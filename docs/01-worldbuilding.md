@@ -1,8 +1,8 @@
 # 01. 세계관 & 배경 설정
 
 **문서 ID**: `docs/01-worldbuilding.md`  
-**버전**: v0.2  
-**최종 수정**: 2026-04  
+**버전**: v0.3 (11×11 맵 반영)  
+**최종 수정**: 2026-04-21  
 **관련 문서**: `03-factions-blocs.md`, `04-characters-ghosts.md`, `10-map-zones.md`, `12-legacy-campaign.md`
 
 ---

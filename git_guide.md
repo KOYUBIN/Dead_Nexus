@@ -1,5 +1,7 @@
 # DEAD NEXUS — Git 업로드 가이드 & 문서 인덱스
 
+> ⚠️ **HISTORICAL DOCUMENT** — v0.1~v0.3 마이그레이션 시점 기록. `dn_*`·`cartel_rulebook` 참조는 **구형 Notion 아티팩트 식별자**이지 파일 경로가 아님. 현재 구조는 모든 파일이 최종 경로에 배치된 상태.
+
 **이 문서의 목적**: 지금까지 작성된 모든 artifact를 실제 git 리포지토리에 어떻게 배치할지, 어떤 파일이 어디에 들어가는지 정리합니다.
 
 ---
@@ -345,8 +347,8 @@ git push origin --tags
 6. `CONTRIBUTING.md` — 기여 가이드
 7. `cards/ghost/*.md` — 6개 클래스 덱 (각 10장)
 8. `cards/events/news-events.md` — 뉴스 50장
-9. `cards/quests/quest-deck.md` — 퀘스트 40장
-10. `cards/black-market/black-market.md` — 블랙마켓 30장
+9. `cards/events/quest-deck.md` — 퀘스트 40장
+10. `cards/events/black-market.md` — 블랙마켓 30장
 
 ### v0.4 작성 예정
 11. `docs/10-map-zones.md` — 맵 구역 상세

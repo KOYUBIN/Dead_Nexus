@@ -1,8 +1,8 @@
 # 03. 5대 블록 (Blocs)
 
 **문서 ID**: `docs/03-factions-blocs.md`  
-**버전**: v0.2  
-**최종 수정**: 2026-04  
+**버전**: v0.4 (시작 구역 좌표 반영)  
+**최종 수정**: 2026-04-22  
 **관련 문서**: `01-worldbuilding.md`, `04-characters-ghosts.md`, `06-attribute-system.md`
 
 ---

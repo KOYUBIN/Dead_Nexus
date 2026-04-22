@@ -141,4 +141,4 @@
 - **메인 캠페인 가이드**: `docs/12-legacy-campaign.md`
 - **이전 챕터**: `legacy/chapter-05-mesh-ghost.md`
 - **다음 챕터**: `legacy/chapter-07-heart-of-city.md`
-- **관련 시스템**: `docs/08-stock-mna.md` (M&A 규칙), `docs/03-fractions-blocs.md`
+- **관련 시스템**: `docs/08-stock-mna.md` (M&A 규칙), `docs/03-factions-blocs.md`

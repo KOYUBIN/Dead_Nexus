@@ -10,6 +10,38 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ### Planned
 - 시뮬레이터 v0.5 피드백 반영 (밸런스·UX)
+
+---
+
+## [0.5.2] — 교차참조 감사 & 리네이밍 (2026-04-22)
+
+### Fixed
+- **파일명 오타 수정**:
+  - `docs/03-fractions-blocs.md` → `docs/03-factions-blocs.md` (fraction → faction)
+  - `docs/11-event-quests.md` → `docs/11-events-quests.md` (복수형 통일)
+- **폴더명 일관성**:
+  - `cards/block/` → `cards/bloc/` (Bloc 게임 용어와 일치)
+- **깨진 파일 참조 8건** 정정:
+  - `docs/11-events-quests.md`의 `cards/quests/quest-deck.md` → `cards/events/quest-deck.md`
+  - `cards/legacy/chapter-06`의 `03-fractions-blocs.md` → `03-factions-blocs.md`
+  - `git_guide.md`의 `cards/quests/`·`cards/black-market/` → `cards/events/`
+  - `docs/10-map-zones.md`의 `11-event-quests.md` → `11-events-quests.md` (3곳)
+
+### Changed
+- `git_guide.md` 상단에 **HISTORICAL** 마크 추가 — `dn_*`·`cartel_rulebook` 참조가 구형 Notion 아티팩트 식별자임을 명시
+- docs 버전 태그 갱신:
+  - `docs/01-worldbuilding.md` v0.2 → v0.3
+  - `docs/02-core-rules.md` v0.2 → v0.3
+  - `docs/03-factions-blocs.md` v0.2 → v0.4
+  - `docs/11-events-quests.md` v0.2 → v0.4
+
+### Audit Summary
+- 총 파일 참조: 51개
+- 깨진 참조: **0건** (실제 파일 기준)
+- 의도된 미래 참조: 1건 (`playtesting/session-01-guide.md` — "(예정)" 태그)
+- 히스토리 참조: 5건 (`dn_*`·`cartel_rulebook` — HISTORICAL 마크)
+- 봉투 레이블 A~H: 전부 정확
+- 레거시 챕터 prev/next 체인: 1~7번 모두 연결 (8번은 최종)
 - 11×11 맵 시뮬레이터 확장 (v0.6)
 - Bloc 덱 확장 (블록당 6 → 10장) + 드래프트 규칙
 - 시나리오 S02~S06 시뮬레이터 지원
@@ -179,7 +211,7 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 - `docs/01-worldbuilding.md` — 격자 크기 갱신
 - `docs/02-core-rules.md` §2.2, §2.3 — 시작 셋업 갱신
 - `docs/03-factions-blocs.md` — 5 블록 시작 구역 좌표 명시
-- `docs/11-event-quests.md` — 토큰 구성 2 사이즈 버전
+- `docs/11-events-quests.md` — 토큰 구성 2 사이즈 버전
 - `cards/legacy/chapter-03-martial-night.md` — 병영 구역 (경찰서 4곳 주변)
 - `cards/legacy/chapter-04-price-of-splice.md` — B6 → B8 불법 시술소
 - `cards/legacy/chapter-05-mesh-ghost.md` — 메시 레이어 격자 갱신

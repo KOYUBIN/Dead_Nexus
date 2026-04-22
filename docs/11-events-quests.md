@@ -1,7 +1,7 @@
 # 11. 이벤트 토큰 & 퀘스트 시스템
 
 **문서 ID**: `docs/11-events-quests.md`  
-**버전**: v0.2  
+**버전**: v0.4 (11×11 / 5×5 토큰 수 반영)  
 **최종 수정**: 2026-04  
 **관련 문서**: `02-core-rules.md`, `10-map-zones.md`, `12-legacy-campaign.md`
 
@@ -234,4 +234,4 @@
 - **맵 구역**: `docs/10-map-zones.md`
 - **레거시 캠페인**: `docs/12-legacy-campaign.md`
 - **뉴스 카드 덱**: `cards/events/news-events.md`
-- **퀘스트 덱 상세**: `cards/quests/quest-deck.md`
+- **퀘스트 덱 상세**: `cards/events/quest-deck.md`

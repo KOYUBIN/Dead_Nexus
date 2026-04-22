@@ -1,7 +1,7 @@
 # DEAD NEXUS — 핵심 규칙 (Core Rules)
 
 **문서 ID**: `docs/02-core-rules.md`  
-**버전**: v0.2  
+**버전**: v0.3 (11×11 + 5×5 튜토리얼 반영)  
 **최종 수정**: 2026-04  
 **의존 문서**: `03-factions-blocs.md`, `04-characters-ghosts.md`, `05-card-system.md`, `06-attribute-system.md`
 

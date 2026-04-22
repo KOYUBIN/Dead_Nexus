@@ -2,7 +2,7 @@
 
 **문서 ID**: `docs/10-map-zones.md`  
 **버전**: v0.3 (**11×11 동심원 재설계** — 2026-04-21)  
-**관련 문서**: `01-worldbuilding.md`, `02-core-rules.md`, `06-attribute-system.md`, `11-event-quests.md`
+**관련 문서**: `01-worldbuilding.md`, `02-core-rules.md`, `06-attribute-system.md`, `11-events-quests.md`
 
 ---
 
@@ -671,7 +671,7 @@ Chebyshev 거리 기준 링: **Ring 0 (1) + Ring 1 (8) + Ring 2 (16) = 25** ✓
 - `docs/02-core-rules.md` §2.2 블록 시작 구역 — 2 → 3
 - `docs/03-factions-blocs.md` 각 블록 "시작 구역" — HQ+Ring2 2개 반영
 - `docs/04-characters-ghosts.md` Ghost 시작 위치 — 새 좌표
-- `docs/11-event-quests.md` 이벤트 토큰 총수 — 36 → 121
+- `docs/11-events-quests.md` 이벤트 토큰 총수 — 36 → 121
 - `docs/12-legacy-campaign.md` 챕터 영향 지도 — 좌표 재지정
 - `cards/legacy/chapter-01~08.md` — 언급된 좌표 업데이트 (B4 폐허 → ? 등)
 - `playtesting/session-00-guide.md` §1.2 준비물 — 맵 프린트 사이즈
@@ -683,5 +683,5 @@ Chebyshev 거리 기준 링: **Ring 0 (1) + Ring 1 (8) + Ring 2 (16) = 25** ✓
 
 - **세계관**: `docs/01-worldbuilding.md`
 - **속성 생산**: `docs/06-attribute-system.md`
-- **이벤트 토큰**: `docs/11-event-quests.md`
+- **이벤트 토큰**: `docs/11-events-quests.md`
 - **레거시 챕터 5 (메시 맵)**: `cards/legacy/chapter-05-mesh-ghost.md`
