@@ -967,6 +967,32 @@ function reducer(state, action) {
       });
 
       s = { ...s, players: newPlayers, pool: newPool, log: newLog.slice(-60) };
+
+      // === Bloc 패시브 확장: 라운드마다 자사 소유 구역 인접한 빈 buildable 구역 1개 자동 점령 ===
+      const expandedMap = { ...s.map };
+      const expandLog = [];
+      for (let pi = 0; pi < s.players.length; pi++) {
+        const p = s.players[pi];
+        if (p.role !== 'bloc' || p.defeated) continue;
+        const myZones = Object.entries(expandedMap).filter(([c, cell]) => cell.owner === pi).map(([c]) => c);
+        const candidates = new Set();
+        myZones.forEach(c => {
+          coordsAdj(c).forEach(adj => {
+            const cell = expandedMap[adj];
+            if (cell && cell.owner === null && ZONE_TYPES[cell.zone]?.buildable) candidates.add(adj);
+          });
+        });
+        if (candidates.size > 0) {
+          const picks = [...candidates];
+          const target = picks[Math.floor(Math.random() * picks.length)];
+          expandedMap[target] = { ...expandedMap[target], owner: pi };
+          const zName = ZONE_TYPES[expandedMap[target].zone]?.name || target;
+          expandLog.push({ round: s.meta.round, phase: s.meta.phase, message: `📈 P${pi} [${p.specific}] 영향권 확장 → ${target} (${zName}) · 자산 +5` });
+        }
+      }
+      if (expandLog.length > 0) {
+        s = { ...s, map: expandedMap, log: [...s.log, ...expandLog].slice(-60) };
+      }
       return s;
     }
 
@@ -1136,41 +1162,54 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = { ...s, pool: newPool };
   }
 
-  // === 이동 (스마트 라우팅) ===
+  // === 이동 (스마트 라우팅, effect.move 스텝만큼 반복) ===
   if (effect.move) {
-    let target = null;
-    const mv = effect.move;
-    if (p.role === 'ghost') {
-      // 공격 카드면 → Bloc 구역으로 한 칸 이동
-      // 아니면 → 근처 Bloc 구역으로 일반 이동
-      const goal = findNearestBlocZone(s, p.position);
-      if (goal) target = stepToward(s, p.position, goal);
-      else {
-        const adj = coordsAdj(p.position);
-        if (adj.length) target = rand(adj);
+    const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+    const startPos = s.players[playerIdx].position;
+    let current = startPos;
+    const path = [startPos];
+    for (let step = 0; step < effect.move; step++) {
+      let nextStep = null;
+      const pNow = s.players[playerIdx];
+      if (pNow.role === 'ghost') {
+        const goal = findNearestBlocZone(s, current);
+        if (goal && goal !== current) {
+          nextStep = stepToward(s, current, goal);
+        } else if (goal === current) {
+          break; // 이미 목표 도착, 남은 이동은 보존
+        } else {
+          const adj = coordsAdj(current);
+          if (adj.length) nextStep = rand(adj);
+        }
+      } else {
+        // Bloc: 빈 buildable 구역 선호
+        const adj = coordsAdj(current);
+        const empty = adj.filter(c => s.map[c] && s.map[c].owner === null && ZONE_TYPES[s.map[c].zone]?.buildable);
+        if (empty.length > 0) nextStep = rand(empty);
+        else if (adj.length > 0) nextStep = rand(adj);
       }
-    } else {
-      // Bloc: 인접 빈 구역으로 확장 선호
-      const adj = coordsAdj(p.position);
-      const empty = adj.filter(c => s.map[c] && s.map[c].owner === null && ZONE_TYPES[s.map[c].zone]?.buildable);
-      if (empty.length > 0) target = rand(empty);
-      else if (adj.length > 0) target = rand(adj);
-    }
-    if (target && target !== p.position) {
+      if (!nextStep || nextStep === current) break;
+      current = nextStep;
+      path.push(current);
+      // 각 스텝마다 s.players 업데이트
       const ps = [...s.players];
-      ps[playerIdx] = { ...ps[playerIdx], position: target };
+      ps[playerIdx] = { ...ps[playerIdx], position: current };
       const v = new Set(s.meta.zonesVisited[playerIdx] || []);
-      v.add(target);
+      v.add(current);
       s = { ...s, players: ps, meta: { ...s.meta, zonesVisited: { ...s.meta.zonesVisited, [playerIdx]: v } } };
-      const zName = ZONE_TYPES[s.map[target].zone]?.name || target;
-      const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${p.position} → ${target} (${zName})`);
+    }
+    if (path.length > 1) {
+      const finalPos = current;
+      const zName = ZONE_TYPES[s.map[finalPos].zone]?.name || finalPos;
+      const pathStr = path.join(' → ');
+      s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${pathStr} (${zName}, ${path.length - 1}칸 이동)`);
     }
   }
 
   // === OPERATIVE 배치 (Bloc 구역 확장) ===
   if (effect.deploy_op && p.role === 'bloc') {
-    const adj = coordsAdj(p.position);
+    const curPos = s.players[playerIdx].position;
+    const adj = coordsAdj(curPos);
     const empty = adj.filter(c => s.map[c] && s.map[c].owner === null && ZONE_TYPES[s.map[c].zone]?.buildable);
     const count = Math.min(effect.deploy_op, empty.length);
     if (count > 0) {
@@ -1191,17 +1230,18 @@ function applyEffect(state, playerIdx, effect, kind, card) {
 
   // === 공격 (같은 구역 적) ===
   if (effect.atk || effect.atk_x2 || effect.atk_x3_retort) {
-    const atkVal = effect.atk || (effect.atk_x2 ? p.stats.atk : 0) || 0;
-    const enemies = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.position === p.position);
+    const curP = s.players[playerIdx];
+    const atkVal = effect.atk || (effect.atk_x2 ? curP.stats.atk : 0) || 0;
+    const enemies = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.position === curP.position);
     if (enemies.length > 0) {
       const target = enemies[0];
       const tIdx = s.players.indexOf(target);
       const atkRoll = d6();
       const defRoll = d6();
-      const atkTotal = p.stats.atk + atkVal + atkRoll;
+      const atkTotal = curP.stats.atk + atkVal + atkRoll;
       const defTotal = target.stats.def + defRoll;
       const dmg = Math.max(0, atkTotal - defTotal);
-      s = logEntry(s, `💥 P${playerIdx} → P${tIdx} (${target.specific}) · 공격 ${p.stats.atk}+${atkVal}+🎲${atkRoll}=${atkTotal} vs 방어 ${target.stats.def}+🎲${defRoll}=${defTotal} → 피해 ${dmg}`);
+      s = logEntry(s, `💥 P${playerIdx} → P${tIdx} (${target.specific}) · 공격 ${curP.stats.atk}+${atkVal}+🎲${atkRoll}=${atkTotal} vs 방어 ${target.stats.def}+🎲${defRoll}=${defTotal} → 피해 ${dmg}`);
       const ps = [...s.players];
       ps[tIdx] = { ...ps[tIdx], hp: Math.max(0, ps[tIdx].hp - dmg) };
       if (ps[tIdx].hp === 0) {
@@ -1214,14 +1254,16 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   }
 
   // === 레이드 (Ghost + Bloc 구역에서 공격 카드 사용 시) ===
-  const atCell = s.map[p.position];
+  // ⚠ 중요: p는 시작 시점 기준이라 이동 후 무효. 현재 위치 재읽기 필수
+  const curP2 = s.players[playerIdx];
+  const atCell = s.map[curP2.position];
   const isBlocOwnedZone = atCell?.owner !== null && atCell?.owner !== undefined && s.players[atCell.owner]?.role === 'bloc';
-  if (p.role === 'ghost' && effect.atk && isBlocOwnedZone) {
+  if (curP2.role === 'ghost' && effect.atk && isBlocOwnedZone) {
     const blocIdx = atCell.owner;
     const bloc = s.players[blocIdx].specific;
     const zName = ZONE_TYPES[atCell.zone]?.name || '';
     const raidRoll = d6();
-    const raidTotal = raidRoll + p.stats.atk;
+    const raidTotal = raidRoll + curP2.stats.atk;
     const threshold = 5;
     if (raidTotal >= threshold) {
       // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
@@ -1233,10 +1275,11 @@ function applyEffect(state, playerIdx, effect, kind, card) {
         resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
         wanted: ps[playerIdx].wanted + 1,
       };
-      const newMap = { ...s.map, [p.position]: { ...atCell, owner: null } }; // 구역 소유 해제 (점령은 안 함, 중립화)
+      const newMap = { ...s.map, [curP2.position]: { ...atCell, owner: null } };
       s = { ...s, players: ps, map: newMap, heat: Math.min(10, s.heat + 1) };
       s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-      s = logEntry(s, `🗡️ 레이드 성공! [${p.position} ${zName}] 🎲${raidRoll}+${p.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+3 (누적 ${ps[playerIdx].resources.rep}), 현상수배+1, 공권력+1`);
+      const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+      s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+3 (누적 ${ps[playerIdx].resources.rep}), 현상수배+1`);
     } else {
       const ps = [...s.players];
       ps[playerIdx] = {
@@ -1245,7 +1288,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
         wanted: ps[playerIdx].wanted + 1,
       };
       s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-      s = logEntry(s, `❌ 레이드 실패 [${p.position} ${zName}] 🎲${raidRoll}+${p.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+1`);
+      const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+      s = logEntry(s, `${meTag}❌ 레이드 실패 [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+1`);
     }
   }
 
