@@ -1,0 +1,60 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node / Web Simulator
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python (tools / scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Build outputs
+*.tmp
+*.cache
+.next/
+.nuxt/
+
+# Playtesting — private notes
+playtesting/feedback/*.private.md
+playtesting/feedback/personal/
+
+# Design assets — raw files
+assets/**/*.psd
+assets/**/*.ai
+assets/**/*.sketch
+assets/**/*.xcf
+assets/**/*.blend
+
+# PDFs only in releases, not in working tree
+prototypes/print-and-play/**/*.pdf
+!prototypes/print-and-play/releases/*.pdf
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# Misc
+.coverage
+coverage/
+*.lcov
