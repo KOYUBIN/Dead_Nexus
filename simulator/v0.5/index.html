@@ -263,12 +263,13 @@
   .hand-wrap h4 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
   .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
   .card {
-    width: 130px; height: 180px;
+    width: 150px; height: 240px;
     background: #0a0a18; border: 1.5px solid var(--border);
     border-radius: 4px; padding: 6px;
     flex-shrink: 0;
     font-size: 10px; display: flex; flex-direction: column;
     cursor: pointer; transition: transform 0.15s, border-color 0.1s;
+    overflow: hidden;
   }
   .card:hover { transform: translateY(-4px); border-color: var(--cyan); }
   .card.selected { border-color: var(--yellow); box-shadow: 0 0 12px rgba(255,215,0,0.4); }
@@ -284,12 +285,16 @@
     color: var(--yellow); letter-spacing: 0.5px; text-align: center; margin: 4px 0;
   }
   .card .ceff {
-    font-size: 9px; line-height: 1.25; flex: 1;
+    font-size: 9.5px; line-height: 1.35; flex: 1;
+    overflow-y: auto; max-height: 90px;
   }
+  .card .ceff strong { display: block; margin-bottom: 2px; font-size: 9px; }
   .card .cbot {
-    border-top: 1px dashed #444; padding-top: 3px; margin-top: 3px;
-    font-size: 9px;
+    border-top: 1px dashed #444; padding-top: 4px; margin-top: 3px;
+    font-size: 9.5px; line-height: 1.35;
+    max-height: 90px; overflow-y: auto;
   }
+  .card .cbot strong { display: block; margin-bottom: 2px; font-size: 9px; }
   .card .cost {
     font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-dim);
   }
@@ -1031,119 +1036,281 @@ function executeCards(state, playerIdx) {
   return s;
 }
 
+// ============================================================================
+// 경로 탐색: 가장 가까운 Bloc 소유 구역 찾기 (BFS, Chebyshev 4-방향)
+// ============================================================================
+function findNearestBlocZone(state, fromCoord, excludeOwnBloc = null) {
+  const visited = new Set([fromCoord]);
+  let frontier = [fromCoord];
+  while (frontier.length > 0) {
+    const next = [];
+    for (const c of frontier) {
+      const cell = state.map[c];
+      if (!cell) continue;
+      if (cell.owner !== null && cell.owner !== undefined) {
+        const owner = state.players[cell.owner];
+        if (owner?.role === 'bloc' && owner.specific !== excludeOwnBloc) {
+          return c; // Found bloc zone
+        }
+      }
+      for (const adj of coordsAdj(c)) {
+        if (!visited.has(adj)) { visited.add(adj); next.push(adj); }
+      }
+    }
+    frontier = next;
+  }
+  return null;
+}
+
+// 현재 위치에서 목표 방향으로 한 칸 이동 (BFS 기반)
+function stepToward(state, fromCoord, toCoord) {
+  if (fromCoord === toCoord) return fromCoord;
+  // BFS로 경로 찾기
+  const parent = { [fromCoord]: null };
+  const queue = [fromCoord];
+  while (queue.length > 0) {
+    const c = queue.shift();
+    if (c === toCoord) {
+      // Backtrack to find first step
+      let step = c;
+      while (parent[step] !== fromCoord && parent[step] !== null) step = parent[step];
+      return step === toCoord ? toCoord : step;
+    }
+    for (const adj of coordsAdj(c)) {
+      if (!(adj in parent)) { parent[adj] = c; queue.push(adj); }
+    }
+  }
+  return fromCoord;
+}
+
 function applyEffect(state, playerIdx, effect, kind, card) {
   let s = state;
   const p = s.players[playerIdx];
 
-  // Generate attr
+  // 속성 생성
   if (effect.gen) {
     const newPool = { ...s.pool };
     const keys = effect.gen.split(':');
     keys.forEach(k => { newPool[k] = (newPool[k] || 0) + 1; });
     s = { ...s, pool: newPool };
+    s = logEntry(s, `P${playerIdx} [${p.specific}] · 속성 ${keys.join('+')} 생성 → 풀에 적립`);
   }
 
-  // Pay cost
+  // 비용 지불
   if (effect.cost) {
     const newPool = { ...s.pool };
     for (const a of effect.cost) {
       if (newPool[a] > 0) newPool[a]--;
       else if (newPool.GRID > 0) newPool.GRID--;
       else {
-        // Can't pay — ignore effect
+        s = logEntry(s, `P${playerIdx} · ${a} 부족 — 효과 불발 (${cardDisplayName(card)})`);
         return s;
       }
     }
     s = { ...s, pool: newPool };
   }
 
-  // Move
+  // === 이동 (스마트 라우팅) ===
   if (effect.move) {
-    // Ghost auto-move to a random adjacent zone (for bot); human picks UI (out of scope for MVP)
-    const adj = coordsAdj(p.position);
-    if (adj.length > 0) {
-      const target = rand(adj);
+    let target = null;
+    const mv = effect.move;
+    if (p.role === 'ghost') {
+      // 공격 카드면 → Bloc 구역으로 한 칸 이동
+      // 아니면 → 근처 Bloc 구역으로 일반 이동
+      const goal = findNearestBlocZone(s, p.position);
+      if (goal) target = stepToward(s, p.position, goal);
+      else {
+        const adj = coordsAdj(p.position);
+        if (adj.length) target = rand(adj);
+      }
+    } else {
+      // Bloc: 인접 빈 구역으로 확장 선호
+      const adj = coordsAdj(p.position);
+      const empty = adj.filter(c => s.map[c] && s.map[c].owner === null && ZONE_TYPES[s.map[c].zone]?.buildable);
+      if (empty.length > 0) target = rand(empty);
+      else if (adj.length > 0) target = rand(adj);
+    }
+    if (target && target !== p.position) {
       const ps = [...s.players];
       ps[playerIdx] = { ...ps[playerIdx], position: target };
-      // Track visited
       const v = new Set(s.meta.zonesVisited[playerIdx] || []);
       v.add(target);
       s = { ...s, players: ps, meta: { ...s.meta, zonesVisited: { ...s.meta.zonesVisited, [playerIdx]: v } } };
+      const zName = ZONE_TYPES[s.map[target].zone]?.name || target;
+      s = logEntry(s, `🚶 P${playerIdx} [${p.specific}] · ${p.position} → ${target} (${zName})`);
     }
   }
 
-  // Attack — simple damage if in same zone as enemy
+  // === OPERATIVE 배치 (Bloc 구역 확장) ===
+  if (effect.deploy_op && p.role === 'bloc') {
+    const adj = coordsAdj(p.position);
+    const empty = adj.filter(c => s.map[c] && s.map[c].owner === null && ZONE_TYPES[s.map[c].zone]?.buildable);
+    const count = Math.min(effect.deploy_op, empty.length);
+    if (count > 0) {
+      const newMap = { ...s.map };
+      const captured = [];
+      for (let i = 0; i < count; i++) {
+        const target = empty[i];
+        newMap[target] = { ...newMap[target], owner: playerIdx };
+        captured.push(target);
+      }
+      s = { ...s, map: newMap };
+      const names = captured.map(c => `${c}(${ZONE_TYPES[s.map[c].zone]?.name || ''})`).join(', ');
+      s = logEntry(s, `🏢 P${playerIdx} [${p.specific}] · 구역 점령: ${names} — 자산 +${count * 5}`);
+    } else {
+      s = logEntry(s, `🏢 P${playerIdx} [${p.specific}] · 인접 빈 구역 없음 (OPERATIVE 불발)`);
+    }
+  }
+
+  // === 공격 (같은 구역 적) ===
   if (effect.atk || effect.atk_x2 || effect.atk_x3_retort) {
-    const atkVal = effect.atk || 0;
+    const atkVal = effect.atk || (effect.atk_x2 ? p.stats.atk : 0) || 0;
     const enemies = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.position === p.position);
     if (enemies.length > 0) {
       const target = enemies[0];
       const tIdx = s.players.indexOf(target);
-      const atkTotal = p.stats.atk + atkVal + d6();
-      const defTotal = target.stats.def + d6() + (effect.def_ignore ? 0 : 0);
+      const atkRoll = d6();
+      const defRoll = d6();
+      const atkTotal = p.stats.atk + atkVal + atkRoll;
+      const defTotal = target.stats.def + defRoll;
       const dmg = Math.max(0, atkTotal - defTotal);
-      s = logEntry(s, `💥 P${playerIdx} → P${tIdx}: ATK${atkTotal} vs DEF${defTotal} = ${dmg} 피해`);
+      s = logEntry(s, `💥 P${playerIdx} → P${tIdx} (${target.specific}) · 공격 ${p.stats.atk}+${atkVal}+🎲${atkRoll}=${atkTotal} vs 방어 ${target.stats.def}+🎲${defRoll}=${defTotal} → 피해 ${dmg}`);
       const ps = [...s.players];
       ps[tIdx] = { ...ps[tIdx], hp: Math.max(0, ps[tIdx].hp - dmg) };
       if (ps[tIdx].hp === 0) {
         ps[tIdx] = { ...ps[tIdx], defeated: true };
-        s = logEntry(s, `⚰️ P${tIdx} 쓰러짐`);
+        s = logEntry(s, `⚰️ P${tIdx} (${target.specific}) 쓰러짐`);
       }
       s = { ...s, players: ps };
-      // Count attacks
       s.meta.attacksUsed[playerIdx] = (s.meta.attacksUsed[playerIdx] || 0) + 1;
     }
   }
 
-  // Raid (if ghost and target is bloc zone)
-  if (effect.raid_bonus || (p.role === 'ghost' && effect.atk && s.map[p.position]?.owner !== null && s.players[s.map[p.position].owner]?.role === 'bloc')) {
-    const targetCell = s.map[p.position];
-    if (targetCell.owner !== null && s.players[targetCell.owner]?.role === 'bloc') {
-      const raidSuccess = d6() + p.stats.atk >= 6;
-      if (raidSuccess) {
-        const bloc = s.players[targetCell.owner].specific;
-        // Decrease stock
-        const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
-        s = { ...s, stocks: newStocks };
-        // Add rep
-        const ps = [...s.players];
-        ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 }, wanted: ps[playerIdx].wanted + 1 };
-        // Increase heat
-        s = { ...s, heat: Math.min(10, s.heat + 1) };
-        s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-        s = { ...s, players: ps };
-        s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} 렙+3, ${bloc} 주가-3`);
-      } else {
-        const ps = [...s.players];
-        ps[playerIdx] = { ...ps[playerIdx], hp: Math.max(0, ps[playerIdx].hp - 3), wanted: ps[playerIdx].wanted + 1 };
-        s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-        s = logEntry(s, `❌ 레이드 실패. P${playerIdx} HP-3`);
-      }
+  // === 레이드 (Ghost + Bloc 구역에서 공격 카드 사용 시) ===
+  const atCell = s.map[p.position];
+  const isBlocOwnedZone = atCell?.owner !== null && atCell?.owner !== undefined && s.players[atCell.owner]?.role === 'bloc';
+  if (p.role === 'ghost' && effect.atk && isBlocOwnedZone) {
+    const blocIdx = atCell.owner;
+    const bloc = s.players[blocIdx].specific;
+    const zName = ZONE_TYPES[atCell.zone]?.name || '';
+    const raidRoll = d6();
+    const raidTotal = raidRoll + p.stats.atk;
+    const threshold = 5;
+    if (raidTotal >= threshold) {
+      // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
+      const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
+      s = { ...s, stocks: newStocks };
+      const ps = [...s.players];
+      ps[playerIdx] = {
+        ...ps[playerIdx],
+        resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
+        wanted: ps[playerIdx].wanted + 1,
+      };
+      const newMap = { ...s.map, [p.position]: { ...atCell, owner: null } }; // 구역 소유 해제 (점령은 안 함, 중립화)
+      s = { ...s, players: ps, map: newMap, heat: Math.min(10, s.heat + 1) };
+      s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+      s = logEntry(s, `🗡️ 레이드 성공! [${p.position} ${zName}] 🎲${raidRoll}+${p.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+3 (누적 ${ps[playerIdx].resources.rep}), 현상수배+1, 공권력+1`);
+    } else {
+      const ps = [...s.players];
+      ps[playerIdx] = {
+        ...ps[playerIdx],
+        hp: Math.max(0, ps[playerIdx].hp - 3),
+        wanted: ps[playerIdx].wanted + 1,
+      };
+      s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
+      s = logEntry(s, `❌ 레이드 실패 [${p.position} ${zName}] 🎲${raidRoll}+${p.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+1`);
     }
   }
 
-  // Heal
+  // === 회복 (아군 Ghost 50%) ===
   if (effect.heal_all) {
     const ps = s.players.map(pp => pp.role === 'bloc' ? pp : { ...pp, hp: Math.min(pp.maxHp, pp.hp + Math.floor(pp.maxHp * 0.5)) });
     s = { ...s, players: ps };
+    s = logEntry(s, `💚 P${playerIdx} [${p.specific}] · 아군 Ghost 전원 HP 50% 회복`);
   }
 
-  // Loss tag tracking
   if (card?.loss) {
     s.meta.lostCardsUsed[playerIdx] = (s.meta.lostCardsUsed[playerIdx] || 0) + 1;
   }
 
-  // Stock crash
+  // === 주가 조작 ===
   if (effect.crash_stock || effect.crash_target) {
-    // Random bloc (simplified)
-    const target = rand(Object.keys(s.stocks));
+    // 자기 블록 외 랜덤
+    const candidates = Object.keys(s.stocks).filter(b => !(p.role === 'bloc' && p.specific === b));
+    const target = rand(candidates);
     const amt = effect.crash_stock || effect.crash_target || 3;
     const newStocks = { ...s.stocks, [target]: Math.max(1, s.stocks[target] - amt) };
     s = { ...s, stocks: newStocks };
-    s = logEntry(s, `📉 ${target} 주가 -${amt}`);
+    s = logEntry(s, `📉 P${playerIdx} [${p.specific}] · ${target} 주가 -${amt} (${s.stocks[target]} → ${newStocks[target]})`);
+  }
+
+  // === 무기·자원 지급 ===
+  if (effect.weapons) {
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, weapons: (ps[playerIdx].resources.weapons || 0) + effect.weapons } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🔩 P${playerIdx} · 무기 +${effect.weapons}`);
+  }
+  if (effect.credit) {
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.credit } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `₵ P${playerIdx} · 크레딧 +${effect.credit}`);
+  }
+  if (effect.parts) {
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, parts: (ps[playerIdx].resources.parts || 0) + effect.parts } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `⚙️ P${playerIdx} · 부품 +${effect.parts}`);
+  }
+
+  // === 공권력 변동 ===
+  if (effect.heat) {
+    const newHeat = Math.max(0, Math.min(10, s.heat + effect.heat));
+    s = { ...s, heat: newHeat };
+    s = logEntry(s, `🚨 공권력 ${effect.heat > 0 ? '+' : ''}${effect.heat} → ${newHeat}`);
   }
 
   return s;
+}
+
+// 카드 한글 이름 매핑 (표시용)
+const CARD_NAMES_KR = {
+  PORT_SCAN: '포트 스캔', DATA_SPIKE: '데이터 스파이크', GHOST_ACCESS: '유령 접속',
+  MESH_DIVE: '메시 다이브', ICE_BREAK: '아이스 브레이크', PROXY_RELAY: '프록시 릴레이',
+  STOCK_CRASH: '주식 크래시', NEURAL_OVRD: '뉴럴 오버라이드', ZERO_TRACE: '제로 트레이스',
+  BASIC_MOVE_C: '기본 이동', BASIC_MOVE_B: '기본 이동', BASIC_MOVE_R: '기본 이동',
+  BASIC_MOVE_RG: '기본 이동', BASIC_MOVE_D: '기본 이동', BASIC_MOVE_M: '기본 이동',
+  QUICK_DRAW: '퀵 드로우', SUPPRESS_FIRE: '제압 사격', BREACHER: '브리처',
+  CONTRACT_KILL: '계약 처형', HUMAN_SHIELD: '인간 방패', DOUBLE_TAP: '더블 탭',
+  POINT_BLANK: '포인트 블랭크', BERSERKER: '버서커', LAST_STAND: '최후 저항',
+  NETWORK: '네트워크', BACK_DEAL: '백 딜', BLACKMAIL: '블랙메일',
+  MIDDLE_DEAL: '중개 딜', INFO_BROKER: '정보 브로커', CRISIS_TALK: '위기 협상',
+  DBL_CONTRACT: '이중 계약', POKER_FACE: '포커 페이스', BURN_BRIDGE: '다리 소각',
+  DRONE_SCAN: '드론 스캔', TRAP_WIRE: '트랩 와이어', EMP_PULSE: 'EMP 펄스',
+  OVERCLOCK: '오버클록', FIELD_CRAFT: '현장 제작', SHIELD_GEN: '실드 제너레이터',
+  DRONE_SWARM: '드론 스웜', JURY_RIG: '즉석 수리', TECH_BREACH: '테크 브리치',
+  FAST_TRAVEL: '고속 이동', SUPPLY_CONV: '보급 호송', AMBUSH: '매복',
+  STORM_RUSH: '스톰 러시', BACKROADS: '뒷길', SCORCH_PATH: '화염 자취',
+  CARGO_HAUL: '화물 운송', IRON_WHEELS: '강철 바퀴', GHOST_RUN: '유령 질주',
+  INNER_DOCS: '내부 문서', AUTH_ABUSE: '권한 남용', CLEAN_SLATE: '백지화',
+  FALSE_FLAG: '가짜 깃발', DISGUISE: '위장', BOARD_MANIP: '이사회 조작',
+  LEAK: '유출', DEEP_COVER: '심층 잠입', ID_COLLAPSE: '정체성 붕괴',
+  SHADOW_FILE: '섀도우 파일', LEVERAGE: '레버리지', VEIL_DEPLOY: '베일 전개',
+  GHOST_PROTOCOL: '유령 프로토콜', DATA_WIPE: '데이터 삭제', ZERO_RECORD: '제로 레코드',
+  FORWARD_STRIKE: '전진 타격', ARMS_SUPPLY: '무기 보급', FORWARD_BASE: '전방 기지',
+  MARTIAL_LAW: '계엄령', MERCENARY_SURGE: '용병 증원', SCORCHED_EARTH: '초토화',
+  FIELD_SPLICE: '필드 스플라이스', NEURAL_IFACE: '신경 인터페이스', AUGMENTATION: '증강',
+  QUARANTINE: '격리', HARVEST: '수확', CLONE_DECOY: '클론 디코이',
+  PREDICTION_E: '예측 엔진', FLASH_CRASH: '플래시 크래시', ALGO_LOCK: '알고리즘 잠금',
+  FLASH_TRADE: '플래시 트레이드', SURVEILLANCE: '감시', SYS_TAKEOVER: '시스템 탈취',
+  POWER_SURGE: '전력 서지', BLACKOUT_C: '블랙아웃', PIPELINE_LOCK: '파이프라인 봉쇄',
+  INFRA_BOND: '인프라 채권', HOSTILE_DIV: '적대 배당', LEGACY_CONTRACT: '레거시 계약',
+};
+
+function cardDisplayName(card) {
+  if (!card) return '?';
+  return CARD_NAMES_KR[card.id] || card.name || '?';
 }
 
 function logEntry(s, msg) {
@@ -1529,14 +1696,15 @@ function GameScreen({ state, dispatch }) {
                       {c.loss && <span className="loss-tag">LOSS</span>}
                     </span>
                   </div>
-                  <div className="ct">{c.name}</div>
+                  <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
+                  <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
                   <div className="ceff">
-                    {c.top && <>▲ {effectSummary(c.top)}</>}
-                    {c.main && <>▶ {effectSummary(c.main)}</>}
+                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단</strong><br/>{effectSummary(c.top)}</>}
+                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인</strong><br/>{effectSummary(c.main)}</>}
                   </div>
                   <div className="cbot">
-                    {c.bot && <>▼ {c.bot.cost ? <span className="cost">{c.bot.cost.join(' ')}</span> : ''} {effectSummary(c.bot)}</>}
-                    {c.side && <>↻ {effectSummary(c.side)}</>}
+                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단</strong><br/>{effectSummary(c.bot)}</>}
+                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드</strong><br/>{effectSummary(c.side)}</>}
                   </div>
                 </div>
               );
@@ -1626,21 +1794,79 @@ function GameScreen({ state, dispatch }) {
 }
 
 function effectSummary(eff) {
+  if (!eff) return '-';
   const parts = [];
-  if (eff.gen) parts.push(`+${eff.gen}`);
-  if (eff.move) parts.push(`이동${eff.move}`);
-  if (eff.atk) parts.push(`ATK+${eff.atk}`);
-  if (eff.def) parts.push(`DEF+${eff.def}`);
-  if (eff.scout) parts.push(`정찰${eff.scout}`);
-  if (eff.heal_all) parts.push(`전원 회복`);
-  if (eff.stealth) parts.push('은신');
-  if (eff.break_veil) parts.push('베일해제');
-  if (eff.deploy_op) parts.push(`OP배치${eff.deploy_op}`);
-  if (eff.weapons) parts.push(`무기+${eff.weapons}`);
-  if (eff.heat) parts.push(`공권력${eff.heat > 0 ? '+' : ''}${eff.heat}`);
-  if (eff.crash_stock || eff.crash_target) parts.push(`주가-${eff.crash_stock || eff.crash_target}`);
-  if (eff.peek_hand) parts.push('패 엿보기');
-  return parts.join(' · ') || '-';
+
+  if (eff.cost && eff.cost.length) parts.push(`[${eff.cost.join('+')} 소비]`);
+  if (eff.gen) parts.push(`속성 ${eff.gen.split(':').map(x => `${x}+1`).join(' ')} 생성`);
+
+  if (eff.move) parts.push(`이동 ${eff.move}칸`);
+  if (eff.atk) parts.push(`공격 +${eff.atk} (같은 구역 적)`);
+  if (eff.atk_x2) parts.push(`공격 2배 (이번 라운드)`);
+  if (eff.atk_x3_retort) parts.push(`반격 공격 3배`);
+  if (eff.def) parts.push(`방어 +${eff.def}`);
+  if (eff.def_ignore) parts.push(`적 방어 무시`);
+
+  if (eff.scout) parts.push(`정찰 ${eff.scout}칸 (토큰 확인)`);
+  if (eff.stealth) parts.push('은신 (추적 불가)');
+  if (eff.break_veil === 99) parts.push('베일 완전 해제');
+  else if (eff.break_veil) parts.push(`베일 강도 -${eff.break_veil}`);
+
+  if (eff.deploy_op) parts.push(`OPERATIVE ${eff.deploy_op}명 배치 → 인접 빈 구역 자동 점령`);
+  if (eff.fortify) parts.push(`자사 구역 방어력 +${eff.fortify} 영구`);
+
+  if (eff.crash_stock) parts.push(`대상 블록 주가 -${eff.crash_stock}`);
+  if (eff.crash_target) parts.push(`지정 블록 주가 -${eff.crash_target}`);
+  if (eff.peek_hand) parts.push('상대 패 1장 엿보기');
+  if (eff.peek_full) parts.push('상대 패 전체 확인');
+  if (eff.peek_news) parts.push(`뉴스 다음 ${eff.peek_news}장 미리 보기`);
+
+  if (eff.heal_all) parts.push(`아군 Ghost 전원 HP ${eff.heal_all}% 회복`);
+  if (eff.heal) parts.push(`HP +${eff.heal} 회복`);
+
+  if (eff.weapons) parts.push(`무기 +${eff.weapons}`);
+  if (eff.credit) parts.push(`₵ +${eff.credit}`);
+  if (eff.parts) parts.push(`부품 +${eff.parts}`);
+  if (eff.data) parts.push(`데이터 +${eff.data}`);
+  if (eff.rep) parts.push(`렙 +${eff.rep}`);
+  if (eff.contact) parts.push(`접선 +${eff.contact}`);
+
+  if (eff.heat) parts.push(`공권력 ${eff.heat > 0 ? '+' : ''}${eff.heat}`);
+  if (eff.clear_wanted) parts.push('현상수배 0 초기화');
+  if (eff.clear_track) parts.push('추적 기록 삭제');
+  if (eff.spd) parts.push(`속도 +${eff.spd}`);
+  if (eff.always_first) parts.push('무조건 선공');
+  if (eff.enemy_spd) parts.push(`적 속도 ${eff.enemy_spd}`);
+
+  if (eff.cancel_card) parts.push('상대 행동 카드 1장 취소');
+  if (eff.cancel_action) parts.push('상대 행동 1개 취소');
+  if (eff.stop_combat) parts.push('진행 중 전투 즉시 중단');
+  if (eff.hide_actions_1r) parts.push('자사 행동 1R 비공개');
+  if (eff.hide_actions) parts.push('이번 라운드 행동 비공개');
+  if (eff.veil_up) parts.push(`자사 구역 베일 강도 +${eff.veil_up} 영구`);
+
+  if (eff.draw_quest) parts.push(`퀘스트 카드 ${eff.draw_quest}장 획득`);
+  if (eff.blackmarket) parts.push(`블랙마켓 카드 ${eff.blackmarket}장 획득`);
+  if (eff.revive) parts.push('사망 고스트 1명 부활');
+  if (eff.broker_fee) parts.push(`거래 수수료 +${eff.broker_fee}%`);
+
+  if (eff.trap) parts.push('구역에 함정 설치');
+  if (eff.trap_damage) parts.push(`함정 발동 시 HP -${eff.trap_damage}`);
+  if (eff.steal) parts.push(`적 ${eff.steal} 속성 1개 탈취`);
+  if (eff.infiltrate) parts.push('블록 소속 위장');
+  if (eff.disguise) parts.push('이번 라운드 블록 위장');
+
+  if (eff.swap) parts.push('자원 2종 1:1 교환');
+  if (eff.swap_ratio) parts.push(`자원 1:${eff.swap_ratio} 유리한 교환`);
+
+  if (eff.stock_op) parts.push('블록 1곳 주가 ±1 비공개 조작');
+  if (eff.zone_income_2x) parts.push('자사 구역 수입 2배 (이번 라운드)');
+  if (eff.zero_income) parts.push('대상 구역 수입 0 (이번 라운드)');
+
+  if (eff.loss) parts.push('⚠ 소각 (Long Rest만 복구)');
+
+  if (parts.length === 0) return '특수 효과';
+  return parts.join(' · ');
 }
 
 // ============================================================================
