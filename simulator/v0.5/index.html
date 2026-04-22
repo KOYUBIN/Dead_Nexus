@@ -621,22 +621,61 @@ const BLOC_DECKS = {
 };
 
 // Curated news (15 for S00)
+// 뉴스 이벤트 카드 — 효과 키
+// heat: 공권력 ±N  / all_stock: 모든 주가 ±N  / target_stock: {bloc, delta}  / random_crash: 임의 블록 -N
+// all_credit: 전 플레이어 ₵ ±N  / target_credit: {role, delta}  / all_rep: Ghost 전원 렙 ±N
+// all_weapons/parts/data: 전 플레이어 자원 ±N  / signal_lock: 시그널 다이 고정  / bloc_income_2x: 1R Bloc 수입 2배
+// ghost_move: 모든 Ghost 이동 +N  / wanted_all: Ghost 전원 현상수배 ±N  / map_reveal: N라운드 지도 노출
+// random_zone_flip: 랜덤 구역 중립화  / stock_freeze: 주가 변동 1R 정지  / hp_all: 전 고스트 HP ±N
 const NEWS = [
-  { id: 1,  title: '계엄 부분 해제', effect: { heat: -2 }, flavor: '임시 조치였다고 정부는 말한다.' },
-  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -3 }, flavor: '패닉은 합리적이다.' },
-  { id: 12, title: '투자 붐', effect: { all_stock: 2 }, flavor: '낙관주의는 위험하다.' },
-  { id: 13, title: '암시장 호황', effect: { blackmarket_cheaper: 1 }, flavor: '공식 경제가 망가지면.' },
-  { id: 18, title: '대형 거래 체결', effect: { broker_bonus: 5 }, flavor: '중개인의 월급날.' },
-  { id: 21, title: '대규모 시위', effect: { heat: 2, lock_random: 1 }, flavor: '구호는 단순했다.' },
-  { id: 22, title: '시민 축제', effect: { club_2x: 1 }, flavor: '잠깐이라도 괜찮다고.' },
-  { id: 25, title: '이민 물결', effect: { slum_bonus: 2, heat: 1 }, flavor: '더 나은 곳을 찾아온다.' },
-  { id: 30, title: '베일 업데이트', effect: { vanta_veil: 1 }, flavor: '안전하다고 느끼게 해줍니다.' },
-  { id: 33, title: '드론 스웜 사고', effect: { rigger_bonus: 3 }, flavor: '세 대가 돌아왔다.' },
-  { id: 37, title: '용병 시장 확장', effect: { ironwall_stock: 2, blade_atk: 1 }, flavor: '수요는 끝이 없다.' },
-  { id: 43, title: '군수 계약 취소', effect: { ironwall_stock: -3 }, flavor: '계약은 깨졌다.' },
-  { id: 46, title: 'UFO 목격', effect: { draw_extra: 2 }, flavor: '그냥 드론이라고 정부는 말한다.' },
-  { id: 2,  title: 'AI 규제 법안', effect: { axiom_stock: -3 }, flavor: 'AI는 사람을 대체할 수 없다.' },
-  { id: 41, title: '용병 증원 도착', effect: { ironwall_free_merc: 1 }, flavor: '새 얼굴. 같은 작전.' },
+  // === 시장 충격 (주가 축) ===
+  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -4, heat: 1 }, flavor: '패닉은 합리적이다.' },
+  { id: 12, title: '월가 붐', effect: { all_stock: 3 }, flavor: '낙관주의는 위험하다.' },
+  { id: 14, title: '루머 확산', effect: { random_crash: 5 }, flavor: '소문은 항상 먼저 도착한다.' },
+  { id: 15, title: '인수합병 열풍', effect: { all_stock: 2, target_credit: { role: 'bloc', delta: 4 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
+  { id: 16, title: '내부자 고발', effect: { random_crash: 8, heat: 2 }, flavor: '익명의 이메일 한 통.' },
+  { id: 17, title: '주가 동결령', effect: { stock_freeze: 1 }, flavor: '시장을 멈추면 문제가 해결될까?' },
+
+  // === 블록별 호재/악재 ===
+  { id: 2,  title: 'AI 규제 법안 통과', effect: { target_stock: { bloc: 'AXIOM', delta: -4 } }, flavor: 'AI는 사람을 대체할 수 없다.' },
+  { id: 3,  title: 'AI 윤리 허가', effect: { target_stock: { bloc: 'AXIOM', delta: 3 } }, flavor: '기계는 이제 자격증이 있다.' },
+  { id: 30, title: '베일 스캔들', effect: { target_stock: { bloc: 'VANTA', delta: -3 }, map_reveal: 2 }, flavor: '사생활은 상품이었다.' },
+  { id: 31, title: '바이오 혁신', effect: { target_stock: { bloc: 'HELIX', delta: 3 }, hp_all: 2 }, flavor: '살아있는 것들의 시대.' },
+  { id: 37, title: '용병 수요 폭증', effect: { target_stock: { bloc: 'IRONWALL', delta: 3 }, heat: 1 }, flavor: '총성이 들려야 월급이 온다.' },
+  { id: 43, title: '군수 계약 취소', effect: { target_stock: { bloc: 'IRONWALL', delta: -4 } }, flavor: '계약은 깨졌다.' },
+  { id: 44, title: '정전 사태', effect: { target_stock: { bloc: 'CARBON', delta: -3 }, all_credit: -2 }, flavor: '어둠 속에서 도시가 멈췄다.' },
+  { id: 45, title: '신재생 에너지 보조금', effect: { target_stock: { bloc: 'CARBON', delta: 4 } }, flavor: '정부는 녹색을 발견했다.' },
+
+  // === 공권력·치안 축 ===
+  { id: 1,  title: '계엄 부분 해제', effect: { heat: -3 }, flavor: '임시 조치였다고 정부는 말한다.' },
+  { id: 21, title: '대규모 시위', effect: { heat: 3, target_stock: { bloc: 'IRONWALL', delta: 1 } }, flavor: '구호는 단순했다.' },
+  { id: 26, title: '경찰 파업', effect: { heat: -4, wanted_all: -1 }, flavor: '법은 월급이 멈추면 쉰다.' },
+  { id: 27, title: '드론 순찰 강화', effect: { heat: 2, wanted_all: 1 }, flavor: '하늘에서 지켜본다.' },
+  { id: 28, title: '임시 사면령', effect: { wanted_all: -2 }, flavor: '선거 전이다.' },
+
+  // === 자원·지원 축 ===
+  { id: 13, title: '암시장 호황', effect: { target_credit: { role: 'ghost', delta: 4 }, all_weapons: 1 }, flavor: '공식 경제가 망가지면.' },
+  { id: 18, title: '대형 거래 체결', effect: { all_credit: 3 }, flavor: '유동성이 돌아왔다.' },
+  { id: 22, title: '시민 축제', effect: { target_credit: { role: 'bloc', delta: 3 }, target_stock: { bloc: 'VANTA', delta: 1 } }, flavor: '잠깐이라도 괜찮다고.' },
+  { id: 25, title: '이민 물결', effect: { all_credit: 2, heat: 1 }, flavor: '더 나은 곳을 찾아온다.' },
+  { id: 33, title: '드론 스웜 사고', effect: { all_parts: 2, random_zone_flip: 1 }, flavor: '세 대가 돌아왔다. 일곱 대는 아니었다.' },
+  { id: 46, title: 'UFO 목격', effect: { all_data: 2, heat: 1 }, flavor: '그냥 드론이라고 정부는 말한다.' },
+
+  // === 정보·시그널 축 ===
+  { id: 50, title: '메시넷 블랙아웃', effect: { signal_lock: 'BLACKOUT', target_credit: { role: 'ghost', delta: 3 } }, flavor: '1시간. 모두 사라졌다.' },
+  { id: 51, title: '메시넷 과부하', effect: { signal_lock: 'SURGE' }, flavor: '누군가 전부를 연결하려 했다.' },
+  { id: 52, title: '해킹 대란', effect: { target_stock: { bloc: 'VANTA', delta: -2 }, target_stock2: { bloc: 'AXIOM', delta: -2 } }, flavor: '그들은 밤새 일했다.' },
+
+  // === Ghost·Bloc 비대칭 이벤트 ===
+  { id: 60, title: '영웅 담론', effect: { all_rep: 2, heat: -1 }, flavor: '이름을 지워도 이야기는 남는다.' },
+  { id: 61, title: '마녀사냥', effect: { wanted_all: 2, target_stock: { bloc: 'IRONWALL', delta: 2 } }, flavor: '누군가 대가를 치러야 한다.' },
+  { id: 62, title: 'Bloc 연합 회의', effect: { target_credit: { role: 'bloc', delta: 5 }, target_stock: { bloc: 'CARBON', delta: 1 } }, flavor: '위기는 그들을 묶었다.' },
+  { id: 63, title: '고스트 사냥령', effect: { wanted_all: 3, hp_all: -1 }, flavor: '현상금이 떨어졌다.' },
+
+  // === 이동·맵 이벤트 ===
+  { id: 70, title: '도로 봉쇄', effect: { ghost_move: -1, heat: 2 }, flavor: '그들은 출구를 닫았다.' },
+  { id: 71, title: '지하 통로 개통', effect: { ghost_move: 1 }, flavor: '지도에 없는 길이 하나 생겼다.' },
+  { id: 72, title: '구역 점령 해제', effect: { random_zone_flip: 2 }, flavor: '한 구역, 두 구역, 세 구역.' },
 ];
 
 // Hidden objectives (10 simplified for MVP)
@@ -910,6 +949,7 @@ function buildPlayer(id, kind, role, specific) {
     achievements: [],
     defeated: false,
     plannedCards: [],  // for phase 3->4
+    plannedHalves: [], // top/bot 또는 main/side — 각 카드의 어느 반쪽을 쓸지
   };
 }
 
@@ -1050,6 +1090,99 @@ function reducer(state, action) {
     case 'SKIP_ZONE_BONUS':
       return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
 
+    case 'BUY_STOCK': {
+      // action.playerIdx, action.bloc, action.qty
+      const price = state.stocks[action.bloc];
+      if (!price) return state;
+      const cost = price * action.qty;
+      const ps = [...state.players];
+      const p = ps[action.playerIdx];
+      if ((p.resources.credit || 0) < cost) return state;
+      ps[action.playerIdx] = {
+        ...p,
+        resources: { ...p.resources, credit: p.resources.credit - cost },
+        stocks: { ...p.stocks, [action.bloc]: (p.stocks[action.bloc] || 0) + action.qty },
+      };
+      // Bloc 본인 매수 유동성 부여: 주가 +1 (매수세)
+      const newStocks = { ...state.stocks, [action.bloc]: Math.min(20, price + (action.qty >= 2 ? 1 : 0)) };
+      const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
+      return {
+        ...state,
+        players: ps,
+        stocks: newStocks,
+        log: [...state.log, { round: state.meta.round, phase: 1, message: `📈 ${marker}P${action.playerIdx} · ${action.bloc} ${action.qty}주 매수 (₵${cost}) — 주가 ${price}${newStocks[action.bloc] !== price ? `→${newStocks[action.bloc]}` : ''}` }].slice(-150),
+      };
+    }
+
+    case 'SELL_STOCK': {
+      const price = state.stocks[action.bloc];
+      if (!price) return state;
+      const ps = [...state.players];
+      const p = ps[action.playerIdx];
+      const have = p.stocks[action.bloc] || 0;
+      const qty = Math.min(have, action.qty);
+      if (qty === 0) return state;
+      const earn = price * qty;
+      ps[action.playerIdx] = {
+        ...p,
+        resources: { ...p.resources, credit: (p.resources.credit || 0) + earn },
+        stocks: { ...p.stocks, [action.bloc]: have - qty },
+      };
+      const newStocks = { ...state.stocks, [action.bloc]: Math.max(1, price - (qty >= 2 ? 1 : 0)) };
+      const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
+      return {
+        ...state,
+        players: ps,
+        stocks: newStocks,
+        log: [...state.log, { round: state.meta.round, phase: 1, message: `📉 ${marker}P${action.playerIdx} · ${action.bloc} ${qty}주 매도 (₵+${earn}) — 주가 ${price}${newStocks[action.bloc] !== price ? `→${newStocks[action.bloc]}` : ''}` }].slice(-150),
+      };
+    }
+
+    case 'BOT_MARKET': {
+      // 봇들 자동 거래 (간단 AI)
+      let s = { ...state };
+      const ps = [...state.players];
+      state.players.forEach((p, pi) => {
+        if (p.kind !== 'bot' || p.defeated) return;
+        const credit = p.resources.credit || 0;
+        const blocs = Object.keys(s.stocks);
+        // 주가 낮고 본인 자산에 들어갈 주식 매수 (Bloc은 자사 제외)
+        blocs.forEach(bl => {
+          if (p.role === 'bloc' && p.specific === bl) return;  // 자사 매수 X
+          const price = s.stocks[bl];
+          if (price <= 7 && credit >= price * 2 && Math.random() < 0.5) {
+            const qty = 2;
+            const cost = price * qty;
+            ps[pi] = {
+              ...ps[pi],
+              resources: { ...ps[pi].resources, credit: ps[pi].resources.credit - cost },
+              stocks: { ...ps[pi].stocks, [bl]: (ps[pi].stocks[bl] || 0) + qty },
+            };
+            s = { ...s, stocks: { ...s.stocks, [bl]: Math.min(20, s.stocks[bl] + 1) } };
+            s = logEntry(s, `📈 P${pi} [${p.specific}] · ${bl} ${qty}주 매수 (₵${cost}) — 주가 ${price}→${s.stocks[bl]}`);
+          }
+        });
+        // 주가 높은 보유 종목은 매도
+        Object.entries(p.stocks).forEach(([bl, qty]) => {
+          if (p.role === 'bloc' && p.specific === bl) return;
+          const price = s.stocks[bl];
+          if (price >= 15 && qty >= 2 && Math.random() < 0.6) {
+            const sellQty = Math.min(qty, 2);
+            const earn = price * sellQty;
+            ps[pi] = {
+              ...ps[pi],
+              resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + earn },
+              stocks: { ...ps[pi].stocks, [bl]: qty - sellQty },
+            };
+            s = { ...s, stocks: { ...s.stocks, [bl]: Math.max(1, s.stocks[bl] - 1) } };
+            s = logEntry(s, `📉 P${pi} [${p.specific}] · ${bl} ${sellQty}주 매도 (₵+${earn}) — 주가 ${price}→${s.stocks[bl]}`);
+          }
+        });
+      });
+      s = { ...s, players: ps };
+      return s;
+    }
+
     case 'SNAPSHOT_TURN': {
       const snap = state.players.map(p => ({
         hp: p.hp,
@@ -1163,28 +1296,115 @@ function reducer(state, action) {
 
     case 'DRAW_NEWS': {
       const news = rand(NEWS);
+      const eff = news.effect;
       let newStocks = { ...state.stocks };
       let newHeat = state.heat;
-      if (news.effect.heat) newHeat += news.effect.heat;
-      if (news.effect.all_stock) {
-        Object.keys(newStocks).forEach(k => newStocks[k] = Math.max(1, Math.min(20, newStocks[k] + news.effect.all_stock)));
+      let newSignal = state.signalDie;
+      let ps = [...state.players];
+      const logMsgs = [];
+
+      // Heat
+      if (eff.heat) { newHeat += eff.heat; logMsgs.push(`🔥공권력${eff.heat > 0 ? '+' : ''}${eff.heat}`); }
+      // Stock: all
+      if (eff.all_stock) {
+        Object.keys(newStocks).forEach(k => newStocks[k] = Math.max(1, Math.min(20, newStocks[k] + eff.all_stock)));
+        logMsgs.push(`📊전체주가${eff.all_stock > 0 ? '+' : ''}${eff.all_stock}`);
       }
-      if (news.effect.ironwall_stock) newStocks.IRONWALL = Math.max(1, Math.min(20, newStocks.IRONWALL + news.effect.ironwall_stock));
-      if (news.effect.axiom_stock) newStocks.AXIOM = Math.max(1, Math.min(20, newStocks.AXIOM + news.effect.axiom_stock));
+      // Stock: target
+      if (eff.target_stock) {
+        const { bloc, delta } = eff.target_stock;
+        if (newStocks[bloc] != null) {
+          newStocks[bloc] = Math.max(1, Math.min(20, newStocks[bloc] + delta));
+          logMsgs.push(`📊${bloc}${delta > 0 ? '+' : ''}${delta}`);
+        }
+      }
+      if (eff.target_stock2) {
+        const { bloc, delta } = eff.target_stock2;
+        if (newStocks[bloc] != null) {
+          newStocks[bloc] = Math.max(1, Math.min(20, newStocks[bloc] + delta));
+          logMsgs.push(`📊${bloc}${delta > 0 ? '+' : ''}${delta}`);
+        }
+      }
+      // Random crash
+      if (eff.random_crash) {
+        const blocs = Object.keys(newStocks);
+        const pick = blocs[Math.floor(Math.random() * blocs.length)];
+        newStocks[pick] = Math.max(1, newStocks[pick] - eff.random_crash);
+        logMsgs.push(`📉${pick}-${eff.random_crash}`);
+      }
+      // Signal lock
+      if (eff.signal_lock) { newSignal = eff.signal_lock; logMsgs.push(`📡고정${eff.signal_lock}`); }
+      // Credit: all
+      if (eff.all_credit) {
+        ps = ps.map(p => ({ ...p, resources: { ...p.resources, credit: Math.max(0, (p.resources.credit || 0) + eff.all_credit) } }));
+        logMsgs.push(`₵전체${eff.all_credit > 0 ? '+' : ''}${eff.all_credit}`);
+      }
+      // Credit: targeted by role
+      if (eff.target_credit) {
+        const { role, delta } = eff.target_credit;
+        ps = ps.map(p => p.role === role ? { ...p, resources: { ...p.resources, credit: Math.max(0, (p.resources.credit || 0) + delta) } } : p);
+        logMsgs.push(`₵${role}${delta > 0 ? '+' : ''}${delta}`);
+      }
+      // All rep (Ghost only)
+      if (eff.all_rep) {
+        ps = ps.map(p => p.role === 'ghost' ? { ...p, resources: { ...p.resources, rep: Math.max(0, (p.resources.rep || 0) + eff.all_rep) } } : p);
+        logMsgs.push(`★Ghost렙${eff.all_rep > 0 ? '+' : ''}${eff.all_rep}`);
+      }
+      // All weapons/parts/data
+      if (eff.all_weapons) { ps = ps.map(p => ({ ...p, resources: { ...p.resources, weapons: Math.max(0, (p.resources.weapons || 0) + eff.all_weapons) } })); logMsgs.push(`🔩전체${eff.all_weapons > 0 ? '+' : ''}${eff.all_weapons}`); }
+      if (eff.all_parts)   { ps = ps.map(p => ({ ...p, resources: { ...p.resources, parts:   Math.max(0, (p.resources.parts   || 0) + eff.all_parts)   } })); logMsgs.push(`⚙️전체${eff.all_parts > 0 ? '+' : ''}${eff.all_parts}`); }
+      if (eff.all_data)    { ps = ps.map(p => ({ ...p, resources: { ...p.resources, data:    Math.max(0, (p.resources.data    || 0) + eff.all_data)    } })); logMsgs.push(`📡전체${eff.all_data > 0 ? '+' : ''}${eff.all_data}`); }
+      // Wanted all (ghost)
+      if (eff.wanted_all) {
+        ps = ps.map(p => p.role === 'ghost' ? { ...p, wanted: Math.max(0, (p.wanted || 0) + eff.wanted_all) } : p);
+        logMsgs.push(`🚨Ghost수배${eff.wanted_all > 0 ? '+' : ''}${eff.wanted_all}`);
+      }
+      // HP all ghost
+      if (eff.hp_all) {
+        ps = ps.map(p => p.role === 'ghost' ? { ...p, hp: Math.max(0, Math.min(p.maxHp, p.hp + eff.hp_all)) } : p);
+        logMsgs.push(`❤️Ghost HP${eff.hp_all > 0 ? '+' : ''}${eff.hp_all}`);
+      }
+      // Random zone flip
+      if (eff.random_zone_flip) {
+        const newMap = { ...state.map };
+        const owned = Object.entries(newMap).filter(([c, cell]) => cell.owner !== null && cell.owner !== undefined);
+        for (let i = 0; i < eff.random_zone_flip && owned.length > 0; i++) {
+          const idx = Math.floor(Math.random() * owned.length);
+          const [coord] = owned.splice(idx, 1)[0];
+          newMap[coord] = { ...newMap[coord], owner: null };
+          logMsgs.push(`🗺️${coord}중립화`);
+        }
+        return {
+          ...state, players: ps, stocks: newStocks, map: newMap, signalDie: newSignal,
+          heat: Math.max(0, Math.min(10, newHeat)),
+          currentNews: news,
+          log: [...state.log, { round: state.meta.round, phase: 1, message: `📰 ${news.title} — ${logMsgs.join(' · ')}` }].slice(-150),
+        };
+      }
+      // Map reveal
+      let mapReveal = state.meta.mapReveal || 0;
+      if (eff.map_reveal) { mapReveal += eff.map_reveal; logMsgs.push(`👁지도${eff.map_reveal}R노출`); }
+      // Ghost move boost
+      let moveBonusNext = state.meta.moveBonusNext || 0;
+      if (eff.ghost_move) { moveBonusNext += eff.ghost_move; logMsgs.push(`🚶이동${eff.ghost_move > 0 ? '+' : ''}${eff.ghost_move}`); }
+
       return {
         ...state,
         currentNews: news,
         stocks: newStocks,
+        signalDie: newSignal,
         heat: Math.max(0, Math.min(10, newHeat)),
-        log: [...state.log, { round: state.meta.round, phase: 1, message: `📰 ${news.title} — ${JSON.stringify(news.effect).slice(0, 60)}` }].slice(-150),
+        players: ps,
+        meta: { ...state.meta, mapReveal, moveBonusNext },
+        log: [...state.log, { round: state.meta.round, phase: 1, message: `📰 ${news.title} — ${logMsgs.join(' · ') || '효과 없음'}` }].slice(-150),
       };
     }
 
     case 'PLAN_CARDS': {
-      // action.playerIdx, action.cards (array of card IDs — 1 or 2 for ghost; 1-3 for bloc)
+      // action.playerIdx, action.cards, action.halves (optional)
       const ps = state.players.map((p, i) => {
         if (i === action.playerIdx) {
-          return { ...p, plannedCards: action.cards };
+          return { ...p, plannedCards: action.cards, plannedHalves: action.halves || [] };
         }
         return p;
       });
@@ -1389,31 +1609,40 @@ function executeCards(state, playerIdx) {
   const p = s.players[playerIdx];
   if (!p.plannedCards || p.plannedCards.length === 0) return s;
 
-  // For simplicity: execute TOP of first card + BOTTOM of second card (Ghost) or Main of first (Bloc)
   if (p.role === 'ghost') {
-    const c1 = getCard(p.plannedCards[0]);
-    const c2 = p.plannedCards.length > 1 ? getCard(p.plannedCards[1]) : null;
-    if (c1?.top) s = applyEffect(s, playerIdx, c1.top, 'top', c1);
-    if (c2?.bot) s = applyEffect(s, playerIdx, c2.bot, 'bot', c2);
-    // Move cards to discard/lost
+    // plannedHalves[i] = 'top' | 'bot' — 각 카드에서 어느 반쪽을 쓸지
+    // 기본: 1번 카드=top, 2번 카드=bot. 사용자가 선택 가능
+    const halves = p.plannedHalves && p.plannedHalves.length === p.plannedCards.length
+      ? p.plannedHalves
+      : p.plannedCards.map((_, i) => i === 0 ? 'top' : 'bot');
+    // 실행: 선택 순서대로 (top 먼저 → bot 나중, 하지만 둘 다 top이면 0번→1번 순)
+    const order = [...p.plannedCards.keys()].sort((a, b) => {
+      const ha = halves[a], hb = halves[b];
+      if (ha === hb) return a - b;
+      return ha === 'top' ? -1 : 1;  // top 먼저
+    });
+    for (const idx of order) {
+      const c = getCard(p.plannedCards[idx]);
+      const half = halves[idx];
+      if (c && c[half]) s = applyEffect(s, playerIdx, c[half], half, c);
+    }
     const newHand = p.hand.filter(h => !p.plannedCards.includes(h));
     const newDiscard = [...p.discard];
     const newLost = [...p.lost];
-    p.plannedCards.forEach((cid, i) => {
+    p.plannedCards.forEach((cid) => {
       const c = getCard(cid);
-      if (c?.loss && i === 1) newLost.push(cid);
-      else if (c?.loss && i === 0) newLost.push(cid);
+      if (c?.loss) newLost.push(cid);
       else newDiscard.push(cid);
     });
-    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, lost: newLost } : pp);
+    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, lost: newLost, plannedHalves: [] } : pp);
   } else {
-    // Bloc
     const c1 = getCard(p.plannedCards[0]);
-    if (c1?.main) s = applyEffect(s, playerIdx, c1.main, 'main', c1);
-    // Move played cards to discard
+    // Bloc: 'main' 기본, 사용자가 side 선택 가능
+    const half = (p.plannedHalves && p.plannedHalves[0]) || 'main';
+    if (c1 && c1[half]) s = applyEffect(s, playerIdx, c1[half], half, c1);
     const newHand = p.hand.filter(h => !p.plannedCards.includes(h));
     const newDiscard = [...p.discard, ...p.plannedCards];
-    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard } : pp);
+    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, plannedHalves: [] } : pp);
   }
   return s;
 }
@@ -2045,6 +2274,7 @@ function GameScreen({ state, dispatch }) {
   const me = state.players[0];
   const isMyTurn = state.meta.phase === 2;  // Plan phase
   const [selectedCards, setSelectedCards] = useState([]);
+  const [selectedHalves, setSelectedHalves] = useState([]);  // 각 선택 카드의 'top'|'bot' (Ghost) / 'main'|'side' (Bloc)
 
   // Auto-advance phases
   useEffect(() => {
@@ -2052,9 +2282,11 @@ function GameScreen({ state, dispatch }) {
     const ph = state.meta.phase;
 
     // Instantaneous phase handling
+    // Phase 1 (시장) — 뉴스 1장 공개 + 봇 거래. 사용자 거래는 "거래 끝" 버튼으로 진행.
     if (ph === 1 && !state.currentNews) {
-      setTimeout(() => dispatch({ type: 'DRAW_NEWS' }), 600);
-      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 2 }), 1500);
+      setTimeout(() => dispatch({ type: 'DRAW_NEWS' }), 400);
+      setTimeout(() => dispatch({ type: 'BOT_MARKET' }), 1200);
+      // phase 2로의 자동 이동은 사용자가 시장 패널의 "거래 끝" 버튼을 눌러야 함
     }
 
     if (ph === 2) {
@@ -2104,25 +2336,21 @@ function GameScreen({ state, dispatch }) {
   const canPlan = me.kind === 'human' && state.meta.phase === 2;
   const needCards = me.role === 'ghost' ? 2 : 1;
 
-  // 선택한 카드의 총 이동 스텝 (Ghost: top의 move 또는 bot의 move / Bloc: main의 move) 합계
-  const computeMoveBudget = (cards) => {
+  // 선택한 카드+반쪽의 총 이동 스텝 합계
+  const computeMoveBudget = (cards, halves) => {
     let total = 0;
     cards.forEach((cid, idx) => {
       const c = getCard(cid);
       if (!c) return;
-      if (me.role === 'ghost') {
-        if (idx === 0 && c.top?.move) total += c.top.move;
-        if (idx === 1 && c.bot?.move) total += c.bot.move;
-      } else {
-        if (idx === 0 && c.main?.move) total += c.main.move;
-      }
+      const half = halves[idx] || (me.role === 'ghost' ? (idx === 0 ? 'top' : 'bot') : 'main');
+      if (c[half]?.move) total += c[half].move;
     });
     return total;
   };
 
   const confirmPlan = () => {
-    dispatch({ type: 'PLAN_CARDS', playerIdx: 0, cards: selectedCards });
-    const budget = computeMoveBudget(selectedCards);
+    dispatch({ type: 'PLAN_CARDS', playerIdx: 0, cards: selectedCards, halves: selectedHalves });
+    const budget = computeMoveBudget(selectedCards, selectedHalves);
     // 이동 스텝이 있으면 사용자에게 목표 클릭 요청
     if (budget > 0) {
       dispatch({ type: 'REQUEST_MOVE_TARGET', budget });
@@ -2130,6 +2358,7 @@ function GameScreen({ state, dispatch }) {
       setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 600);
     }
     setSelectedCards([]);
+    setSelectedHalves([]);
   };
 
   const skipMovePick = () => {
@@ -2172,10 +2401,33 @@ function GameScreen({ state, dispatch }) {
   const toggleCard = (cid) => {
     if (!canPlan) return;
     if (selectedCards.includes(cid)) {
+      const idx = selectedCards.indexOf(cid);
       setSelectedCards(selectedCards.filter(c => c !== cid));
+      setSelectedHalves(selectedHalves.filter((_, i) => i !== idx));
     } else if (selectedCards.length < needCards) {
-      setSelectedCards([...selectedCards, cid]);
+      const newSel = [...selectedCards, cid];
+      // 기본: 첫 카드=top, 두 번째 카드=bot (Ghost) / main (Bloc)
+      let defaultHalf;
+      if (me.role === 'ghost') {
+        defaultHalf = selectedCards.length === 0 ? 'top' : 'bot';
+      } else {
+        defaultHalf = 'main';
+      }
+      setSelectedCards(newSel);
+      setSelectedHalves([...selectedHalves, defaultHalf]);
     }
+  };
+
+  // 특정 선택 카드의 반쪽 토글
+  const cycleHalf = (idx) => {
+    if (!canPlan) return;
+    const next = [...selectedHalves];
+    if (me.role === 'ghost') {
+      next[idx] = next[idx] === 'top' ? 'bot' : 'top';
+    } else {
+      next[idx] = next[idx] === 'main' ? 'side' : 'main';
+    }
+    setSelectedHalves(next);
   };
 
   if (state.meta.gameOver) {
@@ -2373,28 +2625,53 @@ function GameScreen({ state, dispatch }) {
               <button className="pa-btn primary" style={{ float: 'right', marginTop: -4 }} onClick={confirmPlan}>✓ 확정</button>
             )}
           </h4>
+          {canPlan && selectedCards.length > 0 && (
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', padding: '0 4px 4px', fontFamily: 'Share Tech Mono, monospace' }}>
+              💡 선택한 카드의 <span style={{ color: 'var(--cyan)' }}>▲ 상단</span>/<span style={{ color: 'var(--yellow)' }}>▼ 하단</span> 영역을 클릭해 반쪽 전환 (카드 자체 클릭은 선택/해제)
+            </div>
+          )}
           <div className="hand">
             {me.hand.map((cid, idx) => {
               const c = getCard(cid);
               if (!c) return null;
               const sel = selectedCards.includes(cid);
+              const selIdx = sel ? selectedCards.indexOf(cid) : -1;
+              const chosen = selIdx >= 0 ? selectedHalves[selIdx] : null;
+              const topSel = chosen === 'top' || chosen === 'main';
+              const botSel = chosen === 'bot' || chosen === 'side';
               return (
-                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`} onClick={() => toggleCard(cid)}>
-                  <div className="ch">
-                    <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
-                    <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
-                      {c.loss && <span className="loss-tag">LOSS</span>}
-                    </span>
+                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`}>
+                  <div onClick={() => toggleCard(cid)} style={{ cursor: 'pointer' }}>
+                    <div className="ch">
+                      <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
+                      <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
+                        {c.loss && <span className="loss-tag">LOSS</span>}
+                      </span>
+                    </div>
+                    <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
+                    <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
                   </div>
-                  <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
-                  <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
-                  <div className="ceff">
-                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단</strong><br/>{effectSummary(c.top)}</>}
-                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인</strong><br/>{effectSummary(c.main)}</>}
+                  <div className="ceff"
+                    onClick={(e) => { e.stopPropagation(); if (sel) cycleHalf(selIdx); }}
+                    style={sel ? {
+                      border: topSel ? '2px solid var(--cyan)' : '2px dashed transparent',
+                      background: topSel ? 'rgba(60, 200, 220, 0.15)' : 'transparent',
+                      cursor: 'pointer',
+                      borderRadius: 3, padding: 2, marginTop: 2,
+                    } : {}}>
+                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단 {topSel && '✓'}</strong><br/>{effectSummary(c.top)}</>}
+                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인 {topSel && '✓'}</strong><br/>{effectSummary(c.main)}</>}
                   </div>
-                  <div className="cbot">
-                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단</strong><br/>{effectSummary(c.bot)}</>}
-                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드</strong><br/>{effectSummary(c.side)}</>}
+                  <div className="cbot"
+                    onClick={(e) => { e.stopPropagation(); if (sel) cycleHalf(selIdx); }}
+                    style={sel ? {
+                      border: botSel ? '2px solid var(--yellow)' : '2px dashed transparent',
+                      background: botSel ? 'rgba(255, 235, 60, 0.15)' : 'transparent',
+                      cursor: 'pointer',
+                      borderRadius: 3, padding: 2, marginTop: 2,
+                    } : {}}>
+                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단 {botSel && '✓'}</strong><br/>{effectSummary(c.bot)}</>}
+                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드 {botSel && '✓'}</strong><br/>{effectSummary(c.side)}</>}
                   </div>
                 </div>
               );
@@ -2408,6 +2685,16 @@ function GameScreen({ state, dispatch }) {
             <button className="pa-btn primary" onClick={() => dispatch({ type: 'SET_PHASE', phase: 1 })}>
               ▶ 시장 → 뉴스
             </button>
+          )}
+          {state.meta.phase === 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
+              <div style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: 12 }}>
+                📊 시장 개장 — 주가 박스에서 매수/매도
+              </div>
+              <button className="pa-btn primary" style={{ marginLeft: 'auto' }} onClick={() => dispatch({ type: 'SET_PHASE', phase: 2 })}>
+                ▶ 거래 끝 / 계획 단계로
+              </button>
+            </div>
           )}
           {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
             <button className="pa-btn" disabled>봇 계획 중...</button>
@@ -2531,14 +2818,30 @@ function GameScreen({ state, dispatch }) {
         </div>
 
         <div className="pool-box">
-          <h4>📊 주가</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
-            {Object.entries(state.stocks).map(([bl, v]) => (
-              <div key={bl}>
-                <span style={{ color: 'var(--text-dim)' }}>{bl}:</span> <span style={{ color: v > 10 ? 'var(--green)' : (v < 10 ? 'var(--magenta)' : 'var(--text)') }}>{v}</span>
-              </div>
-            ))}
+          <h4>📊 주가 · 보유 · 거래</h4>
+          <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
+            {Object.entries(state.stocks).map(([bl, v]) => {
+              const myQty = me.stocks[bl] || 0;
+              const isOwnBloc = me.role === 'bloc' && me.specific === bl;
+              const canTrade = state.meta.phase === 1;
+              const canBuy = canTrade && !isOwnBloc && (me.resources.credit || 0) >= v;
+              const canSell = canTrade && !isOwnBloc && myQty > 0;
+              return (
+                <div key={bl} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 0', borderBottom: '1px solid var(--bg3)' }}>
+                  <span style={{ color: 'var(--text-dim)', width: 60 }}>{bl}{isOwnBloc ? '★' : ''}:</span>
+                  <span style={{ color: v > 10 ? 'var(--green)' : (v < 10 ? 'var(--magenta)' : 'var(--text)'), width: 24, textAlign: 'right' }}>{v}</span>
+                  <span style={{ color: 'var(--text-dim)', width: 36 }}>보유 {myQty}</span>
+                  {canBuy && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매수 ₵{v}</button>}
+                  {canSell && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--magenta)', border: '1px solid var(--magenta)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매도 ₵{v}</button>}
+                </div>
+              );
+            })}
           </div>
+          {state.meta.phase === 1 && (
+            <div style={{ fontSize: 9, color: 'var(--cyan)', marginTop: 4 }}>
+              💡 시장 개장 중 — 매수(녹)/매도(자주) 클릭. ₵보유 {me.resources.credit || 0}
+            </div>
+          )}
         </div>
 
         {state.currentNews && (

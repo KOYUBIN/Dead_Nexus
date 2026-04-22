@@ -14,6 +14,27 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [0.5.6] — 카드 반쪽 선택 + 시장 거래 + 뉴스 강화 (2026-04-22)
+
+### Added
+- **카드 TOP/BOT 명시 선택 UI**: 2장 선택 후 각 카드의 상단/하단 영역을 클릭해 실제로 발동할 반쪽 전환. 시안=top, 노랑=bot 외곽선으로 시각 확인. 기본값은 "카드1=top, 카드2=bot" 유지.
+- **시장 페이즈 주식 거래 UI**: Phase 1에서 주가 박스에 매수(녹)/매도(자주) 버튼. 1주 단위, 자기 블록 주식은 거래 불가. 시장 단계는 "거래 끝" 버튼을 눌러야 계획 단계로 진행.
+- **봇 간이 AI 거래**: 봇은 저가 주식(≤7)을 매수, 고가(≥15) 보유분을 매도. 거래량이 2주 이상이면 주가도 ±1 변동.
+- **뉴스 카드 15장 → 35장 확장 + 효과 키 대폭 추가**:
+  - 시장 충격 6종 (all_stock·random_crash·stock_freeze 등)
+  - 블록별 호재/악재 8종 (target_stock 기반)
+  - 공권력/치안 5종 (heat·wanted_all)
+  - 자원/지원 6종 (all_credit·target_credit·all_weapons/parts/data)
+  - 정보/시그널 3종 (signal_lock·map_reveal)
+  - Ghost/Bloc 비대칭 4종 (all_rep·wanted_all)
+  - 이동/맵 3종 (ghost_move·random_zone_flip)
+
+### Changed
+- 카드 실행 순서: `top → bot` 보장 (같은 반쪽 선택 시 선택 순서)
+- NEXT_ROUND에서 `plannedHalves` 초기화
+
+---
+
 ## [0.5.5] — Ghost TL 재조정 + 승리 진척 패널 + 구역 첫 방문 드래프트 (2026-04-22)
 
 ### Fixed
