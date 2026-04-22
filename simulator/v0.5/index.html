@@ -603,6 +603,17 @@ const BLOC_CARDS = {
   FLASH_TRADE:     { name: 'FLASH TRADE',     bloc: 'AXIOM',   tl: 2, main: { cost:['M'], same_round_trade: 1 }, side: { gen: 'M' }, combo: {} },
   SURVEILLANCE:    { name: 'SURVEILLANCE',    bloc: 'AXIOM',   tl: 3, main: { cost:['M','V'], scout_all: 1 }, side: { gen: 'M' }, combo: {} },
   SYS_TAKEOVER:    { name: 'SYS TAKEOVER',    bloc: 'AXIOM',   tl: 4, main: { cost:['M','M','V','V'], algorithm: 1 }, side: { gen: 'V' }, combo: {} },
+  // === 공통 Bloc 추가 카드: 이동·투자·용병·합병 옵션 ===
+  BOARDROOM_MOVE:   { name: 'BOARDROOM MOVE',  bloc: 'any',     tl: 1, main: { move: 2 },                                  side: { gen: 'GRID' }, combo: {} },
+  MARKET_TRADE:     { name: 'MARKET TRADE',    bloc: 'any',     tl: 1, main: { stock_buy_any: 2 },                         side: { gen: 'M' },    combo: {} },
+  HIRE_GHOST:       { name: 'HIRE GHOST',      bloc: 'any',     tl: 2, main: { cost:['S'], hire_raid: 1 },                 side: { credit: 2 },   combo: {} },
+  ZONE_FORTIFY:     { name: 'ZONE FORTIFY',    bloc: 'any',     tl: 1, main: { cost:['I'], fortify_here: 1 },              side: { gen: 'I' },    combo: {} },
+  EXPAND_OP:        { name: 'EXPAND OP',       bloc: 'any',     tl: 1, main: { deploy_op: 2 },                             side: { gen: 'A' },    combo: {} },
+  INVEST_HEAVY:     { name: 'INVEST HEAVY',    bloc: 'any',     tl: 2, main: { cost:['GRID'], stock_buy_any: 4 },          side: { credit: 3 },   combo: {} },
+  COUNTER_INTEL:    { name: 'COUNTER INTEL',   bloc: 'any',     tl: 2, main: { cost:['M'], peek_news: 2, scout_all: 1 },   side: { gen: 'M' },    combo: {} },
+  CRISIS_RESPONSE:  { name: 'CRISIS RESPONSE', bloc: 'any',     tl: 1, main: { heat: -2, credit: 3 },                      side: { gen: 'A' },    combo: {} },
+  HOSTILE_BID:      { name: 'HOSTILE BID',     bloc: 'any',     tl: 3, main: { cost:['M','GRID'], crash_target: 3, credit: 4 }, side: { gen: 'M' }, combo: {} },
+  SECURITY_SWEEP:   { name: 'SECURITY SWEEP',  bloc: 'any',     tl: 2, main: { cost:['I'], ghost_wanted_all: 1, heat: 1 }, side: { gen: 'I' },    combo: {} },
   // CARBON
   POWER_SURGE:     { name: 'POWER SURGE',     bloc: 'CARBON',  tl: 1, main: { cost:['V'], zone_income_2x: 1 }, side: { gen: 'V' }, combo: {} },
   BLACKOUT_C:      { name: 'BLACKOUT',        bloc: 'CARBON',  tl: 2, main: { cost:['V','A'], zero_income: 1 }, side: { gen: 'A' }, combo: {} },
@@ -612,12 +623,15 @@ const BLOC_CARDS = {
   LEGACY_CONTRACT: { name: 'LEGACY CONTRACT', bloc: 'CARBON',  tl: 4, main: { cost:['V','V','A'], long_contract: 50 }, side: { gen: 'V' }, combo: {} },
 };
 
+// 모든 블록이 공통으로 받는 10장 (이동·투자·용병·요새·합병·정보 등)
+const BLOC_COMMON = ['BOARDROOM_MOVE','MARKET_TRADE','HIRE_GHOST','ZONE_FORTIFY','EXPAND_OP','INVEST_HEAVY','COUNTER_INTEL','CRISIS_RESPONSE','HOSTILE_BID','SECURITY_SWEEP'];
+
 const BLOC_DECKS = {
-  VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD'],
-  IRONWALL: ['FORWARD_STRIKE','ARMS_SUPPLY','FORWARD_BASE','MARTIAL_LAW','MERCENARY_SURGE','SCORCHED_EARTH'],
-  HELIX: ['FIELD_SPLICE','NEURAL_IFACE','AUGMENTATION','QUARANTINE','HARVEST','CLONE_DECOY'],
-  AXIOM: ['PREDICTION_E','FLASH_CRASH','ALGO_LOCK','FLASH_TRADE','SURVEILLANCE','SYS_TAKEOVER'],
-  CARBON: ['POWER_SURGE','BLACKOUT_C','PIPELINE_LOCK','INFRA_BOND','HOSTILE_DIV','LEGACY_CONTRACT'],
+  VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD', ...BLOC_COMMON],
+  IRONWALL: ['FORWARD_STRIKE','ARMS_SUPPLY','FORWARD_BASE','MARTIAL_LAW','MERCENARY_SURGE','SCORCHED_EARTH', ...BLOC_COMMON],
+  HELIX: ['FIELD_SPLICE','NEURAL_IFACE','AUGMENTATION','QUARANTINE','HARVEST','CLONE_DECOY', ...BLOC_COMMON],
+  AXIOM: ['PREDICTION_E','FLASH_CRASH','ALGO_LOCK','FLASH_TRADE','SURVEILLANCE','SYS_TAKEOVER', ...BLOC_COMMON],
+  CARBON: ['POWER_SURGE','BLACKOUT_C','PIPELINE_LOCK','INFRA_BOND','HOSTILE_DIV','LEGACY_CONTRACT', ...BLOC_COMMON],
 };
 
 // Curated news (15 for S00)
@@ -960,7 +974,7 @@ function reducer(state, action) {
     case 'DRAW_INITIAL': {
       // Draw hand size depending on role
       const ps = state.players.map(p => {
-        const handSize = p.role === 'bloc' ? 5 : 6;
+        const handSize = 6;
         const newHand = p.deck.slice(0, handSize);
         const newDeck = p.deck.slice(handSize);
         return { ...p, hand: newHand, deck: newDeck };
@@ -1278,7 +1292,7 @@ function reducer(state, action) {
       // === 손패 리필 + 개인 풀 감쇠 ===
       const refilledPlayers = state.players.map(p => {
         if (p.defeated) return p;
-        const handMax = p.role === 'bloc' ? 5 : 6;
+        const handMax = 6;
         const needed = Math.max(0, handMax - p.hand.length);
         let newDeck = [...p.deck];
         let newDiscard = [...p.discard];
@@ -1678,10 +1692,20 @@ function executeCards(state, playerIdx) {
     });
     s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, lost: newLost, plannedHalves: [] } : pp);
   } else {
-    const c1 = getCard(p.plannedCards[0]);
-    // Bloc: 'main' 기본, 사용자가 side 선택 가능
-    const half = (p.plannedHalves && p.plannedHalves[0]) || 'main';
-    if (c1 && c1[half]) s = applyEffect(s, playerIdx, c1[half], half, c1);
+    // Bloc: Ghost와 동일하게 2장 × main/side 조합
+    const halves = p.plannedHalves && p.plannedHalves.length === p.plannedCards.length
+      ? p.plannedHalves
+      : p.plannedCards.map((_, i) => i === 0 ? 'main' : 'side');
+    const order = [...p.plannedCards.keys()].sort((a, b) => {
+      const ha = halves[a], hb = halves[b];
+      if (ha === hb) return a - b;
+      return ha === 'main' ? -1 : 1;
+    });
+    for (const idx of order) {
+      const c = getCard(p.plannedCards[idx]);
+      const half = halves[idx];
+      if (c && c[half]) s = applyEffect(s, playerIdx, c[half], half, c);
+    }
     const newHand = p.hand.filter(h => !p.plannedCards.includes(h));
     const newDiscard = [...p.discard, ...p.plannedCards];
     s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, plannedHalves: [] } : pp);
@@ -2067,6 +2091,68 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `🚨 공권력 ${effect.heat > 0 ? '+' : ''}${effect.heat} → ${newHeat}`);
   }
 
+  // === Bloc 신규 효과들 ===
+  // 임의 블록 N주 자동 매수 (저가 순)
+  if (effect.stock_buy_any) {
+    const pNow = s.players[playerIdx];
+    const blocs = Object.entries(s.stocks).filter(([bl]) => !(pNow.role === 'bloc' && pNow.specific === bl));
+    blocs.sort((a, b) => a[1] - b[1]);
+    let bought = 0;
+    let newPlayerStocks = { ...pNow.stocks };
+    let remainingCredit = pNow.resources.credit || 0;
+    for (const [bl, price] of blocs) {
+      while (bought < effect.stock_buy_any && remainingCredit >= price) {
+        newPlayerStocks[bl] = (newPlayerStocks[bl] || 0) + 1;
+        remainingCredit -= price;
+        bought++;
+      }
+      if (bought >= effect.stock_buy_any) break;
+    }
+    if (bought > 0) {
+      const ps = [...s.players];
+      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: remainingCredit }, stocks: newPlayerStocks };
+      s = { ...s, players: ps };
+      s = logEntry(s, `📈 P${playerIdx} [${p.specific}] · ${bought}주 자동 매수 (잔액 ₵${remainingCredit})`);
+    } else {
+      s = logEntry(s, `📈 P${playerIdx} · 매수 실패 (₵ 부족)`);
+    }
+  }
+
+  // 현위치 요새화 — 방어력 +1 플래그 (단순화: 다음 레이드 threshold +1)
+  if (effect.fortify_here) {
+    const pNow = s.players[playerIdx];
+    const cellHere = s.map[pNow.position];
+    if (cellHere && cellHere.owner === playerIdx) {
+      const newMap = { ...s.map, [pNow.position]: { ...cellHere, fortified: (cellHere.fortified || 0) + 1 } };
+      s = { ...s, map: newMap };
+      s = logEntry(s, `🛡 P${playerIdx} [${p.specific}] · ${pNow.position} 요새화 (방어 +1)`);
+    } else {
+      s = logEntry(s, `🛡 P${playerIdx} · 요새화 실패 (자사 구역 아님)`);
+    }
+  }
+
+  // 용병 고용 — 랜덤 Bloc 구역(자사 제외) 주가 -3
+  if (effect.hire_raid) {
+    const targets = Object.entries(s.map).filter(([c, cell]) => cell.owner !== null && cell.owner !== undefined && cell.owner !== playerIdx && s.players[cell.owner]?.role === 'bloc');
+    if (targets.length > 0) {
+      const [coord, cell] = rand(targets);
+      const targetBloc = s.players[cell.owner].specific;
+      const newStocks = { ...s.stocks, [targetBloc]: Math.max(1, s.stocks[targetBloc] - 3) };
+      const newMap = { ...s.map, [coord]: { ...cell, owner: null } };
+      s = { ...s, stocks: newStocks, map: newMap };
+      s = logEntry(s, `🗡 P${playerIdx} [${p.specific}] · 용병 고용 → ${coord} ${targetBloc} 타격 (주가-3, 중립화)`);
+    } else {
+      s = logEntry(s, `🗡 P${playerIdx} · 용병 고용 실패 (타 Bloc 구역 없음)`);
+    }
+  }
+
+  // Ghost 전원 수배 +N
+  if (effect.ghost_wanted_all) {
+    const ps = s.players.map(pp => pp.role === 'ghost' && !pp.defeated ? { ...pp, wanted: (pp.wanted || 0) + effect.ghost_wanted_all } : pp);
+    s = { ...s, players: ps };
+    s = logEntry(s, `🚨 P${playerIdx} [${p.specific}] · Ghost 전원 수배 +${effect.ghost_wanted_all}`);
+  }
+
   return s;
 }
 
@@ -2102,6 +2188,10 @@ const CARD_NAMES_KR = {
   FLASH_TRADE: '플래시 트레이드', SURVEILLANCE: '감시', SYS_TAKEOVER: '시스템 탈취',
   POWER_SURGE: '전력 서지', BLACKOUT_C: '블랙아웃', PIPELINE_LOCK: '파이프라인 봉쇄',
   INFRA_BOND: '인프라 채권', HOSTILE_DIV: '적대 배당', LEGACY_CONTRACT: '레거시 계약',
+  BOARDROOM_MOVE: '이사회 이동', MARKET_TRADE: '시장 거래', HIRE_GHOST: '고스트 고용',
+  ZONE_FORTIFY: '구역 요새화', EXPAND_OP: '작전 확장', INVEST_HEAVY: '대규모 투자',
+  COUNTER_INTEL: '방첩', CRISIS_RESPONSE: '위기 대응', HOSTILE_BID: '적대적 매수',
+  SECURITY_SWEEP: '치안 소탕',
 };
 
 function cardDisplayName(card) {
@@ -2162,10 +2252,10 @@ function botPickCards(state, playerIdx) {
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, Math.min(2, p.hand.length)).map(x => x.cid);
   } else {
-    // Bloc picks 1 card
+    // Bloc: 2장 선택 (상위 2장)
     const scored = p.hand.map(cid => ({ cid, score: scoreBlocCard(state, playerIdx, cid) }));
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 1).map(x => x.cid);
+    return scored.slice(0, Math.min(2, p.hand.length)).map(x => x.cid);
   }
 }
 
@@ -2418,7 +2508,7 @@ function GameScreen({ state, dispatch }) {
   }, [state.meta.phase, state.meta.round]);
 
   const canPlan = me.kind === 'human' && state.meta.phase === 2;
-  const needCards = me.role === 'ghost' ? 2 : 1;
+  const needCards = 2; // Ghost·Bloc 모두 2장 플레이 (main/side 조합)
 
   // 선택한 카드+반쪽의 총 이동 스텝 합계
   const computeMoveBudget = (cards, halves) => {
@@ -2426,7 +2516,10 @@ function GameScreen({ state, dispatch }) {
     cards.forEach((cid, idx) => {
       const c = getCard(cid);
       if (!c) return;
-      const half = halves[idx] || (me.role === 'ghost' ? (idx === 0 ? 'top' : 'bot') : 'main');
+      const defaultHalf = me.role === 'ghost'
+        ? (idx === 0 ? 'top' : 'bot')
+        : (idx === 0 ? 'main' : 'side');
+      const half = halves[idx] || defaultHalf;
       if (c[half]?.move) total += c[half].move;
     });
     return total;
@@ -2490,12 +2583,12 @@ function GameScreen({ state, dispatch }) {
       setSelectedHalves(selectedHalves.filter((_, i) => i !== idx));
     } else if (selectedCards.length < needCards) {
       const newSel = [...selectedCards, cid];
-      // 기본: 첫 카드=top, 두 번째 카드=bot (Ghost) / main (Bloc)
+      // 기본: 첫 카드=top/main, 두 번째 카드=bot/side
       let defaultHalf;
       if (me.role === 'ghost') {
         defaultHalf = selectedCards.length === 0 ? 'top' : 'bot';
       } else {
-        defaultHalf = 'main';
+        defaultHalf = selectedCards.length === 0 ? 'main' : 'side';
       }
       setSelectedCards(newSel);
       setSelectedHalves([...selectedHalves, defaultHalf]);
@@ -3249,7 +3342,7 @@ function effectSummary(eff) {
 function buildInitial(role, specific) {
   const initial = initGame(role, specific);
   initial.players = initial.players.map(p => {
-    const handSize = p.role === 'bloc' ? 5 : 6;
+    const handSize = 6;
     return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
   });
   return initial;

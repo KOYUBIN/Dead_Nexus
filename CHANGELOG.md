@@ -14,6 +14,33 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [0.5.8] — Bloc 2카드 운용 + 공통 덱 10장 + 이동 카드 (2026-04-22)
+
+### Design Intent
+Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대응. Bloc이 한 턴에 카드 1장 + 자동 확장만 가능하던 구조에서 Ghost와 동등한 2장 플레이(main/side 조합) 체계로 확장.
+
+### Added
+- **모든 블록 공통 10장 카드 풀**:
+  - BOARDROOM_MOVE (이사회 이동): main = 이동 2칸
+  - MARKET_TRADE (시장 거래): main = 자동 2주 매수 (저가 우선)
+  - HIRE_GHOST (고스트 고용): main = 타 Bloc 구역 랜덤 1곳 타격 (주가-3, 중립화)
+  - ZONE_FORTIFY (구역 요새화): 현위치 방어 +1
+  - EXPAND_OP (작전 확장): 인접 2구역 자동 점령
+  - INVEST_HEAVY (대규모 투자): GRID 1 지불, 4주 자동 매수
+  - COUNTER_INTEL (방첩): 뉴스 2장 미리보기 + 지도 3R 노출
+  - CRISIS_RESPONSE (위기 대응): 공권력 -2, ₵+3
+  - HOSTILE_BID (적대적 매수): 지정 블록 주가 -3 + ₵+4
+  - SECURITY_SWEEP (치안 소탕): Ghost 전원 수배 +1
+- **Bloc도 2장 플레이 + main/side 반쪽 선택** (Ghost와 동일 UI)
+- **Bloc 손패 5장 → 6장**으로 증가
+
+### Changed
+- Bloc 덱: 고유 6장 + 공통 10장 = 16장
+- 봇 Bloc AI도 상위 2장 선택
+- Bloc 결과 확장: 일회성 요새화(fortified 플래그), 자동 매수, 용병 공격 등
+
+---
+
 ## [0.5.7] — 결정감 대수정: 레이드 확정 모달·승리 예측·이동 셀 미리보기 (2026-04-22)
 
 ### Design Intent
