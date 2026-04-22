@@ -643,23 +643,21 @@ const coordsAdj = (c) => {
   ].filter(Boolean);
 };
 
-// 자기 블록 주식은 통제권 표시일 뿐 개인 순자산에서 제외 (0x)
-// 타 블록 주식만 자산에 계산. 구역 점유 가치도 추가.
+// 자기 블록 주식: 통제권 표시, 자산 X
+// 자산 = Σ(타 블록 주식 × 주가) + 구역 수 × 5
+// 크레딧은 유동 자원이라 자본에 안 넣음 (자산 인플레 방지)
 const assetValue = (p, stocks, state) => {
   let total = 0;
   for (const [bl, qty] of Object.entries(p.stocks)) {
     const isOwn = p.role === 'bloc' && p.specific === bl;
-    if (isOwn) continue; // 자기 블록 주식 제외
+    if (isOwn) continue;
     const price = stocks[bl] ?? 10;
     total += qty * price;
   }
-  // 구역 점유 가치 (5 per zone)
   if (state?.map) {
     const zonesOwned = Object.values(state.map).filter(c => c.owner === p.id).length;
     total += zonesOwned * 5;
   }
-  // 크레딧도 소액 반영 (1:1)
-  total += (p.resources?.credit || 0);
   return Math.floor(total);
 };
 
@@ -822,22 +820,40 @@ function reducer(state, action) {
 
     case 'NEXT_ROUND': {
       const newRound = state.meta.round + 1;
-      // Check game over by round limit
       if (newRound > 8) {
         return checkVictoryByPoints(state);
       }
-      // Roll new signal die
       const nd = rollSignalDie();
-      // Decay attribute pool
+      // 속성 풀 감쇠
       const newPool = {};
       for (const [k, v] of Object.entries(state.pool)) newPool[k] = Math.floor(v / 2);
+      // === 손패 리필 (드로우 페이즈) ===
+      const refilledPlayers = state.players.map(p => {
+        if (p.defeated) return p;
+        const handMax = p.role === 'bloc' ? 5 : 6;
+        const needed = Math.max(0, handMax - p.hand.length);
+        let newDeck = [...p.deck];
+        let newDiscard = [...p.discard];
+        let newHand = [...p.hand];
+        for (let i = 0; i < needed; i++) {
+          if (newDeck.length === 0) {
+            // 덱 소진 → discard 셔플해서 덱으로 (LOST 카드는 제외)
+            if (newDiscard.length === 0) break;
+            newDeck = shuffle(newDiscard);
+            newDiscard = [];
+          }
+          newHand.push(newDeck.shift());
+        }
+        return { ...p, hand: newHand, deck: newDeck, discard: newDiscard };
+      });
       return {
         ...state,
         meta: { ...state.meta, round: newRound, phase: 0 },
         signalDie: nd,
         pool: newPool,
         currentNews: null,
-        log: [...state.log, { round: newRound, phase: 0, message: `🔄 라운드 ${newRound} 시작. 시그널: ${nd}` }].slice(-60),
+        players: refilledPlayers,
+        log: [...state.log, { round: newRound, phase: 0, message: `🔄 R${newRound} 시작 · 시그널 ${nd} · 손패 리필` }].slice(-60),
       };
     }
 
@@ -1154,13 +1170,15 @@ function checkInstantVictory(state) {
   // Check tutorial victory conditions
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
+    if (p.defeated) continue;
     if (p.role === 'bloc') {
-      if (assetValue(p, state.stocks, state) >= 25) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 25 도달` } };
+      const av = assetValue(p, state.stocks, state);
+      if (av >= 40) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥40)` } };
       }
     } else {
       if (p.resources.rep >= 10 && (state.meta.raidsThisGame[i] || 0) >= 1) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리: 렙 10 + 레이드 1` } };
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리: 렙 ${p.resources.rep} + 레이드 ${state.meta.raidsThisGame[i]}회` } };
       }
     }
   }
@@ -1270,7 +1288,7 @@ function SetupScreen({ onStart }) {
         </div>
         <div className={`role-card ${role === 'bloc' ? 'selected' : ''}`} onClick={() => { setRole('bloc'); setSpecific('VANTA'); }}>
           <h3>🏢 BLOC</h3>
-          <p>메가기업 운영. 자산 25 도달로 승리.</p>
+          <p>메가기업 운영. 자산 40 도달로 승리.</p>
         </div>
       </div>
 
