@@ -1,174 +1,187 @@
 # DEAD NEXUS Simulator v0.5
 
-**솔로 플레이 검증용 웹 시뮬레이터.** 1인 플레이 + AI 상대로 게임 밸런스·카드 상호작용 조기 검증.
+**솔로 플레이 검증용 웹 시뮬레이터.** 1인 플레이 + AI 상대로 게임 밸런스·카드 상호작용·결정감 조기 검증.
+
+현재 라인 버전: **v0.5.9** (2026-04-22)
 
 ## 스코프
 
-### Phase 1 (현재 릴리스: MVP)
+### Phase 1 (현재 릴리스: v0.5.9)
 - **맵**: 5×5 튜토리얼만
 - **역할**: Bloc / Ghost 교체 가능
-- **Ghost 클래스**: CIPHER · BLADE · BROKER (3/6)
-- **Bloc**: VANTA · IRONWALL · CARBON (3/5)
+- **Ghost 클래스**: CIPHER · BLADE · BROKER · RIGGER · DRIFTER · MOLE (6/6)
+- **Bloc**: VANTA · IRONWALL · HELIX · AXIOM · CARBON (5/5)
 - **시나리오**: S01 표준
 - **AI**: 스코어 기반 (평가함수 + 그리디)
 - **시스템**:
-  - 7페이즈 턴
-  - 공용 속성 풀 + 시그널 다이
-  - 카드 TOP/BOTTOM (Ghost) · Main/Sideways (Bloc)
-  - 전투 주사위 판정
-  - 구역 장악·수입
-  - 주식 시장·기본 거래
-  - 뉴스 카드 15 (큐레이션)
+  - 7페이즈 턴 (시장 거래·뉴스·계획·실행·수익·R&D·결산)
+  - **개인 속성 풀** (플레이어별 M/I/V/S/B/A/GRID — 공용에서 개인으로 분리)
+  - 카드 TOP/BOTTOM (Ghost) · Main/Sideways (Bloc), **사용자가 반쪽 조합 선택**
+  - **Ghost·Bloc 모두 2장 플레이**
+  - 주사위 판정 + **레이드 결정 모달** (확률/보상/위험 사전 공개)
+  - **Ghost vs Ghost PvP** (같은 구역 조우 시 결투)
+  - 구역 장악·수입 + **Bloc 패시브 확장** + **구역 첫 방문 3중 1 보너스 드래프트**
+  - 주식 시장 (Phase 1 매수/매도 + 봇 간이 AI)
+  - **뉴스 카드 35종** (블록별 호재/악재·시장 충격·공권력·자원·정보·PvP·이동)
   - 숨은 목표 (각자 2장, 달성 판정)
   - 싱글게임 업적 (선언 버튼)
-  - TL 1~2 테크트리
+  - **TL 역할별 공식**: Ghost = ⌊렙/3⌋ + 레이드×2 + ⌊풀/2⌋ · Bloc = 구역 + ⌊풀/2⌋
+  - **승리 진척 패널** (상시 표시, "한 턴 남음" 배지, 다음 행동 힌트)
+  - **위협 대시보드** (좌측 플레이어 카드 — 진척 바·위험 수준·타겟 표식)
+  - **봇이 P0 공격 시 알림 배너**
+  - **LocalStorage 플레이 히스토리** (최근 50판 기록 + 승률·최고 렙/자산/TL)
 
 ### Phase 2 (v0.6 예정)
 - 11×11 맵
-- 6 Ghost 클래스 전부 + 5 Bloc
 - 시나리오 S02~S06
-- M&A 시스템 전체
-- 뉴스 카드 50 전체
+- M&A 시스템 전체 (적대적 인수·방어 라운드·백기사 동맹)
+- 뉴스 카드 50+
 - 메타 업적 트래킹
-- Tech Level 3~5
+- Tech Level 3~5 전용 카드 해금
 
 ### Phase 3 (v0.7+)
 - 레거시 캠페인 연동
 - 메시 맵 (챕터 5+)
-- TTS 익스포트
+- TTS(Tabletop Simulator) 익스포트
 
 ## 아키텍처
 
 ### 기술 스택
-- **단일 HTML 파일** (React 18 + Babel Standalone CDN)
+- **단일 HTML 파일** (React 18 + Babel Standalone CDN) — 빌드 없이 file:// 에서도 실행
 - **상태 관리**: React useReducer (중앙화)
-- **UI**: CSS Grid + Flexbox, 다크 사이버펑크 테마
+- **UI**: CSS Grid + Flexbox, 다크 사이버펑크 테마 (Rajdhani + Share Tech Mono)
 - **AI**: 평가함수 기반 (각 행동의 가치 점수화 후 최고점 선택)
-- **영속성**: 없음 (브라우저 새로고침 시 초기화). v0.6에 LocalStorage
+- **영속성**: LocalStorage 플레이 히스토리 (v0.5.4+)
 
 ### 파일 구조
 ```
 simulator/v0.5/
 ├── README.md          # 이 문서
-├── index.html         # 엔트리 + 컴포넌트 마운트
-├── sim.jsx            # 메인 시뮬레이터 (React)
-├── data.js            # 카드·클래스·시나리오 데이터
-└── ai.js              # AI 평가함수
+└── index.html         # 엔트리 + 모든 로직 (≈150KB)
 ```
 
-*MVP에서는 단일 `index.html`에 전부 임베드. 커지면 분리.*
+*모든 코드·카드 데이터·UI가 단일 `index.html`에 임베드. v0.6에서 분리 예정.*
 
-### 상태 구조
+### 상태 구조 (요약)
 
 ```js
 {
   meta: {
-    scenario: 'S01',
-    mapSize: '5x5',
-    round: 1,
-    phase: 0,  // 0~6
-    currentPlayer: 0,
+    scenario: 'S01', mapSize: '5x5', round, phase,
+    raidsThisGame: { 0:0, 1:0, 2:0, 3:0 },
+    zonesVisited, visitedBonusZones,           // 첫 방문 트래킹
+    claimedAchievements,
+    pendingMoveTarget, awaitingMoveTarget,     // 클릭-이동 UI
+    pendingRaid,                               // 레이드 결정 모달
+    pendingGhostDuel,                          // PvP 결투 모달
+    zoneBonusPending,                          // 구역 보너스 3중 1 모달
+    lastTargetedBy,                            // "당신이 타겟됨" 배너
+    turnSnapshot, turnDiff,                    // 턴 전후 변화 요약
   },
   players: [
     {
-      id: 0,
-      kind: 'human' | 'bot',
-      role: 'ghost' | 'bloc',
-      specific: 'CIPHER' | 'VANTA' | ...,
-      hp: 6,
-      resources: { credit, data, influence, weapons, parts, rep },
-      stocks: { VANTA: 10, IRONWALL: 0, ... },
-      deck: [cardId],
-      hand: [cardId],
-      discard: [cardId],
-      lost: [cardId],
-      contracts: [],
-      objectives: [cardId, cardId],  // hidden
-      achievements: [cardId],  // claimed this game
-      wanted: 0,
+      kind: 'human' | 'bot', role: 'ghost' | 'bloc', specific,
+      hp, stats, resources, stocks,
+      deck, hand, discard, lost,
+      plannedCards, plannedHalves,             // 2장 + 반쪽 선택
+      pool,                                    // 개인 속성 풀 (v0.5.3+)
+      position, tl, tlProgress,
+      wanted, objectives, achievements, defeated,
     }
   ],
-  map: {
-    'A1': { zone: 'ruin', owner: null, token: 'quest' },
-    // ...
-  },
-  pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
-  stocks: { VANTA: 10, IRONWALL: 10, HELIX: 10, AXIOM: 10, CARBON: 10 },
-  heat: 5,
-  signalDie: 'MESH_UP',
-  newsDeck: [cardId],
-  log: [{ round, phase, message }],
+  map, stocks, heat, signalDie, currentNews, log,
 }
 ```
 
+### 결정 지점 (사용자 개입이 필요한 모달)
+
+| 순간 | 모달 | 핵심 정보 |
+|---|---|---|
+| 계획 단계 | 카드 반쪽 선택 | 각 카드 ▲/▼ 영역 클릭으로 TOP/BOT 전환 |
+| 계획 확정 후 | 클릭-이동 | BFS 반경 내 셀 + 결과 미리보기 태그 (`🗡️ 84%` / `🌟 보너스` / `🏠 내 땅` / `✓ 방문`) |
+| 이동 도착 | Ghost PvP 결투 | 개략 승률 + 보상/위험 · 선제 공격/회피 |
+| 이동 도착 | 레이드 결정 | d6+ATK ≥ 5 확률 바 + 즉시 승리 배지 |
+| 이동 도착 | 구역 첫 방문 | 3중 1 보너스 드래프트 (구역별 옵션 풀) |
+| 시장 페이즈 | 주식 매수/매도 | 블록별 큰 카드 + 보유 수 + 매수/매도 버튼 |
+
 ### AI 평가 함수
 
-각 가능한 행동에 **점수 0~100** 부여:
+각 가능한 행동에 **점수** 부여 후 최고점 선택. 동점 시 랜덤.
+- **Ghost**: 이동+공격 카드 우대, HP 낮으면 방어 카드 선호, 속성 보급 활성
+- **Bloc**: 자사 TL 이하 카드 우대, 자원 비용 지불 가능성 확인, 공격적 카드 점수 +
 
-- **공격/레이드** 점수:
-  - 성공 확률 × 보상 − 실패 비용
-  - HP 낮을수록 방어 선호
-- **이동** 점수:
-  - 목표 구역 가치 − 이동 비용 − 공권력 리스크
-- **카드 선택** 점수:
-  - 자원 효율 × 상황 적합도
-  - 속성 풀 상태 고려 (Surging 활용)
-- **주식 거래** 점수:
-  - 예상 주가 변동 × 수량 − 거래 비용
-
-최고 점수 행동 선택. 동점 시 랜덤.
-
-### 턴 흐름
+### 턴 흐름 (v0.5.9)
 
 ```
-Phase 1 시장   → 시그널 다이 자동 굴림 → 주가 조정 → 거래 UI
-Phase 2 뉴스   → 뉴스 카드 1장 공개 → 효과 자동 적용
-Phase 3 계획   → 인간: 카드 선택 UI / 봇: AI 결정
-Phase 4 실행   → 이니셔티브 순 처리 → 전투 자동 주사위
-Phase 5 수익   → 구역 수입 + 배당 자동 지급 → 풀 감쇠
-Phase 6 R&D    → TL 대기 카운터 감소
-Phase 7 결산   → 라운드 +1 → 승리 체크
+Phase 1 시장     → 시그널 다이 자동 → 뉴스 카드 공개 (35종) → 봇 자동 거래
+                   → 사용자 매수/매도 → "거래 끝" 클릭
+Phase 2 계획     → 인간: 2장 + 반쪽 선택 → 이동 있으면 클릭-이동
+                   봇: AI 자동 선택 (상위 2장)
+Phase 3 실행     → 이니셔티브 순 처리 → 이동 → 결투/레이드/보너스 모달 (P0)
+Phase 4 수익     → 구역 수입 + 배당 (개인 풀) + Bloc 패시브 확장 1구역
+Phase 5 R&D      → 역할별 tlProgress 축적 + 자동 TL 승급 판정
+Phase 6 결산     → 승리 체크 → 다음 라운드
 ```
 
-### 승리 조건
+### 승리 조건 (튜토리얼)
 
 | 역할 | 기본 | 튜토리얼 |
 |---|---|---|
-| Bloc | 자산 60 | **자산 40** |
+| Bloc | 자산 60 | **자산 40** (자기 블록 주식·크레딧 제외) |
 | Ghost | 렙 30 + 레이드 2 | **렙 10 + 레이드 1** |
 | NEXUS | 3R 연속 | **2R 연속** |
 | 라운드 상한 | 12 | **8** |
 
+자산 계산: `Σ(타 블록 주식 × 주가) + 구역 수 × 5` — 자기 블록 주식과 크레딧 제외로 "적극적 시장 참여"를 강제.
+
 ## 사용 방법
 
-1. `index.html`을 **Chrome/Safari**에서 열기 (file:// 로도 OK)
-2. 역할·클래스 선택
-3. 봇 2~3명 자동 설정
-4. 턴 진행: UI 버튼 클릭 or 카드 드래그
-5. 승리/패배 후 "다시 시작"
+1. `index.html`을 **Chrome/Safari**에서 열기 (file:// 도 OK)
+2. 역할(Ghost/Bloc) + 클래스/블록 선택 → `🎮 START SIMULATION`
+3. 봇 3명 자동 배정 (반대 역할 섞여서)
+4. 턴 진행:
+   - Phase 0 → `▶ 시장 → 뉴스` 클릭
+   - Phase 1 (시장) → 주식 거래 → `▶ 거래 끝` 클릭
+   - Phase 2 (계획) → 카드 2장 선택 + 반쪽 선택 → `✓ 확정`
+   - 이동 있으면 지도에서 노란 ◎ 셀 클릭
+   - 레이드/결투/보너스 모달 순서대로 결정
+5. 승리/패배 후 `🔄 다시` 또는 `📊 메뉴 & 히스토리`
 6. 발견한 밸런스 이슈는 **Notion 밸런스 이슈 DB**에 기록
+7. 게임 종료 로그는 `📋 로그 복사` 버튼으로 클립보드 복사 가능
 
 ## 검증 체크리스트 (플레이 후 확인)
 
 - [ ] 7페이즈 순서가 혼란 없이 흘러가는가
-- [ ] 속성 풀이 과하게 비거나 넘치지 않는가
+- [ ] 개인 속성 풀이 과하게 비거나 넘치지 않는가
 - [ ] 특정 클래스·블록이 압도적인가
 - [ ] 카드 조합이 무한 콤보로 이어지지 않는가
-- [ ] 승리 조건 달성까지 걸리는 라운드 수가 적절한가
+- [ ] 승리 조건 달성까지 걸리는 라운드 수가 적절한가 (목표: 5~7R)
 - [ ] AI가 의미 있는 행동을 하는가 (명백한 실수 없음)
 - [ ] 레이드·M&A·공권력 상승이 고르게 발생하는가
+- [ ] **승리 시 "이래서 이겼다"가 설명되는가** (결정감 v0.5.7+)
+- [ ] **Bloc 턴이 Ghost 턴만큼 결정 부담이 있는가** (v0.5.8+)
+- [ ] **상대 존재감이 느껴지는가** (위협 배지, 타겟 알림 — v0.5.9+)
 
 ## 버그 리포트
 
 시뮬레이터 사용 중 발견 이슈는 Notion **밸런스 이슈 DB**에 기록:
 - 제목: 간결
-- Type: 규칙 / 카드 / 역할 / 맵
+- Type: 규칙 / 카드 / 역할 / 맵 / UI
 - Priority: Critical / High / Medium / Low
 - Proposed Fix: 짧은 제안
-- First Seen: 시뮬레이터 v0.5 / 턴 X
+- First Seen: 시뮬레이터 v0.5.X / 턴 X
 
 ## 변경 이력
 
-| 버전 | 변경 |
+| 버전 | 변경 요약 |
 |---|---|
 | v0.5 | MVP 첫 릴리스. 5×5 튜토리얼. |
+| v0.5.1 | 교차참조 감사 & 파일 리네이밍 |
+| v0.5.2 | 한글화, 카드 매핑, 로그 강화 |
+| v0.5.3 | 클릭-이동 UI + 매턴 변화 요약 패널 + 개인 속성 풀 |
+| v0.5.4 | TL 시스템 복구 + R&D 페이즈 + LocalStorage 히스토리 |
+| v0.5.5 | Ghost TL 재조정 + 승리 진척 패널 + 구역 첫 방문 드래프트 |
+| v0.5.6 | 카드 TOP/BOT 선택 UI + 시장 거래 UI + 뉴스 35종 강화 |
+| v0.5.7 | 레이드 확정 모달 + 승리 예측 + 이동 셀 미리보기 |
+| v0.5.8 | Bloc 2카드 운용 + 공통 덱 10장 + Bloc 이동 카드 |
+| v0.5.9 | 위협 대시보드 + Ghost vs Ghost PvP + 타겟 알림 |
