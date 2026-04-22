@@ -1619,45 +1619,44 @@ function effectSummary(eff) {
 // ROOT
 // ============================================================================
 
+function buildInitial(role, specific) {
+  const initial = initGame(role, specific);
+  initial.players = initial.players.map(p => {
+    const handSize = p.role === 'bloc' ? 5 : 6;
+    return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
+  });
+  return initial;
+}
+
 function App() {
-  const [gameState, dispatch] = useReducer(reducer, null);
+  const [state, setState] = useState(null);
 
   const startGame = useCallback((role, specific) => {
-    const initial = initGame(role, specific);
-    // Draw initial hands
-    initial.players = initial.players.map(p => {
-      const handSize = p.role === 'bloc' ? 5 : 6;
-      return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
-    });
-    dispatch({ type: 'INIT_WITH', state: initial });
+    console.log('[SIM] Start game:', role, specific);
+    setState(buildInitial(role, specific));
   }, []);
 
-  // Custom "INIT_WITH" handler
-  const [, forceUpdate] = useState(0);
-  const realState = useRef(null);
-  if (realState.current === null && gameState) realState.current = gameState;
-
-  const realDispatch = useCallback((action) => {
-    if (action.type === 'INIT_WITH') {
-      realState.current = action.state;
-    } else if (action.type === 'RESET') {
-      const initial = initGame(action.humanRole, action.humanSpecific);
-      initial.players = initial.players.map(p => {
-        const handSize = p.role === 'bloc' ? 5 : 6;
-        return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
-      });
-      realState.current = initial;
-    } else if (realState.current) {
-      realState.current = reducer(realState.current, action);
+  const dispatch = useCallback((action) => {
+    if (action.type === 'RESET') {
+      setState(buildInitial(action.humanRole, action.humanSpecific));
+      return;
     }
-    forceUpdate(x => x + 1);
+    setState(prev => {
+      if (!prev) return prev;
+      try {
+        return reducer(prev, action);
+      } catch (e) {
+        console.error('[SIM] Reducer error:', e, 'Action:', action);
+        return prev;
+      }
+    });
   }, []);
 
-  if (!realState.current) {
+  if (!state) {
     return <SetupScreen onStart={startGame} />;
   }
 
-  return <GameScreen state={realState.current} dispatch={realDispatch} />;
+  return <GameScreen state={state} dispatch={dispatch} />;
 }
 
 // Mount
