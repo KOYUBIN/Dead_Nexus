@@ -908,6 +908,7 @@ function initGame(humanRole, humanSpecific) {
       turnDiff: null,            // 턴 후 계산된 변화 요약
       zoneBonusPending: null,    // { zone: 'home', coord: 'B3', options: [{...},{...},{...}] }
       visitedBonusZones: {},     // { playerIdx: { coord: true } } — 보너스를 이미 받은 구역
+      pendingRaid: null,         // { coord, bloc, zoneNm, atk, threshold } — 사용자 레이드 결정 대기
       peekNews: 0,               // 남은 peek 카운트 (cop/data 보너스)
       mapReveal: 0,              // 남은 전체 지도 노출 라운드
       moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
@@ -1089,6 +1090,47 @@ function reducer(state, action) {
 
     case 'SKIP_ZONE_BONUS':
       return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
+
+    case 'RESOLVE_RAID_YES': {
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      let s = { ...state };
+      const raidRoll = d6();
+      const raidTotal = raidRoll + pr.atk;
+      const me = s.players[0];
+      const cell = s.map[pr.coord];
+      if (raidTotal >= pr.threshold) {
+        const newStocks = { ...s.stocks, [pr.bloc]: Math.max(1, s.stocks[pr.bloc] - 3) };
+        const ps = [...s.players];
+        ps[0] = {
+          ...me,
+          resources: { ...me.resources, rep: (me.resources.rep || 0) + 3 },
+          wanted: (me.wanted || 0) + 1,
+        };
+        const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
+        s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
+        s.meta = { ...s.meta, pendingRaid: null, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 렙+3 (누적 ${ps[0].resources.rep})`);
+      } else {
+        const ps = [...s.players];
+        ps[0] = {
+          ...me,
+          hp: Math.max(0, me.hp - 3),
+          wanted: (me.wanted || 0) + 1,
+        };
+        s = { ...s, players: ps, heat: Math.min(10, s.heat + 1), meta: { ...s.meta, pendingRaid: null } };
+        s = logEntry(s, `⭐ 당신 ❌ 레이드 실패 [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}=${raidTotal} < ${pr.threshold} — HP-3, 수배+1`);
+      }
+      return s;
+    }
+
+    case 'RESOLVE_RAID_NO': {
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      let s = { ...state, meta: { ...state.meta, pendingRaid: null } };
+      s = logEntry(s, `⭐ 당신 🕶 레이드 포기 [${pr.coord} ${pr.zoneNm}] — 정찰만 하고 물러남`);
+      return s;
+    }
 
     case 'BUY_STOCK': {
       // action.playerIdx, action.bloc, action.qty
@@ -1650,6 +1692,27 @@ function executeCards(state, playerIdx) {
 // ============================================================================
 // 경로 탐색: 가장 가까운 Bloc 소유 구역 찾기 (BFS, Chebyshev 4-방향)
 // ============================================================================
+function bfsDistance(state, from, to) {
+  if (from === to) return 0;
+  const visited = new Set([from]);
+  let frontier = [from];
+  let dist = 0;
+  while (frontier.length > 0) {
+    dist++;
+    const next = [];
+    for (const c of frontier) {
+      for (const a of coordsAdj(c)) {
+        if (!state.map[a] || visited.has(a)) continue;
+        if (a === to) return dist;
+        visited.add(a);
+        next.push(a);
+      }
+    }
+    frontier = next;
+  }
+  return Infinity;
+}
+
 function findNearestBlocZone(state, fromCoord, excludeOwnBloc = null) {
   const visited = new Set([fromCoord]);
   let frontier = [fromCoord];
@@ -1774,7 +1837,9 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const pathStr = path.join(' → ');
       s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${pathStr} (${zName}, ${path.length - 1}칸 이동)`);
 
-      // === Ghost가 Bloc 소유 구역에 도착 → 자동 레이드 시도 (atk 없어도) ===
+      // === Ghost가 Bloc 소유 구역에 도착 → 레이드 시도 ===
+      // P0: 모달로 명시 선택 (Raid? / Stand down?) — 확률·보상·위험 공개
+      // 봇: 기존 자동 시도 유지
       const pAfterMove = s.players[playerIdx];
       if (pAfterMove.role === 'ghost') {
         const cellThere = s.map[pAfterMove.position];
@@ -1782,32 +1847,51 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const blocIdx = cellThere.owner;
           const bloc = s.players[blocIdx].specific;
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
-          const raidRoll = d6();
-          const raidTotal = raidRoll + pAfterMove.stats.atk;
           const threshold = 5;
-          if (raidTotal >= threshold) {
-            const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
-            const ps = [...s.players];
-            ps[playerIdx] = {
-              ...ps[playerIdx],
-              resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
-              wanted: ps[playerIdx].wanted + 1,
+          if (playerIdx === 0) {
+            // 결정 대기 상태 저장 — UI 모달이 떠서 확률·보상 보여주고 결정 받음
+            s = {
+              ...s,
+              meta: {
+                ...s.meta,
+                pendingRaid: {
+                  coord: pAfterMove.position,
+                  bloc,
+                  zoneNm,
+                  atk: pAfterMove.stats.atk,
+                  threshold,
+                },
+              },
             };
-            const newMap = { ...s.map, [pAfterMove.position]: { ...cellThere, owner: null } };
-            s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
-            s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-            s = logEntry(s, `${meTag}🗡️ 레이드 성공! 도착 시 자동 레이드 [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3 (누적 ${ps[playerIdx].resources.rep})`);
-            s.meta._didAutoRaid = true;
+            s.meta._didAutoRaid = true; // 보너스 드래프트 스킵 (레이드 결정 우선)
           } else {
-            const ps = [...s.players];
-            ps[playerIdx] = {
-              ...ps[playerIdx],
-              hp: Math.max(0, ps[playerIdx].hp - 3),
-              wanted: ps[playerIdx].wanted + 1,
-            };
-            s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-            s = logEntry(s, `${meTag}❌ 레이드 실패 (도착 시 자동) [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 현상수배+1`);
-            s.meta._didAutoRaid = true;
+            // 봇: 기존 자동 로직
+            const raidRoll = d6();
+            const raidTotal = raidRoll + pAfterMove.stats.atk;
+            if (raidTotal >= threshold) {
+              const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
+              const ps = [...s.players];
+              ps[playerIdx] = {
+                ...ps[playerIdx],
+                resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
+                wanted: ps[playerIdx].wanted + 1,
+              };
+              const newMap = { ...s.map, [pAfterMove.position]: { ...cellThere, owner: null } };
+              s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
+              s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
+              s.meta._didAutoRaid = true;
+            } else {
+              const ps = [...s.players];
+              ps[playerIdx] = {
+                ...ps[playerIdx],
+                hp: Math.max(0, ps[playerIdx].hp - 3),
+                wanted: ps[playerIdx].wanted + 1,
+              };
+              s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
+              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
+              s.meta._didAutoRaid = true;
+            }
           }
         }
       }
@@ -2485,6 +2569,65 @@ function GameScreen({ state, dispatch }) {
 
   return (
     <div className="game">
+      {/* === 레이드 결정 모달 === */}
+      {state.meta.pendingRaid && (() => {
+        const pr = state.meta.pendingRaid;
+        // d6 + atk ≥ threshold. 성공 케이스 수 = max(0, 6 - (threshold - atk - 1))
+        const succRolls = Math.max(0, Math.min(6, 6 - (pr.threshold - pr.atk - 1)));
+        const successPct = Math.round(succRolls / 6 * 100);
+        const newRep = (me.resources.rep || 0) + 3;
+        const wouldWin = newRep >= 10 && ((state.meta.raidsThisGame?.[0] || 0) + 1 >= 1);
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(255, 60, 140, 0.3)' }}>
+              <div style={{ color: 'var(--magenta)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🗡️ RAID DECISION</div>
+              <h2 style={{ margin: 0, color: 'var(--text)', letterSpacing: 1 }}>
+                {pr.coord} · {pr.zoneNm} · <span style={{ color: 'var(--magenta)' }}>{pr.bloc}</span> 거점
+              </h2>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 6, marginBottom: 16 }}>
+                Bloc 거점에 잠입했다. 칠 것인가, 관찰하고 물러날 것인가?
+              </div>
+              {/* 확률 바 */}
+              <div style={{ background: 'var(--bg1)', borderRadius: 4, padding: 12, marginBottom: 16, fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-dim)' }}>성공 조건</span>
+                  <span>d6 + ATK {pr.atk} ≥ <strong>{pr.threshold}</strong></span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: 'var(--text-dim)' }}>성공 확률</span>
+                  <strong style={{ color: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 20 }}>{successPct}%</strong>
+                </div>
+                <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{ height: '100%', width: `${successPct}%`, background: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)') }}/>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>주사위 {6 - succRolls + 1}~6 굴려야 성공</div>
+              </div>
+              {/* 보상 vs 위험 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                <div style={{ background: 'rgba(60, 220, 100, 0.1)', border: '1px solid var(--green)', borderRadius: 4, padding: 10 }}>
+                  <div style={{ color: 'var(--green)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✓ 성공 시</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>★ 렙 +3 → {newRep}<br/>📉 {pr.bloc} 주가 -3<br/>🗺️ 구역 중립화<br/>🚨 수배 +1</div>
+                  {wouldWin && <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>🏆 즉시 승리!</div>}
+                </div>
+                <div style={{ background: 'rgba(255, 60, 140, 0.1)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 10 }}>
+                  <div style={{ color: 'var(--magenta)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✗ 실패 시</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>❤️ HP -3 ({me.hp} → {me.hp - 3})<br/>🚨 수배 +1<br/>🔥 공권력 +1</div>
+                  {me.hp - 3 <= 0 && <div style={{ color: 'var(--magenta)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>⚰️ 전사</div>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="pa-btn primary" style={{ flex: 1, padding: '14px', fontSize: 13, background: 'var(--magenta)', color: 'var(--bg1)', border: '1px solid var(--magenta)' }} onClick={() => dispatch({ type: 'RESOLVE_RAID_YES' })}>
+                  🗡️ 레이드! ({successPct}% 성공)
+                </button>
+                <button className="pa-btn" style={{ flex: 1, padding: '14px', fontSize: 13 }} onClick={() => dispatch({ type: 'RESOLVE_RAID_NO' })}>
+                  🕶 물러나기 (피해 없음)
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* === 구역 첫 방문 보너스 모달 === */}
       {state.meta.zoneBonusPending && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
@@ -2586,11 +2729,34 @@ function GameScreen({ state, dispatch }) {
                   const hasMe = pm.some(p => p.id === 0);
                   const isReachable = reachableCells.has(cd);
                   const isTargeting = state.meta.awaitingMoveTarget;
+                  // 도착 시 예상 결과 계산
+                  let previewTag = null;
+                  let previewColor = 'var(--yellow)';
+                  if (isTargeting && isReachable) {
+                    const visitedByMe = state.meta.visitedBonusZones?.[0] || {};
+                    const ownerP = owner;
+                    if (ownerP && ownerP.role === 'bloc' && me.role === 'ghost') {
+                      // 레이드 가능
+                      const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
+                      const pct = Math.round(succRolls / 6 * 100);
+                      previewTag = `🗡️ ${pct}%`;
+                      previewColor = pct >= 66 ? 'var(--green)' : (pct >= 33 ? 'var(--yellow)' : 'var(--magenta)');
+                    } else if (ownerP && ownerP.id === 0) {
+                      previewTag = '🏠 내 땅';
+                      previewColor = 'var(--cyan)';
+                    } else if (!ownerP && !visitedByMe[cd] && ZONE_BONUS_POOL[cell.zone]) {
+                      previewTag = '🌟 보너스';
+                      previewColor = 'var(--yellow)';
+                    } else if (visitedByMe[cd]) {
+                      previewTag = '✓ 방문';
+                      previewColor = 'var(--text-dim)';
+                    }
+                  }
                   const style = {};
                   if (hasMe) { style.outline = '3px solid var(--cyan)'; style.zIndex = 2; }
                   if (isTargeting && isReachable) {
-                    style.outline = '2px dashed var(--yellow)';
-                    style.boxShadow = '0 0 12px rgba(255, 235, 60, 0.8)';
+                    style.outline = `2px dashed ${previewColor}`;
+                    style.boxShadow = `0 0 12px ${previewColor}`;
                     style.cursor = 'crosshair';
                     style.zIndex = 3;
                   }
@@ -2606,8 +2772,11 @@ function GameScreen({ state, dispatch }) {
                           {hasMe ? '★' + pm.map(p => p.specific.slice(0,2)).join(',') : pm.map(p => p.specific.slice(0,2)).join(',')}
                         </div>
                       )}
-                      {isTargeting && isReachable && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 18, color: 'var(--yellow)', textShadow: '0 0 4px #000', pointerEvents: 'none', fontWeight: 900 }}>◎</div>
+                      {isTargeting && isReachable && previewTag && (
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 10, color: previewColor, background: 'rgba(0,0,0,0.85)', padding: '2px 4px', borderRadius: 2, pointerEvents: 'none', fontWeight: 900, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{previewTag}</div>
+                      )}
+                      {isTargeting && isReachable && !previewTag && (
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 16, color: previewColor, textShadow: '0 0 4px #000', pointerEvents: 'none', fontWeight: 900 }}>◎</div>
                       )}
                     </div>
                   );
@@ -2778,12 +2947,27 @@ function GameScreen({ state, dispatch }) {
             const repPct = Math.min(100, Math.round(rep / repGoal * 100));
             const raidDone = raids >= raidGoal;
             const repDone = rep >= repGoal;
-            const nextTip = !repDone
-              ? (raids > 0 ? `Bloc 구역 ${Math.max(1, repGoal - rep) / 3} 번 더 레이드하면 렙 목표 달성` : '가까운 Bloc 구역으로 이동 → 도착 시 자동 레이드')
-              : (!raidDone ? '아직 레이드 0회 — Bloc 구역 하나라도 때려야 함' : '✅ 승리 조건 충족! 라운드 끝까지 생존');
+            // 가장 가까운 Bloc 구역 + 레이드 성공률 계산
+            const nearest = me.position ? findNearestBlocZone(state, me.position) : null;
+            const nearestDist = nearest ? (nearest === me.position ? 0 : bfsDistance(state, me.position, nearest)) : null;
+            const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
+            const raidPct = Math.round(succRolls / 6 * 100);
+            // 승리 예측: 현재 렙 + 성공 시 +3, 레이드 목표도 충족?
+            const repNeeded = Math.max(0, repGoal - rep);
+            const raidsNeeded = Math.max(0, raidGoal - raids);
+            const oneRaidWins = !repDone && repNeeded <= 3 && raidsNeeded <= 1;
+            const nextTip = repDone && raidDone
+              ? '✅ 승리 조건 충족! 라운드 끝까지 생존'
+              : oneRaidWins && nearest
+                ? `🎯 ${nearest} 레이드 성공 시 즉시 승리 (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`
+                : !nearest
+                  ? 'Bloc 구역이 맵에 없음 — 다음 Bloc 확장 기다리기'
+                  : `${nearest} 레이드 시 렙+3 → ${rep + 3}/${repGoal} (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`;
             return (
-              <div className="pool-box" style={{ borderColor: repDone && raidDone ? 'var(--green)' : 'var(--yellow)' }}>
-                <h4 style={{ color: repDone && raidDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Ghost 튜토리얼)</h4>
+              <div className="pool-box" style={{ borderColor: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)'), boxShadow: oneRaidWins ? '0 0 12px rgba(255,60,140,0.3)' : undefined }}>
+                <h4 style={{ color: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)') }}>
+                  🎯 승리 조건 (Ghost) {oneRaidWins && <span style={{ fontSize: 9, background: 'var(--magenta)', color: 'var(--bg1)', padding: '1px 5px', borderRadius: 2, marginLeft: 4 }}>한 턴 남음</span>}
+                </h4>
                 <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
                   <div style={{ marginBottom: 4 }}>
                     <span style={{ color: repDone ? 'var(--green)' : 'var(--text)' }}>{repDone ? '✓' : '•'} 렙 </span>
@@ -2796,7 +2980,7 @@ function GameScreen({ state, dispatch }) {
                     <span style={{ color: raidDone ? 'var(--green)' : 'var(--text)' }}>{raidDone ? '✓' : '•'} 누적 레이드 </span>
                     <strong style={{ color: raidDone ? 'var(--green)' : 'var(--magenta)' }}>{raids}/{raidGoal}</strong>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.4 }}>💡 {nextTip}</div>
+                  <div style={{ fontSize: 10, color: oneRaidWins ? 'var(--magenta)' : 'var(--text-dim)', marginTop: 6, lineHeight: 1.4, fontWeight: oneRaidWins ? 700 : 400 }}>💡 {nextTip}</div>
                 </div>
               </div>
             );
