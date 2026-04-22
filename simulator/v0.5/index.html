@@ -923,6 +923,11 @@ function initGame(humanRole, humanSpecific) {
       zoneBonusPending: null,    // { zone: 'home', coord: 'B3', options: [{...},{...},{...}] }
       visitedBonusZones: {},     // { playerIdx: { coord: true } } — 보너스를 이미 받은 구역
       pendingRaid: null,         // { coord, bloc, zoneNm, atk, threshold } — 사용자 레이드 결정 대기
+      chosenTargets: [],         // [ { cardIdx, half, targetPlayerIdx } ] — 사용자가 지정한 공격 타겟들
+      pendingTargetSelect: null, // { cardId, half, effectKey, candidates, cardIdx } — UI가 타겟 고를 수 있게
+      pendingGhostDuel: null,    // { coord, atkGhostIdx, defGhostIdx } — Ghost PvP 결정 대기
+      lastTargetedBy: null,      // { attacker, effectKey, detail } — 봇이 P0 타겟했을 때 표시
+      attackBonusOnce: 0,        // 일회성 공격 판정 보너스
       peekNews: 0,               // 남은 peek 카운트 (cop/data 보너스)
       mapReveal: 0,              // 남은 전체 지도 노출 라운드
       moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
@@ -1145,6 +1150,46 @@ function reducer(state, action) {
       s = logEntry(s, `⭐ 당신 🕶 레이드 포기 [${pr.coord} ${pr.zoneNm}] — 정찰만 하고 물러남`);
       return s;
     }
+
+    case 'RESOLVE_DUEL_YES': {
+      const d = state.meta.pendingGhostDuel;
+      if (!d) return state;
+      let s = { ...state };
+      const atkRoll = d6();
+      const defRoll = d6();
+      const atkTotal = d.atkStat + atkRoll;
+      const defTotal = d.defStat + defRoll;
+      const ps = [...s.players];
+      const atkP = ps[d.atkGhostIdx];
+      const defP = ps[d.defGhostIdx];
+      if (atkTotal >= defTotal + 2) {
+        const loot = Math.min(3, defP.resources.credit || 0);
+        ps[d.atkGhostIdx] = { ...atkP, resources: { ...atkP.resources, rep: (atkP.resources.rep || 0) + 2, credit: (atkP.resources.credit || 0) + loot } };
+        ps[d.defGhostIdx] = { ...defP, resources: { ...defP.resources, credit: Math.max(0, (defP.resources.credit || 0) - loot) }, hp: Math.max(0, defP.hp - 2) };
+        s = { ...s, players: ps, meta: { ...s.meta, pendingGhostDuel: null } };
+        s = logEntry(s, `⭐ 당신 ⚔️ Ghost 결투 승리! → P${d.defGhostIdx} ${defP.specific} | 🎲${atkTotal} vs ${defTotal} | 렙+2, ₵+${loot} 탈취`);
+      } else if (defTotal >= atkTotal + 2) {
+        ps[d.atkGhostIdx] = { ...atkP, hp: Math.max(0, atkP.hp - 2) };
+        s = { ...s, players: ps, meta: { ...s.meta, pendingGhostDuel: null } };
+        s = logEntry(s, `⭐ 당신 ⚔️ Ghost 결투 반격당함! P${d.defGhostIdx} ${defP.specific} | 🎲${atkTotal} vs ${defTotal} | HP-2`);
+      } else {
+        s = { ...s, meta: { ...s.meta, pendingGhostDuel: null } };
+        s = logEntry(s, `⭐ 당신 ⚔️ Ghost 결투 무승부 P${d.defGhostIdx} | 🎲${atkTotal} vs ${defTotal}`);
+      }
+      return s;
+    }
+
+    case 'RESOLVE_DUEL_NO': {
+      const d = state.meta.pendingGhostDuel;
+      if (!d) return state;
+      let s = { ...state, meta: { ...state.meta, pendingGhostDuel: null } };
+      const defP = s.players[d.defGhostIdx];
+      s = logEntry(s, `⭐ 당신 🕶 결투 회피 — P${d.defGhostIdx} ${defP.specific}와 잠시 공존`);
+      return s;
+    }
+
+    case 'DISMISS_TARGETED':
+      return { ...state, meta: { ...state.meta, lastTargetedBy: null } };
 
     case 'BUY_STOCK': {
       // action.playerIdx, action.bloc, action.qty
@@ -1861,11 +1906,62 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const pathStr = path.join(' → ');
       s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${pathStr} (${zName}, ${path.length - 1}칸 이동)`);
 
+      // === Ghost가 다른 Ghost와 같은 구역에 있음 → PvP 옵션 ===
+      const pAfterMove = s.players[playerIdx];
+      if (pAfterMove.role === 'ghost') {
+        const rivalGhosts = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.role === 'ghost' && pp.position === pAfterMove.position);
+        if (rivalGhosts.length > 0) {
+          const rival = rivalGhosts[0];
+          const rivalIdx = s.players.indexOf(rival);
+          if (playerIdx === 0) {
+            // 사용자에게 결투 선택 모달
+            s = {
+              ...s,
+              meta: {
+                ...s.meta,
+                pendingGhostDuel: {
+                  coord: pAfterMove.position,
+                  atkGhostIdx: 0,
+                  defGhostIdx: rivalIdx,
+                  atkStat: pAfterMove.stats.atk,
+                  defStat: rival.stats.def,
+                  zoneNm: ZONE_TYPES[s.map[pAfterMove.position].zone]?.name || '',
+                },
+              },
+            };
+            s.meta._didAutoRaid = true;
+          } else {
+            // 봇이 P0를 공격하는 경우: 자동 결투
+            const atkRoll = d6();
+            const defRoll = d6();
+            const atkTotal = pAfterMove.stats.atk + atkRoll;
+            const defTotal = rival.stats.def + defRoll;
+            const ps = [...s.players];
+            if (atkTotal >= defTotal + 2) {
+              // 공격자 승리: 렙+2, 방어자 자원 일부 탈취
+              const loot = Math.min(3, rival.resources.credit || 0);
+              ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2, credit: (ps[playerIdx].resources.credit || 0) + loot } };
+              ps[rivalIdx] = { ...ps[rivalIdx], resources: { ...ps[rivalIdx].resources, credit: Math.max(0, (ps[rivalIdx].resources.credit || 0) - loot) }, hp: Math.max(0, ps[rivalIdx].hp - 2) };
+              s = { ...s, players: ps };
+              s = logEntry(s, `⚔️ Ghost 결투: P${playerIdx} → P${rivalIdx} · ${atkTotal} vs ${defTotal} · 승리 · 렙+2, ₵+${loot}, 상대 HP-2`);
+              if (rivalIdx === 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'ghost_pvp', detail: `HP-2, ₵-${loot}` } };
+            } else if (defTotal >= atkTotal + 2) {
+              // 방어자 반격
+              ps[playerIdx] = { ...ps[playerIdx], hp: Math.max(0, ps[playerIdx].hp - 2) };
+              s = { ...s, players: ps };
+              s = logEntry(s, `⚔️ Ghost 결투: P${playerIdx} → P${rivalIdx} · ${atkTotal} vs ${defTotal} · 반격당함 · HP-2`);
+            } else {
+              s = logEntry(s, `⚔️ Ghost 결투: P${playerIdx} → P${rivalIdx} · ${atkTotal} vs ${defTotal} · 무승부 (양측 무사)`);
+            }
+            s.meta._didAutoRaid = true;
+          }
+        }
+      }
+
       // === Ghost가 Bloc 소유 구역에 도착 → 레이드 시도 ===
       // P0: 모달로 명시 선택 (Raid? / Stand down?) — 확률·보상·위험 공개
       // 봇: 기존 자동 시도 유지
-      const pAfterMove = s.players[playerIdx];
-      if (pAfterMove.role === 'ghost') {
+      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
         const cellThere = s.map[pAfterMove.position];
         if (cellThere?.owner !== null && cellThere?.owner !== undefined && s.players[cellThere.owner]?.role === 'bloc') {
           const blocIdx = cellThere.owner;
@@ -1905,6 +2001,9 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
               s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
               s.meta._didAutoRaid = true;
+              if (blocIdx === 0 && playerIdx !== 0) {
+                s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'raid', detail: `${pAfterMove.position} 잃음, ${bloc} 주가-3` } };
+              }
             } else {
               const ps = [...s.players];
               ps[playerIdx] = {
@@ -2137,10 +2236,14 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     if (targets.length > 0) {
       const [coord, cell] = rand(targets);
       const targetBloc = s.players[cell.owner].specific;
+      const targetIdx = cell.owner;
       const newStocks = { ...s.stocks, [targetBloc]: Math.max(1, s.stocks[targetBloc] - 3) };
       const newMap = { ...s.map, [coord]: { ...cell, owner: null } };
       s = { ...s, stocks: newStocks, map: newMap };
       s = logEntry(s, `🗡 P${playerIdx} [${p.specific}] · 용병 고용 → ${coord} ${targetBloc} 타격 (주가-3, 중립화)`);
+      if (targetIdx === 0 && playerIdx !== 0) {
+        s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'hire_raid', detail: `${coord} 잃음, 주가-3` } };
+      }
     } else {
       s = logEntry(s, `🗡 P${playerIdx} · 용병 고용 실패 (타 Bloc 구역 없음)`);
     }
@@ -2151,6 +2254,9 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const ps = s.players.map(pp => pp.role === 'ghost' && !pp.defeated ? { ...pp, wanted: (pp.wanted || 0) + effect.ghost_wanted_all } : pp);
     s = { ...s, players: ps };
     s = logEntry(s, `🚨 P${playerIdx} [${p.specific}] · Ghost 전원 수배 +${effect.ghost_wanted_all}`);
+    if (s.players[0].role === 'ghost' && playerIdx !== 0) {
+      s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'ghost_wanted_all', detail: `수배 +${effect.ghost_wanted_all}` } };
+    }
   }
 
   return s;
@@ -2721,6 +2827,73 @@ function GameScreen({ state, dispatch }) {
         );
       })()}
 
+      {/* === Ghost 결투 결정 모달 === */}
+      {state.meta.pendingGhostDuel && (() => {
+        const d = state.meta.pendingGhostDuel;
+        const rival = state.players[d.defGhostIdx];
+        // 승리 확률: atk+roll vs def+roll, 승리 = (atk-def) >= 2 after rolls
+        // 간단 추정: 확률 ~ 50% ± (atk-def)*10%
+        const diff = d.atkStat - d.defStat;
+        const winPct = Math.max(15, Math.min(85, 50 + diff * 10));
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--bg2)', border: '2px solid var(--cyan)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(60,200,220,0.3)' }}>
+              <div style={{ color: 'var(--cyan)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>⚔️ GHOST DUEL</div>
+              <h2 style={{ margin: 0, color: 'var(--text)' }}>
+                {d.coord} · {d.zoneNm} · <span style={{ color: 'var(--cyan)' }}>P{d.defGhostIdx} {rival.specific}</span>와 조우
+              </h2>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 6, marginBottom: 16 }}>
+                같은 구역에 라이벌 Ghost가 있다. 선제 타격할 것인가?
+              </div>
+              <div style={{ background: 'var(--bg1)', borderRadius: 4, padding: 12, marginBottom: 16, fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-dim)' }}>내 ATK {d.atkStat} vs 상대 DEF {d.defStat}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ color: 'var(--text-dim)' }}>개략 승률</span>
+                  <strong style={{ color: winPct >= 60 ? 'var(--green)' : (winPct >= 40 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 18 }}>~{winPct}%</strong>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>양측 d6 굴림. 2점 이상 차이로 승리·패배, 그 외 무승부</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                <div style={{ background: 'rgba(60,220,100,0.1)', border: '1px solid var(--green)', borderRadius: 4, padding: 10 }}>
+                  <div style={{ color: 'var(--green)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✓ 승리 시</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>★ 렙 +2<br/>₵ +최대 3 (상대 자산 탈취)<br/>🗡 상대 HP -2</div>
+                </div>
+                <div style={{ background: 'rgba(255,60,140,0.1)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 10 }}>
+                  <div style={{ color: 'var(--magenta)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✗ 반격당함</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>❤️ HP -2 ({me.hp} → {me.hp - 2})<br/>무승부 시: 피해 없음</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="pa-btn primary" style={{ flex: 1, padding: '14px', fontSize: 13, background: 'var(--cyan)', color: 'var(--bg1)', border: '1px solid var(--cyan)' }} onClick={() => dispatch({ type: 'RESOLVE_DUEL_YES' })}>
+                  ⚔️ 선제 공격 (~{winPct}%)
+                </button>
+                <button className="pa-btn" style={{ flex: 1, padding: '14px', fontSize: 13 }} onClick={() => dispatch({ type: 'RESOLVE_DUEL_NO' })}>
+                  🕶 회피 (공존)
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* === 타겟 당함 알림 === */}
+      {state.meta.lastTargetedBy && (() => {
+        const t = state.meta.lastTargetedBy;
+        const atk = state.players[t.attacker];
+        return (
+          <div style={{ position: 'fixed', top: 70, right: 16, zIndex: 150, background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 12, maxWidth: 280, boxShadow: '0 0 20px rgba(255,60,140,0.4)', animation: 'pulse 1.5s infinite' }}>
+            <div style={{ color: 'var(--magenta)', fontSize: 10, letterSpacing: 2, fontWeight: 700 }}>🔴 INCOMING</div>
+            <div style={{ fontSize: 12, marginTop: 3, fontWeight: 700 }}>
+              P{t.attacker} {atk?.specific}가 당신을 공격
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>{t.detail}</div>
+            <button style={{ marginTop: 6, fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'DISMISS_TARGETED' })}>확인</button>
+          </div>
+        );
+      })()}
+
       {/* === 구역 첫 방문 보너스 모달 === */}
       {state.meta.zoneBonusPending && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
@@ -2765,38 +2938,79 @@ function GameScreen({ state, dispatch }) {
       {/* LEFT — Players */}
       <div className="left-panel">
         <h4 style={{ margin: '4px 0 8px', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2 }}>PLAYERS</h4>
-        {state.players.map((p, i) => (
-          <div key={i} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`}>
-            <div className="pheader">
-              <div className="pname">{p.kind === 'human' ? '👤' : '🤖'} P{i} · {p.specific}</div>
-              <div className="php">HP {p.hp}/{p.maxHp}</div>
-            </div>
-            <div className="pstats">
-              <div>₵ <strong>{p.resources.credit}</strong></div>
-              <div>📡 <strong>{p.resources.data}</strong></div>
-              <div>🎙 <strong>{p.resources.influence}</strong></div>
-              <div>🔩 <strong>{p.resources.weapons}</strong></div>
-              <div>⚙️ <strong>{p.resources.parts}</strong></div>
-              {p.role === 'ghost'
-                ? <div>★ <strong>{p.resources.rep}</strong></div>
-                : <div>📊 <strong>{assetValue(p, state.stocks, state)}</strong></div>
-              }
-            </div>
-            {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
-            <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
-              <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>
-                ({p.tlProgress || 0}/{tlCostFor(p.tl)})
-              </span>
-              <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
-            </div>
-            {i === 0 && (
-              <div style={{ fontSize: 10, marginTop: 6, color: 'var(--yellow)' }}>
-                🎯 {p.objectives.map(o => o.name).join(' · ')}
+        {state.players.map((p, i) => {
+          // 위협도 계산: 승리 조건 대비 남은 수치
+          let progressPct = 0, needLabel = '', threatLevel = 'safe', threatBadge = null;
+          if (p.role === 'ghost') {
+            const rep = p.resources.rep || 0;
+            const raids = state.meta.raidsThisGame?.[i] || 0;
+            const repDone = rep >= 10;
+            const raidDone = raids >= 1;
+            progressPct = Math.min(100, Math.round(rep / 10 * 100));
+            const repLeft = Math.max(0, 10 - rep);
+            if (repDone && raidDone) { threatLevel = 'won'; threatBadge = '🏆'; }
+            else if (repLeft <= 3 && (raidDone || raids === 0)) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
+            else if (repLeft <= 6) { threatLevel = 'warn'; }
+            needLabel = `렙 ${rep}/10 · 레이드 ${raids}/1`;
+          } else {
+            const asset = assetValue(p, state.stocks, state);
+            progressPct = Math.min(100, Math.round(asset / 40 * 100));
+            const assetLeft = Math.max(0, 40 - asset);
+            if (asset >= 40) { threatLevel = 'won'; threatBadge = '🏆'; }
+            else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
+            else if (assetLeft <= 15) { threatLevel = 'warn'; }
+            needLabel = `자산 ${asset}/40`;
+          }
+          const borderColor = threatLevel === 'danger' ? 'var(--magenta)' : threatLevel === 'won' ? 'var(--green)' : threatLevel === 'warn' ? 'var(--yellow)' : undefined;
+          const extraStyle = borderColor ? { borderColor, boxShadow: threatLevel === 'danger' ? '0 0 8px rgba(255,60,140,0.4)' : undefined } : {};
+          // "내가 타겟됨" 하이라이트 (P0 아닌데 최근에 나를 공격한 경우)
+          const targetedMe = state.meta.lastTargetedBy?.attacker === i;
+          return (
+            <div key={i} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`} style={{ ...extraStyle, opacity: p.defeated ? 0.4 : 1 }}>
+              <div className="pheader">
+                <div className="pname">
+                  {p.kind === 'human' ? '👤' : '🤖'} P{i} · {p.specific}
+                  {targetedMe && <span style={{ marginLeft: 4, color: 'var(--magenta)', fontSize: 10 }}>🔴</span>}
+                </div>
+                <div className="php">HP {p.hp}/{p.maxHp}</div>
               </div>
-            )}
-          </div>
-        ))}
+              {/* 위협 배지 + 진척 바 */}
+              {i !== 0 && threatBadge && (
+                <div style={{ fontSize: 10, color: threatLevel === 'danger' ? 'var(--magenta)' : 'var(--yellow)', fontWeight: 700, marginTop: 2, letterSpacing: 1 }}>{threatBadge}</div>
+              )}
+              <div style={{ marginTop: 3, marginBottom: 3 }}>
+                <div style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'Share Tech Mono, monospace' }}>{needLabel}</div>
+                <div style={{ height: 3, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
+                  <div style={{ height: '100%', width: `${progressPct}%`, background: threatLevel === 'won' ? 'var(--green)' : threatLevel === 'danger' ? 'var(--magenta)' : (threatLevel === 'warn' ? 'var(--yellow)' : 'var(--cyan)') }}/>
+                </div>
+              </div>
+              <div className="pstats">
+                <div>₵ <strong>{p.resources.credit}</strong></div>
+                <div>📡 <strong>{p.resources.data}</strong></div>
+                <div>🎙 <strong>{p.resources.influence}</strong></div>
+                <div>🔩 <strong>{p.resources.weapons}</strong></div>
+                <div>⚙️ <strong>{p.resources.parts}</strong></div>
+                {p.role === 'ghost'
+                  ? <div>★ <strong>{p.resources.rep}</strong></div>
+                  : <div>📊 <strong>{assetValue(p, state.stocks, state)}</strong></div>
+                }
+              </div>
+              {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
+              <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>
+                  ({p.tlProgress || 0}/{tlCostFor(p.tl)})
+                </span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
+              </div>
+              {i === 0 && (
+                <div style={{ fontSize: 10, marginTop: 6, color: 'var(--yellow)' }}>
+                  🎯 {p.objectives.map(o => o.name).join(' · ')}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* CENTER — Map + Hand */}
