@@ -793,6 +793,11 @@ function initGame(humanRole, humanSpecific) {
       nexusHolder: null,
       nexusStreak: 0,
       claimedAchievements: {},  // id => playerIdx
+      pendingMoveTarget: null,   // 사용자가 지도에서 찍은 목표 좌표 (Ghost/Bloc 둘 다)
+      awaitingMoveTarget: false, // true면 UI에서 목표 클릭 대기
+      moveBudget: 0,             // 이번 턴 총 이동 칸 수 (BFS 반경)
+      turnSnapshot: null,        // 턴 전 상태 스냅샷 (변화 요약용)
+      turnDiff: null,            // 턴 후 계산된 변화 요약
     },
     players,
     map,
@@ -825,6 +830,7 @@ function buildPlayer(id, kind, role, specific) {
     tlProgress: 0,
     position: null,
     zonesOwned: [],
+    pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },  // 개인 속성 풀
     objectives: [],
     achievements: [],
     defeated: false,
@@ -852,6 +858,52 @@ function reducer(state, action) {
     case 'SET_PHASE':
       return { ...state, meta: { ...state.meta, phase: action.phase } };
 
+    case 'REQUEST_MOVE_TARGET':
+      return { ...state, meta: { ...state.meta, awaitingMoveTarget: true, moveBudget: action.budget || 0, pendingMoveTarget: null } };
+
+    case 'SET_MOVE_TARGET':
+      return { ...state, meta: { ...state.meta, awaitingMoveTarget: false, pendingMoveTarget: action.coord } };
+
+    case 'CLEAR_MOVE_TARGET':
+      return { ...state, meta: { ...state.meta, awaitingMoveTarget: false, pendingMoveTarget: null, moveBudget: 0 } };
+
+    case 'SNAPSHOT_TURN': {
+      const snap = state.players.map(p => ({
+        hp: p.hp,
+        rep: p.resources.rep,
+        credit: p.resources.credit,
+        asset: assetValue(p, state.stocks, state),
+        pool: { ...(p.pool || {}) },
+        position: p.position,
+        zones: Object.values(state.map).filter(c => c.owner === p.id).length,
+        wanted: p.wanted || 0,
+      }));
+      return { ...state, meta: { ...state.meta, turnSnapshot: snap, turnDiff: null } };
+    }
+
+    case 'COMPUTE_TURN_DIFF': {
+      const prev = state.meta.turnSnapshot;
+      if (!prev) return state;
+      const diff = state.players.map((p, i) => {
+        const o = prev[i] || {};
+        return {
+          specific: p.specific,
+          hp: p.hp - (o.hp ?? p.hp),
+          rep: p.resources.rep - (o.rep ?? 0),
+          credit: p.resources.credit - (o.credit ?? 0),
+          asset: assetValue(p, state.stocks, state) - (o.asset ?? 0),
+          zones: Object.values(state.map).filter(c => c.owner === i).length - (o.zones ?? 0),
+          wanted: (p.wanted||0) - (o.wanted ?? 0),
+          moved: p.position !== o.position ? `${o.position}→${p.position}` : null,
+          poolDelta: ['M','I','V','S','B','A','GRID'].map(k => {
+            const d = (p.pool?.[k] || 0) - (o.pool?.[k] || 0);
+            return d !== 0 ? `${k}${d>0?'+':''}${d}` : null;
+          }).filter(Boolean).join(' '),
+        };
+      });
+      return { ...state, meta: { ...state.meta, turnDiff: diff } };
+    }
+
     case 'NEXT_PHASE': {
       const cur = state.meta.phase;
       if (cur < 6) return { ...state, meta: { ...state.meta, phase: cur + 1 } };
@@ -865,10 +917,7 @@ function reducer(state, action) {
         return checkVictoryByPoints(state);
       }
       const nd = rollSignalDie();
-      // 속성 풀 감쇠 (Math.ceil로 1→1 유지하여 시드 보존)
-      const newPool = {};
-      for (const [k, v] of Object.entries(state.pool)) newPool[k] = Math.ceil(v / 2);
-      // === 손패 리필 (드로우 페이즈) ===
+      // === 손패 리필 + 개인 풀 감쇠 ===
       const refilledPlayers = state.players.map(p => {
         if (p.defeated) return p;
         const handMax = p.role === 'bloc' ? 5 : 6;
@@ -878,14 +927,16 @@ function reducer(state, action) {
         let newHand = [...p.hand];
         for (let i = 0; i < needed; i++) {
           if (newDeck.length === 0) {
-            // 덱 소진 → discard 셔플해서 덱으로 (LOST 카드는 제외)
             if (newDiscard.length === 0) break;
             newDeck = shuffle(newDiscard);
             newDiscard = [];
           }
           newHand.push(newDeck.shift());
         }
-        return { ...p, hand: newHand, deck: newDeck, discard: newDiscard };
+        // 개인 풀 감쇠 (ceil로 시드 보존)
+        const decayedPool = {};
+        for (const [k, v] of Object.entries(p.pool || {})) decayedPool[k] = Math.ceil(v / 2);
+        return { ...p, hand: newHand, deck: newDeck, discard: newDiscard, pool: decayedPool };
       });
       // === 이전 라운드 요약 ===
       const summaryLines = [];
@@ -902,19 +953,25 @@ function reducer(state, action) {
           summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/40 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
-      summaryLines.push({ round: state.meta.round, phase: 6, message: `  속성 풀: ${Object.entries(state.pool).filter(([,v]) => v>0).map(([k,v])=>`${k}${v}`).join(' ')||'(비어있음)'} · 공권력 ${state.heat}/10` });
+      // 개인 풀 요약
+      state.players.forEach((p, i) => {
+        if (p.defeated) return;
+        const poolStr = Object.entries(p.pool || {}).filter(([,v]) => v>0).map(([k,v])=>`${k}${v}`).join(' ') || '(비어있음)';
+        const marker = i === 0 ? '⭐ ' : '   ';
+        summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} 풀: ${poolStr}` });
+      });
+      summaryLines.push({ round: state.meta.round, phase: 6, message: `  공권력 ${state.heat}/10` });
 
       const finalLog = [
         ...state.log,
         ...summaryLines,
-        { round: newRound, phase: 0, message: `🔄 R${newRound} 시작 · 시그널 ${nd} · 손패 리필` }
-      ].slice(-100);
+        { round: newRound, phase: 0, message: `🔄 R${newRound} 시작 · 시그널 ${nd} · 손패 리필 · 개인 풀 절반 감쇠` }
+      ].slice(-150);
 
       return {
         ...state,
         meta: { ...state.meta, round: newRound, phase: 0 },
         signalDie: nd,
-        pool: newPool,
         currentNews: null,
         players: refilledPlayers,
         log: finalLog,
@@ -969,40 +1026,36 @@ function reducer(state, action) {
 
     case 'COLLECT_INCOME': {
       let s = { ...state };
-      const newPool = { ...s.pool };
       const newLog = [...s.log];
 
       const newPlayers = state.players.map((p, pi) => {
         if (p.defeated) return p;
         const res = { ...p.resources };
-        // 맵에서 직접 소유 구역 찾기 (p.zonesOwned 쓰지 않음 — 안 업데이트되던 버그)
+        const pool = { ...(p.pool || { M:0,I:0,V:0,S:0,B:0,A:0,GRID:0 }) };
         const ownedCoords = Object.entries(state.map).filter(([c, cell]) => cell.owner === pi).map(([c]) => c);
 
         ownedCoords.forEach(c => {
           const cell = state.map[c];
           const z = ZONE_TYPES[cell.zone];
           if (!z) return;
-          // 자원 수입
           for (const [k, v] of Object.entries(z.income)) {
             if (k === 'all_attr') {
-              ['M','I','V','S','B','A'].forEach(a => { newPool[a] = (newPool[a] || 0) + v; });
+              ['M','I','V','S','B','A'].forEach(a => { pool[a] = (pool[a] || 0) + v; });
             } else if (k === 'random_attr') {
               const rnd = rand(['M','I','V','S','B','A']);
-              newPool[rnd] = (newPool[rnd] || 0) + v;
+              pool[rnd] = (pool[rnd] || 0) + v;
             } else if (k === 'operative') {
-              // operative는 구역 탈환·OPERATIVE 프록시 — 지금은 크레딧으로 환산
               res.credit = (res.credit || 0) + v;
             } else {
               res[k] = (res[k] || 0) + v;
             }
           }
-          // 구역 생산 속성도 풀에 추가 (docs/10 명시)
+          // 구역 생산 속성 — 개인 풀에 적립
           if (z.attr && z.attr !== 'all' && z.attr !== null) {
-            newPool[z.attr] = (newPool[z.attr] || 0) + 1;
+            pool[z.attr] = (pool[z.attr] || 0) + 1;
           }
         });
 
-        // 배당 (10% 이상 지분)
         for (const [bl, qty] of Object.entries(p.stocks)) {
           if (qty >= 2) {
             const divPerShare = state.stocks[bl] >= 15 ? 1 : 0.5;
@@ -1012,14 +1065,14 @@ function reducer(state, action) {
         }
 
         if (ownedCoords.length > 0) {
-          const summary = `💰 P${pi} [${p.specific}] · ${ownedCoords.length}구역 수입: ₵${res.credit - (p.resources.credit || 0)}`;
+          const summary = `💰 P${pi} [${p.specific}] · ${ownedCoords.length}구역 수입 ₵+${res.credit - (p.resources.credit || 0)}`;
           newLog.push({ round: s.meta.round, phase: s.meta.phase, message: summary });
         }
 
-        return { ...p, resources: res };
+        return { ...p, resources: res, pool };
       });
 
-      s = { ...s, players: newPlayers, pool: newPool, log: newLog.slice(-150) };
+      s = { ...s, players: newPlayers, log: newLog.slice(-150) };
 
       // === Bloc 패시브 확장: 라운드마다 자사 소유 구역 인접한 빈 buildable 구역 1개 자동 점령 ===
       const expandedMap = { ...s.map };
@@ -1192,27 +1245,33 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   let s = state;
   const p = s.players[playerIdx];
 
-  // 속성 생성
+  // 속성 생성 (개인 풀)
   if (effect.gen) {
-    const newPool = { ...s.pool };
+    const curPool = { ...(s.players[playerIdx].pool || {}) };
     const keys = effect.gen.split(':');
-    keys.forEach(k => { newPool[k] = (newPool[k] || 0) + 1; });
-    s = { ...s, pool: newPool };
-    s = logEntry(s, `P${playerIdx} [${p.specific}] · 속성 ${keys.join('+')} 생성 → 풀에 적립`);
+    keys.forEach(k => { curPool[k] = (curPool[k] || 0) + 1; });
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], pool: curPool };
+    s = { ...s, players: ps };
+    const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+    s = logEntry(s, `${meTag}P${playerIdx} [${p.specific}] · 속성 ${keys.join('+')} +1 (개인 풀)`);
   }
 
-  // 비용 지불
+  // 비용 지불 (개인 풀에서)
   if (effect.cost) {
-    const newPool = { ...s.pool };
+    const curPool = { ...(s.players[playerIdx].pool || {}) };
     for (const a of effect.cost) {
-      if (newPool[a] > 0) newPool[a]--;
-      else if (newPool.GRID > 0) newPool.GRID--;
+      if (curPool[a] > 0) curPool[a]--;
+      else if (curPool.GRID > 0) curPool.GRID--;
       else {
-        s = logEntry(s, `P${playerIdx} · ${a} 부족 — 효과 불발 (${cardDisplayName(card)})`);
+        const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+        s = logEntry(s, `${meTag}P${playerIdx} · ${a} 부족 — 효과 불발 (${cardDisplayName(card) || card?.name})`);
         return s;
       }
     }
-    s = { ...s, pool: newPool };
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], pool: curPool };
+    s = { ...s, players: ps };
   }
 
   // === 이동 (스마트 라우팅, effect.move 스텝만큼 반복) ===
@@ -1221,10 +1280,15 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const startPos = s.players[playerIdx].position;
     let current = startPos;
     const path = [startPos];
+    // 사람(P0)이 지도에서 직접 목표를 찍었으면 그 좌표를 우선 사용
+    const userGoal = (playerIdx === 0 && s.meta.pendingMoveTarget) ? s.meta.pendingMoveTarget : null;
     for (let step = 0; step < effect.move; step++) {
       let nextStep = null;
       const pNow = s.players[playerIdx];
-      if (pNow.role === 'ghost') {
+      if (userGoal) {
+        if (current === userGoal) break;
+        nextStep = stepToward(s, current, userGoal);
+      } else if (pNow.role === 'ghost') {
         const goal = findNearestBlocZone(s, current);
         if (goal && goal !== current) {
           nextStep = stepToward(s, current, goal);
@@ -1256,6 +1320,48 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const zName = ZONE_TYPES[s.map[finalPos].zone]?.name || finalPos;
       const pathStr = path.join(' → ');
       s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${pathStr} (${zName}, ${path.length - 1}칸 이동)`);
+
+      // === Ghost가 Bloc 소유 구역에 도착 → 자동 레이드 시도 (atk 없어도) ===
+      const pAfterMove = s.players[playerIdx];
+      if (pAfterMove.role === 'ghost') {
+        const cellThere = s.map[pAfterMove.position];
+        if (cellThere?.owner !== null && cellThere?.owner !== undefined && s.players[cellThere.owner]?.role === 'bloc') {
+          const blocIdx = cellThere.owner;
+          const bloc = s.players[blocIdx].specific;
+          const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
+          const raidRoll = d6();
+          const raidTotal = raidRoll + pAfterMove.stats.atk;
+          const threshold = 5;
+          if (raidTotal >= threshold) {
+            const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
+            const ps = [...s.players];
+            ps[playerIdx] = {
+              ...ps[playerIdx],
+              resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
+              wanted: ps[playerIdx].wanted + 1,
+            };
+            const newMap = { ...s.map, [pAfterMove.position]: { ...cellThere, owner: null } };
+            s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
+            s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+            s = logEntry(s, `${meTag}🗡️ 레이드 성공! 도착 시 자동 레이드 [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3 (누적 ${ps[playerIdx].resources.rep})`);
+            s.meta._didAutoRaid = true;
+          } else {
+            const ps = [...s.players];
+            ps[playerIdx] = {
+              ...ps[playerIdx],
+              hp: Math.max(0, ps[playerIdx].hp - 3),
+              wanted: ps[playerIdx].wanted + 1,
+            };
+            s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
+            s = logEntry(s, `${meTag}❌ 레이드 실패 (도착 시 자동) [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 현상수배+1`);
+            s.meta._didAutoRaid = true;
+          }
+        }
+      }
+    }
+    // 사용자 지정 목표를 사용했으면 소비 (1회 사용)
+    if (playerIdx === 0 && s.meta.pendingMoveTarget) {
+      s = { ...s, meta: { ...s.meta, pendingMoveTarget: null, moveBudget: 0 } };
     }
   }
 
@@ -1642,8 +1748,10 @@ function GameScreen({ state, dispatch }) {
 
     if (ph === 3) {
       setTimeout(() => {
-        dispatch({ type: 'EXECUTE_TURN' });
-        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 4 }), 1200);
+        dispatch({ type: 'SNAPSHOT_TURN' });
+        setTimeout(() => dispatch({ type: 'EXECUTE_TURN' }), 150);
+        setTimeout(() => dispatch({ type: 'COMPUTE_TURN_DIFF' }), 900);
+        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 4 }), 1400);
       }, 500);
     }
 
@@ -1674,12 +1782,70 @@ function GameScreen({ state, dispatch }) {
   const canPlan = me.kind === 'human' && state.meta.phase === 2;
   const needCards = me.role === 'ghost' ? 2 : 1;
 
+  // 선택한 카드의 총 이동 스텝 (Ghost: top의 move 또는 bot의 move / Bloc: main의 move) 합계
+  const computeMoveBudget = (cards) => {
+    let total = 0;
+    cards.forEach((cid, idx) => {
+      const c = getCard(cid);
+      if (!c) return;
+      if (me.role === 'ghost') {
+        if (idx === 0 && c.top?.move) total += c.top.move;
+        if (idx === 1 && c.bot?.move) total += c.bot.move;
+      } else {
+        if (idx === 0 && c.main?.move) total += c.main.move;
+      }
+    });
+    return total;
+  };
+
   const confirmPlan = () => {
     dispatch({ type: 'PLAN_CARDS', playerIdx: 0, cards: selectedCards });
+    const budget = computeMoveBudget(selectedCards);
+    // 이동 스텝이 있으면 사용자에게 목표 클릭 요청
+    if (budget > 0) {
+      dispatch({ type: 'REQUEST_MOVE_TARGET', budget });
+    } else {
+      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 600);
+    }
     setSelectedCards([]);
-    // Wait for bots to plan, then advance
-    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 800);
   };
+
+  const skipMovePick = () => {
+    // 목표 찍지 않고 AI 라우팅에 위임
+    dispatch({ type: 'CLEAR_MOVE_TARGET' });
+    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 300);
+  };
+
+  const pickMoveTarget = (coord) => {
+    if (!state.meta.awaitingMoveTarget) return;
+    dispatch({ type: 'SET_MOVE_TARGET', coord });
+    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 300);
+  };
+
+  // 내 현재 위치에서 moveBudget 만큼 BFS로 도달 가능한 셀 집합
+  const reachableCells = useMemo(() => {
+    if (!state.meta.awaitingMoveTarget) return new Set();
+    const from = me.position;
+    if (!from) return new Set();
+    const budget = state.meta.moveBudget || 0;
+    const visited = new Map();
+    visited.set(from, 0);
+    let frontier = [from];
+    for (let step = 0; step < budget; step++) {
+      const next = [];
+      frontier.forEach(c => {
+        coordsAdj(c).forEach(a => {
+          if (!visited.has(a) && state.map[a]) {
+            visited.set(a, step + 1);
+            next.push(a);
+          }
+        });
+      });
+      frontier = next;
+    }
+    visited.delete(from);  // 제자리는 선택 불가
+    return new Set(visited.keys());
+  }, [state.meta.awaitingMoveTarget, state.meta.moveBudget, me.position]);
 
   const toggleCard = (cid) => {
     if (!canPlan) return;
@@ -1693,9 +1859,9 @@ function GameScreen({ state, dispatch }) {
   if (state.meta.gameOver) {
     const iWon = state.meta.winner === 0;
     return (
-      <div className={`gameover ${iWon ? 'win' : 'lose'}`}>
+      <div className={`gameover ${iWon ? 'win' : 'lose'}`} style={{ overflow: 'auto', height: '100vh', padding: 24 }}>
         <h1>{iWon ? 'VICTORY' : 'DEFEAT'}</h1>
-        <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20 }}>
+        <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
         <div className="stats-grid">
@@ -1712,9 +1878,30 @@ function GameScreen({ state, dispatch }) {
             <div className="val">{me.achievements.length}</div>
           </div>
         </div>
-        <button className="start-btn" style={{ maxWidth: 300 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
-          🔄 AGAIN
-        </button>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, marginBottom: 20 }}>
+          <button className="start-btn" style={{ maxWidth: 200 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
+            🔄 다시
+          </button>
+          <button className="start-btn" style={{ maxWidth: 200, background: 'var(--bg3)', color: 'var(--cyan)', border: '1px solid var(--cyan)' }} onClick={() => copyLogToClipboard(state.log)}>
+            📋 로그 복사
+          </button>
+        </div>
+
+        {/* 게임 끝나도 로그 표시 */}
+        <div style={{ maxWidth: 900, margin: '20px auto', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, padding: 16, textAlign: 'left' }}>
+          <h3 style={{ margin: 0, fontFamily: 'Share Tech Mono, monospace', color: 'var(--cyan)', letterSpacing: 2, fontSize: 14, marginBottom: 12 }}>📜 전체 플레이 로그 ({state.log.length}개 엔트리)</h3>
+          <div style={{ maxHeight: '50vh', overflowY: 'auto', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
+            {state.log.map((l, i) => {
+              const cls = classifyLog(l.message);
+              return (
+                <div key={i} className={`log-entry ${cls}`} style={{ padding: '3px 6px', marginBottom: 2, lineHeight: 1.4 }}>
+                  <span className="tag" style={{ fontSize: 9, color: 'var(--text-dim)', marginRight: 6 }}>R{l.round}·P{l.phase + 1}</span>
+                  {l.message}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1786,8 +1973,20 @@ function GameScreen({ state, dispatch }) {
                   const owner = cell.owner !== null && cell.owner !== undefined ? state.players[cell.owner] : null;
                   const pm = state.players.filter(p => p.position === cd && !p.defeated);
                   const hasMe = pm.some(p => p.id === 0);
+                  const isReachable = reachableCells.has(cd);
+                  const isTargeting = state.meta.awaitingMoveTarget;
+                  const style = {};
+                  if (hasMe) { style.outline = '3px solid var(--cyan)'; style.zIndex = 2; }
+                  if (isTargeting && isReachable) {
+                    style.outline = '2px dashed var(--yellow)';
+                    style.boxShadow = '0 0 12px rgba(255, 235, 60, 0.8)';
+                    style.cursor = 'crosshair';
+                    style.zIndex = 3;
+                  }
+                  if (isTargeting && !isReachable && !hasMe) { style.opacity = 0.4; }
+                  const onClick = (isTargeting && isReachable) ? () => pickMoveTarget(cd) : undefined;
                   return (
-                    <div key={cd} className={`map-cell ${z.color}`} style={hasMe ? { outline: '3px solid var(--cyan)', zIndex: 2 } : {}}>
+                    <div key={cd} className={`map-cell ${z.color}`} style={style} onClick={onClick}>
                       <div className="coord">{cd}</div>
                       <div className="ztype">{z.name}</div>
                       {owner && <div className="owner" style={{ background: owner.role === 'bloc' ? BLOC_SETUP[owner.specific]?.color || '#555' : '#333' }}>P{cell.owner}</div>}
@@ -1795,6 +1994,9 @@ function GameScreen({ state, dispatch }) {
                         <div className="pm" style={hasMe ? { background: 'var(--cyan)', color: '#000', fontWeight: 900, boxShadow: '0 0 6px var(--cyan)' } : {}}>
                           {hasMe ? '★' + pm.map(p => p.specific.slice(0,2)).join(',') : pm.map(p => p.specific.slice(0,2)).join(',')}
                         </div>
+                      )}
+                      {isTargeting && isReachable && (
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 18, color: 'var(--yellow)', textShadow: '0 0 4px #000', pointerEvents: 'none', fontWeight: 900 }}>◎</div>
                       )}
                     </div>
                   );
@@ -1848,8 +2050,16 @@ function GameScreen({ state, dispatch }) {
               ▶ 시장 → 뉴스
             </button>
           )}
-          {state.meta.phase === 2 && !canPlan && (
+          {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
             <button className="pa-btn" disabled>봇 계획 중...</button>
+          )}
+          {state.meta.awaitingMoveTarget && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ color: 'var(--yellow)', fontWeight: 700, fontSize: 13 }}>
+                🎯 이동 목표 선택 — 노란 ◎ 칸 클릭 (최대 {state.meta.moveBudget}칸)
+              </div>
+              <button className="pa-btn" onClick={skipMovePick}>AI에게 맡기기</button>
+            </div>
           )}
         </div>
       </div>
@@ -1857,13 +2067,42 @@ function GameScreen({ state, dispatch }) {
       {/* RIGHT — Pool, News, Log */}
       <div className="right-panel">
         <div className="pool-box">
-          <h4>🎨 속성 풀</h4>
+          <h4>🎨 내 속성 풀 (개인)</h4>
           <div className="attr-row">
-            {Object.entries(state.pool).map(([k, v]) => (
-              <span key={k} className={`attr-tag a-${k}`}>◈{k}<span style={{ marginLeft: 2 }}>{v}</span></span>
+            {Object.entries(me.pool || {}).map(([k, v]) => (
+              <span key={k} className={`attr-tag a-${k}`} style={{ opacity: v > 0 ? 1 : 0.3 }}>◈{k}<span style={{ marginLeft: 2 }}>{v}</span></span>
             ))}
           </div>
+          <div style={{ fontSize: 9, color: 'var(--text-dim)', marginTop: 4 }}>
+            ※ 개인 풀 — 매 라운드 ½ 감쇠 (올림)
+          </div>
         </div>
+
+        {/* === 이번 턴 변화 요약 === */}
+        {state.meta.turnDiff && (
+          <div className="pool-box" style={{ borderColor: 'var(--yellow)' }}>
+            <h4 style={{ color: 'var(--yellow)' }}>⚡ 이번 턴 변화</h4>
+            {state.meta.turnDiff.map((d, i) => {
+              const p = state.players[i];
+              if (!p || p.defeated) return null;
+              const marker = i === 0 ? '⭐ ' : '   ';
+              const parts = [];
+              if (d.hp !== 0) parts.push(<span key="hp" style={{ color: d.hp > 0 ? 'var(--green)' : 'var(--magenta)' }}>HP{d.hp>0?'+':''}{d.hp}</span>);
+              if (d.rep !== 0) parts.push(<span key="rep" style={{ color: d.rep > 0 ? 'var(--green)' : 'var(--magenta)' }}>렙{d.rep>0?'+':''}{d.rep}</span>);
+              if (d.credit !== 0) parts.push(<span key="cr" style={{ color: d.credit > 0 ? 'var(--green)' : 'var(--magenta)' }}>₵{d.credit>0?'+':''}{d.credit}</span>);
+              if (d.asset !== 0) parts.push(<span key="as" style={{ color: d.asset > 0 ? 'var(--green)' : 'var(--magenta)' }}>자산{d.asset>0?'+':''}{d.asset}</span>);
+              if (d.zones !== 0) parts.push(<span key="zo" style={{ color: d.zones > 0 ? 'var(--green)' : 'var(--magenta)' }}>구역{d.zones>0?'+':''}{d.zones}</span>);
+              if (d.wanted !== 0) parts.push(<span key="wt" style={{ color: 'var(--magenta)' }}>수배{d.wanted>0?'+':''}{d.wanted}</span>);
+              if (d.moved) parts.push(<span key="mv" style={{ color: 'var(--cyan)' }}>🚶{d.moved}</span>);
+              if (d.poolDelta) parts.push(<span key="pl" style={{ color: 'var(--text-dim)' }}>[{d.poolDelta}]</span>);
+              return (
+                <div key={i} style={{ fontSize: 10, fontFamily: 'Share Tech Mono, monospace', marginBottom: 2, lineHeight: 1.4 }}>
+                  {marker}P{i} {p.specific.slice(0,4)} · {parts.length > 0 ? parts.reduce((acc, el, j) => j === 0 ? [el] : [...acc, ' · ', el], []) : <span style={{ color: 'var(--text-dim)' }}>변화 없음</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className={`pool-box signal-box sig-${state.signalDie}`}>
           📡 {state.signalDie}
