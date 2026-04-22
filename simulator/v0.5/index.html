@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEAD NEXUS · Simulator v0.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; margin: 0; background: #06060e; color: #e0e0e0; }
+  body { font-family: 'Rajdhani', system-ui, sans-serif; overflow-x: hidden; }
+  .mono { font-family: 'Share Tech Mono', monospace; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---- Color palette ---- */
+  :root {
+    --bg: #06060e;
+    --bg2: #0f0f1a;
+    --bg3: #1a1a2e;
+    --border: #2d2d4f;
+    --cyan: #00e5ff;
+    --magenta: #ff003c;
+    --yellow: #ffd700;
+    --green: #b4ff39;
+    --orange: #ff9100;
+    --purple: #a855f7;
+    --text-dim: #9090a8;
+    --text: #e0e0e0;
+  }
+
+  /* ---- Boot screen ---- */
+  #boot {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #06060e; color: var(--cyan);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 4px; font-size: 14px;
+  }
+
+  /* ---- Setup screen ---- */
+  .setup {
+    max-width: 900px; margin: 0 auto; padding: 40px 24px;
+  }
+  .setup h1 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 42px; letter-spacing: 4px; margin: 0;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .setup .tagline {
+    color: var(--text-dim); letter-spacing: 3px; font-size: 11px;
+    margin-top: 4px; font-family: 'Share Tech Mono', monospace;
+  }
+  .setup h2 {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--cyan); letter-spacing: 2px;
+    font-size: 16px; margin: 32px 0 12px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+  .role-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .role-card {
+    border: 2px solid var(--border); background: var(--bg2);
+    padding: 16px; border-radius: 4px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .role-card.selected { border-color: var(--cyan); background: var(--bg3); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
+  .role-card h3 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; color: var(--cyan); }
+  .role-card p { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+  .class-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .class-card {
+    border: 1.5px solid var(--border); background: var(--bg2);
+    padding: 12px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+  }
+  .class-card.selected { border-color: var(--cyan); background: rgba(0,229,255,0.1); }
+  .class-card .cname { font-family: 'Share Tech Mono', monospace; font-size: 14px; font-weight: 700; color: var(--cyan); letter-spacing: 1px; }
+  .class-card .cstats { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+
+  .start-btn {
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    border: none; color: #000; font-weight: 700;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 3px;
+    padding: 14px 36px; font-size: 16px; border-radius: 3px;
+    margin-top: 32px; width: 100%;
+  }
+  .start-btn:hover { filter: brightness(1.15); box-shadow: 0 0 30px rgba(0,229,255,0.4); }
+
+  /* ---- Game layout ---- */
+  .game {
+    display: grid;
+    grid-template-columns: 300px 1fr 280px;
+    grid-template-rows: 50px 1fr;
+    height: 100vh; max-height: 100vh;
+    grid-template-areas:
+      "top top top"
+      "left center right";
+  }
+  .top-bar {
+    grid-area: top;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px; gap: 24px;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+  }
+  .top-bar .title {
+    font-weight: 700; letter-spacing: 3px; color: var(--cyan);
+  }
+  .top-bar .phases {
+    display: flex; gap: 4px; flex: 1; justify-content: center;
+  }
+  .phase-chip {
+    padding: 2px 10px; border: 1px solid var(--border); border-radius: 2px;
+    font-size: 10px; letter-spacing: 1px; color: var(--text-dim);
+  }
+  .phase-chip.active { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
+  .phase-chip.done { color: #555; border-color: #333; }
+  .top-bar .round { color: var(--yellow); }
+  .top-bar .heat { color: var(--magenta); }
+
+  /* Left panel — player state */
+  .left-panel {
+    grid-area: left; background: var(--bg2); border-right: 1px solid var(--border);
+    padding: 12px; overflow-y: auto;
+  }
+  .player-card {
+    border: 1.5px solid var(--border); background: var(--bg3);
+    padding: 10px; border-radius: 3px; margin-bottom: 10px;
+  }
+  .player-card.me { border-color: var(--cyan); }
+  .player-card.turn { box-shadow: 0 0 15px rgba(0,229,255,0.3); }
+  .player-card .pheader {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .player-card .pname { color: var(--cyan); letter-spacing: 1px; }
+  .player-card .php {
+    color: var(--magenta); font-weight: 700;
+  }
+  .player-card .pstats {
+    font-family: 'Share Tech Mono', monospace; font-size: 10px;
+    color: var(--text-dim); display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px;
+  }
+  .player-card .pstats strong { color: var(--text); }
+
+  /* Center - map */
+  .center-panel {
+    grid-area: center; display: flex; flex-direction: column; padding: 12px;
+    overflow: auto;
+  }
+  .map-wrap { display: flex; gap: 16px; }
+  .map-board {
+    display: grid;
+    grid-template-columns: 28px repeat(5, 1fr);
+    grid-template-rows: 28px repeat(5, 1fr);
+    gap: 2px;
+    background: #000;
+    padding: 2px;
+    border: 2px solid var(--border);
+    max-width: 520px;
+    aspect-ratio: 5.5/5.5;
+  }
+  .map-cell {
+    background: var(--bg3); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    font-size: 10px; padding: 4px;
+    position: relative; cursor: pointer;
+    transition: all 0.1s;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .map-cell:hover { filter: brightness(1.3); outline: 1px solid var(--cyan); z-index: 1; }
+  .map-cell.label { background: transparent; cursor: default; color: var(--text-dim); }
+  .map-cell.corner { background: transparent; cursor: default; }
+  .map-cell .coord {
+    position: absolute; top: 2px; left: 3px; font-size: 8px; opacity: 0.5;
+  }
+  .map-cell .ztype { font-size: 9px; color: #000; font-weight: 700; }
+  .map-cell .owner {
+    position: absolute; bottom: 2px; right: 3px;
+    font-size: 7px; padding: 0 3px;
+    background: rgba(0,0,0,0.5); color: white; font-weight: 700;
+  }
+  .map-cell .pm {
+    position: absolute; top: 14px; right: 3px; font-size: 9px;
+    background: var(--cyan); color: #000; padding: 1px 3px; font-weight: 700;
+  }
+  /* Zone colors */
+  .z-ruin { background: #3a3a2a; color: #999; }
+  .z-home { background: #4a3a5a; color: #fff; }
+  .z-bank { background: #8a6a10; color: #fff; }
+  .z-data { background: #1a4a7a; color: #fff; }
+  .z-heal { background: #2a7a5a; color: #fff; }
+  .z-work { background: #7a5a2a; color: #fff; }
+  .z-arms { background: #5a5a5a; color: #fff; }
+  .z-club { background: #7a2a5a; color: #fff; }
+  .z-port { background: #3a4a7a; color: #fff; }
+  .z-cop  { background: #222; color: #fff; }
+  .z-nex  { background: #ffd700; color: #000; font-weight: 900; }
+  .z-aux  { background: #5a3a3a; color: #fff; }
+
+  /* Right panel */
+  .right-panel {
+    grid-area: right; background: var(--bg2); border-left: 1px solid var(--border);
+    padding: 12px; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .pool-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 8px; border-radius: 3px; margin-bottom: 10px;
+  }
+  .pool-box h4 {
+    margin: 0 0 6px; font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; color: var(--text-dim);
+  }
+  .attr-row { display: flex; gap: 4px; flex-wrap: wrap; font-family: 'Share Tech Mono', monospace; font-size: 11px; }
+  .attr-tag {
+    padding: 2px 6px; border-radius: 2px; color: white; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .a-M { background: #185FA5; }
+  .a-I { background: #888780; }
+  .a-V { background: #854F0B; }
+  .a-S { background: #534AB7; }
+  .a-B { background: #1D9E75; }
+  .a-A { background: #C04828; }
+  .a-GRID { background: #666; }
+
+  .signal-box { text-align: center; font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; padding: 6px; }
+  .sig-MESH_UP { background: rgba(24,95,165,0.3); color: var(--cyan); }
+  .sig-MESH_DOWN { background: rgba(192,72,40,0.3); color: var(--magenta); }
+  .sig-SURGE { background: rgba(255,215,0,0.3); color: var(--yellow); }
+  .sig-BLACKOUT { background: #000; color: #555; border: 1px solid #333; }
+
+  .news-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 10px; border-radius: 3px; margin-bottom: 10px;
+    font-size: 12px;
+  }
+  .news-box .nh { color: var(--yellow); font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; margin-bottom: 4px; }
+
+  .log-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 8px; border-radius: 3px; font-size: 11px; flex: 1;
+    overflow-y: auto; min-height: 100px; max-height: 300px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .log-box h4 { margin: 0 0 6px; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); }
+  .log-entry { padding: 2px 0; color: var(--text-dim); }
+  .log-entry.event { color: var(--yellow); }
+  .log-entry.action { color: var(--cyan); }
+  .log-entry.combat { color: var(--magenta); }
+
+  /* Hand */
+  .hand-wrap {
+    margin-top: auto; background: var(--bg2); border-top: 1px solid var(--border);
+    padding: 10px; min-height: 180px;
+  }
+  .hand-wrap h4 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
+  .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .card {
+    width: 130px; height: 180px;
+    background: #0a0a18; border: 1.5px solid var(--border);
+    border-radius: 4px; padding: 6px;
+    flex-shrink: 0;
+    font-size: 10px; display: flex; flex-direction: column;
+    cursor: pointer; transition: transform 0.15s, border-color 0.1s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--cyan); }
+  .card.selected { border-color: var(--yellow); box-shadow: 0 0 12px rgba(255,215,0,0.4); }
+  .card.disabled { opacity: 0.4; cursor: not-allowed; }
+  .card .ch {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Share Tech Mono', monospace; font-size: 9px;
+    border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 3px;
+  }
+  .card .ci { background: var(--cyan); color: #000; padding: 1px 5px; font-weight: 700; }
+  .card .ct {
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    color: var(--yellow); letter-spacing: 0.5px; text-align: center; margin: 4px 0;
+  }
+  .card .ceff {
+    font-size: 9px; line-height: 1.25; flex: 1;
+  }
+  .card .cbot {
+    border-top: 1px dashed #444; padding-top: 3px; margin-top: 3px;
+    font-size: 9px;
+  }
+  .card .cost {
+    font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-dim);
+  }
+  .loss-tag { color: var(--magenta); font-weight: 700; font-size: 8px; padding: 1px 3px; background: rgba(255,0,60,0.2); }
+
+  /* Action buttons */
+  .phase-actions {
+    display: flex; gap: 8px; padding: 10px; background: var(--bg2);
+    border-top: 1px solid var(--border);
+  }
+  .pa-btn {
+    flex: 1; padding: 10px; background: var(--bg3);
+    border: 1.5px solid var(--border); color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px; border-radius: 2px; font-size: 12px;
+  }
+  .pa-btn:hover:not(:disabled) { background: var(--cyan); color: #000; border-color: var(--cyan); }
+  .pa-btn.primary { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
+  .pa-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: var(--bg2); border: 2px solid var(--cyan);
+    padding: 24px; border-radius: 4px; max-width: 560px; width: 90%;
+  }
+  .modal h2 {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--cyan); letter-spacing: 3px; margin: 0 0 12px;
+  }
+  .modal p { color: var(--text-dim); line-height: 1.5; }
+  .modal .obj-list { margin: 16px 0; }
+  .modal .obj-item {
+    background: var(--bg3); border-left: 3px solid var(--yellow);
+    padding: 8px 12px; margin: 6px 0; font-size: 12px;
+  }
+
+  /* Game over */
+  .gameover {
+    text-align: center; padding: 60px 24px;
+  }
+  .gameover h1 {
+    font-family: 'Share Tech Mono', monospace; font-size: 56px;
+    letter-spacing: 6px; margin: 0 0 20px;
+  }
+  .gameover.win h1 { color: var(--green); text-shadow: 0 0 30px var(--green); }
+  .gameover.lose h1 { color: var(--magenta); text-shadow: 0 0 30px var(--magenta); }
+  .gameover .stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    max-width: 600px; margin: 24px auto;
+  }
+  .gameover .stat-box {
+    background: var(--bg2); border: 1px solid var(--border);
+    padding: 16px; border-radius: 3px;
+  }
+  .gameover .stat-box .lbl { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 2px; }
+  .gameover .stat-box .val { font-family: 'Share Tech Mono', monospace; font-size: 28px; color: var(--cyan); margin-top: 4px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div id="boot">INITIALIZING ASHGRID SIMULATION...</div>
+</div>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+'use strict';
+const { useState, useEffect, useReducer, useMemo, useCallback, useRef } = React;
+
+// ============================================================================
+// DATA
+// ============================================================================
+
+const ZONE_TYPES = {
+  ruin: { name: '폐허', color: 'z-ruin', income: {}, attr: 'A', buildable: false, note: '거점 불가' },
+  home: { name: '주택가', color: 'z-home', income: { credit: 1, operative: 1 }, attr: 'GRID', buildable: true },
+  bank: { name: '금융가', color: 'z-bank', income: { credit: 3 }, attr: 'M', buildable: true },
+  data: { name: '데이터허브', color: 'z-data', income: { data: 2 }, attr: 'M', buildable: true },
+  heal: { name: '의료구역', color: 'z-heal', income: { operative: 1 }, attr: 'B', buildable: true, note: 'HP회복' },
+  work: { name: '공업지구', color: 'z-work', income: { parts: 2 }, attr: 'V', buildable: true },
+  arms: { name: '무기고', color: 'z-arms', income: { weapons: 2 }, attr: 'I', buildable: true, note: '방어+1' },
+  club: { name: '유흥가', color: 'z-club', income: { credit: 2 }, attr: 'S', buildable: true },
+  port: { name: '항구', color: 'z-port', income: { credit: 1, weapons: 1 }, attr: 'I', buildable: true },
+  cop:  { name: '경찰서', color: 'z-cop', income: {}, attr: null, buildable: false, note: '점령 불가' },
+  nex:  { name: 'NEXUS', color: 'z-nex', income: { credit: 3, all_attr: 1 }, attr: 'all', buildable: true, note: '2R 연속=즉시 승리(튜토)' },
+  aux:  { name: '넥서스부속', color: 'z-aux', income: { credit: 2, random_attr: 1 }, attr: null, buildable: true },
+};
+
+// 5×5 tutorial map (25 cells)
+const MAP_5x5 = [
+  ['A1','ruin'], ['B1','home'], ['C1','bank'], ['D1','data'], ['E1','ruin'],
+  ['A2','ruin'], ['B2','aux'],  ['C2','data'], ['D2','data'], ['E2','heal'],
+  ['A3','port'], ['B3','work'], ['C3','nex'],  ['D3','heal'], ['E3','home'],
+  ['A4','work'], ['B4','aux'],  ['C4','arms'], ['D4','aux'],  ['E4','arms'],
+  ['A5','ruin'], ['B5','club'], ['C5','cop'],  ['D5','port'], ['E5','ruin'],
+];
+
+// Bloc HQ + support zones (tutorial)
+const BLOC_SETUP = {
+  VANTA:    { hq: 'C2', support: ['C1'],      color: '#1a1a1a' },
+  AXIOM:    { hq: 'D2', support: ['D1'],      color: '#2d6fff' },
+  HELIX:    { hq: 'D3', support: ['E2'],      color: '#8ab57c' },
+  IRONWALL: { hq: 'C4', support: ['E4'],      color: '#4a5d23' },
+  CARBON:   { hq: 'B3', support: ['A4'],      color: '#8b5a2b' },
+};
+
+// Bloc stats (for direct combat)
+const BLOC_STATS = {
+  VANTA:    { hp: 7,  atk: 2, def: 2, spd: 3, hack: 5, primary: 'M', secondary: 'S' },
+  IRONWALL: { hp: 10, atk: 5, def: 4, spd: 3, hack: 1, primary: 'I', secondary: 'A' },
+  HELIX:    { hp: 8,  atk: 3, def: 3, spd: 2, hack: 3, primary: 'B', secondary: 'V' },
+  AXIOM:    { hp: 6,  atk: 2, def: 2, spd: 4, hack: 5, primary: 'M', secondary: 'V' },
+  CARBON:   { hp: 9,  atk: 3, def: 4, spd: 2, hack: 2, primary: 'V', secondary: 'A' },
+};
+
+const GHOST_STATS = {
+  CIPHER:  { hp: 6,  atk: 2, def: 1, spd: 4, hack: 5, primary: 'M', secondary: 'S', startZone: 'A1' },
+  BLADE:   { hp: 10, atk: 5, def: 3, spd: 3, hack: 1, primary: 'I', secondary: 'A', startZone: 'A5' },
+  BROKER:  { hp: 6,  atk: 2, def: 2, spd: 5, hack: 2, primary: 'S', secondary: 'GRID', startZone: 'A3' },
+  RIGGER:  { hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'V', secondary: 'I', startZone: 'B5' },
+  DRIFTER: { hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
+  MOLE:    { hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'S', secondary: 'M', startZone: 'D3' },
+};
+
+// Ghost cards (compact: tags describe effects)
+// Effect tags:
+//  move:N, atk:N, def:N, heal:N, scout, stealth, break_veil,
+//  gen:X (generate attr), steal:X, crash_stock:N, reveal_hand,
+//  raid_bonus:N, rep:N, credit:N
+const GHOST_CARDS = {
+  // CIPHER
+  PORT_SCAN:      { name: 'PORT SCAN',      cls: 'CIPHER', init: 12, attr: ['M'],      top: { gen: 'M', move: 3, scout: 1 },                    bot: { cost: ['M','S'], reveal: 'zone', break_veil: 1 } },
+  DATA_SPIKE:     { name: 'DATA SPIKE',     cls: 'CIPHER', init: 22, attr: ['M'], loss: true, top: { gen: 'M', atk: 1 },                         bot: { cost: ['M','M','S'], atk: 5, def_ignore: true, steal: 'M' } },
+  GHOST_ACCESS:   { name: 'GHOST ACCESS',   cls: 'CIPHER', init: 8,  attr: ['S'],      top: { gen: 'S', stealth: 1 },                            bot: { cost: ['S'], clear_wanted: true } },
+  MESH_DIVE:      { name: 'MESH DIVE',      cls: 'CIPHER', init: 30, attr: ['M','S'],  top: { gen: 'GRID', move: 1, scout: 2 },                  bot: { cost: ['M','M'], draw_quest: 1 } },
+  ICE_BREAK:      { name: 'ICE BREAK',      cls: 'CIPHER', init: 18, attr: ['M'],      top: { gen: 'M', break_veil: 1 },                         bot: { cost: ['M','M'], break_veil: 99 } },
+  PROXY_RELAY:    { name: 'PROXY RELAY',    cls: 'CIPHER', init: 25, attr: ['S'],      top: { gen: 'S', redirect: 3 },                           bot: { cost: ['S','M'], transfer_attack: 1 } },
+  STOCK_CRASH:    { name: 'STOCK CRASH',    cls: 'CIPHER', init: 35, attr: ['M'],      top: { gen: 'M', stock_op: 1 },                           bot: { cost: ['M','M','M'], crash_stock: 3 } },
+  NEURAL_OVRD:    { name: 'NEURAL OVERRIDE',cls: 'CIPHER', init: 45, attr: ['M','S'], loss: true, top: { gen: 'M:S', slow_target: 20 },          bot: { cost: ['M','M','S','S'], mimic: 1 } },
+  ZERO_TRACE:     { name: 'ZERO TRACE',     cls: 'CIPHER', init: 50, attr: ['S'], loss: true, top: { gen: 'S', wipe_log: 1 },                    bot: { cost: ['S','S','S'], clear_wanted: true, permanent: true } },
+  BASIC_MOVE_C:   { name: 'BASIC MOVE',     cls: 'CIPHER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // BLADE
+  QUICK_DRAW:     { name: 'QUICK DRAW',     cls: 'BLADE',  init: 5,  attr: ['I'],      top: { gen: 'I', atk: 3, always_first: true },            bot: { cost: ['I'], spd: 3 } },
+  SUPPRESS_FIRE:  { name: 'SUPPRESSION',    cls: 'BLADE',  init: 18, attr: ['I'],      top: { gen: 'I', move: 1, block_adj: 1 },                 bot: { cost: ['I','I'], enemy_spd: -3 } },
+  BREACHER:       { name: 'BREACHER',       cls: 'BLADE',  init: 14, attr: ['A'],      top: { gen: 'A', move: 2, break_veil: 1 },                bot: { break_veil: 99, force_enter: 1 } },
+  CONTRACT_KILL:  { name: 'CONTRACT KILL',  cls: 'BLADE',  init: 28, attr: ['I','A'],  top: { gen: 'I', atk: 2, target: 1 },                     bot: { cost: ['I','I','A'], assassin: 1, rep: 3 } },
+  HUMAN_SHIELD:   { name: 'HUMAN SHIELD',   cls: 'BLADE',  init: 24, attr: ['I'],      top: { gen: 'I', def: 2, protect_ally: 1 },               bot: { def: 4, absorb: 1 } },
+  DOUBLE_TAP:     { name: 'DOUBLE TAP',     cls: 'BLADE',  init: 20, attr: ['I'],      top: { gen: 'I', atk_reroll: 1 },                         bot: { cost: ['I','I'], atk_twice: 1 } },
+  POINT_BLANK:    { name: 'POINT BLANK',    cls: 'BLADE',  init: 10, attr: ['I'],      top: { gen: 'I', same_zone_atk: 4 },                      bot: { cost: ['I'], def_ignore: 1 } },
+  BERSERKER:      { name: 'BERSERKER',      cls: 'BLADE',  init: 32, attr: ['A'], loss: true, top: { gen: 'A', atk: 3, def_penalty: 2 },         bot: { cost: ['A','A'], atk_x2: 1, def_zero: 1 } },
+  LAST_STAND:     { name: 'LAST STAND',     cls: 'BLADE',  init: 40, attr: ['I','A'], loss: true, top: { def_infinite_to_1: 1 },                 bot: { cost: ['I','I','A'], atk_x3_retort: 1 } },
+  BASIC_MOVE_B:   { name: 'BASIC MOVE',     cls: 'BLADE',  init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // BROKER
+  NETWORK:        { name: 'NETWORK',        cls: 'BROKER', init: 15, attr: ['S'],      top: { gen: 'S', contact: 1, scout: 1 },                  bot: { cost: ['S'], contact: 2, blackmarket: 1 } },
+  BACK_DEAL:      { name: 'BACK DEAL',      cls: 'BROKER', init: 18, attr: ['S'],      top: { gen: 'S', swap_ratio: 2 },                         bot: { cost: ['S'], blackmarket: 1 } },
+  BLACKMAIL:      { name: 'BLACKMAIL',      cls: 'BROKER', init: 22, attr: ['S'],      top: { gen: 'S', extort: 1 },                             bot: { cost: ['S','S'], cancel_action: 1, extort: 2 } },
+  MIDDLE_DEAL:    { name: 'MIDDLE DEAL',    cls: 'BROKER', init: 25, attr: ['GRID'],   top: { gen: 'GRID', broker_fee: 10 },                     bot: { passive_ma_fee: 5 } },
+  INFO_BROKER:    { name: 'INFO BROKER',    cls: 'BROKER', init: 30, attr: ['S'],      top: { gen: 'S', peek_objective: 1 },                     bot: { cost: ['S','S'], sell_info: 5, lock: 1 } },
+  CRISIS_TALK:    { name: 'CRISIS TALK',    cls: 'BROKER', init: 28, attr: ['GRID'],   top: { gen: 'GRID', stop_combat: 1 },                     bot: { reward: 2, cooldown: 1 } },
+  DBL_CONTRACT:   { name: 'DBL CONTRACT',   cls: 'BROKER', init: 35, attr: ['S','GRID'], top: { gen: 'S', slot_plus: 1 },                         bot: { cost: ['S','GRID'], quest_two: 1 } },
+  POKER_FACE:     { name: 'POKER FACE',     cls: 'BROKER', init: 20, attr: ['S'],      top: { gen: 'S', hide_actions: 1 },                       bot: { cost: ['S'], negate_scout: 1 } },
+  BURN_BRIDGE:    { name: 'BURN BRIDGE',    cls: 'BROKER', init: 45, attr: ['S'], loss: true, top: { gen: 'S', break_contract: 1 },              bot: { cost: ['S','S'], all_contracts: 1 } },
+  BASIC_MOVE_R:   { name: 'BASIC MOVE',     cls: 'BROKER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // RIGGER
+  DRONE_SCAN:     { name: 'DRONE SCAN',     cls: 'RIGGER', init: 16, attr: ['V'],      top: { gen: 'V', scout: 3 },                              bot: { cost: ['V'], scout: 5, parts: 1 } },
+  TRAP_WIRE:      { name: 'TRAP WIRE',      cls: 'RIGGER', init: 25, attr: ['V'],      top: { gen: 'V', trap: 1 },                               bot: { cost: ['V','I'], trap_damage: 4 } },
+  EMP_PULSE:      { name: 'EMP PULSE',      cls: 'RIGGER', init: 32, attr: ['V'], loss: true, top: { gen: 'V', disable_elec: 1 },                bot: { cost: ['V','V'], zone_disable: 1 } },
+  OVERCLOCK:      { name: 'OVERCLOCK',      cls: 'RIGGER', init: 22, attr: ['V'],      top: { gen: 'V', temp_tl: 1 },                            bot: { cost: ['V','V'], stat_boost: 2 } },
+  FIELD_CRAFT:    { name: 'FIELD CRAFT',    cls: 'RIGGER', init: 26, attr: ['V','I'],  top: { gen: 'V', parts: 2 },                              bot: { cost: ['V','I'], craft_item: 1 } },
+  SHIELD_GEN:     { name: 'SHIELD GEN',     cls: 'RIGGER', init: 24, attr: ['V'],      top: { gen: 'V', def: 3 },                                bot: { cost: ['V','V'], zone_shield: 1 } },
+  DRONE_SWARM:    { name: 'DRONE SWARM',    cls: 'RIGGER', init: 38, attr: ['V','I'],  top: { gen: 'V', atk_range: 2 },                          bot: { cost: ['V','I','I'], multi_target: 3 } },
+  JURY_RIG:       { name: 'JURY RIG',       cls: 'RIGGER', init: 20, attr: ['V'],      top: { gen: 'V', repair: 3 },                             bot: { cost: ['V'], salvage: 2 } },
+  TECH_BREACH:    { name: 'TECH BREACH',    cls: 'RIGGER', init: 42, attr: ['V'], loss: true, top: { gen: 'V', disable_tl: 1 },                  bot: { cost: ['V','V','V'], force_tl_down: 1 } },
+  BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // DRIFTER
+  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 4 },                               bot: { cost: ['A'], move_any: 3 } },
+  SUPPLY_CONV:    { name: 'SUPPLY CONVOY',  cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { gen: 'GRID', fuel: 3 },                            bot: { transfer_ally: 3 } },
+  AMBUSH:         { name: 'AMBUSH',         cls: 'DRIFTER',init: 14, attr: ['A'],      top: { gen: 'A', spd: 5, atk: 2 },                        bot: { cost: ['A'], surprise: 1 } },
+  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 5, ignore_obstacles: 1 },             bot: { cost: ['A','A'], move_3_nowalls: 1 } },
+  BACKROADS:      { name: 'BACKROADS',      cls: 'DRIFTER',init: 28, attr: ['GRID'],   top: { gen: 'GRID', untrack: 1 },                         bot: { shortcut: 2 } },
+  SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
+  CARGO_HAUL:     { name: 'CARGO HAUL',     cls: 'DRIFTER',init: 22, attr: ['A','GRID'], top: { gen: 'A', credit: 3 },                            bot: { smuggle: 1 } },
+  IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 2 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
+  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 3, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
+  BASIC_MOVE_D:   { name: 'BASIC MOVE',     cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // MOLE
+  INNER_DOCS:     { name: 'INNER DOCS',     cls: 'MOLE',   init: 24, attr: ['S','M'],  top: { gen: 'S', peek_bloc: 1 },                          bot: { cost: ['S','M'], steal_card: 1 } },
+  AUTH_ABUSE:     { name: 'AUTH ABUSE',     cls: 'MOLE',   init: 30, attr: ['S'],      top: { gen: 'S', bloc_resource: 2 },                      bot: { cost: ['S','S'], disguise: 1 } },
+  CLEAN_SLATE:    { name: 'CLEAN SLATE',    cls: 'MOLE',   init: 18, attr: ['S'],      top: { gen: 'S', clear_track: 1 },                        bot: { cost: ['S'], permanent_clear: 1 } },
+  FALSE_FLAG:     { name: 'FALSE FLAG',     cls: 'MOLE',   init: 26, attr: ['S','M'],  top: { gen: 'S', frame: 1 },                              bot: { cost: ['S','M'], swap_blame: 1 } },
+  DISGUISE:       { name: 'DISGUISE',       cls: 'MOLE',   init: 16, attr: ['S'],      top: { gen: 'S', infiltrate: 1 },                         bot: { cost: ['S'], bypass_veil: 1 } },
+  BOARD_MANIP:    { name: 'BOARD MANIP',    cls: 'MOLE',   init: 38, attr: ['M','S'],  top: { gen: 'M', influence: 3 },                          bot: { cost: ['M','S','S'], vote_flip: 1 } },
+  LEAK:           { name: 'LEAK',           cls: 'MOLE',   init: 28, attr: ['S','M'],  top: { gen: 'S', scandal: 1 },                            bot: { cost: ['S','M'], stock_dmg: 2 } },
+  DEEP_COVER:     { name: 'DEEP COVER',     cls: 'MOLE',   init: 32, attr: ['S'],      top: { gen: 'S', invisible: 1 },                          bot: { cost: ['S','S'], invisible_2r: 1 } },
+  ID_COLLAPSE:    { name: 'ID COLLAPSE',    cls: 'MOLE',   init: 45, attr: ['S','M'], loss: true, top: { gen: 'S', burn_identity: 1 },            bot: { cost: ['S','S','M'], copy_bloc_card: 1 } },
+  BASIC_MOVE_M:   { name: 'BASIC MOVE',     cls: 'MOLE',   init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+};
+
+// Ghost class decks
+const GHOST_DECKS = {
+  CIPHER:  ['PORT_SCAN','DATA_SPIKE','GHOST_ACCESS','MESH_DIVE','ICE_BREAK','PROXY_RELAY','STOCK_CRASH','NEURAL_OVRD','ZERO_TRACE','BASIC_MOVE_C'],
+  BLADE:   ['QUICK_DRAW','SUPPRESS_FIRE','BREACHER','CONTRACT_KILL','HUMAN_SHIELD','DOUBLE_TAP','POINT_BLANK','BERSERKER','LAST_STAND','BASIC_MOVE_B'],
+  BROKER:  ['NETWORK','BACK_DEAL','BLACKMAIL','MIDDLE_DEAL','INFO_BROKER','CRISIS_TALK','DBL_CONTRACT','POKER_FACE','BURN_BRIDGE','BASIC_MOVE_R'],
+  RIGGER:  ['DRONE_SCAN','TRAP_WIRE','EMP_PULSE','OVERCLOCK','FIELD_CRAFT','SHIELD_GEN','DRONE_SWARM','JURY_RIG','TECH_BREACH','BASIC_MOVE_RG'],
+  DRIFTER: ['FAST_TRAVEL','SUPPLY_CONV','AMBUSH','STORM_RUSH','BACKROADS','SCORCH_PATH','CARGO_HAUL','IRON_WHEELS','GHOST_RUN','BASIC_MOVE_D'],
+  MOLE:    ['INNER_DOCS','AUTH_ABUSE','CLEAN_SLATE','FALSE_FLAG','DISGUISE','BOARD_MANIP','LEAK','DEEP_COVER','ID_COLLAPSE','BASIC_MOVE_M'],
+};
+
+// Bloc cards (compact)
+const BLOC_CARDS = {
+  // VANTA
+  SHADOW_FILE:     { name: 'SHADOW FILE',     bloc: 'VANTA',   tl: 1, main: { cost:['M','S'], peek_hand: 1 }, side: { gen: 'S' }, combo: { with: 'S', peek_full: 1 } },
+  LEVERAGE:        { name: 'LEVERAGE',        bloc: 'VANTA',   tl: 1, main: { cost:['S'], cancel_card: 1 }, side: { gen: 'S' }, combo: { with: 'M', + 'info' } },
+  VEIL_DEPLOY:     { name: 'VEIL DEPLOY',     bloc: 'VANTA',   tl: 2, main: { cost:['M','M'], veil_up: 2 }, side: { gen: 'M' }, combo: {} },
+  GHOST_PROTOCOL:  { name: 'GHOST PROTOCOL',  bloc: 'VANTA',   tl: 3, main: { cost:['M','S','S'], hide_actions_1r: 1 }, side: { gen: 'M' }, combo: {} },
+  DATA_WIPE:       { name: 'DATA WIPE',       bloc: 'VANTA',   tl: 3, main: { cost:['M','M'], clear_ghost_wanted: 1 }, side: { gen: 'M' }, combo: {} },
+  ZERO_RECORD:     { name: 'ZERO RECORD',     bloc: 'VANTA',   tl: 4, main: { cost:['M','M','S'], remove_scandals: 99 }, side: { gen: 'S' }, combo: {} },
+  // IRONWALL
+  FORWARD_STRIKE:  { name: 'FORWARD STRIKE',  bloc: 'IRONWALL',tl: 1, main: { cost:['I'], deploy_op: 1 }, side: { gen: 'I' }, combo: { with: 'A', destroy_res: 50 } },
+  ARMS_SUPPLY:     { name: 'ARMS SUPPLY',     bloc: 'IRONWALL',tl: 1, main: { cost:['I'], weapons: 3 }, side: { gen: 'I' }, combo: {} },
+  FORWARD_BASE:    { name: 'FORWARD BASE',    bloc: 'IRONWALL',tl: 2, main: { cost:['I','I'], fortify: 2 }, side: { gen: 'I' }, combo: {} },
+  MARTIAL_LAW:     { name: 'MARTIAL LAW',     bloc: 'IRONWALL',tl: 3, main: { cost:['I','A','A'], heat: 3, ghost_move: -1 }, side: { gen: 'I' }, combo: {} },
+  MERCENARY_SURGE: { name: 'MERC SURGE',      bloc: 'IRONWALL',tl: 3, main: { cost:['I','I'], deploy_op: 3 }, side: { gen: 'I' }, combo: {} },
+  SCORCHED_EARTH:  { name: 'SCORCHED EARTH',  bloc: 'IRONWALL',tl: 4, main: { cost:['I','A','A'], destroy_zone: 1 }, side: { gen: 'A' }, combo: {} },
+  // HELIX (minimal, 3 for now)
+  FIELD_SPLICE:    { name: 'FIELD SPLICE',    bloc: 'HELIX',   tl: 2, main: { cost:['B'], heal_all: 50 }, side: { gen: 'B' }, combo: {} },
+  NEURAL_IFACE:    { name: 'NEURAL IFACE',    bloc: 'HELIX',   tl: 2, main: { cost:['B','V'], ghost_extra_card: 1 }, side: { gen: 'B' }, combo: {} },
+  AUGMENTATION:    { name: 'AUGMENTATION',    bloc: 'HELIX',   tl: 2, main: { cost:['B','V'], stat_boost: 2 }, side: { gen: 'V' }, combo: {} },
+  QUARANTINE:      { name: 'QUARANTINE',      bloc: 'HELIX',   tl: 3, main: { cost:['B','B'], lock_zone: 1 }, side: { gen: 'B' }, combo: {} },
+  HARVEST:         { name: 'HARVEST',         bloc: 'HELIX',   tl: 3, main: { cost:['B','V','V'], steal_op: 2 }, side: { gen: 'V' }, combo: {} },
+  CLONE_DECOY:     { name: 'CLONE DECOY',     bloc: 'HELIX',   tl: 4, main: { cost:['B','B','V'], revive: 1 }, side: { gen: 'B' }, combo: {} },
+  // AXIOM
+  PREDICTION_E:    { name: 'PREDICTION ENGINE',bloc:'AXIOM',   tl: 2, main: { cost:['M','V'], peek_news: 3 }, side: { gen: 'M' }, combo: {} },
+  FLASH_CRASH:     { name: 'FLASH CRASH',     bloc: 'AXIOM',   tl: 3, main: { cost:['M','M','V'], crash_target: 4 }, side: { gen: 'M' }, combo: {} },
+  ALGO_LOCK:       { name: 'ALGO LOCK',       bloc: 'AXIOM',   tl: 2, main: { cost:['M','V'], zone_hack_def: 4 }, side: { gen: 'V' }, combo: {} },
+  FLASH_TRADE:     { name: 'FLASH TRADE',     bloc: 'AXIOM',   tl: 2, main: { cost:['M'], same_round_trade: 1 }, side: { gen: 'M' }, combo: {} },
+  SURVEILLANCE:    { name: 'SURVEILLANCE',    bloc: 'AXIOM',   tl: 3, main: { cost:['M','V'], scout_all: 1 }, side: { gen: 'M' }, combo: {} },
+  SYS_TAKEOVER:    { name: 'SYS TAKEOVER',    bloc: 'AXIOM',   tl: 4, main: { cost:['M','M','V','V'], algorithm: 1 }, side: { gen: 'V' }, combo: {} },
+  // CARBON
+  POWER_SURGE:     { name: 'POWER SURGE',     bloc: 'CARBON',  tl: 1, main: { cost:['V'], zone_income_2x: 1 }, side: { gen: 'V' }, combo: {} },
+  BLACKOUT_C:      { name: 'BLACKOUT',        bloc: 'CARBON',  tl: 2, main: { cost:['V','A'], zero_income: 1 }, side: { gen: 'A' }, combo: {} },
+  PIPELINE_LOCK:   { name: 'PIPELINE LOCK',   bloc: 'CARBON',  tl: 3, main: { cost:['V','V'], block_resource: 1 }, side: { gen: 'V' }, combo: {} },
+  INFRA_BOND:      { name: 'INFRA BOND',      bloc: 'CARBON',  tl: 2, main: { cost:['V','GRID'], bond: 8 }, side: { gen: 'GRID' }, combo: {} },
+  HOSTILE_DIV:     { name: 'HOSTILE DIV',     bloc: 'CARBON',  tl: 3, main: { cost:['V','A'], div_2x: 1 }, side: { gen: 'V' }, combo: {} },
+  LEGACY_CONTRACT: { name: 'LEGACY CONTRACT', bloc: 'CARBON',  tl: 4, main: { cost:['V','V','A'], long_contract: 50 }, side: { gen: 'V' }, combo: {} },
+};
+
+const BLOC_DECKS = {
+  VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD'],
+  IRONWALL: ['FORWARD_STRIKE','ARMS_SUPPLY','FORWARD_BASE','MARTIAL_LAW','MERCENARY_SURGE','SCORCHED_EARTH'],
+  HELIX: ['FIELD_SPLICE','NEURAL_IFACE','AUGMENTATION','QUARANTINE','HARVEST','CLONE_DECOY'],
+  AXIOM: ['PREDICTION_E','FLASH_CRASH','ALGO_LOCK','FLASH_TRADE','SURVEILLANCE','SYS_TAKEOVER'],
+  CARBON: ['POWER_SURGE','BLACKOUT_C','PIPELINE_LOCK','INFRA_BOND','HOSTILE_DIV','LEGACY_CONTRACT'],
+};
+
+// Curated news (15 for S00)
+const NEWS = [
+  { id: 1,  title: '계엄 부분 해제', effect: { heat: -2 }, flavor: '임시 조치였다고 정부는 말한다.' },
+  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -3 }, flavor: '패닉은 합리적이다.' },
+  { id: 12, title: '투자 붐', effect: { all_stock: 2 }, flavor: '낙관주의는 위험하다.' },
+  { id: 13, title: '암시장 호황', effect: { blackmarket_cheaper: 1 }, flavor: '공식 경제가 망가지면.' },
+  { id: 18, title: '대형 거래 체결', effect: { broker_bonus: 5 }, flavor: '중개인의 월급날.' },
+  { id: 21, title: '대규모 시위', effect: { heat: 2, lock_random: 1 }, flavor: '구호는 단순했다.' },
+  { id: 22, title: '시민 축제', effect: { club_2x: 1 }, flavor: '잠깐이라도 괜찮다고.' },
+  { id: 25, title: '이민 물결', effect: { slum_bonus: 2, heat: 1 }, flavor: '더 나은 곳을 찾아온다.' },
+  { id: 30, title: '베일 업데이트', effect: { vanta_veil: 1 }, flavor: '안전하다고 느끼게 해줍니다.' },
+  { id: 33, title: '드론 스웜 사고', effect: { rigger_bonus: 3 }, flavor: '세 대가 돌아왔다.' },
+  { id: 37, title: '용병 시장 확장', effect: { ironwall_stock: 2, blade_atk: 1 }, flavor: '수요는 끝이 없다.' },
+  { id: 43, title: '군수 계약 취소', effect: { ironwall_stock: -3 }, flavor: '계약은 깨졌다.' },
+  { id: 46, title: 'UFO 목격', effect: { draw_extra: 2 }, flavor: '그냥 드론이라고 정부는 말한다.' },
+  { id: 2,  title: 'AI 규제 법안', effect: { axiom_stock: -3 }, flavor: 'AI는 사람을 대체할 수 없다.' },
+  { id: 41, title: '용병 증원 도착', effect: { ironwall_free_merc: 1 }, flavor: '새 얼굴. 같은 작전.' },
+];
+
+// Hidden objectives (10 simplified for MVP)
+const OBJECTIVES = [
+  { id: 'B-E02', role: 'bloc', diff: 'med',  name: '포트폴리오 킹', desc: '4+ 블록 10%+ 주식', bonus: { assetBonus: 15 } },
+  { id: 'B-D03', role: 'bloc', diff: 'med',  name: '구역 점거',     desc: '자사 구역 10+ 보유', bonus: { assetBonus: 15 } },
+  { id: 'B-T04', role: 'bloc', diff: 'easy', name: '데이터 주권',    desc: '데이터허브 3+ 보유', bonus: { assetBonus: 10, data: 5 } },
+  { id: 'B-P04', role: 'bloc', diff: 'easy', name: '뉴스 조작',      desc: '호재 뉴스 3+ 공개', bonus: { assetBonus: 10 } },
+  { id: 'B-S02', role: 'bloc', diff: 'med',  name: '그림자 군단',    desc: 'Ghost 3+ 계약', bonus: { assetBonus: 15, rep: 10 } },
+  { id: 'G-I01', role: 'ghost',diff: 'easy', name: '은둔자',         desc: '현상수배 0 유지', bonus: { repBonus: 5 } },
+  { id: 'G-K04', role: 'ghost',diff: 'easy', name: '거리의 후원자',  desc: '타 Ghost 자원 10+ 전달', bonus: { repBonus: 5 } },
+  { id: 'G-R04', role: 'ghost',diff: 'easy', name: '소각',           desc: '[LOSS] 5+ 사용', bonus: { repBonus: 5 } },
+  { id: 'G-A02', role: 'ghost',diff: 'med',  name: '블랙마켓 왕',    desc: '블랙마켓 5+ 구매', bonus: { repBonus: 10 } },
+  { id: 'G-K01', role: 'ghost',diff: 'med',  name: '구출자',         desc: 'NPC 5+ 구출', bonus: { repBonus: 10, influence: 3 } },
+];
+
+// Single-game achievements (10 simplified for MVP — claim buttons)
+const ACHIEVEMENTS_IN = [
+  { id: 'I-B01', tier: 'bronze', name: '첫 발',          cond: '첫 공격·레이드·M&A 첫 번째', reward: { res: 3 } },
+  { id: 'I-B03', tier: 'bronze', name: '수집가',         cond: '구역 5곳 방문', reward: { parts: 3 } },
+  { id: 'I-B05', tier: 'bronze', name: '조각 모으기',     cond: '4종+ 속성 동시 보유', reward: { attr: 2 } },
+  { id: 'I-B10', tier: 'bronze', name: '데이터 주니어',   cond: '데이터 누적 10', reward: { data: 3 } },
+  { id: 'I-B20', tier: 'bronze', name: '끝까지',         cond: '10R 이상 생존/참여', reward: { rep: 2 } },
+  { id: 'I-S07', tier: 'silver', name: '속성 절정',       cond: 'Surging 3R 유지', reward: { attr: 5 } },
+  { id: 'I-S09', tier: 'silver', name: 'NPC 구출자',     cond: 'NPC 3명 구출', reward: { rep: 5, contact: 3 } },
+  { id: 'I-S10', tier: 'silver', name: '테크 우위',       cond: 'TL 3 도달', reward: { res: 5 } },
+  { id: 'I-G01', tier: 'gold',   name: '무전투 승리',     cond: '공격 카드 0회 + 승리', reward: { rep: 10, meta: 'BLOODLESS' } },
+  { id: 'I-G02', tier: 'gold',   name: '넥서스 그림자',   cond: 'NEXUS 1R+ 장악 + 승리', reward: { res: 10, meta: 'NEXUS_TOUCHED' } },
+];
+
+const PHASE_NAMES = ['시장', '뉴스', '계획', '실행', '수익', 'R&D', '결산'];
+const PHASE_EN = ['MARKET', 'NEWS', 'PLAN', 'EXECUTE', 'INCOME', 'R&D', 'ROUND'];
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+const d6 = () => Math.floor(Math.random() * 6) + 1;
+const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
+
+const rollSignalDie = () => {
+  const r = d6();
+  if (r <= 2) return 'MESH_UP';
+  if (r <= 4) return 'MESH_DOWN';
+  if (r === 5) return 'SURGE';
+  return 'BLACKOUT';
+};
+
+const getCard = (id) => GHOST_CARDS[id] || BLOC_CARDS[id];
+
+const coord = (col, row) => String.fromCharCode(65 + col) + (row + 1);
+const coordsAdj = (c) => {
+  const col = c.charCodeAt(0) - 65;
+  const row = parseInt(c.slice(1)) - 1;
+  return [
+    col > 0     ? coord(col - 1, row) : null,
+    col < 4     ? coord(col + 1, row) : null,
+    row > 0     ? coord(col, row - 1) : null,
+    row < 4     ? coord(col, row + 1) : null,
+  ].filter(Boolean);
+};
+
+const assetValue = (p, stocks) => {
+  let total = 0;
+  for (const [bl, qty] of Object.entries(p.stocks)) {
+    const price = stocks[bl] ?? 10;
+    const mult = (p.role === 'bloc' && p.specific === bl) ? 0.5 : 1;
+    total += qty * price * mult;
+  }
+  return Math.floor(total);
+};
+
+// Resource init
+const initResources = (role) => role === 'bloc'
+  ? { credit: 8, data: 2, influence: 3, weapons: 0, parts: 0, rep: 0 }
+  : { credit: 5, data: 0, influence: 0, weapons: 0, parts: 0, rep: 5 };
+
+// Initial stocks for bloc player
+const initStocks = (role, specific) => {
+  const base = { VANTA: 0, IRONWALL: 0, HELIX: 0, AXIOM: 0, CARBON: 0 };
+  if (role === 'bloc') base[specific] = 10;
+  return base;
+};
+
+// ============================================================================
+// GAME STATE + REDUCER
+// ============================================================================
+
+function initGame(humanRole, humanSpecific) {
+  // Build 5x5 map
+  const map = {};
+  MAP_5x5.forEach(([c, z]) => {
+    map[c] = { zone: z, owner: null, token: Math.random() < 0.6 ? 'quest' : (Math.random() < 0.5 ? 'instant' : 'discovery'), tokenRevealed: false };
+  });
+
+  // Build players: 1 human + 3 bots
+  const players = [];
+  const allBlocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
+  const allGhosts = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
+
+  // Human first
+  players.push(buildPlayer(0, 'human', humanRole, humanSpecific));
+
+  // 3 bots: mixed roles opposite of human
+  const botSpecs = [];
+  if (humanRole === 'bloc') {
+    // 2 Ghost bots + 1 Bloc bot
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts) });
+    const remaining = allBlocs.filter(b => b !== humanSpecific);
+    botSpecs.push({ role: 'bloc', sp: rand(remaining) });
+  } else {
+    // 2 Bloc bots + 1 Ghost bot
+    botSpecs.push({ role: 'bloc', sp: rand(allBlocs) });
+    botSpecs.push({ role: 'bloc', sp: rand(allBlocs.filter(b => b !== botSpecs[0].sp)) });
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
+  }
+  botSpecs.forEach((bs, i) => players.push(buildPlayer(i + 1, 'bot', bs.role, bs.sp)));
+
+  // Set bloc HQ zones as owned
+  players.forEach(p => {
+    if (p.role === 'bloc') {
+      const setup = BLOC_SETUP[p.specific];
+      map[setup.hq].owner = p.id;
+      setup.support.forEach(s => { map[s].owner = p.id; });
+      p.position = setup.hq;
+    } else {
+      p.position = GHOST_STATS[p.specific].startZone;
+    }
+  });
+
+  // Deal objectives
+  const objBloc = shuffle(OBJECTIVES.filter(o => o.role === 'bloc'));
+  const objGhost = shuffle(OBJECTIVES.filter(o => o.role === 'ghost'));
+  let bi = 0, gi = 0;
+  players.forEach(p => {
+    if (p.role === 'bloc') {
+      p.objectives = [objBloc[bi++ % objBloc.length], objBloc[bi++ % objBloc.length]];
+    } else {
+      p.objectives = [objGhost[gi++ % objGhost.length], objGhost[gi++ % objGhost.length]];
+    }
+  });
+
+  return {
+    meta: {
+      scenario: 'S01',
+      mapSize: '5x5',
+      round: 1,
+      phase: 0,
+      currentPlayer: 0,
+      humanPlayer: 0,
+      turnInit: null,
+      gameOver: false,
+      winner: null,
+      winReason: null,
+      newsSinceStart: 0,
+      raidsThisGame: { 0:0, 1:0, 2:0, 3:0 },
+      zonesVisited: { 0: new Set(), 1: new Set(), 2: new Set(), 3: new Set() },
+      attacksUsed: { 0:0, 1:0, 2:0, 3:0 },
+      lostCardsUsed: { 0:0, 1:0, 2:0, 3:0 },
+      nexusHolder: null,
+      nexusStreak: 0,
+      claimedAchievements: {},  // id => playerIdx
+    },
+    players,
+    map,
+    pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
+    stocks: { VANTA: 10, IRONWALL: 10, HELIX: 10, AXIOM: 10, CARBON: 10 },
+    heat: 5,
+    signalDie: rollSignalDie(),
+    currentNews: null,
+    log: [{ round: 0, phase: 0, message: '🎮 게임 시작. 튜토리얼 5×5 · 시나리오 S01' }],
+  };
+}
+
+function buildPlayer(id, kind, role, specific) {
+  const deck = role === 'bloc' ? BLOC_DECKS[specific] : GHOST_DECKS[specific];
+  const stats = role === 'bloc' ? BLOC_STATS[specific] : GHOST_STATS[specific];
+  return {
+    id, kind, role, specific,
+    hp: stats.hp,
+    maxHp: stats.hp,
+    stats,
+    resources: initResources(role),
+    stocks: initStocks(role, specific),
+    deck: shuffle(deck),
+    hand: [],
+    discard: [],
+    lost: [],
+    contracts: [],
+    wanted: 0,
+    tl: 1,
+    tlProgress: 0,
+    position: null,
+    zonesOwned: [],
+    objectives: [],
+    achievements: [],
+    defeated: false,
+    plannedCards: [],  // for phase 3->4
+  };
+}
+
+// Reducer actions
+function reducer(state, action) {
+  switch (action.type) {
+    case 'DRAW_INITIAL': {
+      // Draw hand size depending on role
+      const ps = state.players.map(p => {
+        const handSize = p.role === 'bloc' ? 5 : 6;
+        const newHand = p.deck.slice(0, handSize);
+        const newDeck = p.deck.slice(handSize);
+        return { ...p, hand: newHand, deck: newDeck };
+      });
+      return { ...state, players: ps };
+    }
+
+    case 'LOG':
+      return { ...state, log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: action.msg }].slice(-60) };
+
+    case 'SET_PHASE':
+      return { ...state, meta: { ...state.meta, phase: action.phase } };
+
+    case 'NEXT_PHASE': {
+      const cur = state.meta.phase;
+      if (cur < 6) return { ...state, meta: { ...state.meta, phase: cur + 1 } };
+      // End of round
+      return state;  // handled elsewhere
+    }
+
+    case 'NEXT_ROUND': {
+      const newRound = state.meta.round + 1;
+      // Check game over by round limit
+      if (newRound > 8) {
+        return checkVictoryByPoints(state);
+      }
+      // Roll new signal die
+      const nd = rollSignalDie();
+      // Decay attribute pool
+      const newPool = {};
+      for (const [k, v] of Object.entries(state.pool)) newPool[k] = Math.floor(v / 2);
+      return {
+        ...state,
+        meta: { ...state.meta, round: newRound, phase: 0 },
+        signalDie: nd,
+        pool: newPool,
+        currentNews: null,
+        log: [...state.log, { round: newRound, phase: 0, message: `🔄 라운드 ${newRound} 시작. 시그널: ${nd}` }].slice(-60),
+      };
+    }
+
+    case 'DRAW_NEWS': {
+      const news = rand(NEWS);
+      let newStocks = { ...state.stocks };
+      let newHeat = state.heat;
+      if (news.effect.heat) newHeat += news.effect.heat;
+      if (news.effect.all_stock) {
+        Object.keys(newStocks).forEach(k => newStocks[k] = Math.max(1, Math.min(20, newStocks[k] + news.effect.all_stock)));
+      }
+      if (news.effect.ironwall_stock) newStocks.IRONWALL = Math.max(1, Math.min(20, newStocks.IRONWALL + news.effect.ironwall_stock));
+      if (news.effect.axiom_stock) newStocks.AXIOM = Math.max(1, Math.min(20, newStocks.AXIOM + news.effect.axiom_stock));
+      return {
+        ...state,
+        currentNews: news,
+        stocks: newStocks,
+        heat: Math.max(0, Math.min(10, newHeat)),
+        log: [...state.log, { round: state.meta.round, phase: 1, message: `📰 ${news.title} — ${JSON.stringify(news.effect).slice(0, 60)}` }].slice(-60),
+      };
+    }
+
+    case 'PLAN_CARDS': {
+      // action.playerIdx, action.cards (array of card IDs — 1 or 2 for ghost; 1-3 for bloc)
+      const ps = state.players.map((p, i) => {
+        if (i === action.playerIdx) {
+          return { ...p, plannedCards: action.cards };
+        }
+        return p;
+      });
+      return { ...state, players: ps };
+    }
+
+    case 'EXECUTE_TURN': {
+      // Order players by initiative
+      const pOrder = state.players
+        .map((p, i) => ({ p, i, init: getInitiative(p) }))
+        .filter(x => !x.p.defeated && x.p.plannedCards.length > 0)
+        .sort((a, b) => a.init - b.init);
+
+      let s = state;
+      for (const { p, i } of pOrder) {
+        s = executeCards(s, i);
+      }
+      // Clear planned
+      s.players = s.players.map(p => ({ ...p, plannedCards: [] }));
+      return s;
+    }
+
+    case 'COLLECT_INCOME': {
+      let s = { ...state, players: [...state.players] };
+      s.players = s.players.map(p => {
+        const res = { ...p.resources };
+        const stocks = { ...p.stocks };
+        let income = 0;
+        p.zonesOwned.forEach(c => {
+          const z = ZONE_TYPES[state.map[c].zone];
+          for (const [k, v] of Object.entries(z.income)) {
+            if (k === 'all_attr' || k === 'random_attr') continue;
+            res[k] = (res[k] || 0) + v;
+            if (k === 'credit') income += v;
+          }
+        });
+        // Dividends
+        for (const [bl, qty] of Object.entries(p.stocks)) {
+          if (qty >= 2) {
+            const divPerShare = state.stocks[bl] >= 15 ? 1 : 0.5;
+            res.credit += Math.floor(qty * divPerShare);
+          }
+        }
+        return { ...p, resources: res };
+      });
+      // NEXUS income to owner (if any)
+      for (const [c, cell] of Object.entries(state.map)) {
+        if (state.map[c].zone === 'nex' && cell.owner !== null) {
+          // owner gets all attrs
+          const newPool = { ...s.pool };
+          ['M','I','V','S','B','A'].forEach(a => newPool[a]++);
+          s.pool = newPool;
+          s.players[cell.owner].resources.credit += 3;
+        }
+      }
+      return s;
+    }
+
+    case 'CLAIM_ACHIEVEMENT': {
+      // action.playerIdx, action.achievementId
+      if (state.meta.claimedAchievements[action.achievementId] !== undefined) return state;
+      const achv = ACHIEVEMENTS_IN.find(a => a.id === action.achievementId);
+      if (!achv) return state;
+      const ps = state.players.map((p, i) => {
+        if (i !== action.playerIdx) return p;
+        const res = { ...p.resources };
+        if (achv.reward.res) res.credit += achv.reward.res;
+        if (achv.reward.rep) res.rep += achv.reward.rep;
+        if (achv.reward.parts) res.parts += achv.reward.parts;
+        if (achv.reward.data) res.data += achv.reward.data;
+        if (achv.reward.contact) res.influence += achv.reward.contact;
+        return { ...p, resources: res, achievements: [...p.achievements, action.achievementId] };
+      });
+      return {
+        ...state,
+        players: ps,
+        meta: { ...state.meta, claimedAchievements: { ...state.meta.claimedAchievements, [action.achievementId]: action.playerIdx } },
+        log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `🏆 P${action.playerIdx} 업적 달성: ${achv.name}` }].slice(-60),
+      };
+    }
+
+    case 'MOVE_PLAYER': {
+      // action.playerIdx, action.to
+      const ps = state.players.map((p, i) => {
+        if (i !== action.playerIdx) return p;
+        return { ...p, position: action.to };
+      });
+      return {
+        ...state,
+        players: ps,
+        log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `P${action.playerIdx} 이동 → ${action.to}` }].slice(-60),
+      };
+    }
+
+    case 'VICTORY':
+      return { ...state, meta: { ...state.meta, gameOver: true, winner: action.winner, winReason: action.reason } };
+
+    case 'RESET':
+      return initGame(action.humanRole, action.humanSpecific);
+
+    default:
+      return state;
+  }
+}
+
+function getInitiative(p) {
+  if (p.role === 'ghost' && p.plannedCards[0]) {
+    const c = getCard(p.plannedCards[0]);
+    return c?.init ?? 50;
+  }
+  if (p.role === 'bloc' && p.plannedCards[0]) {
+    return (p.tl || 1) * 10;
+  }
+  return 50;
+}
+
+function executeCards(state, playerIdx) {
+  let s = { ...state };
+  const p = s.players[playerIdx];
+  if (!p.plannedCards || p.plannedCards.length === 0) return s;
+
+  // For simplicity: execute TOP of first card + BOTTOM of second card (Ghost) or Main of first (Bloc)
+  if (p.role === 'ghost') {
+    const c1 = getCard(p.plannedCards[0]);
+    const c2 = p.plannedCards.length > 1 ? getCard(p.plannedCards[1]) : null;
+    if (c1?.top) s = applyEffect(s, playerIdx, c1.top, 'top', c1);
+    if (c2?.bot) s = applyEffect(s, playerIdx, c2.bot, 'bot', c2);
+    // Move cards to discard/lost
+    const newHand = p.hand.filter(h => !p.plannedCards.includes(h));
+    const newDiscard = [...p.discard];
+    const newLost = [...p.lost];
+    p.plannedCards.forEach((cid, i) => {
+      const c = getCard(cid);
+      if (c?.loss && i === 1) newLost.push(cid);
+      else if (c?.loss && i === 0) newLost.push(cid);
+      else newDiscard.push(cid);
+    });
+    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, lost: newLost } : pp);
+  } else {
+    // Bloc
+    const c1 = getCard(p.plannedCards[0]);
+    if (c1?.main) s = applyEffect(s, playerIdx, c1.main, 'main', c1);
+    // Move played cards to discard
+    const newHand = p.hand.filter(h => !p.plannedCards.includes(h));
+    const newDiscard = [...p.discard, ...p.plannedCards];
+    s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard } : pp);
+  }
+  return s;
+}
+
+function applyEffect(state, playerIdx, effect, kind, card) {
+  let s = state;
+  const p = s.players[playerIdx];
+
+  // Generate attr
+  if (effect.gen) {
+    const newPool = { ...s.pool };
+    const keys = effect.gen.split(':');
+    keys.forEach(k => { newPool[k] = (newPool[k] || 0) + 1; });
+    s = { ...s, pool: newPool };
+  }
+
+  // Pay cost
+  if (effect.cost) {
+    const newPool = { ...s.pool };
+    for (const a of effect.cost) {
+      if (newPool[a] > 0) newPool[a]--;
+      else if (newPool.GRID > 0) newPool.GRID--;
+      else {
+        // Can't pay — ignore effect
+        return s;
+      }
+    }
+    s = { ...s, pool: newPool };
+  }
+
+  // Move
+  if (effect.move) {
+    // Ghost auto-move to a random adjacent zone (for bot); human picks UI (out of scope for MVP)
+    const adj = coordsAdj(p.position);
+    if (adj.length > 0) {
+      const target = rand(adj);
+      const ps = [...s.players];
+      ps[playerIdx] = { ...ps[playerIdx], position: target };
+      // Track visited
+      const v = new Set(s.meta.zonesVisited[playerIdx] || []);
+      v.add(target);
+      s = { ...s, players: ps, meta: { ...s.meta, zonesVisited: { ...s.meta.zonesVisited, [playerIdx]: v } } };
+    }
+  }
+
+  // Attack — simple damage if in same zone as enemy
+  if (effect.atk || effect.atk_x2 || effect.atk_x3_retort) {
+    const atkVal = effect.atk || 0;
+    const enemies = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.position === p.position);
+    if (enemies.length > 0) {
+      const target = enemies[0];
+      const tIdx = s.players.indexOf(target);
+      const atkTotal = p.stats.atk + atkVal + d6();
+      const defTotal = target.stats.def + d6() + (effect.def_ignore ? 0 : 0);
+      const dmg = Math.max(0, atkTotal - defTotal);
+      s = logEntry(s, `💥 P${playerIdx} → P${tIdx}: ATK${atkTotal} vs DEF${defTotal} = ${dmg} 피해`);
+      const ps = [...s.players];
+      ps[tIdx] = { ...ps[tIdx], hp: Math.max(0, ps[tIdx].hp - dmg) };
+      if (ps[tIdx].hp === 0) {
+        ps[tIdx] = { ...ps[tIdx], defeated: true };
+        s = logEntry(s, `⚰️ P${tIdx} 쓰러짐`);
+      }
+      s = { ...s, players: ps };
+      // Count attacks
+      s.meta.attacksUsed[playerIdx] = (s.meta.attacksUsed[playerIdx] || 0) + 1;
+    }
+  }
+
+  // Raid (if ghost and target is bloc zone)
+  if (effect.raid_bonus || (p.role === 'ghost' && effect.atk && s.map[p.position]?.owner !== null && s.players[s.map[p.position].owner]?.role === 'bloc')) {
+    const targetCell = s.map[p.position];
+    if (targetCell.owner !== null && s.players[targetCell.owner]?.role === 'bloc') {
+      const raidSuccess = d6() + p.stats.atk >= 6;
+      if (raidSuccess) {
+        const bloc = s.players[targetCell.owner].specific;
+        // Decrease stock
+        const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
+        s = { ...s, stocks: newStocks };
+        // Add rep
+        const ps = [...s.players];
+        ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 }, wanted: ps[playerIdx].wanted + 1 };
+        // Increase heat
+        s = { ...s, heat: Math.min(10, s.heat + 1) };
+        s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+        s = { ...s, players: ps };
+        s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} 렙+3, ${bloc} 주가-3`);
+      } else {
+        const ps = [...s.players];
+        ps[playerIdx] = { ...ps[playerIdx], hp: Math.max(0, ps[playerIdx].hp - 3), wanted: ps[playerIdx].wanted + 1 };
+        s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
+        s = logEntry(s, `❌ 레이드 실패. P${playerIdx} HP-3`);
+      }
+    }
+  }
+
+  // Heal
+  if (effect.heal_all) {
+    const ps = s.players.map(pp => pp.role === 'bloc' ? pp : { ...pp, hp: Math.min(pp.maxHp, pp.hp + Math.floor(pp.maxHp * 0.5)) });
+    s = { ...s, players: ps };
+  }
+
+  // Loss tag tracking
+  if (card?.loss) {
+    s.meta.lostCardsUsed[playerIdx] = (s.meta.lostCardsUsed[playerIdx] || 0) + 1;
+  }
+
+  // Stock crash
+  if (effect.crash_stock || effect.crash_target) {
+    // Random bloc (simplified)
+    const target = rand(Object.keys(s.stocks));
+    const amt = effect.crash_stock || effect.crash_target || 3;
+    const newStocks = { ...s.stocks, [target]: Math.max(1, s.stocks[target] - amt) };
+    s = { ...s, stocks: newStocks };
+    s = logEntry(s, `📉 ${target} 주가 -${amt}`);
+  }
+
+  return s;
+}
+
+function logEntry(s, msg) {
+  return { ...s, log: [...s.log, { round: s.meta.round, phase: s.meta.phase, message: msg }].slice(-60) };
+}
+
+function checkVictoryByPoints(state) {
+  // Find winner by asset (bloc) or rep (ghost)
+  let winner = null;
+  let topAsset = -Infinity;
+  let topRep = -Infinity;
+  state.players.forEach((p, i) => {
+    if (p.role === 'bloc') {
+      const av = assetValue(p, state.stocks);
+      if (av > topAsset) { topAsset = av; winner = { idx: i, reason: `시간 종료 · 최고 자산 ${av}` }; }
+    } else {
+      if (p.resources.rep > topRep) { topRep = p.resources.rep; winner = { idx: i, reason: `시간 종료 · 최고 렙 ${p.resources.rep}` }; }
+    }
+  });
+  return { ...state, meta: { ...state.meta, gameOver: true, winner: winner?.idx, winReason: winner?.reason || '무승부' } };
+}
+
+function checkInstantVictory(state) {
+  // Check tutorial victory conditions
+  for (let i = 0; i < state.players.length; i++) {
+    const p = state.players[i];
+    if (p.role === 'bloc') {
+      if (assetValue(p, state.stocks) >= 25) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 25 도달` } };
+      }
+    } else {
+      if (p.resources.rep >= 10 && (state.meta.raidsThisGame[i] || 0) >= 1) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리: 렙 10 + 레이드 1` } };
+      }
+    }
+  }
+  return state;
+}
+
+// ============================================================================
+// AI (Score-based greedy)
+// ============================================================================
+
+function botPickCards(state, playerIdx) {
+  const p = state.players[playerIdx];
+  if (p.hand.length === 0) return [];
+
+  if (p.role === 'ghost') {
+    // Pick 2 cards if possible
+    const scored = p.hand.map(cid => ({ cid, score: scoreGhostCard(state, playerIdx, cid) }));
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, Math.min(2, p.hand.length)).map(x => x.cid);
+  } else {
+    // Bloc picks 1 card
+    const scored = p.hand.map(cid => ({ cid, score: scoreBlocCard(state, playerIdx, cid) }));
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 1).map(x => x.cid);
+  }
+}
+
+function scoreGhostCard(state, pIdx, cid) {
+  const c = getCard(cid);
+  const p = state.players[pIdx];
+  if (!c) return 0;
+  let score = 10;
+
+  // Prefer attacking when HP full
+  if (c.top?.atk && p.hp > p.maxHp * 0.5) score += 15;
+  if (c.bot?.atk || c.bot?.atk_x2 || c.bot?.atk_x3_retort) score += 10;
+
+  // Prefer move when not near anything
+  if (c.top?.move && p.zonesOwned.length < 2) score += 8;
+
+  // Avoid LOSS unless powerful
+  if (c.loss) {
+    if (p.hp < p.maxHp * 0.3) score -= 10;
+    else score += (c.bot?.atk || 0);
+  }
+
+  // Resource generation
+  if (c.top?.gen && state.pool[c.top.gen] < 2) score += 5;
+
+  return score + Math.random() * 2;
+}
+
+function scoreBlocCard(state, pIdx, cid) {
+  const c = getCard(cid);
+  const p = state.players[pIdx];
+  if (!c) return 0;
+  let score = 10;
+
+  // Prefer own TL or lower
+  if (c.tl <= p.tl) score += 15;
+  if (c.tl > p.tl) score -= 20;
+
+  // Resource efficiency
+  const costLen = c.main?.cost?.length || 0;
+  if (costLen > 0) {
+    let payable = true;
+    const poolCopy = { ...state.pool };
+    for (const a of c.main.cost) {
+      if (poolCopy[a] > 0) poolCopy[a]--;
+      else if (poolCopy.GRID > 0) poolCopy.GRID--;
+      else { payable = false; break; }
+    }
+    if (!payable) score -= 30;
+  }
+
+  // Reward aggressive cards for attackers
+  if (c.main?.deploy_op || c.main?.heat) score += 10;
+
+  return score + Math.random() * 2;
+}
+
+// ============================================================================
+// UI COMPONENTS
+// ============================================================================
+
+function SetupScreen({ onStart }) {
+  const [role, setRole] = useState('ghost');
+  const [specific, setSpecific] = useState('CIPHER');
+
+  const options = role === 'ghost'
+    ? [['CIPHER','정보전·해킹'],['BLADE','전투·집행'],['BROKER','협상·중개'],['RIGGER','기술·제작'],['DRIFTER','이동·보급'],['MOLE','내부 침투']]
+    : [['VANTA','보안·정보'],['IRONWALL','군사·중화기'],['HELIX','생체공학'],['AXIOM','AI·예측'],['CARBON','에너지·인프라']];
+
+  const statsFor = (sp) => role === 'ghost' ? GHOST_STATS[sp] : BLOC_STATS[sp];
+  const s = statsFor(specific);
+
+  return (
+    <div className="setup">
+      <h1>DEAD NEXUS</h1>
+      <div className="tagline">SIMULATOR v0.5 · TUTORIAL MODE · 5×5 ASHGRID</div>
+
+      <h2>1. 역할 선택</h2>
+      <div className="role-grid">
+        <div className={`role-card ${role === 'ghost' ? 'selected' : ''}`} onClick={() => { setRole('ghost'); setSpecific('CIPHER'); }}>
+          <h3>👻 GHOST</h3>
+          <p>독립 용병. 렙 10 + 레이드 1회로 승리.</p>
+        </div>
+        <div className={`role-card ${role === 'bloc' ? 'selected' : ''}`} onClick={() => { setRole('bloc'); setSpecific('VANTA'); }}>
+          <h3>🏢 BLOC</h3>
+          <p>메가기업 운영. 자산 25 도달로 승리.</p>
+        </div>
+      </div>
+
+      <h2>2. {role === 'ghost' ? '클래스' : '블록'} 선택</h2>
+      <div className="class-grid">
+        {options.map(([sp, desc]) => {
+          const st = statsFor(sp);
+          return (
+            <div key={sp} className={`class-card ${specific === sp ? 'selected' : ''}`} onClick={() => setSpecific(sp)}>
+              <div className="cname">{sp}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{desc}</div>
+              <div className="cstats">
+                HP:{st.hp} ATK:{st.atk}<br/>
+                DEF:{st.def} SPD:{st.spd}<br/>
+                HACK:{st.hack}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <h2>3. 상대 (봇 3명 자동 배정)</h2>
+      <div style={{ background: 'var(--bg2)', padding: 12, borderRadius: 3, fontSize: 13, color: 'var(--text-dim)' }}>
+        당신이 {role === 'ghost' ? 'Ghost' : 'Bloc'}이면 봇은 반대 역할 + 같은 역할 믹스로 배정됩니다.
+        시나리오 S01 표준 · 최대 8라운드 · 튜토리얼 승리 조건.
+      </div>
+
+      <button className="start-btn" onClick={() => onStart(role, specific)}>
+        🎮 START SIMULATION
+      </button>
+    </div>
+  );
+}
+
+function GameScreen({ state, dispatch }) {
+  const me = state.players[0];
+  const isMyTurn = state.meta.phase === 2;  // Plan phase
+  const [selectedCards, setSelectedCards] = useState([]);
+
+  // Auto-advance phases
+  useEffect(() => {
+    if (state.meta.gameOver) return;
+    const ph = state.meta.phase;
+
+    // Instantaneous phase handling
+    if (ph === 1 && !state.currentNews) {
+      setTimeout(() => dispatch({ type: 'DRAW_NEWS' }), 600);
+      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 2 }), 1500);
+    }
+
+    if (ph === 2) {
+      // Bots auto-pick
+      state.players.forEach((p, i) => {
+        if (p.kind === 'bot' && !p.defeated && p.plannedCards.length === 0) {
+          const cards = botPickCards(state, i);
+          setTimeout(() => dispatch({ type: 'PLAN_CARDS', playerIdx: i, cards }), 300 + i * 200);
+        }
+      });
+    }
+
+    if (ph === 3) {
+      setTimeout(() => {
+        dispatch({ type: 'EXECUTE_TURN' });
+        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 4 }), 1200);
+      }, 500);
+    }
+
+    if (ph === 4) {
+      setTimeout(() => {
+        dispatch({ type: 'COLLECT_INCOME' });
+        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 5 }), 800);
+      }, 400);
+    }
+
+    if (ph === 5) {
+      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 6 }), 500);  // R&D skip for MVP
+    }
+
+    if (ph === 6) {
+      setTimeout(() => {
+        // Check victory
+        const after = checkInstantVictory(state);
+        if (after.meta.gameOver) {
+          dispatch({ type: 'VICTORY', winner: after.meta.winner, reason: after.meta.winReason });
+        } else {
+          dispatch({ type: 'NEXT_ROUND' });
+        }
+      }, 500);
+    }
+  }, [state.meta.phase, state.meta.round]);
+
+  const canPlan = me.kind === 'human' && state.meta.phase === 2;
+  const needCards = me.role === 'ghost' ? 2 : 1;
+
+  const confirmPlan = () => {
+    dispatch({ type: 'PLAN_CARDS', playerIdx: 0, cards: selectedCards });
+    setSelectedCards([]);
+    // Wait for bots to plan, then advance
+    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 800);
+  };
+
+  const toggleCard = (cid) => {
+    if (!canPlan) return;
+    if (selectedCards.includes(cid)) {
+      setSelectedCards(selectedCards.filter(c => c !== cid));
+    } else if (selectedCards.length < needCards) {
+      setSelectedCards([...selectedCards, cid]);
+    }
+  };
+
+  if (state.meta.gameOver) {
+    const iWon = state.meta.winner === 0;
+    return (
+      <div className={`gameover ${iWon ? 'win' : 'lose'}`}>
+        <h1>{iWon ? 'VICTORY' : 'DEFEAT'}</h1>
+        <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20 }}>
+          {state.meta.winReason || '게임 종료'}
+        </div>
+        <div className="stats-grid">
+          <div className="stat-box">
+            <div className="lbl">ROUND</div>
+            <div className="val">{state.meta.round}</div>
+          </div>
+          <div className="stat-box">
+            <div className="lbl">{me.role === 'bloc' ? 'ASSET' : 'REP'}</div>
+            <div className="val">{me.role === 'bloc' ? assetValue(me, state.stocks) : me.resources.rep}</div>
+          </div>
+          <div className="stat-box">
+            <div className="lbl">ACHIEVEMENTS</div>
+            <div className="val">{me.achievements.length}</div>
+          </div>
+        </div>
+        <button className="start-btn" style={{ maxWidth: 300 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
+          🔄 AGAIN
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="game">
+      <div className="top-bar">
+        <div className="title">DEAD NEXUS · SIM v0.5</div>
+        <div className="phases">
+          {PHASE_NAMES.map((name, i) => (
+            <div key={i} className={`phase-chip ${i === state.meta.phase ? 'active' : (i < state.meta.phase ? 'done' : '')}`}>
+              {i+1}.{name}
+            </div>
+          ))}
+        </div>
+        <div className="round">R{state.meta.round}/8</div>
+        <div className="heat">🚨HEAT {state.heat}</div>
+      </div>
+
+      {/* LEFT — Players */}
+      <div className="left-panel">
+        <h4 style={{ margin: '4px 0 8px', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2 }}>PLAYERS</h4>
+        {state.players.map((p, i) => (
+          <div key={i} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`}>
+            <div className="pheader">
+              <div className="pname">{p.kind === 'human' ? '👤' : '🤖'} P{i} · {p.specific}</div>
+              <div className="php">HP {p.hp}/{p.maxHp}</div>
+            </div>
+            <div className="pstats">
+              <div>₵ <strong>{p.resources.credit}</strong></div>
+              <div>📡 <strong>{p.resources.data}</strong></div>
+              <div>🎙 <strong>{p.resources.influence}</strong></div>
+              <div>🔩 <strong>{p.resources.weapons}</strong></div>
+              <div>⚙️ <strong>{p.resources.parts}</strong></div>
+              {p.role === 'ghost'
+                ? <div>★ <strong>{p.resources.rep}</strong></div>
+                : <div>📊 <strong>{assetValue(p, state.stocks)}</strong></div>
+              }
+            </div>
+            {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
+            <div style={{ fontSize: 10, marginTop: 4, color: 'var(--text-dim)' }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</div>
+            {i === 0 && (
+              <div style={{ fontSize: 10, marginTop: 6, color: 'var(--yellow)' }}>
+                🎯 {p.objectives.map(o => o.name).join(' · ')}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* CENTER — Map + Hand */}
+      <div className="center-panel">
+        <div className="map-wrap">
+          <div className="map-board">
+            <div className="map-cell corner"></div>
+            <div className="map-cell label">A</div>
+            <div className="map-cell label">B</div>
+            <div className="map-cell label">C</div>
+            <div className="map-cell label">D</div>
+            <div className="map-cell label">E</div>
+            {[1,2,3,4,5].map(r => (
+              <React.Fragment key={r}>
+                <div className="map-cell label">{r}</div>
+                {['A','B','C','D','E'].map(c => {
+                  const cd = c + r;
+                  const cell = state.map[cd];
+                  if (!cell) return <div key={cd} className="map-cell"></div>;
+                  const z = ZONE_TYPES[cell.zone];
+                  const owner = cell.owner !== null ? state.players[cell.owner] : null;
+                  const pm = state.players.filter(p => p.position === cd && !p.defeated);
+                  return (
+                    <div key={cd} className={`map-cell ${z.color}`}>
+                      <div className="coord">{cd}</div>
+                      <div className="ztype">{z.name}</div>
+                      {owner && <div className="owner" style={{ background: owner.role === 'bloc' ? BLOC_SETUP[owner.specific]?.color || '#555' : '#333' }}>P{cell.owner}</div>}
+                      {pm.length > 0 && <div className="pm">{pm.map(p => p.specific.slice(0,2)).join(',')}</div>}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Hand */}
+        <div className="hand-wrap">
+          <h4>
+            ✋ 내 손패 ({me.hand.length}) · {canPlan ? `카드 ${needCards}장 선택 (${selectedCards.length}/${needCards})` : '대기'}
+            {canPlan && selectedCards.length === needCards && (
+              <button className="pa-btn primary" style={{ float: 'right', marginTop: -4 }} onClick={confirmPlan}>✓ 확정</button>
+            )}
+          </h4>
+          <div className="hand">
+            {me.hand.map((cid, idx) => {
+              const c = getCard(cid);
+              if (!c) return null;
+              const sel = selectedCards.includes(cid);
+              return (
+                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`} onClick={() => toggleCard(cid)}>
+                  <div className="ch">
+                    <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
+                    <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
+                      {c.loss && <span className="loss-tag">LOSS</span>}
+                    </span>
+                  </div>
+                  <div className="ct">{c.name}</div>
+                  <div className="ceff">
+                    {c.top && <>▲ {effectSummary(c.top)}</>}
+                    {c.main && <>▶ {effectSummary(c.main)}</>}
+                  </div>
+                  <div className="cbot">
+                    {c.bot && <>▼ {c.bot.cost ? <span className="cost">{c.bot.cost.join(' ')}</span> : ''} {effectSummary(c.bot)}</>}
+                    {c.side && <>↻ {effectSummary(c.side)}</>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Phase actions */}
+        <div className="phase-actions">
+          {state.meta.phase === 0 && (
+            <button className="pa-btn primary" onClick={() => dispatch({ type: 'SET_PHASE', phase: 1 })}>
+              ▶ 시장 → 뉴스
+            </button>
+          )}
+          {state.meta.phase === 2 && !canPlan && (
+            <button className="pa-btn" disabled>봇 계획 중...</button>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT — Pool, News, Log */}
+      <div className="right-panel">
+        <div className="pool-box">
+          <h4>🎨 속성 풀</h4>
+          <div className="attr-row">
+            {Object.entries(state.pool).map(([k, v]) => (
+              <span key={k} className={`attr-tag a-${k}`}>◈{k}<span style={{ marginLeft: 2 }}>{v}</span></span>
+            ))}
+          </div>
+        </div>
+
+        <div className={`pool-box signal-box sig-${state.signalDie}`}>
+          📡 {state.signalDie}
+        </div>
+
+        <div className="pool-box">
+          <h4>📊 주가</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
+            {Object.entries(state.stocks).map(([bl, v]) => (
+              <div key={bl}>
+                <span style={{ color: 'var(--text-dim)' }}>{bl}:</span> <span style={{ color: v > 10 ? 'var(--green)' : (v < 10 ? 'var(--magenta)' : 'var(--text)') }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {state.currentNews && (
+          <div className="news-box">
+            <div className="nh">📰 뉴스 {state.currentNews.id}</div>
+            <div style={{ fontWeight: 700 }}>{state.currentNews.title}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic', marginTop: 3 }}>{state.currentNews.flavor}</div>
+          </div>
+        )}
+
+        <div className="pool-box">
+          <h4>🏆 업적 (선언)</h4>
+          <div style={{ display: 'grid', gap: 3, fontSize: 10 }}>
+            {ACHIEVEMENTS_IN.map(a => {
+              const claimed = state.meta.claimedAchievements[a.id] !== undefined;
+              const mine = state.meta.claimedAchievements[a.id] === 0;
+              return (
+                <button
+                  key={a.id}
+                  className="pa-btn"
+                  style={{ fontSize: 10, padding: '4px 6px', opacity: claimed ? 0.4 : 1, background: mine ? 'var(--green)' : 'var(--bg3)', color: mine ? '#000' : 'var(--text)' }}
+                  disabled={claimed}
+                  onClick={() => dispatch({ type: 'CLAIM_ACHIEVEMENT', playerIdx: 0, achievementId: a.id })}
+                >
+                  {a.tier === 'gold' ? '🥇' : a.tier === 'silver' ? '🥈' : '🥉'} {a.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="log-box">
+          <h4>📜 LOG</h4>
+          {state.log.slice(-20).reverse().map((l, i) => (
+            <div key={i} className="log-entry">
+              [R{l.round}P{l.phase + 1}] {l.message}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function effectSummary(eff) {
+  const parts = [];
+  if (eff.gen) parts.push(`+${eff.gen}`);
+  if (eff.move) parts.push(`이동${eff.move}`);
+  if (eff.atk) parts.push(`ATK+${eff.atk}`);
+  if (eff.def) parts.push(`DEF+${eff.def}`);
+  if (eff.scout) parts.push(`정찰${eff.scout}`);
+  if (eff.heal_all) parts.push(`전원 회복`);
+  if (eff.stealth) parts.push('은신');
+  if (eff.break_veil) parts.push('베일해제');
+  if (eff.deploy_op) parts.push(`OP배치${eff.deploy_op}`);
+  if (eff.weapons) parts.push(`무기+${eff.weapons}`);
+  if (eff.heat) parts.push(`공권력${eff.heat > 0 ? '+' : ''}${eff.heat}`);
+  if (eff.crash_stock || eff.crash_target) parts.push(`주가-${eff.crash_stock || eff.crash_target}`);
+  if (eff.peek_hand) parts.push('패 엿보기');
+  return parts.join(' · ') || '-';
+}
+
+// ============================================================================
+// ROOT
+// ============================================================================
+
+function App() {
+  const [gameState, dispatch] = useReducer(reducer, null);
+
+  const startGame = useCallback((role, specific) => {
+    const initial = initGame(role, specific);
+    // Draw initial hands
+    initial.players = initial.players.map(p => {
+      const handSize = p.role === 'bloc' ? 5 : 6;
+      return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
+    });
+    dispatch({ type: 'INIT_WITH', state: initial });
+  }, []);
+
+  // Custom "INIT_WITH" handler
+  const [, forceUpdate] = useState(0);
+  const realState = useRef(null);
+  if (realState.current === null && gameState) realState.current = gameState;
+
+  const realDispatch = useCallback((action) => {
+    if (action.type === 'INIT_WITH') {
+      realState.current = action.state;
+    } else if (action.type === 'RESET') {
+      const initial = initGame(action.humanRole, action.humanSpecific);
+      initial.players = initial.players.map(p => {
+        const handSize = p.role === 'bloc' ? 5 : 6;
+        return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
+      });
+      realState.current = initial;
+    } else if (realState.current) {
+      realState.current = reducer(realState.current, action);
+    }
+    forceUpdate(x => x + 1);
+  }, []);
+
+  if (!realState.current) {
+    return <SetupScreen onStart={startGame} />;
+  }
+
+  return <GameScreen state={realState.current} dispatch={realDispatch} />;
+}
+
+// Mount
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+</script>
+
+</body>
+</html>
