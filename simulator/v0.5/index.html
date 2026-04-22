@@ -257,11 +257,13 @@
 
   /* Hand */
   .hand-wrap {
-    margin-top: auto; background: var(--bg2); border-top: 1px solid var(--border);
-    padding: 10px; min-height: 180px;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    padding: 10px; flex: 1 1 auto;
+    display: flex; flex-direction: column;
+    min-height: 0; max-height: 300px;
   }
   .hand-wrap h4 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
-  .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex: 1; align-items: flex-start; }
   .card {
     width: 150px; height: 240px;
     background: #0a0a18; border: 1.5px solid var(--border);
@@ -303,8 +305,12 @@
   /* Action buttons */
   .phase-actions {
     display: flex; gap: 8px; padding: 10px; background: var(--bg2);
-    border-top: 1px solid var(--border);
+    border-top: 2px solid var(--cyan);
+    flex: 0 0 auto;
+    min-height: 54px;
   }
+  .center-panel { display: flex; flex-direction: column; }
+  .map-wrap { flex: 0 0 auto; }
   .pa-btn {
     flex: 1; padding: 10px; background: var(--bg3);
     border: 1.5px solid var(--border); color: var(--text);
@@ -829,9 +835,9 @@ function reducer(state, action) {
         return checkVictoryByPoints(state);
       }
       const nd = rollSignalDie();
-      // 속성 풀 감쇠
+      // 속성 풀 감쇠 (Math.ceil로 1→1 유지하여 시드 보존)
       const newPool = {};
-      for (const [k, v] of Object.entries(state.pool)) newPool[k] = Math.floor(v / 2);
+      for (const [k, v] of Object.entries(state.pool)) newPool[k] = Math.ceil(v / 2);
       // === 손패 리필 (드로우 페이즈) ===
       const refilledPlayers = state.players.map(p => {
         if (p.defeated) return p;
@@ -909,38 +915,58 @@ function reducer(state, action) {
     }
 
     case 'COLLECT_INCOME': {
-      let s = { ...state, players: [...state.players] };
-      s.players = s.players.map(p => {
+      let s = { ...state };
+      const newPool = { ...s.pool };
+      const newLog = [...s.log];
+
+      const newPlayers = state.players.map((p, pi) => {
+        if (p.defeated) return p;
         const res = { ...p.resources };
-        const stocks = { ...p.stocks };
-        let income = 0;
-        p.zonesOwned.forEach(c => {
-          const z = ZONE_TYPES[state.map[c].zone];
+        // 맵에서 직접 소유 구역 찾기 (p.zonesOwned 쓰지 않음 — 안 업데이트되던 버그)
+        const ownedCoords = Object.entries(state.map).filter(([c, cell]) => cell.owner === pi).map(([c]) => c);
+
+        ownedCoords.forEach(c => {
+          const cell = state.map[c];
+          const z = ZONE_TYPES[cell.zone];
+          if (!z) return;
+          // 자원 수입
           for (const [k, v] of Object.entries(z.income)) {
-            if (k === 'all_attr' || k === 'random_attr') continue;
-            res[k] = (res[k] || 0) + v;
-            if (k === 'credit') income += v;
+            if (k === 'all_attr') {
+              ['M','I','V','S','B','A'].forEach(a => { newPool[a] = (newPool[a] || 0) + v; });
+            } else if (k === 'random_attr') {
+              const rnd = rand(['M','I','V','S','B','A']);
+              newPool[rnd] = (newPool[rnd] || 0) + v;
+            } else if (k === 'operative') {
+              // operative는 구역 탈환·OPERATIVE 프록시 — 지금은 크레딧으로 환산
+              res.credit = (res.credit || 0) + v;
+            } else {
+              res[k] = (res[k] || 0) + v;
+            }
+          }
+          // 구역 생산 속성도 풀에 추가 (docs/10 명시)
+          if (z.attr && z.attr !== 'all' && z.attr !== null) {
+            newPool[z.attr] = (newPool[z.attr] || 0) + 1;
           }
         });
-        // Dividends
+
+        // 배당 (10% 이상 지분)
         for (const [bl, qty] of Object.entries(p.stocks)) {
           if (qty >= 2) {
             const divPerShare = state.stocks[bl] >= 15 ? 1 : 0.5;
-            res.credit += Math.floor(qty * divPerShare);
+            const div = Math.floor(qty * divPerShare);
+            if (div > 0) res.credit = (res.credit || 0) + div;
           }
         }
+
+        if (ownedCoords.length > 0) {
+          const summary = `💰 P${pi} [${p.specific}] · ${ownedCoords.length}구역 수입: ₵${res.credit - (p.resources.credit || 0)}`;
+          newLog.push({ round: s.meta.round, phase: s.meta.phase, message: summary });
+        }
+
         return { ...p, resources: res };
       });
-      // NEXUS income to owner (if any)
-      for (const [c, cell] of Object.entries(state.map)) {
-        if (state.map[c].zone === 'nex' && cell.owner !== null) {
-          // owner gets all attrs
-          const newPool = { ...s.pool };
-          ['M','I','V','S','B','A'].forEach(a => newPool[a]++);
-          s.pool = newPool;
-          s.players[cell.owner].resources.credit += 3;
-        }
-      }
+
+      s = { ...s, players: newPlayers, pool: newPool, log: newLog.slice(-60) };
       return s;
     }
 
@@ -1137,7 +1163,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       v.add(target);
       s = { ...s, players: ps, meta: { ...s.meta, zonesVisited: { ...s.meta.zonesVisited, [playerIdx]: v } } };
       const zName = ZONE_TYPES[s.map[target].zone]?.name || target;
-      s = logEntry(s, `🚶 P${playerIdx} [${p.specific}] · ${p.position} → ${target} (${zName})`);
+      const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+      s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${p.position} → ${target} (${zName})`);
     }
   }
 
@@ -1659,14 +1686,19 @@ function GameScreen({ state, dispatch }) {
                   const cell = state.map[cd];
                   if (!cell) return <div key={cd} className="map-cell"></div>;
                   const z = ZONE_TYPES[cell.zone];
-                  const owner = cell.owner !== null ? state.players[cell.owner] : null;
+                  const owner = cell.owner !== null && cell.owner !== undefined ? state.players[cell.owner] : null;
                   const pm = state.players.filter(p => p.position === cd && !p.defeated);
+                  const hasMe = pm.some(p => p.id === 0);
                   return (
-                    <div key={cd} className={`map-cell ${z.color}`}>
+                    <div key={cd} className={`map-cell ${z.color}`} style={hasMe ? { outline: '3px solid var(--cyan)', zIndex: 2 } : {}}>
                       <div className="coord">{cd}</div>
                       <div className="ztype">{z.name}</div>
                       {owner && <div className="owner" style={{ background: owner.role === 'bloc' ? BLOC_SETUP[owner.specific]?.color || '#555' : '#333' }}>P{cell.owner}</div>}
-                      {pm.length > 0 && <div className="pm">{pm.map(p => p.specific.slice(0,2)).join(',')}</div>}
+                      {pm.length > 0 && (
+                        <div className="pm" style={hasMe ? { background: 'var(--cyan)', color: '#000', fontWeight: 900, boxShadow: '0 0 6px var(--cyan)' } : {}}>
+                          {hasMe ? '★' + pm.map(p => p.specific.slice(0,2)).join(',') : pm.map(p => p.specific.slice(0,2)).join(',')}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
