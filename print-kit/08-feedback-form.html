@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Session 00 피드백 양식</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 12mm; background: white; color: #000;
+    line-height: 1.4;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16pt;
+    border-bottom: 2px solid #000;
+    padding-bottom: 2mm;
+    margin: 0 0 4mm 0;
+  }
+  h1 .sub { display: block; font-size: 8pt; color: #666; letter-spacing: 0.2em; margin-top: 1mm; font-weight: 400; }
+
+  .section {
+    margin-bottom: 4mm;
+    padding: 2mm;
+    border: 0.5px solid #ccc;
+  }
+  h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11pt;
+    margin: 0 0 2mm 0;
+    padding-bottom: 1mm;
+    border-bottom: 1px solid #000;
+    color: #c04828;
+  }
+
+  .header-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3mm;
+    font-size: 9pt;
+  }
+  .field {
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+  }
+  .field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 8pt;
+  }
+  .blank {
+    flex: 1;
+    border-bottom: 1px solid #000;
+    min-height: 5mm;
+  }
+
+  .role-row {
+    display: flex;
+    gap: 4mm;
+    font-size: 9pt;
+    margin-top: 1mm;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .role-row label { margin-right: 2mm; }
+
+  .question {
+    margin-bottom: 3mm;
+  }
+  .q-text {
+    font-weight: 700;
+    font-size: 9pt;
+    margin-bottom: 1mm;
+  }
+  .scale {
+    display: flex;
+    gap: 2mm;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+  }
+  .scale .mark {
+    display: flex;
+    gap: 3mm;
+  }
+  .scale-box {
+    width: 6mm;
+    height: 6mm;
+    border: 1.5px solid #000;
+    border-radius: 1mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+  }
+  .scale-label {
+    font-size: 7pt;
+    color: #666;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1mm 4mm;
+    font-size: 8.5pt;
+  }
+  .checkbox-grid label {
+    display: flex;
+    gap: 2mm;
+    align-items: center;
+  }
+  .cb {
+    width: 4mm;
+    height: 4mm;
+    border: 1px solid #000;
+    display: inline-block;
+  }
+
+  .text-area {
+    border: 1px solid #000;
+    min-height: 18mm;
+    padding: 2mm;
+    font-size: 8pt;
+  }
+  .text-line {
+    border-bottom: 1px solid #000;
+    min-height: 7mm;
+    margin-bottom: 1mm;
+  }
+
+  .footer-note {
+    margin-top: 4mm;
+    font-size: 7pt;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · 플레이어당 1매 인쇄. 세션 종료 10분 후 배포 · 10분 작성 후 수거 · 디브리핑 때 공유
+</div>
+
+<h1>Session 00 피드백 양식<span class="sub">DEAD NEXUS · v0.4 · 5×5 TUTORIAL MAP</span></h1>
+
+<div class="section">
+  <h2>기본 정보</h2>
+  <div class="header-fields">
+    <div class="field"><label>이름/닉</label><div class="blank"></div></div>
+    <div class="field"><label>세션 일자</label><div class="blank"></div></div>
+    <div class="field"><label>완주 라운드</label><div class="blank"></div></div>
+  </div>
+  <div class="role-row" style="margin-top:2mm;">
+    <span>역할:</span>
+    <label>☐ Bloc</label>
+    <label>☐ Ghost</label>
+    <label>☐ 관찰자</label>
+    <span style="margin-left:4mm;">세부 (예: VANTA, BLADE):</span>
+    <div style="flex:1; border-bottom:1px solid #000; min-height:5mm;"></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>[1] 규칙 이해도 <span style="font-size:7pt; color:#666; font-weight:400;">1=완전 헤맴 / 5=처음부터 명확</span></h2>
+
+  <div class="question">
+    <div class="q-text">턴 7단계 (시장·뉴스·계획·실행·수익·R&D·결산)</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">Ghost 카드 TOP/BOTTOM 선택 (해당자만)</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">공용 속성 풀 사용법 (생성·소비·감쇠)</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">전투/레이드 판정 절차</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>[2] 재미 <span style="font-size:7pt; color:#666; font-weight:400;">1=지루 / 5=한 판 더 하고 싶음</span></h2>
+
+  <div class="question">
+    <div class="q-text">카드 고르는 순간 — 고민할 가치가 있었는가</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">다른 플레이어와의 상호작용</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">승리·패배의 달성감 (또는 여정)</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+
+  <div class="question">
+    <div class="q-text">★ <strong>전반 재미</strong> (단 하나의 별점이라면)</div>
+    <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>[3] 고쳤으면 하는 것 <span style="font-size:7pt; color:#666; font-weight:400;">3개까지 체크</span></h2>
+  <div class="checkbox-grid">
+    <label><span class="cb"></span> (A) 턴이 너무 길다</label>
+    <label><span class="cb"></span> (B) 턴이 너무 짧다</label>
+    <label><span class="cb"></span> (C) 카드 고를 때 고민이 안 된다</label>
+    <label><span class="cb"></span> (D) 너무 고민된다 (분석마비)</label>
+    <label><span class="cb"></span> (E) 속성 풀이 이해 안 간다</label>
+    <label><span class="cb"></span> (F) 전투가 허무하게 느껴진다</label>
+    <label><span class="cb"></span> (G) 비대칭 역할 차이가 재미 없다</label>
+    <label><span class="cb"></span> (H) 나만 재미있었다/없었다</label>
+  </div>
+  <div style="margin-top:2mm; font-size:8.5pt;">
+    (I) 기타: <span style="display:inline-block; border-bottom:1px solid #000; min-width:120mm; min-height:5mm;"></span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>[4] 가장 기억에 남는 순간 <span style="font-size:7pt; color:#666; font-weight:400;">1~2문장</span></h2>
+  <div class="text-line"></div>
+  <div class="text-line"></div>
+</div>
+
+<div class="section">
+  <h2>[5] "이건 빼도 됐다"고 느낀 규칙 1개</h2>
+  <div class="text-line"></div>
+</div>
+
+<div class="section">
+  <h2>[6] 다음 세션 참가 의향 <span style="font-size:7pt; color:#666; font-weight:400;">1=절대 아님 / 5=적극</span></h2>
+  <div class="scale"><div class="mark"><span class="scale-box">1</span><span class="scale-box">2</span><span class="scale-box">3</span><span class="scale-box">4</span><span class="scale-box">5</span></div></div>
+</div>
+
+<div class="section">
+  <h2>[자유 기술] 그 외 할 말</h2>
+  <div class="text-area"></div>
+</div>
+
+<div class="footer-note">감사합니다. 이 양식은 Notion 피드백 DB에 입력된 후 파기됩니다.</div>
+
+</body>
+</html>

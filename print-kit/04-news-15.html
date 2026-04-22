@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>뉴스 이벤트 (큐레이션 15장)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 6mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page {
+    display: grid;
+    grid-template-columns: repeat(3, 63mm);
+    grid-auto-rows: 88mm;
+    gap: 1mm;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .card {
+    width: 63mm; height: 88mm;
+    border: 1.5px solid #000;
+    padding: 2mm;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    page-break-inside: avoid;
+  }
+  .cat-band {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7.5pt;
+    letter-spacing: 0.3em;
+    color: white;
+    text-align: center;
+    padding: 0.8mm 0;
+  }
+  .c-pol { background: #b91c1c; }  /* 정치 red */
+  .c-eco { background: #ca8a04; }  /* 경제 yellow */
+  .c-soc { background: #ea580c; }  /* 사회 orange */
+  .c-tec { background: #2d6fff; }  /* 기술 blue */
+  .c-mil { background: #374151; }  /* 군사 gray */
+  .c-evt { background: #7e22ce; }  /* 사건 purple */
+
+  .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 28pt;
+    text-align: center;
+    padding: 3mm 0 1mm 0;
+    line-height: 1;
+    color: #888;
+  }
+  .title {
+    font-weight: 900;
+    font-size: 12pt;
+    text-align: center;
+    padding: 1mm 0;
+    border-bottom: 1px solid #000;
+    margin-bottom: 2mm;
+  }
+  .effect {
+    font-size: 9pt;
+    font-weight: 700;
+    text-align: center;
+    padding: 2mm 1mm;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .duration {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    color: #666;
+    text-align: center;
+    padding: 0.5mm 0;
+    border-top: 1px dashed #ccc;
+  }
+  .flavor {
+    font-style: italic;
+    font-size: 7pt;
+    color: #555;
+    text-align: center;
+    padding: 1mm;
+    line-height: 1.25;
+    border-top: 1px solid #ddd;
+  }
+  .card-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    padding: 0.5mm 1mm;
+    margin-bottom: 0.5mm;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · Session 00 큐레이션 15장 · A4 세로 2매
+</div>
+
+<!-- ===== PAGE 1 ===== -->
+<div class="page">
+
+<div class="card">
+  <div class="cat-band c-pol">정치 · 006</div>
+  <div class="num">006</div>
+  <div class="title">블록 세금 인상</div>
+  <div class="effect">모든 Bloc<br/>이번 라운드 수입 −2</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"정부가 아직 존재한다는 증거."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-pol">정치 · 009</div>
+  <div class="num">009</div>
+  <div class="title">뇌물 스캔들</div>
+  <div class="effect">공권력 트랙 −1<br/>모든 Bloc 인플루언스 −1</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"누가 누구에게 뭘 줬는지 모두가 안다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-pol">정치 · 010</div>
+  <div class="num">010</div>
+  <div class="title">긴급 행정명령</div>
+  <div class="effect">랜덤 Bloc 1곳에<br/>독점권 부여<br/>수입 +3 이번 라운드</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"비상사태입니다. 언제 아니었던 적 있나요?"</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-eco">경제 · 011</div>
+  <div class="num">011</div>
+  <div class="title">주식 시장 대폭락</div>
+  <div class="effect">모든 Bloc<br/>주가 −3</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"패닉은 합리적이다. 시작된 후에는."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-eco">경제 · 012</div>
+  <div class="num">012</div>
+  <div class="title">투자 붐</div>
+  <div class="effect">모든 Bloc<br/>주가 +2</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"낙관주의는 위험하다. 그러나 수익성은 있다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-eco">경제 · 013</div>
+  <div class="num">013</div>
+  <div class="title">암시장 호황</div>
+  <div class="effect">블랙마켓 카드<br/>이번 라운드 비용 −1</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"공식이 망가지면 비공식이 성장한다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-eco">경제 · 018</div>
+  <div class="num">018</div>
+  <div class="title">대형 거래 체결</div>
+  <div class="effect">BROKER 플레이어 있으면<br/>₵ 5 획득</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"중개인의 월급날."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-soc">사회 · 021</div>
+  <div class="num">021</div>
+  <div class="title">대규모 시위</div>
+  <div class="effect">공권력 +2<br/>랜덤 구역 1칸<br/>이번 라운드 점령 불가</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"구호는 단순했다. 피켓은 덜 단순했다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-soc">사회 · 022</div>
+  <div class="num">022</div>
+  <div class="title">시민 축제</div>
+  <div class="effect">유흥가 구역 수입 2배<br/>이번 라운드</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"잠깐이라도 괜찮다고 느끼기 위해."</div>
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- ===== PAGE 2 ===== -->
+<div class="page">
+
+<div class="card">
+  <div class="cat-band c-soc">사회 · 025</div>
+  <div class="num">025</div>
+  <div class="title">이민 물결</div>
+  <div class="effect">슬럼 구역 수입 +2<br/>공권력 +1</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"더 나은 곳을 찾아온다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-tec">기술 · 030</div>
+  <div class="num">030</div>
+  <div class="title">베일 업데이트</div>
+  <div class="effect">모든 VANTA 베일<br/>강도 +1</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"더 안전한 것처럼 느끼게 해줍니다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-tec">기술 · 033</div>
+  <div class="num">033</div>
+  <div class="title">드론 스웜 사고</div>
+  <div class="effect">랜덤 구역 1칸 수입 없음<br/>RIGGER 부품 +3</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"수백 대가 날아갔다. 세 대가 돌아왔다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-mil">군사 · 037</div>
+  <div class="num">037</div>
+  <div class="title">용병 시장 확장</div>
+  <div class="effect">IRONWALL 주가 +2<br/>BLADE ATK +1</div>
+  <div class="duration">⏱ 이번 라운드</div>
+  <div class="flavor">"수요는 끝이 없다. 공급도."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-mil">군사 · 043</div>
+  <div class="num">043</div>
+  <div class="title">군수 계약 취소</div>
+  <div class="effect">IRONWALL<br/>주가 −3</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"계약은 깨졌다. 관계는 유지된다."</div>
+</div>
+
+<div class="card">
+  <div class="cat-band c-evt">사건 · 046</div>
+  <div class="num">046</div>
+  <div class="title">UFO 목격</div>
+  <div class="effect">효과 없음<br/>뉴스 카드 2장 추가 드로우</div>
+  <div class="duration">⏱ 즉시</div>
+  <div class="flavor">"그냥 드론이라고 정부는 말한다."</div>
+</div>
+
+</div><!-- /page 2 -->
+
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Bloc 카드 (3세력)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 6mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page {
+    display: grid;
+    grid-template-columns: repeat(3, 63mm);
+    grid-auto-rows: 88mm;
+    gap: 1mm;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .card {
+    width: 63mm; height: 88mm;
+    border: 1.5px solid #000;
+    padding: 2mm;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    page-break-inside: avoid;
+  }
+  .bloc-band {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7.5pt;
+    letter-spacing: 0.25em;
+    color: white;
+    text-align: center;
+    padding: 0.8mm 0;
+    margin-bottom: 1.5mm;
+  }
+  .bb-vanta { background: #1a1a1a; }
+  .bb-iron { background: #4a5d23; }
+  .bb-helix { background: #8ab57c; color: #000; }
+  .bb-axiom { background: #2d6fff; }
+  .bb-carbon { background: #8b5a2b; }
+
+  .tl-tag {
+    display: inline-block;
+    background: #000;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    padding: 0.3mm 1.5mm;
+    margin-left: 1mm;
+  }
+  .card-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 10.5pt;
+    margin: 0.5mm 0 1mm 0;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .attr-row {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 9pt;
+    padding: 0.5mm 0;
+    border-bottom: 1px solid #000;
+    margin-bottom: 1mm;
+  }
+  .a-M { color: #185FA5; }
+  .a-I { color: #555; }
+  .a-V { color: #854F0B; }
+  .a-S { color: #534AB7; }
+  .a-B { color: #1D9E75; }
+  .a-A { color: #C04828; }
+  .a-G { color: #888; }
+
+  .effect {
+    font-size: 7.5pt;
+    line-height: 1.25;
+    padding: 1mm;
+    margin-bottom: 0.5mm;
+  }
+  .main { border: 1px solid #000; background: #f9f9f9; min-height: 18mm; }
+  .side { font-size: 7pt; color: #555; padding: 1mm; border-top: 1px dashed #999; padding-top: 1mm; }
+  .combo { font-size: 6.5pt; color: #666; font-style: italic; padding: 0.5mm 1mm; border-top: 1px dotted #bbb; }
+
+  .effect .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 7.5pt;
+    display: inline-block;
+    margin-right: 1.5mm;
+  }
+  .cost {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7pt;
+    color: #666;
+  }
+  .flavor {
+    font-style: italic;
+    font-size: 6.5pt;
+    color: #555;
+    text-align: center;
+    padding: 1mm 0 0 0;
+    line-height: 1.2;
+    margin-top: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · Bloc 3세력 × 6장 = 18장 · A4 세로 2매
+</div>
+
+<!-- ===== PAGE 1: VANTA 6 + IRONWALL 3 ===== -->
+<div class="page">
+
+<!-- VANTA 01 SHADOW FILE -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL1</span></div>
+  <div class="card-title">SHADOW FILE</div>
+  <div class="attr-row"><span class="a-M">◈M</span> <span class="a-S">◈S</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈M ◈S</span></span>
+    대상 플레이어 패 1장 공개 확인.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈S 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈S: 패 전체 확인.
+  </div>
+  <div class="flavor">"We don't watch. We remember."</div>
+</div>
+
+<!-- VANTA 02 LEVERAGE -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL1</span></div>
+  <div class="card-title">LEVERAGE</div>
+  <div class="attr-row"><span class="a-S">◈S</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈S</span></span>
+    상대 행동 카드 1장 강제 취소.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈S 생성 또는 인플루언스 +1.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈M: 취소 후 정보 획득.
+  </div>
+  <div class="flavor">"Everyone has a file."</div>
+</div>
+
+<!-- VANTA 03 VEIL DEPLOYMENT -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL2</span></div>
+  <div class="card-title">VEIL DEPLOYMENT</div>
+  <div class="attr-row"><span class="a-M">◈M</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈M ◈M</span></span>
+    자사 구역 1곳 Veil 강도 +2 (영구).
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈M 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈S: Veil 침투 시도 역추적.
+  </div>
+  <div class="flavor">"If they see the wall, it failed."</div>
+</div>
+
+<!-- VANTA 04 GHOST PROTOCOL -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL3</span></div>
+  <div class="card-title">GHOST PROTOCOL</div>
+  <div class="attr-row"><span class="a-M">◈M</span> <span class="a-S">◈S</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈M ◈S ◈S</span></span>
+    이번 라운드 VANTA 행동 전부 비공개.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈M 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈S: 다음 라운드까지 비공개 연장.
+  </div>
+  <div class="flavor">"You knew. Then you forgot."</div>
+</div>
+
+<!-- VANTA 05 DATA WIPE -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL3</span></div>
+  <div class="card-title">DATA WIPE</div>
+  <div class="attr-row"><span class="a-M">◈M</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈M ◈M</span></span>
+    대상 Ghost 현상수배 0으로 초기화.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈M 또는 ◈S 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈S: 대상과 영구 계약 체결.
+  </div>
+  <div class="flavor">"Reset the record. For a price."</div>
+</div>
+
+<!-- VANTA 06 ZERO RECORD -->
+<div class="card">
+  <div class="bloc-band bb-vanta">VANTA <span class="tl-tag">TL4</span></div>
+  <div class="card-title">ZERO RECORD</div>
+  <div class="attr-row"><span class="a-M">◈M</span> <span class="a-S">◈S</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈M ◈M ◈S</span></span>
+    자사 관련 스캔들 카드 전부 제거.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈S 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈M: 타 블록 스캔들 1장 추가.
+  </div>
+  <div class="flavor">"There is no record. There never was."</div>
+</div>
+
+<!-- IRONWALL 01 FORWARD STRIKE -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL1</span></div>
+  <div class="card-title">FORWARD STRIKE</div>
+  <div class="attr-row"><span class="a-I">◈I</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I</span></span>
+    인접 구역에 OPERATIVE 1명 강제 투입.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈I 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: 구역 자원 50% 파괴.
+  </div>
+  <div class="flavor">"Peace is our product."</div>
+</div>
+
+<!-- IRONWALL 02 ARMS SUPPLY -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL1</span></div>
+  <div class="card-title">ARMS SUPPLY</div>
+  <div class="attr-row"><span class="a-I">◈I</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I</span></span>
+    무기 +3 획득. 동맹 Ghost에 +2 전달 가능.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈I 또는 ◈A 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈I: 무기 +5, 충돌 시 선제공격.
+  </div>
+  <div class="flavor">"Orders processed in 48 hours."</div>
+</div>
+
+<!-- IRONWALL 03 FORWARD BASE -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL2</span></div>
+  <div class="card-title">FORWARD BASE</div>
+  <div class="attr-row"><span class="a-I">◈I</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I ◈I</span></span>
+    자사 구역 1곳 거점화. DEF +2 (영구).
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈I 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: 거점에 화력 지원 시설 추가.
+  </div>
+  <div class="flavor">"Entrench. Expand. Endure."</div>
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- ===== PAGE 2: IRONWALL 3 + CARBON 6 ===== -->
+<div class="page">
+
+<!-- IRONWALL 04 MARTIAL LAW -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL3</span></div>
+  <div class="card-title">MARTIAL LAW</div>
+  <div class="attr-row"><span class="a-I">◈I</span> <span class="a-A">◈A</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I ◈A ◈A</span></span>
+    공권력 트랙 +3. 모든 Ghost 이동 −1 (1R).
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈I 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈I: 효과 2라운드 연장.
+  </div>
+  <div class="flavor">"Curfew starts at sunset."</div>
+</div>
+
+<!-- IRONWALL 05 MERCENARY SURGE -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL3</span></div>
+  <div class="card-title">MERCENARY SURGE</div>
+  <div class="attr-row"><span class="a-I">◈I</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I ◈I</span></span>
+    OPERATIVE 3명 즉시 배치. 자사 구역.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈I 생성. 용병 NPC 1 고용.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: OPERATIVE ATK +1 (1R).
+  </div>
+  <div class="flavor">"Cash talks. Bullets confirm."</div>
+</div>
+
+<!-- IRONWALL 06 SCORCHED EARTH -->
+<div class="card">
+  <div class="bloc-band bb-iron">IRONWALL <span class="tl-tag">TL4</span></div>
+  <div class="card-title">SCORCHED EARTH</div>
+  <div class="attr-row"><span class="a-I">◈I</span> <span class="a-A">◈A</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈I ◈A ◈A</span></span>
+    구역 1곳 초토화. 영구 "CONTAMINATED".
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈A 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: 인접 구역도 ASH 생산 저하.
+  </div>
+  <div class="flavor">"If we can't have it, no one can."</div>
+</div>
+
+<!-- CARBON 01 POWER SURGE -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL1</span></div>
+  <div class="card-title">POWER SURGE</div>
+  <div class="attr-row"><span class="a-V">◈V</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V</span></span>
+    자사 구역 전체 수입 +2 (이번 라운드).
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈V 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈V: 인접 구역 수입 +1 추가.
+  </div>
+  <div class="flavor">"Everything runs on us."</div>
+</div>
+
+<!-- CARBON 02 BLACKOUT -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL2</span></div>
+  <div class="card-title">BLACKOUT</div>
+  <div class="attr-row"><span class="a-V">◈V</span> <span class="a-A">◈A</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V ◈A</span></span>
+    대상 구역 이번 라운드 수입 0.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈A 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈V: 베일·전자장비 전부 무력화.
+  </div>
+  <div class="flavor">"Lights out. No exceptions."</div>
+</div>
+
+<!-- CARBON 03 PIPELINE LOCK -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL3</span></div>
+  <div class="card-title">PIPELINE LOCK</div>
+  <div class="attr-row"><span class="a-V">◈V</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V ◈V</span></span>
+    자원 1종 지정. 타 블록 접근 차단 (1R).
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈V 또는 ◇×2 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: 차단 2라운드 연장.
+  </div>
+  <div class="flavor">"The valve is ours to turn."</div>
+</div>
+
+<!-- CARBON 04 INFRASTRUCTURE BOND -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL2</span></div>
+  <div class="card-title">INFRA. BOND</div>
+  <div class="attr-row"><span class="a-V">◈V</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V ◇</span></span>
+    인프라 채권 발행. ₵ 8 즉시. 매 라운드 ₵ 1 상환.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◇×2 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◇: 채권 2라운드 상환 유예.
+  </div>
+  <div class="flavor">"The city owes us. Still."</div>
+</div>
+
+<!-- CARBON 05 HOSTILE DIVIDEND -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL3</span></div>
+  <div class="card-title">HOSTILE DIVIDEND</div>
+  <div class="attr-row"><span class="a-V">◈V</span> <span class="a-A">◈A</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V ◈A</span></span>
+    이번 라운드 배당 2배. 주가 다음 라운드 −2.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈V 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + ◈A: 배당 3배, 주가 −4.
+  </div>
+  <div class="flavor">"Squeeze the goose. Worry later."</div>
+</div>
+
+<!-- CARBON 06 LEGACY CONTRACT -->
+<div class="card">
+  <div class="bloc-band bb-carbon">CARBON <span class="tl-tag">TL4</span></div>
+  <div class="card-title">LEGACY CONTRACT</div>
+  <div class="attr-row"><span class="a-V">◈V</span> <span class="a-A">◈A</span></div>
+  <div class="effect main">
+    <span class="label">▶ MAIN <span class="cost">◈V ◈V ◈A ₵5</span></span>
+    인접 3구역 수입 50% 영구 확보.
+  </div>
+  <div class="effect side">
+    <span class="label">↻ SIDE</span>
+    ◈V×2 생성.
+  </div>
+  <div class="effect combo">
+    ⊕ + 동맹 Bloc: M&A 선제 차단.
+  </div>
+  <div class="flavor">"The impatient always lose."</div>
+</div>
+
+</div><!-- /page 2 -->
+
+</body>
+</html>

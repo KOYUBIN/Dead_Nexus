@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Ghost 카드 (3덱)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 6mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page {
+    display: grid;
+    grid-template-columns: repeat(3, 63mm);
+    grid-auto-rows: 88mm;
+    gap: 1mm;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .card {
+    width: 63mm; height: 88mm;
+    border: 1.5px solid #000;
+    padding: 2mm;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    position: relative;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5mm 0;
+    border-bottom: 1px solid #000;
+    margin-bottom: 1mm;
+  }
+  .init {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 14pt;
+    padding: 0 2mm;
+    background: #000;
+    color: white;
+    min-width: 9mm;
+    text-align: center;
+  }
+  .attr-tags {
+    display: flex;
+    gap: 1mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 9pt;
+  }
+  .a-M { color: #185FA5; }
+  .a-I { color: #555; }
+  .a-V { color: #854F0B; }
+  .a-S { color: #534AB7; }
+  .a-B { color: #1D9E75; }
+  .a-A { color: #C04828; }
+  .a-G { color: #888; }
+
+  .card-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 11pt;
+    letter-spacing: 0.02em;
+    margin: 1mm 0 1.5mm 0;
+    text-align: center;
+  }
+  .class-band {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7pt;
+    letter-spacing: 0.25em;
+    color: white;
+    text-align: center;
+    padding: 0.5mm 0;
+    margin-bottom: 1mm;
+  }
+  .cb-cipher { background: #185FA5; }
+  .cb-blade { background: #555; }
+  .cb-broker { background: #534AB7; }
+  .cb-loss { background: #C04828; }
+
+  .action {
+    font-size: 7.5pt;
+    line-height: 1.25;
+    margin-top: 0.5mm;
+    padding: 1mm;
+    flex: 1;
+  }
+  .top-action { border-bottom: 1px dashed #999; padding-bottom: 1mm; margin-bottom: 0.5mm; }
+  .action .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 8pt;
+    display: block;
+    margin-bottom: 0.3mm;
+  }
+  .loss-tag {
+    display: inline-block;
+    background: #C04828;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6pt;
+    font-weight: 700;
+    padding: 0.3mm 1mm;
+    margin-right: 1mm;
+    vertical-align: middle;
+  }
+  .cost {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 6.5pt;
+    color: #666;
+  }
+  .flavor {
+    font-style: italic;
+    font-size: 6.5pt;
+    color: #555;
+    text-align: center;
+    padding: 0.5mm;
+    line-height: 1.2;
+    border-top: 1px solid #ddd;
+    margin-top: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · Ghost 덱 3종 × 10장 = 30장 · A4 세로 4매 · <strong>100% 배율, 배경 그래픽 ON</strong>
+</div>
+
+<!-- ===== CIPHER DECK (10 cards) ===== -->
+
+<div class="page">
+
+<!-- 01 PORT SCAN -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 01/10</div>
+  <div class="card-header">
+    <div class="init">12</div>
+    <div class="attr-tags"><span class="a-M">◈M</span></div>
+  </div>
+  <div class="card-title">PORT SCAN</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈M</span>
+    MOVE 3 + 대상 구역 베일 강도 확인.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈S</span></span>
+    구역 내 모든 위치 공개. 다음 턴 베일 해제.
+  </div>
+  <div class="flavor">"Every wall has a seam."</div>
+</div>
+
+<!-- 02 DATA SPIKE -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 02/10</div>
+  <div class="card-header">
+    <div class="init">22</div>
+    <div class="attr-tags"><span class="a-M">◈M</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">DATA SPIKE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈M</span>
+    ATK +1, 기본 공격.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈M ◈S</span></span>
+    <span class="loss-tag">LOSS</span>ATK +5, DEF 무시. ◈M 1개 탈취.
+  </div>
+  <div class="flavor">"The firewall realizes it never was a wall."</div>
+</div>
+
+<!-- 03 GHOST ACCESS -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 03/10</div>
+  <div class="card-header">
+    <div class="init">8</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">GHOST ACCESS</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    이번 턴 위치·행동 추적 불가.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S</span></span>
+    자신의 모든 추적·감시·수배 즉시 해제.
+  </div>
+  <div class="flavor">"You're looking at where I was."</div>
+</div>
+
+<!-- 04 MESH DIVE -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 04/10</div>
+  <div class="card-header">
+    <div class="init">30</div>
+    <div class="attr-tags"><span class="a-M">◈M</span><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">MESH DIVE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◇</span>
+    MOVE 1 + 메시 부분 진입 (인접 메시 확인).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈M</span></span>
+    메시 완전 진입. 퀘스트 1장 즉시 획득.
+  </div>
+  <div class="flavor">"Everything real lives here."</div>
+</div>
+
+<!-- 05 ICE BREAK -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 05/10</div>
+  <div class="card-header">
+    <div class="init">18</div>
+    <div class="attr-tags"><span class="a-M">◈M</span></div>
+  </div>
+  <div class="card-title">ICE BREAK</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈M</span>
+    구역 베일 강도 −1 (1라운드).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈M</span></span>
+    구역 베일 완전 해제. HACK 판정 없이 진입.
+  </div>
+  <div class="flavor">"Every lock is a conversation."</div>
+</div>
+
+<!-- 06 PROXY RELAY -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 06/10</div>
+  <div class="card-header">
+    <div class="init">25</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">PROXY RELAY</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    자신 향한 공격 대상 변경 가능 (3회).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◈M</span></span>
+    다음 공격을 타 Ghost/NPC에게 전이.
+  </div>
+  <div class="flavor">"You just think you're shooting at me."</div>
+</div>
+
+<!-- 07 STOCK CRASH -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 07/10</div>
+  <div class="card-header">
+    <div class="init">35</div>
+    <div class="attr-tags"><span class="a-M">◈M</span></div>
+  </div>
+  <div class="card-title">STOCK CRASH</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈M</span>
+    블록 1곳 지정. 주가 ±1 조작 (비공개).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈M ◈M</span></span>
+    블록 1곳 주가 −3. 덱에 스캔들 1장 삽입.
+  </div>
+  <div class="flavor">"Eighteen seconds. That's all it takes."</div>
+</div>
+
+<!-- 08 NEURAL OVERRIDE -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 08/10</div>
+  <div class="card-header">
+    <div class="init">45</div>
+    <div class="attr-tags"><span class="a-M">◈M</span><span class="a-S">◈S</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">NEURAL OVERRIDE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈M ◈S</span>
+    대상 다음 턴 이니셔티브 +20.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈M ◈M ◈S ◈S</span></span>
+    <span class="loss-tag">LOSS</span>대상 카드 공개 + 1장 대신 사용.
+  </div>
+  <div class="flavor">"I was your head for a minute."</div>
+</div>
+
+<!-- 09 ZERO TRACE -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 09/10</div>
+  <div class="card-header">
+    <div class="init">50</div>
+    <div class="attr-tags"><span class="a-S">◈S</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">ZERO TRACE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    이번 라운드 행동 기록 전부 삭제.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◈S ◈S</span></span>
+    <span class="loss-tag">LOSS</span>모든 추적·베일 해제. 현상수배 영구 제거.
+  </div>
+  <div class="flavor">"Technically, you didn't see me."</div>
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- ===== CIPHER 10번 + BLADE 9장 시작 ===== -->
+
+<div class="page">
+
+<!-- 10 BASIC MOVE (공용) -->
+<div class="card">
+  <div class="class-band cb-cipher">CIPHER · 10/10 (공용)</div>
+  <div class="card-header">
+    <div class="init">20</div>
+    <div class="attr-tags"><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">BASIC MOVE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP</span>
+    MOVE 2.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    자원 2종 1:1 교환.
+  </div>
+  <div class="flavor">—</div>
+</div>
+
+<!-- BLADE 01 QUICK DRAW -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 01/10</div>
+  <div class="card-header">
+    <div class="init">5</div>
+    <div class="attr-tags"><span class="a-I">◈I</span></div>
+  </div>
+  <div class="card-title">QUICK DRAW</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    SPD +2, 이번 턴 무조건 선공.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I</span></span>
+    ATK +3. 충돌 이니셔티브 선공 보장.
+  </div>
+  <div class="flavor">"It's already there."</div>
+</div>
+
+<!-- BLADE 02 SUPPRESSION FIRE -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 02/10</div>
+  <div class="card-header">
+    <div class="init">18</div>
+    <div class="attr-tags"><span class="a-I">◈I</span></div>
+  </div>
+  <div class="card-title">SUPPRESSION FIRE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    MOVE 1 + 인접 적의 다음 이동 차단.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I ◈I</span></span>
+    적 SPD −3 (1라운드). 이동·추격 저지.
+  </div>
+  <div class="flavor">"Stand still. Same outcome."</div>
+</div>
+
+<!-- BLADE 03 BREACHER -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 03/10</div>
+  <div class="card-header">
+    <div class="init">14</div>
+    <div class="attr-tags"><span class="a-A">◈A</span></div>
+  </div>
+  <div class="card-title">BREACHER</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈A</span>
+    MOVE 2. 잠긴 문·봉쇄 무시 통과.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    잠긴 구역·함정 ATK 1회로 강제 진입.
+  </div>
+  <div class="flavor">"Locks are suggestions."</div>
+</div>
+
+<!-- BLADE 04 CONTRACT KILL -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 04/10</div>
+  <div class="card-header">
+    <div class="init">28</div>
+    <div class="attr-tags"><span class="a-I">◈I</span><span class="a-A">◈A</span></div>
+  </div>
+  <div class="card-title">CONTRACT KILL</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    ATK +2, 지정 우선 공격.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I ◈I ◈A</span></span>
+    Ghost 1명 SPD 판정. 승리 시 HP 0. 렙 +3.
+  </div>
+  <div class="flavor">"Contract accepted."</div>
+</div>
+
+<!-- BLADE 05 HUMAN SHIELD -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 05/10</div>
+  <div class="card-header">
+    <div class="init">24</div>
+    <div class="attr-tags"><span class="a-I">◈I</span></div>
+  </div>
+  <div class="card-title">HUMAN SHIELD</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    DEF +2, 인접 아군 1명 보호.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    DEF +4. 아군 피해 자신이 흡수.
+  </div>
+  <div class="flavor">"Someone has to take the bullet."</div>
+</div>
+
+<!-- BLADE 06 DOUBLE TAP -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 06/10</div>
+  <div class="card-header">
+    <div class="init">20</div>
+    <div class="attr-tags"><span class="a-I">◈I</span></div>
+  </div>
+  <div class="card-title">DOUBLE TAP</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    공격 성공 시 한 번 더 굴림.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I ◈I</span></span>
+    ATK 2회 연타. 각각 피해 계산.
+  </div>
+  <div class="flavor">"Once isn't enough."</div>
+</div>
+
+<!-- BLADE 07 POINT BLANK -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 07/10</div>
+  <div class="card-header">
+    <div class="init">10</div>
+    <div class="attr-tags"><span class="a-I">◈I</span></div>
+  </div>
+  <div class="card-title">POINT BLANK</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈I</span>
+    같은 구역 적에 ATK +4.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I</span></span>
+    인접 거리 공격. DEF 무시.
+  </div>
+  <div class="flavor">"Close. Final."</div>
+</div>
+
+<!-- BLADE 08 BERSERKER -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 08/10</div>
+  <div class="card-header">
+    <div class="init">32</div>
+    <div class="attr-tags"><span class="a-A">◈A</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">BERSERKER</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈A</span>
+    ATK +3, 자신 DEF −2.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈A ◈A</span></span>
+    <span class="loss-tag">LOSS</span>이번 라운드 ATK ×2, DEF 0.
+  </div>
+  <div class="flavor">"Pain is fuel."</div>
+</div>
+
+</div><!-- /page 2 -->
+
+<!-- ===== BLADE 09·10 + BROKER 7장 ===== -->
+
+<div class="page">
+
+<!-- BLADE 09 LAST STAND -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 09/10</div>
+  <div class="card-header">
+    <div class="init">40</div>
+    <div class="attr-tags"><span class="a-I">◈I</span><span class="a-A">◈A</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">LAST STAND</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP</span>
+    HP 1까지 DEF 무한.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈I ◈I ◈A</span></span>
+    <span class="loss-tag">LOSS</span>이후 ATK ×3 반격.
+  </div>
+  <div class="flavor">"I die standing."</div>
+</div>
+
+<!-- BLADE 10 BASIC MOVE -->
+<div class="card">
+  <div class="class-band cb-blade">BLADE · 10/10 (공용)</div>
+  <div class="card-header">
+    <div class="init">20</div>
+    <div class="attr-tags"><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">BASIC MOVE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP</span>
+    MOVE 2.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    자원 2종 1:1 교환.
+  </div>
+  <div class="flavor">—</div>
+</div>
+
+<!-- BROKER 01 NETWORK -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 01/10</div>
+  <div class="card-header">
+    <div class="init">15</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">NETWORK</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    접선 +1 (라운드당). 현재 구역 정보 공개.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S</span></span>
+    접선 +2. 블랙마켓 2장 중 1장 선택.
+  </div>
+  <div class="flavor">"Everyone owes someone."</div>
+</div>
+
+<!-- BROKER 02 BACK DEAL -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 02/10</div>
+  <div class="card-header">
+    <div class="init">18</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">BACK DEAL</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    자원 2종 1:2 비율 교환 (자신 유리).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S</span></span>
+    블랙마켓 2장 중 1장 획득. 접선 1 소비.
+  </div>
+  <div class="flavor">"Front door? Only with reservation."</div>
+</div>
+
+<!-- BROKER 03 BLACKMAIL -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 03/10</div>
+  <div class="card-header">
+    <div class="init">22</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">BLACKMAIL</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    대상 자원 1개 강제 징수.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◈S</span></span>
+    행동 카드 1장 취소. 자원 2개 징수.
+  </div>
+  <div class="flavor">"I know what you did."</div>
+</div>
+
+<!-- BROKER 04 MIDDLE DEAL -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 04/10</div>
+  <div class="card-header">
+    <div class="init">25</div>
+    <div class="attr-tags"><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">MIDDLE DEAL</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◇</span>
+    거래 중개. 거래액 10% 수수료.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    M&A 발생 시 ₵ 5 자동 획득 (1라운드).
+  </div>
+  <div class="flavor">"Win or lose, I get paid."</div>
+</div>
+
+<!-- BROKER 05 INFO BROKER -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 05/10</div>
+  <div class="card-header">
+    <div class="init">30</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">INFO BROKER</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    타 플레이어 비밀 목표 1장 확인.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◈S</span></span>
+    정보를 제3자에 판매. ₵ 5. 대상 행동 제한.
+  </div>
+  <div class="flavor">"Secrets have prices."</div>
+</div>
+
+<!-- BROKER 06 CRISIS TALK -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 06/10</div>
+  <div class="card-header">
+    <div class="init">28</div>
+    <div class="attr-tags"><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">CRISIS TALK</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◇</span>
+    진행 중 충돌 즉시 중단.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    양측 ₵ 2 보상. 충돌 재발 1라운드 불가.
+  </div>
+  <div class="flavor">"Both of you. Sit down."</div>
+</div>
+
+<!-- BROKER 07 DOUBLE CONTRACT -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 07/10</div>
+  <div class="card-header">
+    <div class="init">35</div>
+    <div class="attr-tags"><span class="a-S">◈S</span><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">DOUBLE CONTRACT</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    계약 슬롯 +1 (1라운드).
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◇</span></span>
+    퀘스트 2개 동시 수행. 양쪽 보상 획득.
+  </div>
+  <div class="flavor">"Two wallets, same hands."</div>
+</div>
+
+</div><!-- /page 3 -->
+
+<!-- ===== BROKER 08·09·10 ===== -->
+
+<div class="page">
+
+<!-- BROKER 08 POKER FACE -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 08/10</div>
+  <div class="card-header">
+    <div class="init">20</div>
+    <div class="attr-tags"><span class="a-S">◈S</span></div>
+  </div>
+  <div class="card-title">POKER FACE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    이번 라운드 자신 행동 카드 비공개 유지.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S</span></span>
+    상대 정보 탐지 카드 무효화.
+  </div>
+  <div class="flavor">"I never bluff. Never tell."</div>
+</div>
+
+<!-- BROKER 09 BURN THE BRIDGE -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 09/10</div>
+  <div class="card-header">
+    <div class="init">45</div>
+    <div class="attr-tags"><span class="a-S">◈S</span><span class="loss-tag">LOSS</span></div>
+  </div>
+  <div class="card-title">BURN THE BRIDGE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP · Gen: ◈S</span>
+    진행 중 계약 1개 파기. 양측 자원 20%.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM <span class="cost">◈S ◈S</span></span>
+    <span class="loss-tag">LOSS</span>모든 계약 파기. 양측 자원 40% 환수.
+  </div>
+  <div class="flavor">"The bridge was theirs."</div>
+</div>
+
+<!-- BROKER 10 BASIC MOVE -->
+<div class="card">
+  <div class="class-band cb-broker">BROKER · 10/10 (공용)</div>
+  <div class="card-header">
+    <div class="init">20</div>
+    <div class="attr-tags"><span class="a-G">◇</span></div>
+  </div>
+  <div class="card-title">BASIC MOVE</div>
+  <div class="action top-action">
+    <span class="label">▲ TOP</span>
+    MOVE 2.
+  </div>
+  <div class="action">
+    <span class="label">▼ BOTTOM</span>
+    자원 2종 1:1 교환.
+  </div>
+  <div class="flavor">—</div>
+</div>
+
+</div><!-- /page 4 -->
+
+</body>
+</html>

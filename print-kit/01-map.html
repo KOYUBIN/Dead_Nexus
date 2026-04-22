@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>튜토리얼 맵 5×5</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0;
+    padding: 8mm;
+    background: white;
+    color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .board-wrap {
+    display: flex;
+    gap: 12mm;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: 10mm repeat(5, 42mm);
+    grid-template-rows: 10mm repeat(5, 42mm);
+    gap: 0.5mm;
+    background: #000;
+    padding: 0.5mm;
+    border: 2px solid #000;
+  }
+  .cell {
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5mm;
+    font-size: 9pt;
+    position: relative;
+  }
+  .cell.corner, .cell.label {
+    background: #eee;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10pt;
+  }
+  .cell.label { color: #666; }
+  .cell .coord {
+    position: absolute;
+    top: 1mm;
+    left: 1.5mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    color: rgba(0,0,0,0.5);
+    font-weight: 700;
+  }
+  .cell .type { font-size: 8pt; margin-top: 3mm; }
+  .cell .owner {
+    position: absolute;
+    bottom: 1mm;
+    right: 1.5mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 0.5mm 1mm;
+    border-radius: 1mm;
+    color: white;
+  }
+
+  /* Zone type colors - print-safe */
+  .z-data { background: #dbeafe; }
+  .z-bank { background: #fef3c7; }
+  .z-heal { background: #d1fae5; }
+  .z-work { background: #fde68a; }
+  .z-arms { background: #e5e7eb; }
+  .z-club { background: #fce7f3; }
+  .z-home { background: #f3e8ff; }
+  .z-port { background: #c7d2fe; }
+  .z-ruin { background: #d4d4d8; }
+  .z-cop  { background: #1f2937; color: white; }
+  .z-nex  { background: #000; color: #ffd700; font-weight: 900; }
+  .z-aux  { background: #fef2f2; }
+
+  /* Owner tag colors */
+  .o-vanta { background: #1f2937; }
+  .o-iron  { background: #4a5d23; }
+  .o-helix { background: #8ab57c; color: #000 !important; }
+  .o-axiom { background: #2d6fff; }
+  .o-carbon { background: #8b5a2b; }
+  .o-nex   { background: #ffd700; color: #000 !important; }
+  .o-cop   { background: #374151; }
+
+  .ghost-mark {
+    position: absolute;
+    top: 1mm;
+    right: 1.5mm;
+    background: #c04828;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6.5pt;
+    font-weight: 700;
+    padding: 0.5mm 1mm;
+    border-radius: 1mm;
+  }
+
+  .z-nex .coord { color: rgba(255,215,0,0.8); }
+  .z-cop .coord { color: rgba(255,255,255,0.7); }
+
+  .legend {
+    width: 60mm;
+    font-size: 9pt;
+  }
+  .legend h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12pt;
+    margin: 0 0 6mm 0;
+    padding-bottom: 2mm;
+    border-bottom: 1.5px solid #000;
+  }
+  .legend h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10pt;
+    margin: 4mm 0 1.5mm 0;
+    color: #c04828;
+  }
+  .legend .item {
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+    margin: 0.8mm 0;
+    font-size: 8.5pt;
+  }
+  .legend .swatch {
+    width: 5mm;
+    height: 5mm;
+    border: 0.5px solid #000;
+    flex-shrink: 0;
+  }
+  .legend .mini-text { font-size: 8pt; line-height: 1.3; }
+  .legend strong { font-family: 'JetBrains Mono', monospace; }
+
+  .title-banner {
+    text-align: center;
+    margin-bottom: 4mm;
+  }
+  .title-banner h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16pt;
+    margin: 0;
+    letter-spacing: 0.04em;
+  }
+  .title-banner .sub {
+    font-size: 9pt;
+    color: #666;
+    letter-spacing: 0.2em;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">프린트킷 인덱스로</a> · <kbd>Ctrl+P</kbd> → <strong>A4 가로, 100%, 배경 그래픽 켜기</strong>
+</div>
+
+<div class="title-banner">
+  <h1>DEAD NEXUS · TUTORIAL MAP 5×5</h1>
+  <div class="sub">ASHGRID · SESSION 00</div>
+</div>
+
+<div class="board-wrap">
+  <div class="board">
+    <!-- Row 0: column labels -->
+    <div class="cell corner"></div>
+    <div class="cell label">A</div>
+    <div class="cell label">B</div>
+    <div class="cell label">C</div>
+    <div class="cell label">D</div>
+    <div class="cell label">E</div>
+
+    <!-- Row 1 -->
+    <div class="cell label">1</div>
+    <div class="cell z-ruin"><span class="coord">A1</span><span class="ghost-mark">CIPHER</span><span class="type">폐허</span></div>
+    <div class="cell z-home"><span class="coord">B1</span><span class="type">주택가</span></div>
+    <div class="cell z-bank"><span class="coord">C1</span><span class="type">금융가</span><span class="owner o-vanta">VANTA</span></div>
+    <div class="cell z-data"><span class="coord">D1</span><span class="type">데이터허브</span><span class="owner o-axiom">AXIOM</span></div>
+    <div class="cell z-ruin"><span class="coord">E1</span><span class="ghost-mark">DRIFTER</span><span class="type">폐허</span></div>
+
+    <!-- Row 2 -->
+    <div class="cell label">2</div>
+    <div class="cell z-ruin"><span class="coord">A2</span><span class="type">폐허</span></div>
+    <div class="cell z-aux"><span class="coord">B2</span><span class="type">넥서스 부속</span><span class="owner o-nex">NEX</span></div>
+    <div class="cell z-data"><span class="coord">C2</span><span class="type">데이터허브<br/>(HQ)</span><span class="owner o-vanta">VANTA</span></div>
+    <div class="cell z-data"><span class="coord">D2</span><span class="type">데이터허브<br/>(HQ)</span><span class="owner o-axiom">AXIOM</span></div>
+    <div class="cell z-heal"><span class="coord">E2</span><span class="type">의료구역</span><span class="owner o-helix">HELIX</span></div>
+
+    <!-- Row 3 -->
+    <div class="cell label">3</div>
+    <div class="cell z-port"><span class="coord">A3</span><span class="ghost-mark">BROKER</span><span class="type">항구<br/>(서 관문)</span></div>
+    <div class="cell z-work"><span class="coord">B3</span><span class="type">공업지구<br/>(HQ)</span><span class="owner o-carbon">CARBON</span></div>
+    <div class="cell z-nex"><span class="coord">C3</span><span class="type" style="color:#ffd700;font-weight:900;">NEXUS<br/>⭐</span></div>
+    <div class="cell z-heal"><span class="coord">D3</span><span class="ghost-mark" style="background:#374151">MOLE</span><span class="type">의료구역<br/>(HQ)</span><span class="owner o-helix">HELIX</span></div>
+    <div class="cell z-home"><span class="coord">E3</span><span class="type">주택가</span></div>
+
+    <!-- Row 4 -->
+    <div class="cell label">4</div>
+    <div class="cell z-work"><span class="coord">A4</span><span class="type">공업지구</span><span class="owner o-carbon">CARBON</span></div>
+    <div class="cell z-aux"><span class="coord">B4</span><span class="type">넥서스 부속</span><span class="owner o-nex">NEX</span></div>
+    <div class="cell z-arms"><span class="coord">C4</span><span class="type">무기고<br/>(HQ)</span><span class="owner o-iron">IRON</span></div>
+    <div class="cell z-aux"><span class="coord">D4</span><span class="type">넥서스 부속</span><span class="owner o-nex">NEX</span></div>
+    <div class="cell z-arms"><span class="coord">E4</span><span class="type">무기고</span><span class="owner o-iron">IRON</span></div>
+
+    <!-- Row 5 -->
+    <div class="cell label">5</div>
+    <div class="cell z-ruin"><span class="coord">A5</span><span class="ghost-mark">BLADE</span><span class="type">폐허</span></div>
+    <div class="cell z-club"><span class="coord">B5</span><span class="ghost-mark">RIGGER</span><span class="type">유흥가</span></div>
+    <div class="cell z-cop"><span class="coord">C5</span><span class="type">경찰서<br/>🚔</span></div>
+    <div class="cell z-port"><span class="coord">D5</span><span class="type">항구<br/>(남 관문)</span></div>
+    <div class="cell z-ruin"><span class="coord">E5</span><span class="type">폐허</span></div>
+  </div>
+
+  <div class="legend">
+    <h2>범례</h2>
+
+    <h3>구역 종류</h3>
+    <div class="item"><div class="swatch z-data"></div>데이터허브 · 📡</div>
+    <div class="item"><div class="swatch z-bank"></div>금융가 · ₵+3</div>
+    <div class="item"><div class="swatch z-heal"></div>의료구역 · HP 회복</div>
+    <div class="item"><div class="swatch z-work"></div>공업지구 · 🔩+2</div>
+    <div class="item"><div class="swatch z-arms"></div>무기고 · 방어 +1</div>
+    <div class="item"><div class="swatch z-club"></div>유흥가 · ₵+2</div>
+    <div class="item"><div class="swatch z-home"></div>주택가 · 공권력 0</div>
+    <div class="item"><div class="swatch z-port"></div>항구 · 밀수 허브</div>
+    <div class="item"><div class="swatch z-ruin"></div>폐허 · 거점 불가</div>
+    <div class="item"><div class="swatch z-cop"></div>경찰서 · 점령 불가</div>
+    <div class="item"><div class="swatch z-nex"></div>NEXUS · 2R 연속 점유</div>
+    <div class="item"><div class="swatch z-aux"></div>넥서스 부속 · 공용</div>
+
+    <h3>블록 HQ (Ring 1)</h3>
+    <div class="mini-text">
+      <strong>VANTA</strong> C2 (N) · <strong>AXIOM</strong> D2 (NE)<br/>
+      <strong>HELIX</strong> D3 (E) · <strong>IRONWALL</strong> C4 (S)<br/>
+      <strong>CARBON</strong> B3 (W)
+    </div>
+
+    <h3>Ghost 시작</h3>
+    <div class="mini-text">
+      <strong>CIPHER</strong> A1 · <strong>DRIFTER</strong> E1<br/>
+      <strong>BROKER</strong> A3 · <strong>BLADE</strong> A5<br/>
+      <strong>RIGGER</strong> B5 · <strong>MOLE</strong> D3 (위장)
+    </div>
+
+    <h3>튜토리얼 승리</h3>
+    <div class="mini-text">
+      <strong>Bloc</strong>: 주식 자산 <strong>25</strong><br/>
+      <strong>Ghost</strong>: 렙 <strong>10</strong> + 레이드 1<br/>
+      <strong>NEXUS</strong>: <strong>2라운드 연속</strong> 장악
+    </div>
+
+    <h3>이동</h3>
+    <div class="mini-text">
+      상하좌우 4방향 · 1포인트/칸<br/>
+      경찰서(C5)는 점령 불가, 통과만
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

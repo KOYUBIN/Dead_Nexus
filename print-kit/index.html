@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>DEAD NEXUS — 튜토리얼 프린트킷</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    line-height: 1.6;
+  }
+  h1 { font-family: 'JetBrains Mono', monospace; color: #2d6fff; letter-spacing: -0.02em; font-size: 3em; margin-bottom: 0; }
+  h1 small { display: block; color: #888; font-size: 0.35em; letter-spacing: 0.3em; margin-top: 0.5em; }
+  h2 { color: #c04828; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 40px; }
+  h3 { color: #2d6fff; font-family: 'JetBrains Mono', monospace; }
+  a { color: #2d6fff; text-decoration: none; font-weight: 500; }
+  a:hover { text-decoration: underline; }
+  .kit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 30px 0; }
+  .kit-item {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-left: 3px solid #c04828;
+    padding: 20px;
+    border-radius: 4px;
+  }
+  .kit-item h3 { margin-top: 0; }
+  .kit-item p { margin: 5px 0; font-size: 0.9em; color: #aaa; }
+  .kit-item .badge {
+    display: inline-block;
+    background: #2d6fff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-family: 'JetBrains Mono', monospace;
+    margin-right: 6px;
+  }
+  .kit-item .pages {
+    color: #2d6fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+  .print-instructions {
+    background: #2a1a00;
+    border: 1px solid #c04828;
+    padding: 20px;
+    border-radius: 4px;
+    margin: 30px 0;
+  }
+  .print-instructions h3 { color: #c04828; margin-top: 0; }
+  code {
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #2d6fff;
+  }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<h1>DEAD NEXUS<small>튜토리얼 프린트킷 v0.4 · Session 00 용</small></h1>
+
+<p>5×5 튜토리얼 맵으로 60~90분 Session 00 플레이테스트를 할 때 필요한 모든 프린트 컴포넌트. 브라우저에서 열어 <code>Ctrl+P</code>로 PDF 저장하거나 직접 인쇄하세요.</p>
+
+<div class="print-instructions">
+  <h3>⚙️ 인쇄 설정 권장값</h3>
+  <ul>
+    <li><strong>용지</strong>: 맵은 <strong>A4 가로</strong>, 나머지는 <strong>A4 세로</strong></li>
+    <li><strong>배율</strong>: <strong>100% (실제 크기)</strong> — 축소 금지 (카드 크기 유지)</li>
+    <li><strong>여백</strong>: 최소 (CSS에 정의되어 있음)</li>
+    <li><strong>배경 그래픽</strong>: <strong>켜기</strong> (Chrome: More settings → Background graphics 체크)</li>
+    <li><strong>양면 인쇄</strong>: 카드는 단면만 (뒷면 시인성 방지)</li>
+    <li><strong>종이</strong>: 카드는 <strong>120g 이상</strong> 권장. 맵은 일반지 OK</li>
+  </ul>
+</div>
+
+<h2>📦 컴포넌트 목록</h2>
+
+<div class="kit-grid">
+
+  <div class="kit-item">
+    <span class="badge">MAP</span>
+    <h3>1. 튜토리얼 맵 (5×5)</h3>
+    <p>25구역 보드. NEXUS 중앙. 블록 HQ 5곳, Ghost 시작 위치 표시.</p>
+    <p class="pages">📄 A4 가로 1매</p>
+    <p><a href="01-map.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">CARDS</span>
+    <h3>2. Ghost 덱 (3클래스 × 10)</h3>
+    <p>CIPHER · BLADE · BROKER (Session 00 권장 클래스). 총 30장.</p>
+    <p class="pages">📄 A4 세로 4매 (9카드/페이지)</p>
+    <p><a href="02-cards-ghost.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">CARDS</span>
+    <h3>3. Bloc 덱 (3세력 × 6)</h3>
+    <p>VANTA · IRONWALL · CARBON (Session 00 권장). 총 18장.</p>
+    <p class="pages">📄 A4 세로 2매</p>
+    <p><a href="03-cards-bloc.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">CARDS</span>
+    <h3>4. 뉴스 이벤트 (큐레이션 15)</h3>
+    <p>Session 00 전용 큐레이션. 정치·경제·사회·기술·군사·사건.</p>
+    <p class="pages">📄 A4 세로 2매</p>
+    <p><a href="04-news-15.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">TOKEN</span>
+    <h3>5. 토큰 시트</h3>
+    <p>속성 풀 토큰 6종×10 + 자원 토큰 + 이벤트 토큰 4유형.</p>
+    <p class="pages">📄 A4 세로 2매</p>
+    <p><a href="05-tokens.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">SHEET</span>
+    <h3>6. 캐릭터 시트</h3>
+    <p>Ghost 6종 + Bloc 5종 블랭크 시트. HP·자원·구역 추적.</p>
+    <p class="pages">📄 A4 세로 3매</p>
+    <p><a href="06-character-sheets.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">REF</span>
+    <h3>7. 진행자·플레이어 참조 카드</h3>
+    <p>턴 7단계·전투 판정·속성 상성·시그널 다이 요약.</p>
+    <p class="pages">📄 A4 세로 1매 (양면 권장)</p>
+    <p><a href="07-reference.html">→ 열기</a></p>
+  </div>
+
+  <div class="kit-item">
+    <span class="badge">FORM</span>
+    <h3>8. 피드백 양식</h3>
+    <p>세션 종료 후 플레이어 1인당 1매. 6문항 + 자유 기술.</p>
+    <p class="pages">📄 A4 세로 1매/인</p>
+    <p><a href="08-feedback-form.html">→ 열기</a></p>
+  </div>
+
+</div>
+
+<h2>📋 Session 00 준비 체크리스트</h2>
+
+<ul>
+  <li>인원 3~5명 · 장소 확정 · 날짜 확정 · 관찰자 1명</li>
+  <li>맵 1장 · Ghost 덱 3~6종 · Bloc 덱 2~5종</li>
+  <li>뉴스 15장 · 토큰 시트 2장 · 캐릭터 시트 플레이어당 1장</li>
+  <li>참조 카드 플레이어당 1장 · 피드백 양식 플레이어당 1장</li>
+  <li>d6 4~6개 · 시그널 다이 1개 (없으면 d6 + 대응표)</li>
+  <li>타이머 · 필기구 · 스낵</li>
+</ul>
+
+<h2>🔗 관련 문서</h2>
+
+<ul>
+  <li>정본 규칙: <code>docs/10-map-zones.md</code> §15 (5×5 튜토리얼)</li>
+  <li>세션 가이드: <code>playtesting/session-00-guide.md</code></li>
+  <li>Git 리포지토리: <a href="https://github.com/KOYUBIN/Dead_Nexus">KOYUBIN/Dead_Nexus</a></li>
+</ul>
+
+<p style="margin-top: 60px; color: #666; font-size: 0.85em; text-align: center;">
+  DEAD NEXUS · v0.4.0 · © 2026 · All Rights Reserved
+</p>
+
+</body>
+</html>

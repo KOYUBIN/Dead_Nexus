@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>참조 카드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 8mm; background: white; color: #000;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page {
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14pt;
+    margin: 0 0 3mm 0;
+    padding-bottom: 2mm;
+    border-bottom: 2px solid #000;
+    letter-spacing: 0.05em;
+  }
+  h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10pt;
+    background: #000;
+    color: white;
+    padding: 1mm 2mm;
+    margin: 3mm 0 1.5mm 0;
+    letter-spacing: 0.1em;
+  }
+  h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    margin: 2mm 0 1mm 0;
+    color: #c04828;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3mm;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 2mm;
+  }
+  th, td {
+    border: 0.5px solid #000;
+    padding: 1mm 1.5mm;
+    text-align: left;
+  }
+  th {
+    background: #eee;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+
+  .step {
+    display: flex;
+    margin-bottom: 1.5mm;
+  }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    background: #000;
+    color: white;
+    min-width: 10mm;
+    text-align: center;
+    padding: 0.5mm 1mm;
+    font-size: 9pt;
+  }
+  .step-body {
+    flex: 1;
+    padding: 0.5mm 2mm;
+    border: 0.5px solid #000;
+    border-left: none;
+  }
+  .step-body strong { font-family: 'JetBrains Mono', monospace; }
+
+  .chip {
+    display: inline-block;
+    padding: 0.3mm 1.5mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+    color: white;
+    border-radius: 1mm;
+  }
+  .c-mesh { background: #185FA5; }
+  .c-iron { background: #555; }
+  .c-volt { background: #854F0B; }
+  .c-shade { background: #534AB7; }
+  .c-bio { background: #1D9E75; }
+  .c-ash { background: #C04828; }
+  .c-grid { background: #888; }
+
+  .callout {
+    border: 1.5px solid #C04828;
+    background: #fff4f0;
+    padding: 2mm;
+    margin: 2mm 0;
+    font-size: 8.5pt;
+  }
+  .callout strong { color: #C04828; }
+
+  kbd {
+    font-family: 'JetBrains Mono', monospace;
+    background: #eee;
+    padding: 0.5px 4px;
+    border: 0.5px solid #999;
+    border-radius: 2px;
+    font-size: 7pt;
+  }
+
+  .mini-note { font-size: 7pt; color: #666; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · 참조 카드 (A4 2매 양면 권장) · 플레이어마다 1부
+</div>
+
+<!-- =============== PAGE 1: TURN + COMBAT =============== -->
+<div class="page">
+
+<h1>DEAD NEXUS · 빠른 참조 (튜토리얼 5×5)</h1>
+
+<h2>🔄 라운드 구조 (7단계)</h2>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body"><strong>시장 개장</strong> · 시그널 다이 굴림 → 주가 자동 조정 → 자유 주식 거래 <span class="mini-note">(3-5분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body"><strong>뉴스</strong> · 뉴스 카드 1장 공개 → 즉시 효과 적용 <span class="mini-note">(1-2분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body"><strong>계획</strong> · 전원 <strong>동시</strong> 카드 선택 (Ghost 2장, Bloc 1-3장) → 속성 비용 선언 → 이니셔티브 공개 <span class="mini-note">(5-10분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body"><strong>실행</strong> · 이니셔티브 낮은 순서 → 카드 공개 → 효과 적용 → 충돌 해결 <span class="mini-note">(15-30분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body"><strong>수익</strong> · 구역 수입 → 주식 배당 (10%↑ 지분) → 속성 풀 <strong>절반 감쇠</strong> (반올림) <span class="mini-note">(3-5분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body"><strong>테크 R&D</strong> · 대기 카운터 −1 → 0 도달 시 TL 상승 (튜토 상한 TL 3) <span class="mini-note">(1분)</span></div>
+</div>
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body"><strong>결산</strong> · 이사회 투표 → 공권력 트랙 확인 → 라운드 카운터 +1 <span class="mini-note">(2-3분)</span></div>
+</div>
+
+<div class="two-col" style="margin-top:3mm;">
+  <div>
+    <h2>⚔ 충돌 해결 (5스텝)</h2>
+    <div class="step"><div class="step-num">A</div><div class="step-body"><strong>이니셔티브 확정</strong> · Ghost TOP 숫자 / Bloc TL×10 · 낮은 쪽 선공</div></div>
+    <div class="step"><div class="step-num">B</div><div class="step-body"><strong>공격·방어 선언</strong> · ATK+카드+무기+속성 / DEF+카드+구역+속성</div></div>
+    <div class="step"><div class="step-num">C</div><div class="step-body"><strong>주사위 판정</strong> · d6 각자 굴림 + 속성 보너스</div></div>
+    <div class="step"><div class="step-num">D</div><div class="step-body"><strong>피해 계산</strong> · 공격값 − 방어값 = 피해. ≤0 = 빗맞음</div></div>
+    <div class="step"><div class="step-num">E</div><div class="step-body"><strong>결과 처리</strong> · HP 0 = 패배/자원 30% 약탈/시작구역 이동</div></div>
+
+    <h3 style="margin-top:3mm;">동점 순서</h3>
+    <div style="font-size:8pt;">Ghost 우선 → BLADE 자동선공 → SPD 높은 쪽 → 가위바위보</div>
+  </div>
+
+  <div>
+    <h2>👻 Ghost → Bloc 레이드</h2>
+    <table>
+      <tr><th>결과</th><th>효과</th></tr>
+      <tr><td><strong>성공</strong></td><td>Ghost 렙 +3 · 블록 주가 −3 · 자원 50% 약탈 · 스캔들 카드 1장 · 현상수배 +1</td></tr>
+      <tr><td><strong>실패</strong></td><td>HP −3 · 현상수배 +1 · 공권력 +1 · 블록 주가 +1</td></tr>
+    </table>
+
+    <h2>🎲 주사위 보너스</h2>
+    <table>
+      <tr><th>조건</th><th>효과</th></tr>
+      <tr><td><span class="chip c-iron">◈I</span>풀 2+</td><td>공격 주사위 +1</td></tr>
+      <tr><td><span class="chip c-mesh">◈M</span>풀 2+</td><td>적 DEF −1</td></tr>
+      <tr><td><span class="chip c-bio">◈B</span>풀 2+</td><td>HP +2 (전투 중)</td></tr>
+      <tr><td><span class="chip c-ash">◈A</span>풀 2+</td><td>구역 피해 +1</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>🎯 튜토리얼 승리 조건</h2>
+<div class="callout">
+  <strong>Bloc</strong>: 주식 자산 <strong>25</strong> 도달 (자기 지분 50% 할인) · <strong>Ghost</strong>: 렙 <strong>10</strong> + 레이드 <strong>1</strong>회 · <strong>즉시 승리</strong>: NEXUS <strong>2라운드 연속</strong> 장악 · <strong>최대</strong>: 6~8 라운드 경과
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- =============== PAGE 2: ATTRIBUTES + DIE + MAP =============== -->
+<div class="page">
+
+<h1>속성 · 시그널 다이 · 맵 퀵룩</h1>
+
+<div class="two-col">
+  <div>
+    <h2>🎨 6 + 1 속성</h2>
+    <table>
+      <tr><th>기호</th><th>이름</th><th>테마</th></tr>
+      <tr><td><span class="chip c-mesh">◈M</span></td><td>MESH</td><td>해킹·데이터·메시</td></tr>
+      <tr><td><span class="chip c-iron">◈I</span></td><td>IRON</td><td>물리·전투·중화기</td></tr>
+      <tr><td><span class="chip c-volt">◈V</span></td><td>VOLT</td><td>전기·에너지</td></tr>
+      <tr><td><span class="chip c-shade">◈S</span></td><td>SHADE</td><td>은신·정보·기만</td></tr>
+      <tr><td><span class="chip c-bio">◈B</span></td><td>BIO</td><td>생체·치유·독</td></tr>
+      <tr><td><span class="chip c-ash">◈A</span></td><td>ASH</td><td>파괴·초토화</td></tr>
+      <tr><td><span class="chip c-grid">◇</span></td><td>GRID</td><td>무색 범용 (대체 가능, 조합 X)</td></tr>
+    </table>
+
+    <h3>속성 강도</h3>
+    <table>
+      <tr><th>보유량</th><th>상태</th><th>효과</th></tr>
+      <tr><td>1</td><td>Dim</td><td>기본 비용</td></tr>
+      <tr><td>2~3</td><td>Active</td><td>해당 속성 효과 +1</td></tr>
+      <tr><td>4+</td><td>Surging</td><td>[LOSS] 비용 −1, 효과 +2</td></tr>
+    </table>
+
+    <h3>속성 상성 (같은 턴 사용 시)</h3>
+    <div style="font-size:8pt; line-height:1.5;">
+      <span class="chip c-mesh">◈M</span>→<span class="chip c-shade">◈S</span> ·
+      <span class="chip c-iron">◈I</span>→<span class="chip c-ash">◈A</span> ·
+      <span class="chip c-volt">◈V</span>→<span class="chip c-bio">◈B</span><br/>
+      <span class="chip c-shade">◈S</span>→<span class="chip c-mesh">◈M</span> ·
+      <span class="chip c-ash">◈A</span>→<span class="chip c-volt">◈V</span> ·
+      <span class="chip c-bio">◈B</span>→<span class="chip c-iron">◈I</span>
+      <div class="mini-note">상성 → 공용 풀에서 대상 속성 1개 제거 (봉쇄)</div>
+    </div>
+  </div>
+
+  <div>
+    <h2>🎲 시그널 다이 (d6)</h2>
+    <table>
+      <tr><th>굴림</th><th>상태</th><th>효과</th></tr>
+      <tr><td>1-2</td><td>🔵 MESH UP</td><td>CIPHER·RIGGER·AXIOM +1</td></tr>
+      <tr><td>3-4</td><td>🔴 MESH DOWN</td><td>BLADE·DRIFTER·IRONWALL +1</td></tr>
+      <tr><td>5</td><td>⚡ SURGE</td><td>조합 2배, 상처·스캔들 2배</td></tr>
+      <tr><td>6</td><td>⚫ BLACKOUT</td><td>HACK 불가, CIPHER 이니 +20</td></tr>
+    </table>
+
+    <h2>🚨 공권력 트랙 (0~8 튜토)</h2>
+    <table>
+      <tr><th>트랙</th><th>효과</th></tr>
+      <tr><td>0-2</td><td>평시</td></tr>
+      <tr><td>3-4</td><td>경계 — 무기 거래 비용 +1</td></tr>
+      <tr><td>5-6</td><td>단속 — 구역당 ₵ −0.5</td></tr>
+      <tr><td>7-8</td><td>긴장 — Ghost 이동 −1</td></tr>
+      <tr><td class="mini-note" colspan="2">튜토리얼은 10 (계엄) 안 감. 정규는 10 = 계엄.</td></tr>
+    </table>
+
+    <h2>💥 Ghost 카드 [LOSS]</h2>
+    <div style="font-size:8pt;">
+      사용 후 <strong>소각 패</strong>로 이동. Short Rest 회복 불가. <strong>Long Rest</strong> (챕터 종료)에만 복원. 튜토리얼은 Long Rest 없음 → 신중하게.
+    </div>
+  </div>
+</div>
+
+<h2>🗺️ 튜토리얼 맵 (5×5) 퀵 레퍼런스</h2>
+
+<div class="two-col">
+  <div>
+    <h3>블록 HQ</h3>
+    <table>
+      <tr><th>블록</th><th>HQ</th><th>지원</th></tr>
+      <tr><td>VANTA</td><td>C2 데이터</td><td>C1 금융</td></tr>
+      <tr><td>AXIOM</td><td>D2 데이터</td><td>D1 데이터</td></tr>
+      <tr><td>HELIX</td><td>D3 의료</td><td>E2 의료</td></tr>
+      <tr><td>IRONWALL</td><td>C4 무기</td><td>E4 무기</td></tr>
+      <tr><td>CARBON</td><td>B3 공업</td><td>A4 공업</td></tr>
+    </table>
+
+    <h3>Ghost 시작 위치</h3>
+    <table>
+      <tr><th>Ghost</th><th>위치</th></tr>
+      <tr><td>STATIC (CIPHER)</td><td>A1</td></tr>
+      <tr><td>RUST (BLADE)</td><td>A5</td></tr>
+      <tr><td>PATCH (RIGGER)</td><td>B5</td></tr>
+      <tr><td>SILK (BROKER)</td><td>A3</td></tr>
+      <tr><td>FLINT (DRIFTER)</td><td>E1</td></tr>
+      <tr><td>ECHO (MOLE)</td><td>D3 (HELIX 위장)</td></tr>
+    </table>
+  </div>
+
+  <div>
+    <h3>특수 구역</h3>
+    <table>
+      <tr><th>구역</th><th>효과</th></tr>
+      <tr><td><strong>C3 NEXUS</strong></td><td>수익: 전 속성 1 + ₵3. 2R 연속 점유 필요. 3R 연속 = 즉시 승리. 방어 +3.</td></tr>
+      <tr><td><strong>C5 경찰서</strong></td><td>점령 불가. 인접 공권력 −1. Ghost 통과 시 무기 1 압수.</td></tr>
+      <tr><td><strong>폐허 4곳</strong><br/>A1 E1 A5 E5</td><td>거점 불가. ASH +2 생산. 추적 불가.</td></tr>
+      <tr><td><strong>항구</strong> A3, D5</td><td>무기 거래. 밀수 퀘스트. 지하 루트 2칸 점프.</td></tr>
+      <tr><td><strong>B2, B4, D4</strong></td><td>넥서스 부속 (공용). 수익: ₵2 + 랜덤 속성 1.</td></tr>
+    </table>
+
+    <h3>이동</h3>
+    <div style="font-size:8pt;">
+      상하좌우 4방향 · 대각선 X · 1포인트 = 1칸<br/>
+      <strong>DRIFTER</strong>: 이동 비용 0<br/>
+      <strong>지하 루트</strong>: 항구→항구 2칸 점프<br/>
+      <strong>메시다이브</strong>: 튜토 불가 (챕터 5)
+    </div>
+  </div>
+</div>
+
+</div><!-- /page 2 -->
+
+</body>
+</html>

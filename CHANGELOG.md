@@ -9,7 +9,30 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 ## [Unreleased] — 작업 중
 
 ### Planned
-- 플레이테스트 세션 00 실시 (5×5 튜토리얼 맵 기반)
+- 플레이테스트 세션 00 실시 (5×5 튜토리얼 맵 + 프린트킷 기반)
+
+---
+
+## [0.4.1] — 프린트킷 (2026-04-22)
+
+### Added
+- **`print-kit/` 디렉토리** — Session 00 실시용 프린트 컴포넌트 9개 HTML
+  - `index.html` — 프린트킷 허브 (인쇄 설정 가이드 포함)
+  - `01-map.html` — 5×5 튜토리얼 보드 (A4 가로 1매)
+  - `02-cards-ghost.html` — Ghost 3덱 × 10장 = 30장 (CIPHER·BLADE·BROKER, A4 세로 4매)
+  - `03-cards-bloc.html` — Bloc 3세력 × 6장 = 18장 (VANTA·IRONWALL·CARBON, A4 세로 2매)
+  - `04-news-15.html` — Session 00 큐레이션 뉴스 15장 (A4 세로 2매)
+  - `05-tokens.html` — 속성 풀 토큰 60개 + 자원 토큰 48개 + 이벤트 토큰 24개 + 블록 마커 25개 + 시그널 다이 대응표
+  - `06-character-sheets.html` — Ghost 3종 + Bloc 공용 블랭크 시트 (HP·자원·덱·구역 추적)
+  - `07-reference.html` — 턴·전투·속성·맵 퀵룩 참조 카드 (A4 세로 2매)
+  - `08-feedback-form.html` — 플레이어 피드백 양식 (6문항 + 자유 기술)
+
+### Design Notes
+- 브라우저 렌더링 (Noto Sans KR + JetBrains Mono via Google Fonts CDN)
+- `@page` CSS로 용지 크기·여백 제어
+- 카드 표준 사이즈 63×88mm (포커 카드 호환)
+- 프린트 친화 색상 팔레트 (저잉크 파스텔)
+- `Ctrl+P → PDF 저장`으로 배포 가능
 - 피드백 기반 v0.4.1 밸런스 패치
 - 변형 시나리오 문서 (`legacy/after-zero-day.md` — 엔딩 3/4 해금 후)
 - VOSS Chronicles 확장 아웃라인

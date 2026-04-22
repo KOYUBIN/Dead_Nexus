@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>캐릭터 시트</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 10mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .sheet {
+    border: 2.5px solid #000;
+    padding: 4mm;
+    page-break-after: always;
+    height: 270mm;
+  }
+  .sheet:last-child { page-break-after: auto; }
+
+  .sheet-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #000;
+    padding-bottom: 2mm;
+    margin-bottom: 3mm;
+  }
+  .sheet-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 18pt;
+    letter-spacing: 0.05em;
+  }
+  .sheet-title .sub {
+    display: block;
+    font-size: 9pt;
+    color: #666;
+    letter-spacing: 0.15em;
+    font-weight: 400;
+  }
+
+  .name-row {
+    display: flex;
+    gap: 5mm;
+    margin-bottom: 3mm;
+  }
+  .field {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+  }
+  .field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 9pt;
+    min-width: 22mm;
+  }
+  .field .blank {
+    flex: 1;
+    border-bottom: 1.5px solid #000;
+    min-height: 6mm;
+  }
+
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 10pt;
+    letter-spacing: 0.1em;
+    background: #000;
+    color: white;
+    padding: 1.5mm 2mm;
+    margin: 4mm 0 2mm 0;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2mm;
+    margin-bottom: 3mm;
+  }
+  .stat {
+    border: 1.5px solid #000;
+    text-align: center;
+    padding: 2mm;
+  }
+  .stat .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 8pt;
+  }
+  .stat .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 18pt;
+    line-height: 1.1;
+  }
+  .stat .curr {
+    font-size: 7pt;
+    color: #666;
+    border-top: 1px dashed #999;
+    margin-top: 1mm;
+    padding-top: 1mm;
+  }
+
+  .hp-track {
+    margin-bottom: 3mm;
+  }
+  .hp-circles {
+    display: flex;
+    gap: 1mm;
+    flex-wrap: wrap;
+  }
+  .hp-c {
+    width: 7mm;
+    height: 7mm;
+    border: 1.5px solid #000;
+    border-radius: 50%;
+  }
+
+  .resource-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2mm;
+    margin-bottom: 3mm;
+  }
+  .res {
+    border: 1px solid #000;
+    padding: 1.5mm;
+    text-align: center;
+  }
+  .res .rlbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+  }
+  .res .rval {
+    min-height: 8mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 14pt;
+    border-bottom: 1px solid #000;
+    margin-top: 1mm;
+  }
+
+  .zones-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5mm;
+  }
+  .zone-slot {
+    border: 1px dashed #666;
+    height: 10mm;
+    padding: 1mm;
+    font-size: 7pt;
+  }
+
+  .notes-area {
+    border: 1px solid #000;
+    min-height: 25mm;
+    padding: 2mm;
+    font-size: 8pt;
+  }
+
+  .deck-track {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 1mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    margin-bottom: 2mm;
+  }
+  .deck-slot {
+    border: 1px solid #000;
+    padding: 1mm;
+    text-align: center;
+    min-height: 7mm;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+
+  /* Ghost class colors */
+  .cipher .sheet-title { color: #185FA5; }
+  .blade  .sheet-title { color: #C04828; }
+  .broker .sheet-title { color: #534AB7; }
+  .bloc-vanta  .sheet-title { color: #000; }
+  .bloc-iron   .sheet-title { color: #4a5d23; }
+  .bloc-carbon .sheet-title { color: #8b5a2b; }
+
+  kbd {
+    font-family: 'JetBrains Mono', monospace;
+    background: #eee;
+    padding: 1px 5px;
+    border: 1px solid #999;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · Ghost 3종 + Bloc 3종 블랭크 시트 · 플레이어당 1장 · 연필 사용 권장
+</div>
+
+<!-- ============ CIPHER SHEET ============ -->
+<div class="sheet cipher">
+  <div class="sheet-header">
+    <div class="sheet-title">CIPHER<span class="sub">GHOST · 정보전·해킹</span></div>
+    <div style="text-align:right; font-size:9pt;">
+      <div>코드네임: <strong>STATIC</strong></div>
+      <div>주속성: <strong style="color:#185FA5">◈M</strong> / 부속성: <strong style="color:#534AB7">◈S</strong></div>
+      <div>시작 위치: <strong>A1 (NW 폐허)</strong></div>
+    </div>
+  </div>
+
+  <div class="name-row">
+    <div class="field"><label>플레이어</label><div class="blank"></div></div>
+    <div class="field"><label>날짜</label><div class="blank"></div></div>
+    <div class="field"><label>세션</label><div class="blank"></div></div>
+  </div>
+
+  <div class="section-title">기본 스탯</div>
+  <div class="stats-grid">
+    <div class="stat"><div class="lbl">❤ HP</div><div class="val">6</div><div class="curr">현재: ___</div></div>
+    <div class="stat"><div class="lbl">⚔ ATK</div><div class="val">2</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">🛡 DEF</div><div class="val">1</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">⚡ SPD</div><div class="val">4</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">💻 HACK</div><div class="val">5</div><div class="curr">수정: ___</div></div>
+  </div>
+
+  <div class="hp-track">
+    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 6 → 튜토 8):</strong>
+    <div class="hp-circles">
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div><div class="hp-c"></div>
+      <span style="font-size:7pt;color:#666;margin-left:5mm;">⚠ 3↓ = 상처 카드 덱에 삽입</span>
+    </div>
+  </div>
+
+  <div class="section-title">자원 추적</div>
+  <div class="resource-row">
+    <div class="res"><div class="rlbl">₵ CREDIT</div><div class="rval">5</div></div>
+    <div class="res"><div class="rlbl">★ 렙 (승리 조건: 10)</div><div class="rval">0</div></div>
+    <div class="res"><div class="rlbl">📡 데이터</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">⚙️ 부품</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">🔩 무기</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">현상수배</div><div class="rval">0</div></div>
+  </div>
+
+  <div class="section-title">덱 상태 (10장)</div>
+  <div class="deck-track">
+    <div class="deck-slot">PORT SCAN</div>
+    <div class="deck-slot">DATA SPIKE</div>
+    <div class="deck-slot">GHOST ACC.</div>
+    <div class="deck-slot">MESH DIVE</div>
+    <div class="deck-slot">ICE BREAK</div>
+    <div class="deck-slot">PROXY REL.</div>
+    <div class="deck-slot">STOCK CR.</div>
+    <div class="deck-slot">NEURAL OV.</div>
+    <div class="deck-slot">ZERO TRACE</div>
+    <div class="deck-slot">B. MOVE</div>
+  </div>
+  <div style="font-size:7pt;color:#666;margin-bottom:2mm;">상태: ◯=패 · ✕=버린패 · ▲=소각(LOSS) · ⚠=상처</div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-title">점령 구역</div>
+      <div class="zones-grid">
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">계약 (슬롯 2)</div>
+      <div class="zones-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="zone-slot" style="min-height:12mm;"></div>
+        <div class="zone-slot" style="min-height:12mm;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">메모 · 레이드 성공 기록</div>
+  <div class="notes-area">
+    <div style="color:#999; font-size:7pt;">튜토리얼 승리: <kbd>렙 10 + 레이드 1회</kbd></div>
+  </div>
+</div>
+
+
+<!-- ============ BLADE SHEET ============ -->
+<div class="sheet blade">
+  <div class="sheet-header">
+    <div class="sheet-title">BLADE<span class="sub">GHOST · 전투·집행</span></div>
+    <div style="text-align:right; font-size:9pt;">
+      <div>코드네임: <strong>RUST</strong></div>
+      <div>주속성: <strong style="color:#555">◈I</strong> / 부속성: <strong style="color:#C04828">◈A</strong></div>
+      <div>시작 위치: <strong>A5 (SW 폐허)</strong></div>
+    </div>
+  </div>
+
+  <div class="name-row">
+    <div class="field"><label>플레이어</label><div class="blank"></div></div>
+    <div class="field"><label>날짜</label><div class="blank"></div></div>
+    <div class="field"><label>세션</label><div class="blank"></div></div>
+  </div>
+
+  <div class="section-title">기본 스탯 · 패시브: 이니셔티브 동점 시 자동 선공</div>
+  <div class="stats-grid">
+    <div class="stat"><div class="lbl">❤ HP</div><div class="val">10</div><div class="curr">현재: ___</div></div>
+    <div class="stat"><div class="lbl">⚔ ATK</div><div class="val">5</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">🛡 DEF</div><div class="val">3</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">⚡ SPD</div><div class="val">3</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">💻 HACK</div><div class="val">1</div><div class="curr">수정: ___</div></div>
+  </div>
+
+  <div class="hp-track">
+    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 10):</strong>
+    <div class="hp-circles">
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div>
+      <span style="font-size:7pt;color:#666;margin-left:5mm;">⚠ 5↓ = 상처 카드</span>
+    </div>
+  </div>
+
+  <div class="section-title">자원 추적</div>
+  <div class="resource-row">
+    <div class="res"><div class="rlbl">₵ CREDIT</div><div class="rval">5</div></div>
+    <div class="res"><div class="rlbl">★ 렙 (승리 조건: 10)</div><div class="rval">0</div></div>
+    <div class="res"><div class="rlbl">🔩 무기</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">바디카운트</div><div class="rval">0</div></div>
+    <div class="res"><div class="rlbl">📡 데이터</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">현상수배</div><div class="rval">0</div></div>
+  </div>
+
+  <div class="section-title">덱 상태 (10장)</div>
+  <div class="deck-track">
+    <div class="deck-slot">QUICK DR.</div>
+    <div class="deck-slot">SUPP. FIRE</div>
+    <div class="deck-slot">BREACHER</div>
+    <div class="deck-slot">CONT. KILL</div>
+    <div class="deck-slot">HUM. SHLD</div>
+    <div class="deck-slot">DBL. TAP</div>
+    <div class="deck-slot">POINT BL.</div>
+    <div class="deck-slot">BERSERKER</div>
+    <div class="deck-slot">LAST STAND</div>
+    <div class="deck-slot">B. MOVE</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-title">점령 구역</div>
+      <div class="zones-grid">
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">계약 (슬롯 2)</div>
+      <div class="zones-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="zone-slot" style="min-height:12mm;"></div>
+        <div class="zone-slot" style="min-height:12mm;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">메모 · 레이드 성공 기록</div>
+  <div class="notes-area"></div>
+</div>
+
+
+<!-- ============ BROKER SHEET ============ -->
+<div class="sheet broker">
+  <div class="sheet-header">
+    <div class="sheet-title">BROKER<span class="sub">GHOST · 협상·중개</span></div>
+    <div style="text-align:right; font-size:9pt;">
+      <div>코드네임: <strong>SILK</strong></div>
+      <div>주속성: <strong style="color:#534AB7">◈S</strong> / 부속성: <strong style="color:#888">◇</strong></div>
+      <div>시작 위치: <strong>A3 (서 항구 인접)</strong></div>
+    </div>
+  </div>
+
+  <div class="name-row">
+    <div class="field"><label>플레이어</label><div class="blank"></div></div>
+    <div class="field"><label>날짜</label><div class="blank"></div></div>
+    <div class="field"><label>세션</label><div class="blank"></div></div>
+  </div>
+
+  <div class="section-title">기본 스탯 · 패시브: 계약 슬롯 3 (기본 2+1)</div>
+  <div class="stats-grid">
+    <div class="stat"><div class="lbl">❤ HP</div><div class="val">6</div><div class="curr">현재: ___</div></div>
+    <div class="stat"><div class="lbl">⚔ ATK</div><div class="val">2</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">🛡 DEF</div><div class="val">2</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">⚡ SPD</div><div class="val">5</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">💻 HACK</div><div class="val">2</div><div class="curr">수정: ___</div></div>
+  </div>
+
+  <div class="hp-track">
+    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 6):</strong>
+    <div class="hp-circles">
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
+      <span style="font-size:7pt;color:#666;margin-left:5mm;">⚠ 3↓ = 상처 카드</span>
+    </div>
+  </div>
+
+  <div class="section-title">자원 추적</div>
+  <div class="resource-row">
+    <div class="res"><div class="rlbl">₵ CREDIT</div><div class="rval">5</div></div>
+    <div class="res"><div class="rlbl">★ 렙 (승리: 10)</div><div class="rval">0</div></div>
+    <div class="res"><div class="rlbl">접선</div><div class="rval">0</div></div>
+    <div class="res"><div class="rlbl">🎙️ 인플루</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">📡 데이터</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">현상수배</div><div class="rval">0</div></div>
+  </div>
+
+  <div class="section-title">덱 상태 (10장)</div>
+  <div class="deck-track">
+    <div class="deck-slot">NETWORK</div>
+    <div class="deck-slot">BACK DEAL</div>
+    <div class="deck-slot">BLACKMAIL</div>
+    <div class="deck-slot">MIDDLE D.</div>
+    <div class="deck-slot">INFO BRK.</div>
+    <div class="deck-slot">CRISIS T.</div>
+    <div class="deck-slot">DBL. CONT.</div>
+    <div class="deck-slot">POKER FC.</div>
+    <div class="deck-slot">BURN BR.</div>
+    <div class="deck-slot">B. MOVE</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-title">점령 구역</div>
+      <div class="zones-grid">
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+        <div class="zone-slot"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">계약 (슬롯 3)</div>
+      <div class="zones-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="zone-slot" style="min-height:12mm;"></div>
+        <div class="zone-slot" style="min-height:12mm;"></div>
+        <div class="zone-slot" style="min-height:12mm;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">메모</div>
+  <div class="notes-area"></div>
+</div>
+
+
+<!-- ============ BLOC SHEET (universal) ============ -->
+<div class="sheet bloc-vanta">
+  <div class="sheet-header">
+    <div class="sheet-title">BLOC SHEET<span class="sub">5대 기업 공용 블랭크</span></div>
+    <div style="text-align:right; font-size:9pt;">
+      <div>블록 선택: <strong>VANTA / IRONWALL / HELIX / AXIOM / CARBON</strong></div>
+      <div>(하나만 ○ 표시)</div>
+    </div>
+  </div>
+
+  <div class="name-row">
+    <div class="field"><label>플레이어</label><div class="blank"></div></div>
+    <div class="field"><label>블록</label><div class="blank"></div></div>
+    <div class="field"><label>날짜</label><div class="blank"></div></div>
+  </div>
+
+  <div class="section-title">HQ & 시작 구역 (튜토리얼)</div>
+  <div style="border:1px solid #000; padding:2mm; margin-bottom:3mm; font-size:8pt;">
+    VANTA: C2 + C1 · IRONWALL: C4 + E4 · HELIX: D3 + E2 · AXIOM: D2 + D1 · CARBON: B3 + A4<br/>
+    <span style="color:#666;font-size:7pt;">시작 구역 보호: 2라운드</span>
+  </div>
+
+  <div class="section-title">기본 스탯 (임원 직접 전투 시)</div>
+  <div class="stats-grid">
+    <div class="stat"><div class="lbl">❤ HP</div><div class="val">_</div><div class="curr">현재: ___</div></div>
+    <div class="stat"><div class="lbl">⚔ ATK</div><div class="val">_</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">🛡 DEF</div><div class="val">_</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">⚡ SPD</div><div class="val">_</div><div class="curr">수정: ___</div></div>
+    <div class="stat"><div class="lbl">💻 HACK</div><div class="val">_</div><div class="curr">수정: ___</div></div>
+  </div>
+  <div style="font-size:7pt;color:#666;margin-bottom:3mm;">VANTA 7/2/2/3/5 · IRONWALL 10/5/4/3/1 · HELIX 8/3/3/2/3 · AXIOM 6/2/2/4/5 · CARBON 9/3/4/2/2</div>
+
+  <div class="section-title">자산 & 자원</div>
+  <div class="resource-row">
+    <div class="res"><div class="rlbl">₵ CREDIT</div><div class="rval">8</div></div>
+    <div class="res"><div class="rlbl">주식 (자사)</div><div class="rval">10</div></div>
+    <div class="res"><div class="rlbl">주가</div><div class="rval">10</div></div>
+    <div class="res"><div class="rlbl">🎙️ 인플루</div><div class="rval">3</div></div>
+    <div class="res"><div class="rlbl">🔩 무기</div><div class="rval"></div></div>
+    <div class="res"><div class="rlbl">⚙️ 부품</div><div class="rval"></div></div>
+  </div>
+
+  <div class="section-title">자산 트래커 (승리 조건: 25)</div>
+  <div style="font-size:7.5pt; padding:2mm; border:1px solid #000; margin-bottom:3mm;">
+    <strong>자산 = Σ(보유 주식 × 해당 주가) · 자기 지분은 50% 할인</strong><br/>
+    자사: ___주 × ___ × 0.5 = ___ · 타 블록 지분 합: ___ · <strong>총 자산: ___</strong>
+  </div>
+
+  <div class="section-title">TL 진행</div>
+  <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:2mm; margin-bottom:3mm;">
+    <div style="border:1.5px solid #000; padding:2mm; text-align:center;"><strong>TL 1</strong><br/><span style="font-size:7pt">✓ 기본</span></div>
+    <div style="border:1.5px solid #000; padding:2mm; text-align:center;"><strong>TL 2</strong><br/><span style="font-size:7pt">대기: ___R</span></div>
+    <div style="border:1.5px solid #000; padding:2mm; text-align:center; background:#eee;"><strong>TL 3</strong><br/><span style="font-size:7pt">튜토 상한</span></div>
+    <div style="border:1.5px dashed #999; padding:2mm; text-align:center; color:#999;"><strong>TL 4</strong><br/><span style="font-size:7pt">(정규)</span></div>
+    <div style="border:1.5px dashed #999; padding:2mm; text-align:center; color:#999;"><strong>TL 5</strong><br/><span style="font-size:7pt">(정규)</span></div>
+  </div>
+
+  <div class="section-title">점령 구역</div>
+  <div class="zones-grid">
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+    <div class="zone-slot"></div>
+  </div>
+
+  <div class="section-title">메모</div>
+  <div class="notes-area"></div>
+</div>
+
+</body>
+</html>

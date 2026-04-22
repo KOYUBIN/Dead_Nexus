@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>토큰 시트</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 8mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11pt;
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 2mm;
+    margin: 4mm 0 2mm 0;
+  }
+  .section { margin-bottom: 5mm; }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1mm;
+    margin-bottom: 1.5mm;
+  }
+  .token {
+    width: 14mm;
+    height: 14mm;
+    border: 1.5px solid #000;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 9pt;
+  }
+  .token.sq {
+    border-radius: 2mm;
+  }
+  .token .val {
+    font-size: 10pt;
+    line-height: 1;
+  }
+  .token .sym {
+    font-size: 7pt;
+    line-height: 1;
+    margin-bottom: 0.5mm;
+  }
+  .token.event {
+    width: 12mm;
+    height: 12mm;
+  }
+  .token.bloc {
+    width: 16mm;
+    height: 16mm;
+    font-size: 7pt;
+    color: white;
+  }
+
+  .t-mesh { background: #185FA5; color: white; }
+  .t-iron { background: #888; color: white; }
+  .t-volt { background: #c49a10; color: white; }
+  .t-shade { background: #534AB7; color: white; }
+  .t-bio { background: #1D9E75; color: white; }
+  .t-ash { background: #C04828; color: white; }
+  .t-grid { background: #e5e5e5; color: #000; }
+
+  .t-cred { background: #ffe066; color: #000; }
+  .t-data { background: #93c5fd; color: #000; }
+  .t-infl { background: #c7d2fe; color: #000; }
+  .t-weap { background: #fca5a5; color: #000; }
+  .t-part { background: #86efac; color: #000; }
+  .t-rep { background: #fde68a; color: #000; }
+
+  .t-evt-red { background: #dc2626; color: white; }
+  .t-evt-yel { background: #eab308; color: #000; }
+  .t-evt-grn { background: #16a34a; color: white; }
+  .t-evt-wht { background: white; color: #000; border-style: dashed; }
+
+  .bl-vanta { background: #1a1a1a; }
+  .bl-iron { background: #4a5d23; }
+  .bl-helix { background: #8ab57c; color: #000; }
+  .bl-axiom { background: #2d6fff; }
+  .bl-carbon { background: #8b5a2b; }
+
+  .cut-note {
+    font-size: 8pt;
+    color: #666;
+    margin: 2mm 0;
+    font-style: italic;
+  }
+  .mini-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    font-weight: 700;
+    display: inline-block;
+    min-width: 22mm;
+    margin-right: 2mm;
+  }
+  .group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5mm;
+  }
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1mm;
+    max-width: 120mm;
+  }
+  .signal-face {
+    border: 1.5px solid #000;
+    padding: 2mm;
+    font-size: 8pt;
+    text-align: center;
+    min-height: 20mm;
+  }
+  .signal-face .roll {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 14pt;
+  }
+  .signal-face .state {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+  }
+  .signal-face .eff { font-size: 6.5pt; color: #555; line-height: 1.2; }
+  .s-up { background: #dbeafe; }
+  .s-down { background: #fecaca; }
+  .s-surge { background: #fef3c7; }
+  .s-black { background: #1f2937; color: white; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · 토큰 시트 (A4 세로 1-2매) · 두꺼운 종이 권장. 가위로 오려서 사용.
+</div>
+
+<h1 style="font-family:'JetBrains Mono',monospace; font-size:14pt; margin:0;">DEAD NEXUS · 토큰 시트</h1>
+
+<div class="section">
+  <h2>🎨 공용 속성 풀 토큰 (6종 × 10 = 60개)</h2>
+  <div class="cut-note">각 속성 10개씩. 가위로 원형 오려 사용 (약 14mm). 부족하면 이 페이지 재인쇄.</div>
+
+  <div class="group">
+    <span class="mini-label">◈M MESH</span>
+    <div class="row">
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+      <div class="token t-mesh"><span class="sym">◈M</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◈I IRON</span>
+    <div class="row">
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+      <div class="token t-iron"><span class="sym">◈I</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◈V VOLT</span>
+    <div class="row">
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+      <div class="token t-volt"><span class="sym">◈V</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◈S SHADE</span>
+    <div class="row">
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+      <div class="token t-shade"><span class="sym">◈S</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◈B BIO</span>
+    <div class="row">
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+      <div class="token t-bio"><span class="sym">◈B</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◈A ASH</span>
+    <div class="row">
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+      <div class="token t-ash"><span class="sym">◈A</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">◇ GRID (무색)</span>
+    <div class="row">
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+      <div class="token t-grid"><span class="sym">◇</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="page-break-before: always;">
+  <h2>💰 자원 토큰 (6종 × 8 = 48개)</h2>
+  <div class="cut-note">기본 자원 추적용. 사각형 (14mm). 큰 값 쓰는 경우 캐릭터 시트에 숫자로 기록해도 됨.</div>
+
+  <div class="group">
+    <span class="mini-label">₵ 크레딧</span>
+    <div class="row">
+      <div class="token sq t-cred"><span class="val">₵1</span></div>
+      <div class="token sq t-cred"><span class="val">₵1</span></div>
+      <div class="token sq t-cred"><span class="val">₵1</span></div>
+      <div class="token sq t-cred"><span class="val">₵1</span></div>
+      <div class="token sq t-cred"><span class="val">₵5</span></div>
+      <div class="token sq t-cred"><span class="val">₵5</span></div>
+      <div class="token sq t-cred"><span class="val">₵5</span></div>
+      <div class="token sq t-cred"><span class="val">₵10</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">📡 데이터</span>
+    <div class="row">
+      <div class="token sq t-data"><span class="val">+1</span></div>
+      <div class="token sq t-data"><span class="val">+1</span></div>
+      <div class="token sq t-data"><span class="val">+1</span></div>
+      <div class="token sq t-data"><span class="val">+1</span></div>
+      <div class="token sq t-data"><span class="val">+1</span></div>
+      <div class="token sq t-data"><span class="val">+3</span></div>
+      <div class="token sq t-data"><span class="val">+3</span></div>
+      <div class="token sq t-data"><span class="val">+5</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">🎙️ 인플루언스</span>
+    <div class="row">
+      <div class="token sq t-infl"><span class="val">+1</span></div>
+      <div class="token sq t-infl"><span class="val">+1</span></div>
+      <div class="token sq t-infl"><span class="val">+1</span></div>
+      <div class="token sq t-infl"><span class="val">+1</span></div>
+      <div class="token sq t-infl"><span class="val">+1</span></div>
+      <div class="token sq t-infl"><span class="val">+3</span></div>
+      <div class="token sq t-infl"><span class="val">+3</span></div>
+      <div class="token sq t-infl"><span class="val">+3</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">🔩 무기</span>
+    <div class="row">
+      <div class="token sq t-weap"><span class="val">+1</span></div>
+      <div class="token sq t-weap"><span class="val">+1</span></div>
+      <div class="token sq t-weap"><span class="val">+1</span></div>
+      <div class="token sq t-weap"><span class="val">+1</span></div>
+      <div class="token sq t-weap"><span class="val">+1</span></div>
+      <div class="token sq t-weap"><span class="val">+3</span></div>
+      <div class="token sq t-weap"><span class="val">+3</span></div>
+      <div class="token sq t-weap"><span class="val">+3</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">⚙️ 부품</span>
+    <div class="row">
+      <div class="token sq t-part"><span class="val">+1</span></div>
+      <div class="token sq t-part"><span class="val">+1</span></div>
+      <div class="token sq t-part"><span class="val">+1</span></div>
+      <div class="token sq t-part"><span class="val">+1</span></div>
+      <div class="token sq t-part"><span class="val">+1</span></div>
+      <div class="token sq t-part"><span class="val">+3</span></div>
+      <div class="token sq t-part"><span class="val">+3</span></div>
+      <div class="token sq t-part"><span class="val">+5</span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">★ 렙 (Rep)</span>
+    <div class="row">
+      <div class="token sq t-rep"><span class="val">+1</span></div>
+      <div class="token sq t-rep"><span class="val">+1</span></div>
+      <div class="token sq t-rep"><span class="val">+1</span></div>
+      <div class="token sq t-rep"><span class="val">+1</span></div>
+      <div class="token sq t-rep"><span class="val">+1</span></div>
+      <div class="token sq t-rep"><span class="val">+3</span></div>
+      <div class="token sq t-rep"><span class="val">+3</span></div>
+      <div class="token sq t-rep"><span class="val">+5</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🎯 이벤트 토큰 (튜토리얼 24개: 8즉발 / 10퀘스트 / 4발견 / 2공백)</h2>
+  <div class="cut-note">5×5 맵의 각 구역(NEXUS 제외)에 뒤집어 놓기. 모양·색상만 다름. 원 12mm.</div>
+
+  <div class="group">
+    <span class="mini-label">🔴 즉발 (8)</span>
+    <div class="row">
+      <div class="token event t-evt-red">1</div>
+      <div class="token event t-evt-red">2</div>
+      <div class="token event t-evt-red">3</div>
+      <div class="token event t-evt-red">4</div>
+      <div class="token event t-evt-red">5</div>
+      <div class="token event t-evt-red">6</div>
+      <div class="token event t-evt-red">7</div>
+      <div class="token event t-evt-red">8</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">🟡 퀘스트 (10)</span>
+    <div class="row">
+      <div class="token event t-evt-yel">Q1</div>
+      <div class="token event t-evt-yel">Q2</div>
+      <div class="token event t-evt-yel">Q3</div>
+      <div class="token event t-evt-yel">Q4</div>
+      <div class="token event t-evt-yel">Q5</div>
+      <div class="token event t-evt-yel">Q6</div>
+      <div class="token event t-evt-yel">Q7</div>
+      <div class="token event t-evt-yel">Q8</div>
+      <div class="token event t-evt-yel">Q9</div>
+      <div class="token event t-evt-yel">Q10</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">🟢 발견 (4)</span>
+    <div class="row">
+      <div class="token event t-evt-grn">D1</div>
+      <div class="token event t-evt-grn">D2</div>
+      <div class="token event t-evt-grn">D3</div>
+      <div class="token event t-evt-grn">D4</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="mini-label">⚪ 공백 (2)</span>
+    <div class="row">
+      <div class="token event t-evt-wht">—</div>
+      <div class="token event t-evt-wht">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🏢 구역 점령 마커 (Bloc별 × 5)</h2>
+  <div class="cut-note">장악한 구역 위에 올리기. 16mm 사각형.</div>
+  <div class="row">
+    <div class="token bloc sq bl-vanta">VANTA</div>
+    <div class="token bloc sq bl-vanta">VANTA</div>
+    <div class="token bloc sq bl-vanta">VANTA</div>
+    <div class="token bloc sq bl-vanta">VANTA</div>
+    <div class="token bloc sq bl-vanta">VANTA</div>
+  </div>
+  <div class="row">
+    <div class="token bloc sq bl-iron">IRON</div>
+    <div class="token bloc sq bl-iron">IRON</div>
+    <div class="token bloc sq bl-iron">IRON</div>
+    <div class="token bloc sq bl-iron">IRON</div>
+    <div class="token bloc sq bl-iron">IRON</div>
+  </div>
+  <div class="row">
+    <div class="token bloc sq bl-helix">HELIX</div>
+    <div class="token bloc sq bl-helix">HELIX</div>
+    <div class="token bloc sq bl-helix">HELIX</div>
+    <div class="token bloc sq bl-helix">HELIX</div>
+    <div class="token bloc sq bl-helix">HELIX</div>
+  </div>
+  <div class="row">
+    <div class="token bloc sq bl-axiom">AXIOM</div>
+    <div class="token bloc sq bl-axiom">AXIOM</div>
+    <div class="token bloc sq bl-axiom">AXIOM</div>
+    <div class="token bloc sq bl-axiom">AXIOM</div>
+    <div class="token bloc sq bl-axiom">AXIOM</div>
+  </div>
+  <div class="row">
+    <div class="token bloc sq bl-carbon">CARBON</div>
+    <div class="token bloc sq bl-carbon">CARBON</div>
+    <div class="token bloc sq bl-carbon">CARBON</div>
+    <div class="token bloc sq bl-carbon">CARBON</div>
+    <div class="token bloc sq bl-carbon">CARBON</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🎲 시그널 다이 — d6 대응표</h2>
+  <div class="cut-note">시그널 다이 없을 때 일반 d6 굴려 아래 표로 해석.</div>
+  <div class="signal-grid">
+    <div class="signal-face s-up">
+      <div class="roll">1</div>
+      <div class="state">🔵 MESH UP</div>
+      <div class="eff">CIPHER·RIGGER<br/>AXIOM +1</div>
+    </div>
+    <div class="signal-face s-up">
+      <div class="roll">2</div>
+      <div class="state">🔵 MESH UP</div>
+      <div class="eff">CIPHER·RIGGER<br/>AXIOM +1</div>
+    </div>
+    <div class="signal-face s-down">
+      <div class="roll">3</div>
+      <div class="state">🔴 MESH DOWN</div>
+      <div class="eff">BLADE·DRIFTER<br/>IRONWALL +1</div>
+    </div>
+    <div class="signal-face s-down">
+      <div class="roll">4</div>
+      <div class="state">🔴 MESH DOWN</div>
+      <div class="eff">BLADE·DRIFTER<br/>IRONWALL +1</div>
+    </div>
+    <div class="signal-face s-surge">
+      <div class="roll">5</div>
+      <div class="state">⚡ SURGE</div>
+      <div class="eff">조합 2배<br/>상처·스캔들 2배</div>
+    </div>
+    <div class="signal-face s-black">
+      <div class="roll">6</div>
+      <div class="state">⚫ BLACKOUT</div>
+      <div class="eff">HACK 행동 불가<br/>CIPHER 이니+20</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
