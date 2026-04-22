@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>업적 참조 시트 + 메타 프로필</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 8mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 8mm; background: white; color: #000;
+    font-size: 9pt; line-height: 1.35;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14pt;
+    margin: 0 0 3mm 0;
+    padding-bottom: 2mm;
+    border-bottom: 2px solid #000;
+    letter-spacing: 0.05em;
+  }
+  h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11pt;
+    background: #000;
+    color: white;
+    padding: 1.5mm 2.5mm;
+    margin: 4mm 0 2mm 0;
+    letter-spacing: 0.1em;
+  }
+  h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5pt;
+    margin: 3mm 0 1mm 0;
+    color: #c04828;
+    padding-bottom: 0.5mm;
+    border-bottom: 0.5px solid #999;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+
+  .achv-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1mm;
+    font-size: 8pt;
+  }
+  .achv {
+    display: grid;
+    grid-template-columns: 12mm 24mm 1fr 15mm;
+    gap: 1.5mm;
+    padding: 1mm;
+    border: 0.5px solid #ccc;
+    align-items: center;
+  }
+  .achv .id {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7pt;
+    color: #555;
+  }
+  .achv .name {
+    font-weight: 900;
+    font-size: 8pt;
+  }
+  .achv .cond {
+    font-size: 7.5pt;
+    line-height: 1.25;
+  }
+  .achv .reward {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    text-align: right;
+    color: #c04828;
+    font-weight: 700;
+  }
+  .achv.bronze { background: #fef3c7; }
+  .achv.silver { background: #e5e7eb; }
+  .achv.gold   { background: #fef2f2; border-color: #c04828; }
+  .achv .claim {
+    width: 5mm; height: 5mm;
+    border: 1.5px solid #000;
+    border-radius: 1mm;
+    margin-right: 1mm;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2mm;
+  }
+  .meta-card {
+    border: 1.5px solid #000;
+    padding: 2mm;
+    font-size: 8pt;
+    display: flex;
+    flex-direction: column;
+  }
+  .meta-card .mid {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    color: #555;
+  }
+  .meta-card .mname {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 10pt;
+    margin: 0.5mm 0;
+  }
+  .meta-card .mdesc {
+    font-size: 7.5pt;
+    line-height: 1.25;
+    flex: 1;
+  }
+  .meta-card .mtitle {
+    font-style: italic;
+    font-size: 7pt;
+    color: #c04828;
+    margin-top: 1mm;
+    padding-top: 1mm;
+    border-top: 0.5px dashed #999;
+  }
+  .meta-card.cat-c { background: #fef3c7; }
+  .meta-card.cat-t { background: #fecaca; }
+  .meta-card.cat-x { background: #fef9c3; }
+  .meta-card.cat-l { background: #dbeafe; }
+  .meta-card.cat-d { background: #1f2937; color: white; }
+  .meta-card.cat-d .mtitle { color: #fca5a5; border-color: #555; }
+  .meta-card.cat-d .mid { color: #aaa; }
+
+  .mcb {
+    width: 5mm; height: 5mm;
+    border: 1.5px solid #000;
+    border-radius: 1mm;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 1mm;
+    background: white;
+  }
+
+  .profile {
+    border: 2.5px solid #000;
+    padding: 4mm;
+  }
+  .profile-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 2mm;
+    margin-bottom: 3mm;
+  }
+  .profile-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 14pt;
+    letter-spacing: 0.05em;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 4mm;
+    margin-bottom: 2mm;
+  }
+  .field {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+  }
+  .field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 8pt;
+    min-width: 22mm;
+  }
+  .field .blank {
+    flex: 1;
+    border-bottom: 1.5px solid #000;
+    min-height: 5mm;
+  }
+
+  .progress-box {
+    border: 1px solid #000;
+    padding: 2mm;
+    margin: 2mm 0;
+    font-size: 8pt;
+  }
+  .progress-box h4 {
+    margin: 0 0 1.5mm 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+  }
+  .progress-tracker {
+    display: flex;
+    gap: 1mm;
+    flex-wrap: wrap;
+  }
+  .progress-cell {
+    width: 7mm; height: 7mm;
+    border: 1px solid #000;
+  }
+
+  kbd {
+    font-family: 'JetBrains Mono', monospace;
+    background: #eee; padding: 0.5px 4px;
+    border: 0.5px solid #999; border-radius: 2px; font-size: 7pt;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · 싱글 업적 참조 시트 + 메타 업적 + 플레이어 프로필
+</div>
+
+<!-- ==================== PAGE 1: 싱글 업적 참조 (브론즈+실버) ==================== -->
+<div class="page">
+
+<h1>🏆 싱글게임 업적 — 참조 시트</h1>
+
+<p style="font-size:8pt;color:#666;margin-bottom:3mm;">
+게임 중 조건 달성 시 <kbd>선언</kbd> → 진행자 확인 → 체크박스 표시.<br/>
+각 업적 게임당 1인만 (선착순). 보상은 즉시 수령. 메타 포인트 누적.
+</p>
+
+<h2>🥉 브론즈 (1포인트 / 보상 +2~3)</h2>
+<div class="achv-grid">
+  <div class="achv bronze"><div class="id">I-B01</div><div class="name"><span class="claim"></span>첫 발</div><div class="cond">첫 공격·레이드·M&A를 첫 번째로 실행</div><div class="reward">자원 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B02</div><div class="name"><span class="claim"></span>외교관</div><div class="cond">계약 3건 체결 (Bloc-Ghost 또는 Ghost-Ghost)</div><div class="reward">인플루 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B03</div><div class="name"><span class="claim"></span>수집가</div><div class="cond">구역 5곳 방문 (진입 기록)</div><div class="reward">부품 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B04</div><div class="name"><span class="claim"></span>이니시 1등</div><div class="cond">이니셔티브 5 이하로 선공 결정</div><div class="reward">₵ +3</div></div>
+  <div class="achv bronze"><div class="id">I-B05</div><div class="name"><span class="claim"></span>조각 모으기</div><div class="cond">한 라운드에 4종 이상 속성 동시 보유</div><div class="reward">속성 +2</div></div>
+  <div class="achv bronze"><div class="id">I-B06</div><div class="name"><span class="claim"></span>블랙마켓 단골</div><div class="cond">블랙마켓 카드 2장 구매</div><div class="reward">₵ +3</div></div>
+  <div class="achv bronze"><div class="id">I-B07</div><div class="name"><span class="claim"></span>장기 주주</div><div class="cond">자사 주식 10주+ 6R 연속 유지</div><div class="reward">자산 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B08</div><div class="name"><span class="claim"></span>유통망</div><div class="cond">항구 구역 2곳 방문</div><div class="reward">연료 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B09</div><div class="name"><span class="claim"></span>즉발 경험자</div><div class="cond">즉발 이벤트 3개 트리거</div><div class="reward">자원 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B10</div><div class="name"><span class="claim"></span>데이터 주니어</div><div class="cond">데이터 누적 10 획득</div><div class="reward">데이터 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B11</div><div class="name"><span class="claim"></span>구역 주인</div><div class="cond">같은 구역 3R 연속 유지</div><div class="reward">자산 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B12</div><div class="name"><span class="claim"></span>뉴스 민감자</div><div class="cond">뉴스 공개 직후 반응 행동 3회</div><div class="reward">인플루 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B13</div><div class="name"><span class="claim"></span>접선 지존</div><div class="cond">접선 5+ 동시 보유</div><div class="reward">렙 +2</div></div>
+  <div class="achv bronze"><div class="id">I-B14</div><div class="name"><span class="claim"></span>서플라이 체인</div><div class="cond">타 플레이어에 자원 6+ 전달</div><div class="reward">인플루 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B15</div><div class="name"><span class="claim"></span>빈털터리</div><div class="cond">₵ 0 상태로 한 라운드 완주</div><div class="reward">₵ +5</div></div>
+  <div class="achv bronze"><div class="id">I-B16</div><div class="name"><span class="claim"></span>1차 타격</div><div class="cond">첫 공격·레이드 성공</div><div class="reward">렙 +2</div></div>
+  <div class="achv bronze"><div class="id">I-B17</div><div class="name"><span class="claim"></span>해커 입문</div><div class="cond">HACK 판정 3회 성공</div><div class="reward">데이터 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B18</div><div class="name"><span class="claim"></span>경제 감각</div><div class="cond">주식 거래 3회 성공 (손실 없이)</div><div class="reward">₵ +3</div></div>
+  <div class="achv bronze"><div class="id">I-B19</div><div class="name"><span class="claim"></span>구역 장군</div><div class="cond">방어전 2회 성공</div><div class="reward">자산 +3</div></div>
+  <div class="achv bronze"><div class="id">I-B20</div><div class="name"><span class="claim"></span>끝까지</div><div class="cond">10R 이상 생존·참여</div><div class="reward">렙 +2</div></div>
+</div>
+
+<h2>🥈 실버 (2포인트 / 보상 +5)</h2>
+<div class="achv-grid">
+  <div class="achv silver"><div class="id">I-S01</div><div class="name"><span class="claim"></span>독점</div><div class="cond">자사 구역 5곳+ 동시 장악 <em>(Bloc)</em></div><div class="reward">자산 +5</div></div>
+  <div class="achv silver"><div class="id">I-S02</div><div class="name"><span class="claim"></span>주가 스나이퍼</div><div class="cond">자사 주가 15 도달 <em>(Bloc)</em></div><div class="reward">자산 +5</div></div>
+  <div class="achv silver"><div class="id">I-S03</div><div class="name"><span class="claim"></span>첫 M&A</div><div class="cond">M&A 선언 + 방어 성공 또는 인수 성공</div><div class="reward">자산/인플루 +5/+3</div></div>
+  <div class="achv silver"><div class="id">I-S04</div><div class="name"><span class="claim"></span>공권력 조작자</div><div class="cond">공권력 5칸+ 변동 유도</div><div class="reward">인플루 +5</div></div>
+  <div class="achv silver"><div class="id">I-S05</div><div class="name"><span class="claim"></span>레이드 연속</div><div class="cond">레이드 2회 연속 성공 <em>(Ghost)</em></div><div class="reward">렙/무기 +5/+3</div></div>
+  <div class="achv silver"><div class="id">I-S06</div><div class="name"><span class="claim"></span>이중 계약</div><div class="cond">동시 2 Bloc과 계약 유지</div><div class="reward">렙 +5</div></div>
+  <div class="achv silver"><div class="id">I-S07</div><div class="name"><span class="claim"></span>속성 절정</div><div class="cond">공용 풀 Surging (4+) 3R 유지</div><div class="reward">속성 +5</div></div>
+  <div class="achv silver"><div class="id">I-S08</div><div class="name"><span class="claim"></span>이사회 장악</div><div class="cond">이사회 투표 2회 승리 <em>(Bloc)</em></div><div class="reward">인플루/자산 +5/+5</div></div>
+  <div class="achv silver"><div class="id">I-S09</div><div class="name"><span class="claim"></span>NPC 구출자</div><div class="cond">NPC 3명 구출 (퀘스트 통합)</div><div class="reward">렙/접선 +5/+3</div></div>
+  <div class="achv silver"><div class="id">I-S10</div><div class="name"><span class="claim"></span>테크 우위</div><div class="cond">TL 3 도달</div><div class="reward">자원 택1 +5</div></div>
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- ==================== PAGE 2: 골드 + 메타 업적 ==================== -->
+<div class="page">
+
+<h1>🥇 골드 업적 (5포인트) + 🎖 메타 업적 (누적)</h1>
+
+<h2>🥇 골드 업적 (5장)</h2>
+<div class="achv-grid">
+  <div class="achv gold"><div class="id">I-G01</div><div class="name"><span class="claim"></span>무전투 승리</div><div class="cond">공격 카드·레이드 0회 + 기본 승리</div><div class="reward">렙/인플루 +10<br/>메타 "BLOODLESS"</div></div>
+  <div class="achv gold"><div class="id">I-G02</div><div class="name"><span class="claim"></span>넥서스의 그림자</div><div class="cond">NEXUS 1R+ 장악 + 승리</div><div class="reward">+10<br/>메타 "NEXUS TOUCHED"</div></div>
+  <div class="achv gold"><div class="id">I-G03</div><div class="name"><span class="claim"></span>완전 회복</div><div class="cond">HP 20%↓ → 완치 OR 주가 3↓ → 15↑ 복구</div><div class="reward">+10<br/>메타 "PHOENIX"</div></div>
+  <div class="achv gold"><div class="id">I-G04</div><div class="name"><span class="claim"></span>솔로 레이드</div><div class="cond">Ring 1 블록 본사 단독 레이드 성공 <em>(Ghost)</em></div><div class="reward">렙 +10<br/>메타 "HQ BREACHER"</div></div>
+  <div class="achv gold"><div class="id">I-G05</div><div class="name"><span class="claim"></span>왕관</div><div class="cond">S02·S04·S05·S06 중 승리</div><div class="reward">+10<br/>메타 해당 트로피</div></div>
+</div>
+
+<h2>🎖 메타 업적 (25장) — 여러 판 누적</h2>
+
+<h3>🎓 클래스 마스터리 (8)</h3>
+<div class="meta-grid">
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C01 🟢</span><div class="mname">CLASS INITIATE</div><div class="mdesc">6 Ghost 클래스 모두 1회+ 플레이</div><div class="mtitle">"모든 얼굴의 주인"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C02 🟡</span><div class="mname">CIPHER MASTER</div><div class="mdesc">CIPHER 5플레이 + 3승리</div><div class="mtitle">"신호 그 자체"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C03 🟡</span><div class="mname">BLADE MASTER</div><div class="mdesc">BLADE 5플레이 + 3승리</div><div class="mtitle">"약속의 집행자"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C04 🟡</span><div class="mname">RIGGER MASTER</div><div class="mdesc">RIGGER 5플레이 + 3승리</div><div class="mtitle">"설계자의 설계자"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C05 🟡</span><div class="mname">BROKER MASTER</div><div class="mdesc">BROKER 5플레이 + 3승리</div><div class="mtitle">"도시의 중개인"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C06 🟡</span><div class="mname">DRIFTER MASTER</div><div class="mdesc">DRIFTER 5플레이 + 3승리</div><div class="mtitle">"경계 없는 자"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C07 🟡</span><div class="mname">MOLE MASTER</div><div class="mdesc">MOLE 5플레이 + 3승리</div><div class="mtitle">"거울의 반대편"</div></div>
+  <div class="meta-card cat-c"><span class="mcb"></span><span class="mid">M-C08 🔴</span><div class="mname">BLOC TYCOON</div><div class="mdesc">5대 블록 모두로 각 1회+ 승리</div><div class="mtitle">"이사회의 이사회"</div></div>
+</div>
+
+<h3>🏆 승리 트로피 (6)</h3>
+<div class="meta-grid">
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T01 🟢</span><div class="mname">STOCK KING</div><div class="mdesc">Bloc 주식 승리 3회</div><div class="mtitle">"바벨탑의 설계자"</div></div>
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T02 🟢</span><div class="mname">STREET LEGEND</div><div class="mdesc">Ghost 렙 승리 3회</div><div class="mtitle">"거리의 이름"</div></div>
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T03 🟡</span><div class="mname">M&A OVERLORD</div><div class="mdesc">M&A 승리 2회</div><div class="mtitle">"포식의 사냥꾼"</div></div>
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T04 🟡</span><div class="mname">NEXUS KING</div><div class="mdesc">넥서스 3R 승리 1회</div><div class="mtitle">"심장의 주인"</div></div>
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T05 🟡</span><div class="mname">WAR HERO</div><div class="mdesc">S02 코프 대전 승리 2회</div><div class="mtitle">"기업 전쟁 용사"</div></div>
+  <div class="meta-card cat-t"><span class="mcb"></span><span class="mid">M-T06 🔴</span><div class="mname">FULL SCENARIO</div><div class="mdesc">S01~S06 모두 승리</div><div class="mtitle">"모든 새벽의 주인"</div></div>
+</div>
+
+<h3>⚡ 극한 도전 (6)</h3>
+<div class="meta-grid">
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X01 🟢</span><div class="mname">BLOODLESS</div><div class="mdesc">무전투 승리 3회</div><div class="mtitle">"피 묻지 않은 손"</div></div>
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X02 🟡</span><div class="mname">FIRST STRIKE</div><div class="mdesc">첫 라운드 점수 확보 후 승리 5회</div><div class="mtitle">"선공의 예술"</div></div>
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X03 🟡</span><div class="mname">HQ BREACHER</div><div class="mdesc">Ring 1 본사 레이드 3회</div><div class="mtitle">"경비 뚫는 자"</div></div>
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X04 🔴</span><div class="mname">PHOENIX</div><div class="mdesc">HP/주가 1 → 복구 승리 3회</div><div class="mtitle">"불사조"</div></div>
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X05 🔴</span><div class="mname">SPEEDRUN</div><div class="mdesc">S01 8R 이내 승리</div><div class="mtitle">"계산된 급습"</div></div>
+  <div class="meta-card cat-x"><span class="mcb"></span><span class="mid">M-X06 🔴</span><div class="mname">FLAWLESS</div><div class="mdesc">숨은 목표 2장 모두 달성 승리</div><div class="mtitle">"더블 에이전트"</div></div>
+</div>
+
+<h3>📚 컬렉션 (3) · 💀 어두운 훈장 (2)</h3>
+<div class="meta-grid">
+  <div class="meta-card cat-l"><span class="mcb"></span><span class="mid">M-L01 🟡</span><div class="mname">DECK MASTER</div><div class="mdesc">Ghost 카드 60장 각 1회+ 사용</div><div class="mtitle">"카드 서재의 사서"</div></div>
+  <div class="meta-card cat-l"><span class="mcb"></span><span class="mid">M-L02 🟡</span><div class="mname">OBJECTIVE HUNTER</div><div class="mdesc">숨은 목표 40장 드로우 + 15장 달성</div><div class="mtitle">"모든 비밀의 기록자"</div></div>
+  <div class="meta-card cat-l"><span class="mcb"></span><span class="mid">M-L03 🔴</span><div class="mname">COMPLETIONIST</div><div class="mdesc">싱글 업적 35장 모두 누적</div><div class="mtitle">"완벽주의자"</div></div>
+  <div class="meta-card cat-d"><span class="mcb" style="background:white"></span><span class="mid">M-D01 🟢</span><div class="mname">HOT START</div><div class="mdesc">1R HP 0 (Ghost) / 2R 주가 0 (Bloc)</div><div class="mtitle">"인생은 시작부터 하드모드"</div></div>
+  <div class="meta-card cat-d"><span class="mcb" style="background:white"></span><span class="mid">M-D02 🟢</span><div class="mname">DOUBLE DEFEAT</div><div class="mdesc">같은 세션 2회 연속 최하위</div><div class="mtitle">"학습자"</div></div>
+</div>
+
+</div><!-- /page 2 -->
+
+<!-- ==================== PAGE 3: 플레이어 프로필 시트 ==================== -->
+<div class="page">
+
+<h1>🎖 플레이어 프로필 시트</h1>
+
+<div class="profile">
+  <div class="profile-header">
+    <div class="profile-title">PLAYER PROFILE</div>
+    <div style="text-align:right; font-size:9pt;">
+      <div>DEAD NEXUS · v0.5</div>
+      <div style="font-size:7pt; color:#666;">Notion DB 연동 또는 수기 관리</div>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field"><label>이름/닉</label><div class="blank"></div></div>
+    <div class="field"><label>시작일</label><div class="blank"></div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>세션 수</label><div class="blank"></div></div>
+    <div class="field"><label>선호 클래스</label><div class="blank"></div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>최고 자산</label><div class="blank"></div></div>
+    <div class="field"><label>최고 렙</label><div class="blank"></div></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>승/패</label><div class="blank"></div></div>
+    <div class="field"><label>메타 포인트</label><div class="blank"></div></div>
+  </div>
+
+  <h2 style="margin-top:5mm;">메타 업적 진척 (25)</h2>
+
+  <div class="progress-box">
+    <h4>🎓 클래스 마스터리 (8)</h4>
+    <div class="progress-tracker">
+      <div class="progress-cell" title="M-C01 INITIATE"></div>
+      <div class="progress-cell" title="M-C02 CIPHER"></div>
+      <div class="progress-cell" title="M-C03 BLADE"></div>
+      <div class="progress-cell" title="M-C04 RIGGER"></div>
+      <div class="progress-cell" title="M-C05 BROKER"></div>
+      <div class="progress-cell" title="M-C06 DRIFTER"></div>
+      <div class="progress-cell" title="M-C07 MOLE"></div>
+      <div class="progress-cell" title="M-C08 TYCOON"></div>
+    </div>
+  </div>
+
+  <div class="progress-box">
+    <h4>🏆 승리 트로피 (6)</h4>
+    <div class="progress-tracker">
+      <div class="progress-cell" title="M-T01 STOCK KING"></div>
+      <div class="progress-cell" title="M-T02 STREET LEGEND"></div>
+      <div class="progress-cell" title="M-T03 M&A OVERLORD"></div>
+      <div class="progress-cell" title="M-T04 NEXUS KING"></div>
+      <div class="progress-cell" title="M-T05 WAR HERO"></div>
+      <div class="progress-cell" title="M-T06 FULL SCENARIO"></div>
+    </div>
+  </div>
+
+  <div class="progress-box">
+    <h4>⚡ 극한 도전 (6)</h4>
+    <div class="progress-tracker">
+      <div class="progress-cell" title="M-X01 BLOODLESS"></div>
+      <div class="progress-cell" title="M-X02 FIRST STRIKE"></div>
+      <div class="progress-cell" title="M-X03 HQ BREACHER"></div>
+      <div class="progress-cell" title="M-X04 PHOENIX"></div>
+      <div class="progress-cell" title="M-X05 SPEEDRUN"></div>
+      <div class="progress-cell" title="M-X06 FLAWLESS"></div>
+    </div>
+  </div>
+
+  <div class="progress-box">
+    <h4>📚 컬렉션 (3) · 💀 어두운 훈장 (2)</h4>
+    <div class="progress-tracker">
+      <div class="progress-cell" title="M-L01 DECK"></div>
+      <div class="progress-cell" title="M-L02 OBJECTIVE"></div>
+      <div class="progress-cell" title="M-L03 COMPLETE"></div>
+      <div class="progress-cell" style="background:#1f2937" title="M-D01 HOT START"></div>
+      <div class="progress-cell" style="background:#1f2937" title="M-D02 DOUBLE"></div>
+    </div>
+  </div>
+
+  <div class="progress-box">
+    <h4>📊 포인트 타이틀 (누적 메타 포인트)</h4>
+    <div style="font-size:8pt; display:grid; grid-template-columns:repeat(5,1fr); gap:2mm;">
+      <div style="border:1px solid #000; padding:1mm; text-align:center;"><strong>50+</strong><br/>CASUAL<br/><span class="mcb" style="margin:0;"></span></div>
+      <div style="border:1px solid #000; padding:1mm; text-align:center;"><strong>100+</strong><br/>DEDICATED<br/><span class="mcb" style="margin:0;"></span></div>
+      <div style="border:1px solid #000; padding:1mm; text-align:center;"><strong>250+</strong><br/>MASTER<br/><span class="mcb" style="margin:0;"></span></div>
+      <div style="border:1px solid #000; padding:1mm; text-align:center;"><strong>500+</strong><br/>LEGEND<br/><span class="mcb" style="margin:0;"></span></div>
+      <div style="border:1px solid #000; padding:1mm; text-align:center;"><strong>1000+</strong><br/>ARCHITECT<br/><span class="mcb" style="margin:0;"></span></div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:5mm;">세션별 메모</h2>
+  <div style="border:1px solid #000; min-height:40mm; padding:2mm; font-size:8pt;">
+    <div style="border-bottom:0.5px dashed #999; min-height:8mm;"></div>
+    <div style="border-bottom:0.5px dashed #999; min-height:8mm;"></div>
+    <div style="border-bottom:0.5px dashed #999; min-height:8mm;"></div>
+    <div style="border-bottom:0.5px dashed #999; min-height:8mm;"></div>
+    <div style="min-height:8mm;"></div>
+  </div>
+</div>
+
+</div><!-- /page 3 -->
+
+</body>
+</html>

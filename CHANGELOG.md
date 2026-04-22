@@ -9,7 +9,63 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 ## [Unreleased] — 작업 중
 
 ### Planned
-- 플레이테스트 세션 00 실시 (5×5 튜토리얼 맵 + 프린트킷 기반)
+- 플레이테스트 세션 00 실시 (v0.5 리플레이성 시스템 적용)
+- Bloc 덱 확장 (블록당 6 → 10장) + 드래프트 규칙 (v0.6)
+- 시뮬레이터 v0.4 업데이트 (simulator/dead_nexus_simulator.jsx)
+- 레거시 캠페인 확장 (v0.7+)
+
+---
+
+## [0.5.0] — 리플레이성 4층 시스템 (2026-04-22)
+
+### Added
+
+**기본 게임 리플레이성 완성**. 4층 변주 시스템으로 매 판 완전히 다른 경험:
+
+- **🎲 시나리오 시스템** (`docs/14-scenarios.md`)
+  - 6개 공식 시나리오: S01 표준 · S02 코프 대전 · S03 스트리트 라이징 · S04 계엄의 밤 · S05 골드러시 · S06 마켓 크래시
+  - 각 시나리오 시작 조건·특수 규칙·플레이 시간 차별화
+  - 커스텀 시나리오 가이드
+- **🎯 숨은 목표 시스템** (`docs/15-hidden-objectives.md`)
+  - Bloc 20장 + Ghost 20장 = 40장 비밀 목표 덱
+  - 난이도 3단계 (🟢 쉬움 / 🟡 보통 / 🔴 어려움)
+  - 5종 대체 승리 카드 포함 (Bloc 3 + Ghost 2)
+  - 카테고리: 경제·정치·기술·파괴·비밀 / 복수·축적·정체성·도망·카르마
+- **🏆 싱글게임 업적** (`docs/16-achievements.md`, `cards/achievements/in-game.md`)
+  - 35장 (브론즈 20 + 실버 10 + 골드 5)
+  - 한 판 내부 공개 도전. 선착순 달성
+  - 메타 포인트 적립 (1/2/5pt)
+- **🎖 메타 업적** (`cards/achievements/meta.md`)
+  - 25장 여러 판 누적 수집 시스템
+  - 카테고리: 🎓 마스터리 8 + 🏆 트로피 6 + ⚡ 극한 6 + 📚 컬렉션 3 + 💀 어두운 훈장 2
+  - 포인트 타이틀: CASUAL → DEDICATED → MASTER → LEGEND → ARCHITECT
+
+**프린트킷 확장 (v0.4.1 → v0.5)**:
+- `print-kit/09-scenarios.html` — 시나리오 카드 6장 (A4 2매)
+- `print-kit/10-objectives.html` — 숨은 목표 40장 (A4 5매)
+- `print-kit/11-achievements.html` — 싱글+메타 업적 참조 시트 + 플레이어 프로필 (A4 3매)
+
+### Design Philosophy
+
+**4층 스태킹**:
+```
+🎖 메타 업적 (계정 평생)
+🏆 싱글 업적 (한 판 공개)
+🎯 숨은 목표 (한 판 비공개)
+🎲 시나리오 (판 시작 조건)
+```
+각 층은 독립 ON/OFF. 입문 = 모두 OFF. 정규 = 전부 ON.
+
+### Changed
+- 기본 게임 승리 조건에 "숨은 목표 대체 승리" 옵션 추가
+- Ghost/Bloc 덱 선택 시 클래스 모순 리드로우 권장 규칙
+
+### Documentation
+- `docs/14-scenarios.md` 신규 (6 시나리오 상세)
+- `docs/15-hidden-objectives.md` 신규 (시스템 + 40장 index)
+- `docs/16-achievements.md` 신규 (싱글+메타 통합)
+- `cards/objectives/bloc.md` + `cards/objectives/ghost.md` 신규
+- `cards/achievements/in-game.md` + `cards/achievements/meta.md` 신규
 
 ---
 

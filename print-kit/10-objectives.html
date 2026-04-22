@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>숨은 목표 카드 40장</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 6mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  .page {
+    display: grid;
+    grid-template-columns: repeat(3, 63mm);
+    grid-auto-rows: 88mm;
+    gap: 1mm;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .obj-card {
+    width: 63mm; height: 88mm;
+    border: 2px solid #000;
+    padding: 2mm;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    page-break-inside: avoid;
+    position: relative;
+  }
+  .deck-band {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7pt;
+    letter-spacing: 0.25em;
+    color: white;
+    text-align: center;
+    padding: 1mm 0;
+    margin: -2mm -2mm 2mm -2mm;
+  }
+  .db-bloc { background: #1f2937; }
+  .db-ghost { background: #7e22ce; }
+
+  .id-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6.5pt;
+    color: #666;
+    position: absolute;
+    top: 4mm;
+    left: 3mm;
+  }
+  .diff-tag {
+    position: absolute;
+    top: 4mm;
+    right: 3mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    font-weight: 900;
+    padding: 0.3mm 1.5mm;
+    border-radius: 1mm;
+    color: white;
+  }
+  .d-easy { background: #16a34a; }
+  .d-med  { background: #ca8a04; }
+  .d-hard { background: #dc2626; }
+
+  .cat-label {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7pt;
+    letter-spacing: 0.2em;
+    color: #555;
+    margin: 4mm 0 1mm 0;
+  }
+  .obj-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 11pt;
+    text-align: center;
+    margin-bottom: 2mm;
+    letter-spacing: 0.02em;
+    min-height: 9mm;
+    line-height: 1.1;
+  }
+  .obj-cond {
+    font-size: 8pt;
+    line-height: 1.3;
+    padding: 1mm;
+    border: 1px solid #000;
+    margin-bottom: 1.5mm;
+    background: #f9f9f9;
+    min-height: 16mm;
+  }
+  .obj-cond strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5pt;
+    display: block;
+    margin-bottom: 0.5mm;
+  }
+  .obj-reward {
+    font-size: 8pt;
+    line-height: 1.3;
+    padding: 1mm;
+    margin-bottom: 1mm;
+  }
+  .obj-reward strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    font-size: 8pt;
+  }
+  .victory-alt {
+    background: #fff0f0;
+    border: 1.5px solid #dc2626;
+    padding: 1mm;
+    font-size: 7pt;
+    font-weight: 700;
+    color: #dc2626;
+    text-align: center;
+    margin-bottom: 1mm;
+  }
+  .obj-flavor {
+    font-style: italic;
+    font-size: 6.5pt;
+    color: #555;
+    text-align: center;
+    padding: 1mm 0;
+    line-height: 1.25;
+    margin-top: auto;
+    border-top: 1px solid #ddd;
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · 숨은 목표 40장 (Bloc 20 + Ghost 20) · A4 세로 5매 · 뒤집어 배포
+</div>
+
+<!-- ========== BLOC 목표 (20장) — 4 페이지 중 3 페이지에 9+9+2=20장 ========== -->
+
+<!-- Page 1: Bloc 경제 5 + 정치 4 = 9 -->
+<div class="page">
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-E01</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">💰 경제 지배</div>
+  <div class="obj-title">절대 우위</div>
+  <div class="obj-cond"><strong>조건</strong>게임 종료 시 자신 자산 ≥ 타 Bloc 자산 합의 <strong>150%</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +10</div>
+  <div class="obj-flavor">"이기는 것만으론 부족하다. 기억되어야 한다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-E02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💰 경제 지배</div>
+  <div class="obj-title">포트폴리오 킹</div>
+  <div class="obj-cond"><strong>조건</strong>게임 종료 시 <strong>4개 이상 블록</strong> 주식 각 10% 이상 보유</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15</div>
+  <div class="obj-flavor">"내 돈이 모든 곳에 있다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-E03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💰 경제 지배</div>
+  <div class="obj-title">흑자 전환</div>
+  <div class="obj-cond"><strong>조건</strong>6R까지 자산 30 이하 → 종료 시 60 초과</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +20, 메타 "TURNAROUND"</div>
+  <div class="obj-flavor">"그들은 내가 끝났다고 썼다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-E04</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">💰 경제 지배</div>
+  <div class="obj-title">주가 20</div>
+  <div class="obj-cond"><strong>조건</strong>자사 주가 20 도달 후 <strong>3R 연속 유지</strong></div>
+  <div class="victory-alt">⚡ 대체 승리</div>
+  <div class="obj-flavor">"최정점. 그 이상은 기록이다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-E05</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">💰 경제 지배</div>
+  <div class="obj-title">장기 투자</div>
+  <div class="obj-cond"><strong>조건</strong>자사 주식 첫 R 수치 이상 유지한 채 종료</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +10</div>
+  <div class="obj-flavor">"팔지 않는다. 팔면 다시 살 수 없다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-P01</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🎭 정치 음모</div>
+  <div class="obj-title">이사회 지배</div>
+  <div class="obj-cond"><strong>조건</strong>이사회 투표 <strong>3회 승리</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15, 인플루언스 +5</div>
+  <div class="obj-flavor">"의견은 자유다. 표결은 아니다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-P02</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🎭 정치 음모</div>
+  <div class="obj-title">계엄 선포</div>
+  <div class="obj-cond"><strong>조건</strong>공권력 10 도달 + 자신이 공권력 상승 유발</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +25, 메타 "AUTOCRAT"</div>
+  <div class="obj-flavor">"질서는 내 상품이다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-P03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🎭 정치 음모</div>
+  <div class="obj-title">백기사</div>
+  <div class="obj-cond"><strong>조건</strong>타 Bloc M&A 피격 시 <strong>방어 지원</strong>하여 방어 성공 기여</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15</div>
+  <div class="obj-flavor">"호의는 계산된다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-P04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">🎭 정치 음모</div>
+  <div class="obj-title">뉴스 조작</div>
+  <div class="obj-cond"><strong>조건</strong>자사 관련 호재 뉴스 <strong>3회 공개</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +10</div>
+  <div class="obj-flavor">"진실은 우리가 쓴다."</div>
+</div>
+
+</div><!-- /page 1 -->
+
+<!-- Page 2: Bloc 기술 4 + 파괴 4 + 비밀 1 = 9 -->
+<div class="page">
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-T01</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🔬 기술 독점</div>
+  <div class="obj-title">정상 등극</div>
+  <div class="obj-cond"><strong>조건</strong>자사 <strong>TL 5 달성</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +25, 메타 "APEX"</div>
+  <div class="obj-flavor">"우리가 먼저 도착했다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-T02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🔬 기술 독점</div>
+  <div class="obj-title">기술 봉쇄</div>
+  <div class="obj-cond"><strong>조건</strong>게임 종료 시 타 모든 Bloc이 <strong>TL 3 이하</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15</div>
+  <div class="obj-flavor">"당신 연구가 내 파일 위에."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-T03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🔬 기술 독점</div>
+  <div class="obj-title">스플라이스 패권</div>
+  <div class="obj-cond"><strong>조건</strong>Ghost에 스플라이스 카드 <strong>5장 공급</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15, 인플루언스 +3</div>
+  <div class="obj-flavor">"몸은 소모품. 시장은 영원."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-T04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">🔬 기술 독점</div>
+  <div class="obj-title">데이터 주권</div>
+  <div class="obj-cond"><strong>조건</strong>자사 데이터허브 구역 <strong>3곳 이상</strong> 보유</div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +10, 데이터 +5</div>
+  <div class="obj-flavor">"그들의 기억 위에 앉는다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-D01</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">💣 전략적 파괴</div>
+  <div class="obj-title">적의 종말</div>
+  <div class="obj-cond"><strong>조건</strong>비밀 지정 Bloc 1곳 <strong>파산 또는 흡수</strong></div>
+  <div class="victory-alt">⚡ 대체 승리</div>
+  <div class="obj-flavor">"존재하지 않았다고 기록된다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-D02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💣 전략적 파괴</div>
+  <div class="obj-title">스캔들 제조기</div>
+  <div class="obj-cond"><strong>조건</strong>타 블록 덱에 스캔들 <strong>5장 삽입 유도</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15</div>
+  <div class="obj-flavor">"기자 한 명. 술 한 잔."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-D03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💣 전략적 파괴</div>
+  <div class="obj-title">구역 점거</div>
+  <div class="obj-cond"><strong>조건</strong>종료 시 자사 구역 <strong>10개 이상</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15</div>
+  <div class="obj-flavor">"주소가 내 것이면 사람도 내 것."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-D04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">💣 전략적 파괴</div>
+  <div class="obj-title">부의 이동</div>
+  <div class="obj-cond"><strong>조건</strong>타 블록에서 크레딧 <strong>20+ 강탈</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +10</div>
+  <div class="obj-flavor">"그쪽 계좌는 은행일 뿐."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-S01</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🕯️ 비밀 어젠다</div>
+  <div class="obj-title">VOSS 밀약</div>
+  <div class="obj-cond"><strong>조건</strong>HELIX·CARBON 동시 동맹 <strong>3R 유지</strong><br/><em>(HELIX/CARBON 전용)</em></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +30, 메타 "BLOODLINE"</div>
+  <div class="obj-flavor">"피는 시장보다 진하다."</div>
+</div>
+
+</div><!-- /page 2 -->
+
+<!-- Page 3: Bloc 비밀 2 + Ghost 복수 4 + 축적 3 = 9 -->
+<div class="page">
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-S02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🕯️ 비밀 어젠다</div>
+  <div class="obj-title">그림자 군단</div>
+  <div class="obj-cond"><strong>조건</strong>Ghost <strong>3명 이상과 계약</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 자산 +15, 렙 10</div>
+  <div class="obj-flavor">"블록은 몸. 고스트는 팔다리."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-bloc">BLOC OBJECTIVE</div>
+  <div class="id-tag">B-S03</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🕯️ 비밀 어젠다</div>
+  <div class="obj-title">중심 장악</div>
+  <div class="obj-cond"><strong>조건</strong>NEXUS(F6) 1R+ 장악 + 종료 시 자산 40+</div>
+  <div class="victory-alt">⚡ 대체 승리</div>
+  <div class="obj-flavor">"왕좌는 한 번만 앉으면 된다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-R01</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🩸 복수</div>
+  <div class="obj-title">표적 처리</div>
+  <div class="obj-cond"><strong>조건</strong>비밀 지정 Bloc 구역 <strong>3회 레이드 성공</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10</div>
+  <div class="obj-flavor">"내 형제가 그 건물에서 던져졌다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-R02</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🩸 복수</div>
+  <div class="obj-title">전직 동료</div>
+  <div class="obj-cond"><strong>조건</strong>지정 Bloc 수장 NPC <strong>제거 또는 해임</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +15, 메타 "NAMESAKE"</div>
+  <div class="obj-flavor">"그는 내 이름을 지웠다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-R03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🩸 복수</div>
+  <div class="obj-title">경쟁 청산</div>
+  <div class="obj-cond"><strong>조건</strong>지정 Ghost <strong>HP 0 도달 유도</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10</div>
+  <div class="obj-flavor">"같은 거리에서 자랐지만…"</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-R04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">🩸 복수</div>
+  <div class="obj-title">소각</div>
+  <div class="obj-cond"><strong>조건</strong>[LOSS] 카드 <strong>5장 이상 사용</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +5</div>
+  <div class="obj-flavor">"남기지 않는다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-A01</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💸 축적</div>
+  <div class="obj-title">콜드 캐시</div>
+  <div class="obj-cond"><strong>조건</strong>어느 시점 <strong>크레딧 30 동시 보유</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10</div>
+  <div class="obj-flavor">"은행은 묻는다. 나는 답하지 않는다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-A02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">💸 축적</div>
+  <div class="obj-title">블랙마켓 왕</div>
+  <div class="obj-cond"><strong>조건</strong>블랙마켓 카드 <strong>5장 이상 구매</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10, 블랙마켓 1장</div>
+  <div class="obj-flavor">"정식 가격표는 없다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-A03</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">💸 축적</div>
+  <div class="obj-title">억만장자</div>
+  <div class="obj-cond"><strong>조건</strong>종료 시 크레딧 50+ · 렙 20+</div>
+  <div class="victory-alt">⚡ 대체 승리</div>
+  <div class="obj-flavor">"거리가 나를 만들었다. 이제 내가 거리를 산다."</div>
+</div>
+
+</div><!-- /page 3 -->
+
+<!-- Page 4: Ghost 축적 1 + 정체성 4 + 도망 3 + 카르마 1 = 9 -->
+<div class="page">
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-A04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">💸 축적</div>
+  <div class="obj-title">자원 수집가</div>
+  <div class="obj-cond"><strong>조건</strong>6자원 모두 <strong>10+ 동시</strong> 보유</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +5, 자원 택1 +5</div>
+  <div class="obj-flavor">"다양성이 생존이다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-I01</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">🎭 정체성</div>
+  <div class="obj-title">은둔자</div>
+  <div class="obj-cond"><strong>조건</strong>종료 시 <strong>현상수배 0 유지</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +5</div>
+  <div class="obj-flavor">"이름은 부담이다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-I02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🎭 정체성</div>
+  <div class="obj-title">얼굴 수집가</div>
+  <div class="obj-cond"><strong>조건</strong>3개 이상 블록 구역 <strong>위장/합법 진입</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10</div>
+  <div class="obj-flavor">"세 곳에서 세 사람. 전부 나."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-I03</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🎭 정체성</div>
+  <div class="obj-title">전설의 유령</div>
+  <div class="obj-cond"><strong>조건</strong>정체 공개 안 함 + 렙 20 도달</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +15, 메타 "URBAN LEGEND"</div>
+  <div class="obj-flavor">"전설은 사라진다. 나는 전설이다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-I04</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🎭 정체성</div>
+  <div class="obj-title">이중 삶</div>
+  <div class="obj-cond"><strong>조건</strong>Bloc 계약자 + Ghost 활동 <strong>3R 동시 유지</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10, 크레딧 +10</div>
+  <div class="obj-flavor">"점심 사내식당. 저녁 폐창고."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-E01</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">🕳️ 도망</div>
+  <div class="obj-title">그리드 탈출</div>
+  <div class="obj-cond"><strong>조건</strong>비통제구역 경계 탈출 + 현상수배 3+</div>
+  <div class="victory-alt">⚡ 대체 승리 (도주)</div>
+  <div class="obj-flavor">"어디 갔냐는 질문이 증거다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-E02</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">🕳️ 도망</div>
+  <div class="obj-title">무적의 밤</div>
+  <div class="obj-cond"><strong>조건</strong>공권력 8+ 상태 <strong>3R 연속 생존</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10</div>
+  <div class="obj-flavor">"경찰은 자정에 자러 간다."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-E03</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">🕳️ 도망</div>
+  <div class="obj-title">기록 세탁</div>
+  <div class="obj-cond"><strong>조건</strong>현상수배 누적 5+ → 최종 1-</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +5, 메타 "GHOST WRITER"</div>
+  <div class="obj-flavor">"파일은 옮겨질 뿐. 영원히."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-K01</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">😇 카르마</div>
+  <div class="obj-title">구출자</div>
+  <div class="obj-cond"><strong>조건</strong>NPC <strong>5명 구출</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10, 인플루언스 +3</div>
+  <div class="obj-flavor">"돈은 안 받는다."</div>
+</div>
+
+</div><!-- /page 4 -->
+
+<!-- Page 5: Ghost 카르마 4 -->
+<div class="page">
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-K02</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">😇 카르마</div>
+  <div class="obj-title">평화주의자</div>
+  <div class="obj-cond"><strong>조건</strong>종료 시 <strong>전투 피해 유발 0</strong> (공격 카드 금지)</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +15, 메타 "BLOODLESS"</div>
+  <div class="obj-flavor">"피가 답이라면 질문을 바꿔야."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-K03</div><div class="diff-tag d-med">🟡</div>
+  <div class="cat-label">😇 카르마</div>
+  <div class="obj-title">경찰 존중</div>
+  <div class="obj-cond"><strong>조건</strong>경찰 NPC 0 제거 + 공권력 −3 유도</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +10, 현상수배 0</div>
+  <div class="obj-flavor">"법은 가끔 친구다. 자주는 아니고."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-K04</div><div class="diff-tag d-easy">🟢</div>
+  <div class="cat-label">😇 카르마</div>
+  <div class="obj-title">거리의 후원자</div>
+  <div class="obj-cond"><strong>조건</strong>타 Ghost에게 자원 <strong>10+ 전달</strong></div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +5</div>
+  <div class="obj-flavor">"네가 살아남아야 내 이야기도."</div>
+</div>
+
+<div class="obj-card">
+  <div class="deck-band db-ghost">GHOST OBJECTIVE</div>
+  <div class="id-tag">G-K05</div><div class="diff-tag d-hard">🔴</div>
+  <div class="cat-label">😇 카르마</div>
+  <div class="obj-title">해방자</div>
+  <div class="obj-cond"><strong>조건</strong>블록 1곳 <strong>파산 유도</strong> (주가 0 + 2R)</div>
+  <div class="obj-reward"><strong>보상</strong> 렙 +15, 메타 "LIBERATOR"</div>
+  <div class="obj-flavor">"100층이 무너진다. 설계자 책임."</div>
+</div>
+
+</div><!-- /page 5 -->
+
+</body>
+</html>
