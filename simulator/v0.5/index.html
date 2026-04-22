@@ -672,6 +672,59 @@ const rollSignalDie = () => {
 
 const getCard = (id) => GHOST_CARDS[id] || BLOC_CARDS[id];
 
+// TL 승급 비용: 1→2=4pt, 2→3=7pt, 3→4=10pt, 4→5=14pt
+const tlCostFor = (curTl) => {
+  if (curTl >= 5) return 99;
+  return [4, 7, 10, 14][curTl - 1] || 99;
+};
+
+// ============================================================================
+// 게임 히스토리 (LocalStorage) — 브라우저 로컬에만 저장, 서버 전송 없음
+// ============================================================================
+const HISTORY_KEY = 'dn_sim_history_v053';
+const loadHistory = () => {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+const saveGameRecord = (rec) => {
+  try {
+    const h = loadHistory();
+    h.unshift(rec);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 50)));  // 최근 50판만
+  } catch (e) { console.warn('history save failed', e); }
+};
+const clearHistory = () => {
+  try { localStorage.removeItem(HISTORY_KEY); } catch {}
+};
+const buildGameRecord = (state) => {
+  const me = state.players[0];
+  const iWon = state.meta.winner === 0;
+  return {
+    ts: Date.now(),
+    round: state.meta.round,
+    role: me.role,
+    specific: me.specific,
+    won: iWon,
+    winner: state.meta.winner,
+    winnerSpecific: state.meta.winner != null ? state.players[state.meta.winner]?.specific : null,
+    reason: state.meta.winReason,
+    hp: me.hp,
+    rep: me.resources.rep,
+    asset: assetValue(me, state.stocks, state),
+    raids: state.meta.raidsThisGame?.[0] || 0,
+    tl: me.tl,
+    achievements: me.achievements.length,
+    zones: Object.values(state.map).filter(c => c.owner === 0).length,
+  };
+};
+const formatHistoryTime = (ts) => {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const coord = (col, row) => String.fromCharCode(65 + col) + (row + 1);
 const coordsAdj = (c) => {
   const col = c.charCodeAt(0) - 65;
@@ -1100,6 +1153,35 @@ function reducer(state, action) {
         s = { ...s, map: expandedMap, log: [...s.log, ...expandLog].slice(-150) };
       }
       return s;
+    }
+
+    case 'RESEARCH_PHASE': {
+      // R&D: 각 플레이어가 tlProgress 축적 + 승급 판정
+      let s = { ...state };
+      const newLog = [...s.log];
+      const newPlayers = state.players.map((p, pi) => {
+        if (p.defeated) return p;
+        // TL 진척도 = 소유 구역 수 + 개인 풀 비GRID 합의 절반 + 누적 레이드(고스트)
+        const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
+        const poolSum = ['M','I','V','S','B','A'].reduce((a,k) => a + (p.pool?.[k] || 0), 0);
+        const raids = state.meta.raidsThisGame?.[pi] || 0;
+        const gain = ownCount + Math.floor(poolSum / 2) + (p.role === 'ghost' ? raids : 0);
+        let tl = p.tl || 1;
+        let tlProgress = (p.tlProgress || 0) + gain;
+        const events = [];
+        while (tl < 5 && tlProgress >= tlCostFor(tl)) {
+          tlProgress -= tlCostFor(tl);
+          tl += 1;
+          events.push(tl);
+        }
+        if (gain > 0 || events.length > 0) {
+          const marker = pi === 0 ? '⭐ 당신 ' : '';
+          const upMsg = events.length > 0 ? ` · ⚡TL UP → TL ${tl}` : '';
+          newLog.push({ round: s.meta.round, phase: 5, message: `🧪 ${marker}P${pi} [${p.specific}] R&D +${gain}pt (구역${ownCount} +풀½${Math.floor(poolSum/2)}${p.role==='ghost'?` +레이드${raids}`:''}) → ${tlProgress}/${tlCostFor(tl)}${upMsg}` });
+        }
+        return { ...p, tl, tlProgress };
+      });
+      return { ...s, players: newPlayers, log: newLog.slice(-150) };
     }
 
     case 'CLAIM_ACHIEVEMENT': {
@@ -1664,10 +1746,28 @@ function scoreBlocCard(state, pIdx, cid) {
 function SetupScreen({ onStart }) {
   const [role, setRole] = useState('ghost');
   const [specific, setSpecific] = useState('CIPHER');
+  const [history, setHistory] = useState(() => loadHistory());
 
   const options = role === 'ghost'
     ? [['CIPHER','정보전·해킹'],['BLADE','전투·집행'],['BROKER','협상·중개'],['RIGGER','기술·제작'],['DRIFTER','이동·보급'],['MOLE','내부 침투']]
     : [['VANTA','보안·정보'],['IRONWALL','군사·중화기'],['HELIX','생체공학'],['AXIOM','AI·예측'],['CARBON','에너지·인프라']];
+
+  const stats = useMemo(() => {
+    if (history.length === 0) return null;
+    const total = history.length;
+    const wins = history.filter(h => h.won).length;
+    const byRole = { ghost: { total: 0, wins: 0 }, bloc: { total: 0, wins: 0 } };
+    history.forEach(h => {
+      if (byRole[h.role]) {
+        byRole[h.role].total++;
+        if (h.won) byRole[h.role].wins++;
+      }
+    });
+    const bestRep = Math.max(...history.filter(h => h.role === 'ghost').map(h => h.rep || 0), 0);
+    const bestAsset = Math.max(...history.filter(h => h.role === 'bloc').map(h => h.asset || 0), 0);
+    const maxTl = Math.max(...history.map(h => h.tl || 1), 1);
+    return { total, wins, byRole, bestRep, bestAsset, maxTl };
+  }, [history]);
 
   const statsFor = (sp) => role === 'ghost' ? GHOST_STATS[sp] : BLOC_STATS[sp];
   const s = statsFor(specific);
@@ -1716,6 +1816,56 @@ function SetupScreen({ onStart }) {
       <button className="start-btn" onClick={() => onStart(role, specific)}>
         🎮 START SIMULATION
       </button>
+
+      {/* === 플레이 히스토리 === */}
+      {stats && (
+        <div style={{ marginTop: 30, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontFamily: 'Share Tech Mono, monospace', color: 'var(--cyan)', letterSpacing: 2, fontSize: 13 }}>📊 내 플레이 기록 (이 브라우저)</h3>
+            <button className="pa-btn" style={{ fontSize: 10 }} onClick={() => { if (confirm('플레이 기록 전부 삭제?')) { clearHistory(); setHistory([]); } }}>🗑 초기화</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, fontFamily: 'Share Tech Mono, monospace', fontSize: 11, marginBottom: 12 }}>
+            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>총 판수</div>
+              <div style={{ color: 'var(--cyan)', fontSize: 18, fontWeight: 700 }}>{stats.total}</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>승률</div>
+              <div style={{ color: stats.wins/stats.total >= 0.5 ? 'var(--green)' : 'var(--magenta)', fontSize: 18, fontWeight: 700 }}>{Math.round(stats.wins/stats.total*100)}%</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 렙</div>
+              <div style={{ color: 'var(--yellow)', fontSize: 18, fontWeight: 700 }}>{stats.bestRep}</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 자산</div>
+              <div style={{ color: 'var(--yellow)', fontSize: 18, fontWeight: 700 }}>{stats.bestAsset}</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 TL</div>
+              <div style={{ color: 'var(--green)', fontSize: 18, fontWeight: 700 }}>⚡{stats.maxTl}</div>
+            </div>
+          </div>
+          <div style={{ maxHeight: 220, overflowY: 'auto', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 50px 80px 50px 50px 50px 50px 50px 1fr', gap: 4, color: 'var(--text-dim)', fontSize: 9, paddingBottom: 4, borderBottom: '1px solid var(--border)' }}>
+              <div>일시</div><div>결과</div><div>클래스/블록</div><div>라운드</div><div>렙/자산</div><div>레이드</div><div>TL</div><div>업적</div><div>이유</div>
+            </div>
+            {history.map((h, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 50px 80px 50px 50px 50px 50px 50px 1fr', gap: 4, padding: '3px 0', borderBottom: '1px solid var(--bg3)' }}>
+                <div style={{ color: 'var(--text-dim)' }}>{formatHistoryTime(h.ts)}</div>
+                <div style={{ color: h.won ? 'var(--green)' : 'var(--magenta)', fontWeight: 700 }}>{h.won ? '승' : '패'}</div>
+                <div>{h.role === 'ghost' ? '👻' : '🏢'} {h.specific}</div>
+                <div style={{ textAlign: 'center' }}>R{h.round}</div>
+                <div style={{ textAlign: 'center', color: 'var(--yellow)' }}>{h.role === 'ghost' ? h.rep : h.asset}</div>
+                <div style={{ textAlign: 'center' }}>{h.raids || 0}</div>
+                <div style={{ textAlign: 'center', color: 'var(--green)' }}>⚡{h.tl}</div>
+                <div style={{ textAlign: 'center' }}>{h.achievements || 0}</div>
+                <div style={{ color: 'var(--text-dim)', fontSize: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.reason || '—'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1763,7 +1913,8 @@ function GameScreen({ state, dispatch }) {
     }
 
     if (ph === 5) {
-      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 6 }), 500);  // R&D skip for MVP
+      setTimeout(() => dispatch({ type: 'RESEARCH_PHASE' }), 300);
+      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 6 }), 900);
     }
 
     if (ph === 6) {
@@ -1878,11 +2029,14 @@ function GameScreen({ state, dispatch }) {
             <div className="val">{me.achievements.length}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, marginBottom: 20 }}>
-          <button className="start-btn" style={{ maxWidth: 200 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+          <button className="start-btn" style={{ maxWidth: 180 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
             🔄 다시
           </button>
-          <button className="start-btn" style={{ maxWidth: 200, background: 'var(--bg3)', color: 'var(--cyan)', border: '1px solid var(--cyan)' }} onClick={() => copyLogToClipboard(state.log)}>
+          <button className="start-btn" style={{ maxWidth: 180, background: 'var(--bg3)', color: 'var(--yellow)', border: '1px solid var(--yellow)' }} onClick={() => dispatch({ type: 'BACK_TO_MENU' })}>
+            📊 메뉴 & 히스토리
+          </button>
+          <button className="start-btn" style={{ maxWidth: 180, background: 'var(--bg3)', color: 'var(--cyan)', border: '1px solid var(--cyan)' }} onClick={() => copyLogToClipboard(state.log)}>
             📋 로그 복사
           </button>
         </div>
@@ -1942,7 +2096,13 @@ function GameScreen({ state, dispatch }) {
               }
             </div>
             {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
-            <div style={{ fontSize: 10, marginTop: 4, color: 'var(--text-dim)' }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</div>
+            <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
+              <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>
+                ({p.tlProgress || 0}/{tlCostFor(p.tl)})
+              </span>
+              <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
+            </div>
             {i === 0 && (
               <div style={{ fontSize: 10, marginTop: 6, color: 'var(--yellow)' }}>
                 🎯 {p.objectives.map(o => o.name).join(' · ')}
@@ -2292,15 +2452,23 @@ function buildInitial(role, specific) {
 
 function App() {
   const [state, setState] = useState(null);
+  const savedRef = useRef(false);
 
   const startGame = useCallback((role, specific) => {
     console.log('[SIM] Start game:', role, specific);
+    savedRef.current = false;
     setState(buildInitial(role, specific));
   }, []);
 
   const dispatch = useCallback((action) => {
     if (action.type === 'RESET') {
+      savedRef.current = false;
       setState(buildInitial(action.humanRole, action.humanSpecific));
+      return;
+    }
+    if (action.type === 'BACK_TO_MENU') {
+      savedRef.current = false;
+      setState(null);
       return;
     }
     setState(prev => {
@@ -2313,6 +2481,14 @@ function App() {
       }
     });
   }, []);
+
+  // 게임 종료 시 히스토리 저장 (한 번만)
+  useEffect(() => {
+    if (state?.meta?.gameOver && !savedRef.current) {
+      savedRef.current = true;
+      saveGameRecord(buildGameRecord(state));
+    }
+  }, [state?.meta?.gameOver]);
 
   if (!state) {
     return <SetupScreen onStart={startGame} />;
