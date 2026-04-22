@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DEAD_NEXUS — Ashgrid Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    html, body, #root { height: 100%; margin: 0; background: #06060e; color: #e0e0e0; }
+    body { font-family: 'Rajdhani', system-ui, sans-serif; overflow: hidden; }
+    #boot {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: #06060e; color: #00e5ff; font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 4px; font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"><div id="boot">BOOTING ASHGRID SIMULATION…</div></div>
+
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react" src="./dead_nexus_simulator.jsx"></script>
+  <script type="text/babel" data-presets="react">
+    const __mount = () => {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<DeadNexusSimulator />);
+    };
+    if (typeof DeadNexusSimulator !== 'undefined') {
+      __mount();
+    } else {
+      window.addEventListener('DOMContentLoaded', () => {
+        const tryMount = () => {
+          if (typeof DeadNexusSimulator !== 'undefined') __mount();
+          else setTimeout(tryMount, 30);
+        };
+        tryMount();
+      });
+    }
+  </script>
+</body>
+</html>
