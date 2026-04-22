@@ -432,6 +432,22 @@ const ZONE_TYPES = {
   aux:  { name: '넥서스부속', color: 'z-aux', income: { credit: 2, random_attr: 1 }, attr: null, buildable: true },
 };
 
+// 구역 첫 방문 시 3중 1 드래프트용 보너스 풀 — 구역 성격에 맞춘 옵션 셋
+const ZONE_BONUS_POOL = {
+  ruin:  [ {k:'parts',v:2,label:'⚙️ 부품 +2'}, {k:'gen',v:'A',label:'◈A +1 (개인 풀)'}, {k:'wanted',v:-1,label:'🚨 현상수배 -1'} ],
+  home:  [ {k:'credit',v:3,label:'₵ +3'}, {k:'gen',v:'GRID',label:'◈GRID +1'}, {k:'draw',v:1,label:'🂠 카드 1장 드로우'} ],
+  bank:  [ {k:'credit',v:5,label:'₵ +5 (금고 탈취)'}, {k:'stock_buy',v:1,label:'📈 주식 1주 할인 매수 (1₵)'}, {k:'rep',v:1,label:'★ 렙 +1 (평판 쌓기)'} ],
+  data:  [ {k:'data',v:2,label:'📡 데이터 +2'}, {k:'draw',v:2,label:'🂠 카드 2장 드로우'}, {k:'peek_news',v:1,label:'👁 다음 뉴스 미리보기'} ],
+  heal:  [ {k:'heal',v:3,label:'❤️ HP +3 회복'}, {k:'full_heal',v:1,label:'❤️❤️ HP 최대치 회복'}, {k:'gen',v:'B',label:'◈B +1'} ],
+  work:  [ {k:'parts',v:3,label:'⚙️ 부품 +3'}, {k:'weapons',v:1,label:'🔩 무기 +1'}, {k:'gen',v:'V',label:'◈V +1'} ],
+  arms:  [ {k:'weapons',v:2,label:'🔩 무기 +2'}, {k:'atk_boost',v:2,label:'💥 다음 판정 +2 (일회성)'}, {k:'gen',v:'I',label:'◈I +1'} ],
+  club:  [ {k:'credit',v:4,label:'₵ +4'}, {k:'influence',v:1,label:'🎙 인플루언스 +1'}, {k:'gen',v:'S',label:'◈S +1'} ],
+  port:  [ {k:'credit',v:2,label:'₵ +2'}, {k:'weapons',v:1,label:'🔩 무기 +1'}, {k:'move_bonus',v:2,label:'🚶 다음 턴 이동 +2'} ],
+  cop:   [ {k:'wanted',v:-2,label:'🚨 현상수배 -2 (해금)'}, {k:'heat_down',v:1,label:'🔥 공권력 -1'}, {k:'info',v:1,label:'👁 전체 지도 3라운드 노출'} ],
+  nex:   [ {k:'all_attr',v:1,label:'◈ 전속성 +1'}, {k:'credit',v:5,label:'₵ +5 (넥서스 보상)'}, {k:'rep',v:3,label:'★ 렙 +3 (명성)'} ],
+  aux:   [ {k:'credit',v:2,label:'₵ +2'}, {k:'gen',v:'GRID',label:'◈GRID +1'}, {k:'random_attr',v:1,label:'◈ 랜덤 속성 +2'} ],
+};
+
 // 5×5 tutorial map (25 cells)
 const MAP_5x5 = [
   ['A1','ruin'], ['B1','home'], ['C1','bank'], ['D1','data'], ['E1','ruin'],
@@ -851,6 +867,12 @@ function initGame(humanRole, humanSpecific) {
       moveBudget: 0,             // 이번 턴 총 이동 칸 수 (BFS 반경)
       turnSnapshot: null,        // 턴 전 상태 스냅샷 (변화 요약용)
       turnDiff: null,            // 턴 후 계산된 변화 요약
+      zoneBonusPending: null,    // { zone: 'home', coord: 'B3', options: [{...},{...},{...}] }
+      visitedBonusZones: {},     // { playerIdx: { coord: true } } — 보너스를 이미 받은 구역
+      peekNews: 0,               // 남은 peek 카운트 (cop/data 보너스)
+      mapReveal: 0,              // 남은 전체 지도 노출 라운드
+      moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
+      atkBonusOnce: 0,           // 일회성 공격 판정 보너스 (arms 보너스)
     },
     players,
     map,
@@ -919,6 +941,114 @@ function reducer(state, action) {
 
     case 'CLEAR_MOVE_TARGET':
       return { ...state, meta: { ...state.meta, awaitingMoveTarget: false, pendingMoveTarget: null, moveBudget: 0 } };
+
+    case 'APPLY_ZONE_BONUS': {
+      // action.opt: 선택된 옵션 객체 {k, v, label}
+      const pending = state.meta.zoneBonusPending;
+      if (!pending) return state;
+      const opt = action.opt;
+      let s = { ...state };
+      const me = s.players[0];
+      let res = { ...me.resources };
+      let pool = { ...(me.pool || {}) };
+      let hp = me.hp;
+      let maxHp = me.maxHp;
+      let wanted = me.wanted || 0;
+      let heat = s.heat;
+      let metaPatch = {};
+      const logLines = [];
+      switch (opt.k) {
+        case 'credit': res.credit = (res.credit || 0) + opt.v; logLines.push(`₵ +${opt.v}`); break;
+        case 'data': res.data = (res.data || 0) + opt.v; logLines.push(`📡 데이터 +${opt.v}`); break;
+        case 'weapons': res.weapons = (res.weapons || 0) + opt.v; logLines.push(`🔩 무기 +${opt.v}`); break;
+        case 'parts': res.parts = (res.parts || 0) + opt.v; logLines.push(`⚙️ 부품 +${opt.v}`); break;
+        case 'influence': res.influence = (res.influence || 0) + opt.v; logLines.push(`🎙 인플루언스 +${opt.v}`); break;
+        case 'rep': res.rep = (res.rep || 0) + opt.v; logLines.push(`★ 렙 +${opt.v}`); break;
+        case 'heal': hp = Math.min(maxHp, hp + opt.v); logLines.push(`❤️ HP +${opt.v} (→${hp})`); break;
+        case 'full_heal': hp = maxHp; logLines.push(`❤️❤️ HP 완전 회복 (→${hp})`); break;
+        case 'wanted': wanted = Math.max(0, wanted + opt.v); logLines.push(`🚨 현상수배 ${opt.v > 0 ? '+' : ''}${opt.v} (→${wanted})`); break;
+        case 'heat_down': heat = Math.max(0, heat - opt.v); logLines.push(`🔥 공권력 -${opt.v} (→${heat})`); break;
+        case 'gen': pool[opt.v] = (pool[opt.v] || 0) + 1; logLines.push(`◈${opt.v} +1 (개인 풀)`); break;
+        case 'all_attr':
+          ['M','I','V','S','B','A'].forEach(a => { pool[a] = (pool[a] || 0) + opt.v; });
+          logLines.push(`◈ 전속성 +${opt.v}`);
+          break;
+        case 'random_attr': {
+          const pick = rand(['M','I','V','S','B','A']);
+          pool[pick] = (pool[pick] || 0) + opt.v;
+          logLines.push(`◈${pick} +${opt.v} (랜덤)`);
+          break;
+        }
+        case 'draw': {
+          const deck = [...(me.deck || [])];
+          const handAdd = deck.splice(0, opt.v);
+          const newHand = [...(me.hand || []), ...handAdd];
+          // 플레이어에 반영 예약 (아래에서 한 번에 저장)
+          metaPatch._drawNew = { deck, hand: newHand };
+          logLines.push(`🂠 카드 ${handAdd.length}장 드로우`);
+          break;
+        }
+        case 'stock_buy': {
+          // 임의 선택 불가라 랜덤 블록 1주 할인 매수
+          const blocs = Object.keys(s.stocks);
+          const pick = rand(blocs);
+          const cost = Math.max(1, s.stocks[pick] - opt.v);
+          if (res.credit >= cost) {
+            res.credit -= cost;
+            const newStocks = { ...me.stocks, [pick]: (me.stocks[pick] || 0) + 1 };
+            metaPatch._stocksNew = newStocks;
+            logLines.push(`📈 ${pick} 주식 1주 매수 (₵${cost})`);
+          } else {
+            logLines.push(`📈 주식 할인 매수 — ₵부족 (필요 ${cost})`);
+          }
+          break;
+        }
+        case 'peek_news':
+          metaPatch.peekNews = (s.meta.peekNews || 0) + opt.v;
+          logLines.push(`👁 다음 뉴스 ${opt.v}장 미리보기 적립`);
+          break;
+        case 'info':
+          metaPatch.mapReveal = (s.meta.mapReveal || 0) + 3;
+          logLines.push(`👁 지도 3R 노출`);
+          break;
+        case 'move_bonus':
+          metaPatch.moveBonusNext = (s.meta.moveBonusNext || 0) + opt.v;
+          logLines.push(`🚶 다음 턴 이동 +${opt.v}`);
+          break;
+        case 'atk_boost':
+          metaPatch.atkBonusOnce = (s.meta.atkBonusOnce || 0) + opt.v;
+          logLines.push(`💥 다음 판정 +${opt.v} (일회성)`);
+          break;
+        default:
+          logLines.push(`(${opt.k} 미구현)`);
+      }
+      // 플레이어 상태 병합
+      let ps = [...s.players];
+      const p0Next = {
+        ...me,
+        resources: res,
+        pool,
+        hp,
+        wanted,
+      };
+      if (metaPatch._drawNew) {
+        p0Next.deck = metaPatch._drawNew.deck;
+        p0Next.hand = metaPatch._drawNew.hand;
+        delete metaPatch._drawNew;
+      }
+      if (metaPatch._stocksNew) {
+        p0Next.stocks = metaPatch._stocksNew;
+        delete metaPatch._stocksNew;
+      }
+      ps[0] = p0Next;
+      const meta2 = { ...s.meta, zoneBonusPending: null, ...metaPatch };
+      s = { ...s, players: ps, heat, meta: meta2 };
+      s = logEntry(s, `⭐ 당신 🌟 ${pending.coord} 보너스 획득 · ${opt.label}${logLines.length > 1 ? ` [${logLines.join(', ')}]` : ''}`);
+      return s;
+    }
+
+    case 'SKIP_ZONE_BONUS':
+      return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
 
     case 'SNAPSHOT_TURN': {
       const snap = state.players.map(p => ({
@@ -1157,15 +1287,27 @@ function reducer(state, action) {
 
     case 'RESEARCH_PHASE': {
       // R&D: 각 플레이어가 tlProgress 축적 + 승급 판정
+      // Bloc 공식: 구역수 + ⌊풀/2⌋  (구역 확장으로 자연 축적)
+      // Ghost 공식: ⌊렙/3⌋ + 레이드×2 + ⌊풀/2⌋  (렙·레이드로 축적 — Bloc 대비 비대칭)
       let s = { ...state };
       const newLog = [...s.log];
       const newPlayers = state.players.map((p, pi) => {
         if (p.defeated) return p;
-        // TL 진척도 = 소유 구역 수 + 개인 풀 비GRID 합의 절반 + 누적 레이드(고스트)
-        const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
         const poolSum = ['M','I','V','S','B','A'].reduce((a,k) => a + (p.pool?.[k] || 0), 0);
+        const poolHalf = Math.floor(poolSum / 2);
         const raids = state.meta.raidsThisGame?.[pi] || 0;
-        const gain = ownCount + Math.floor(poolSum / 2) + (p.role === 'ghost' ? raids : 0);
+        const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
+        let gain = 0;
+        let breakdown = '';
+        if (p.role === 'ghost') {
+          const repPart = Math.floor((p.resources.rep || 0) / 3);
+          const raidPart = raids * 2;
+          gain = repPart + raidPart + poolHalf;
+          breakdown = `렙⅓${repPart} +레이드×2${raidPart} +풀½${poolHalf}`;
+        } else {
+          gain = ownCount + poolHalf;
+          breakdown = `구역${ownCount} +풀½${poolHalf}`;
+        }
         let tl = p.tl || 1;
         let tlProgress = (p.tlProgress || 0) + gain;
         const events = [];
@@ -1177,7 +1319,7 @@ function reducer(state, action) {
         if (gain > 0 || events.length > 0) {
           const marker = pi === 0 ? '⭐ 당신 ' : '';
           const upMsg = events.length > 0 ? ` · ⚡TL UP → TL ${tl}` : '';
-          newLog.push({ round: s.meta.round, phase: 5, message: `🧪 ${marker}P${pi} [${p.specific}] R&D +${gain}pt (구역${ownCount} +풀½${Math.floor(poolSum/2)}${p.role==='ghost'?` +레이드${raids}`:''}) → ${tlProgress}/${tlCostFor(tl)}${upMsg}` });
+          newLog.push({ round: s.meta.round, phase: 5, message: `🧪 ${marker}P${pi} [${p.specific}] R&D +${gain}pt (${breakdown}) → ${tlProgress}/${tlCostFor(tl)}${upMsg}` });
         }
         return { ...p, tl, tlProgress };
       });
@@ -1445,6 +1587,35 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     if (playerIdx === 0 && s.meta.pendingMoveTarget) {
       s = { ...s, meta: { ...s.meta, pendingMoveTarget: null, moveBudget: 0 } };
     }
+
+    // === 구역 첫 방문 보너스 (P0 전용, 자동 레이드 발생 시 스킵) ===
+    if (playerIdx === 0 && !s.meta._didAutoRaid) {
+      const pNow = s.players[0];
+      const cellThere = s.map[pNow.position];
+      const visitedMap = s.meta.visitedBonusZones || {};
+      const visitedByMe = visitedMap[0] || {};
+      if (cellThere && !visitedByMe[pNow.position]) {
+        const zoneKind = cellThere.zone;
+        const pool = ZONE_BONUS_POOL[zoneKind];
+        if (pool && pool.length > 0) {
+          const shuffled = [...pool].sort(() => Math.random() - 0.5);
+          const options = shuffled.slice(0, Math.min(3, pool.length));
+          const newVisited = { ...visitedByMe, [pNow.position]: true };
+          s = {
+            ...s,
+            meta: {
+              ...s.meta,
+              zoneBonusPending: { zone: zoneKind, coord: pNow.position, options },
+              visitedBonusZones: { ...visitedMap, 0: newVisited },
+            },
+          };
+          const zName = ZONE_TYPES[zoneKind]?.name || zoneKind;
+          s = logEntry(s, `⭐ 당신 🌟 ${pNow.position} (${zName}) 첫 방문 — 보너스 3중 1 선택`);
+        }
+      }
+    }
+    // 다음 턴 쓸 수 있게 플래그 초기화
+    s = { ...s, meta: { ...s.meta, _didAutoRaid: false } };
   }
 
   // === OPERATIVE 배치 (Bloc 구역 확장) ===
@@ -2062,6 +2233,34 @@ function GameScreen({ state, dispatch }) {
 
   return (
     <div className="game">
+      {/* === 구역 첫 방문 보너스 모달 === */}
+      {state.meta.zoneBonusPending && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg2)', border: '2px solid var(--yellow)', borderRadius: 6, padding: 24, maxWidth: 600, width: '90%', boxShadow: '0 0 30px rgba(255, 235, 60, 0.3)' }}>
+            <div style={{ color: 'var(--yellow)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🌟 FIRST VISIT DRAFT</div>
+            <h2 style={{ margin: 0, color: 'var(--text)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: 1 }}>
+              {state.meta.zoneBonusPending.coord} · {ZONE_TYPES[state.meta.zoneBonusPending.zone]?.name}
+            </h2>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, marginBottom: 16 }}>
+              이 구역을 처음 밟았다 — 세 가지 기회 중 하나를 선택하라
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${state.meta.zoneBonusPending.options.length}, 1fr)`, gap: 10 }}>
+              {state.meta.zoneBonusPending.options.map((opt, i) => (
+                <button key={i}
+                  className="pa-btn"
+                  style={{ padding: '18px 12px', fontSize: 13, textAlign: 'center', borderColor: 'var(--yellow)', color: 'var(--text)', lineHeight: 1.4, whiteSpace: 'normal', minHeight: 80 }}
+                  onClick={() => dispatch({ type: 'APPLY_ZONE_BONUS', opt })}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <button className="pa-btn" style={{ fontSize: 10, color: 'var(--text-dim)' }} onClick={() => dispatch({ type: 'SKIP_ZONE_BONUS' })}>건너뛰기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="top-bar">
         <div className="title">DEAD NEXUS · SIM v0.5</div>
         <div className="phases">
@@ -2226,6 +2425,69 @@ function GameScreen({ state, dispatch }) {
 
       {/* RIGHT — Pool, News, Log */}
       <div className="right-panel">
+        {/* === 승리 진척 (상시 표시) === */}
+        {(() => {
+          if (me.role === 'ghost') {
+            const repGoal = 10;
+            const raidGoal = 1;
+            const rep = me.resources.rep || 0;
+            const raids = state.meta.raidsThisGame?.[0] || 0;
+            const repPct = Math.min(100, Math.round(rep / repGoal * 100));
+            const raidDone = raids >= raidGoal;
+            const repDone = rep >= repGoal;
+            const nextTip = !repDone
+              ? (raids > 0 ? `Bloc 구역 ${Math.max(1, repGoal - rep) / 3} 번 더 레이드하면 렙 목표 달성` : '가까운 Bloc 구역으로 이동 → 도착 시 자동 레이드')
+              : (!raidDone ? '아직 레이드 0회 — Bloc 구역 하나라도 때려야 함' : '✅ 승리 조건 충족! 라운드 끝까지 생존');
+            return (
+              <div className="pool-box" style={{ borderColor: repDone && raidDone ? 'var(--green)' : 'var(--yellow)' }}>
+                <h4 style={{ color: repDone && raidDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Ghost 튜토리얼)</h4>
+                <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ color: repDone ? 'var(--green)' : 'var(--text)' }}>{repDone ? '✓' : '•'} 렙 </span>
+                    <strong style={{ color: repDone ? 'var(--green)' : 'var(--yellow)' }}>{rep}/{repGoal}</strong>
+                    <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
+                      <div style={{ height: '100%', width: `${repPct}%`, background: repDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ color: raidDone ? 'var(--green)' : 'var(--text)' }}>{raidDone ? '✓' : '•'} 누적 레이드 </span>
+                    <strong style={{ color: raidDone ? 'var(--green)' : 'var(--magenta)' }}>{raids}/{raidGoal}</strong>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.4 }}>💡 {nextTip}</div>
+                </div>
+              </div>
+            );
+          } else {
+            const assetGoal = 40;
+            const asset = assetValue(me, state.stocks, state);
+            const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
+            const assetDone = asset >= assetGoal;
+            // 남은 간격 계산
+            const gap = Math.max(0, assetGoal - asset);
+            const myZones = Object.values(state.map).filter(c => c.owner === 0).length;
+            const tip = assetDone
+              ? '✅ 승리 조건 충족! 라운드 끝까지 버티기'
+              : gap <= 10
+                ? `자산 ${gap} 남음 — 구역 확장 2곳 또는 타 블록 주식 매수로 마무리 가능`
+                : `구역 ${Math.ceil(gap / 5)}곳 확장 or 타 블록 주식 모으기 (현재 ${myZones}구역)`;
+            return (
+              <div className="pool-box" style={{ borderColor: assetDone ? 'var(--green)' : 'var(--yellow)' }}>
+                <h4 style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Bloc 튜토리얼)</h4>
+                <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ color: assetDone ? 'var(--green)' : 'var(--text)' }}>{assetDone ? '✓' : '•'} 자산 </span>
+                    <strong style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>{asset}/{assetGoal}</strong>
+                    <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
+                      <div style={{ height: '100%', width: `${assetPct}%`, background: assetDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.4 }}>💡 {tip}</div>
+                </div>
+              </div>
+            );
+          }
+        })()}
+
         <div className="pool-box">
           <h4>🎨 내 속성 풀 (개인)</h4>
           <div className="attr-row">
