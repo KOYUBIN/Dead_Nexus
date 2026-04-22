@@ -1817,8 +1817,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       s = { ...s, meta: { ...s.meta, pendingMoveTarget: null, moveBudget: 0 } };
     }
 
-    // === 구역 첫 방문 보너스 (P0 전용, 자동 레이드 발생 시 스킵) ===
-    if (playerIdx === 0 && !s.meta._didAutoRaid) {
+    // === 구역 첫 방문 보너스 (P0 전용, 실제로 이동한 경우만, 자동 레이드 발생 시 스킵) ===
+    if (playerIdx === 0 && !s.meta._didAutoRaid && path.length > 1) {
       const pNow = s.players[0];
       const cellThere = s.map[pNow.position];
       const visitedMap = s.meta.visitedBonusZones || {};
@@ -2639,39 +2639,59 @@ function GameScreen({ state, dispatch }) {
               const chosen = selIdx >= 0 ? selectedHalves[selIdx] : null;
               const topSel = chosen === 'top' || chosen === 'main';
               const botSel = chosen === 'bot' || chosen === 'side';
+              const handleTopClick = (e) => {
+                e.stopPropagation();
+                if (!canPlan) return;
+                if (!sel) {
+                  // 카드 선택 + top으로 고정
+                  toggleCard(cid);
+                } else {
+                  // 이미 선택됨 → top 아니면 top으로
+                  if (!topSel) cycleHalf(selIdx);
+                }
+              };
+              const handleBotClick = (e) => {
+                e.stopPropagation();
+                if (!canPlan) return;
+                if (!sel) {
+                  // 카드 선택 + 그 다음 bot으로 설정하기 위해 선택 후 toggle
+                  toggleCard(cid);
+                  // selection toggled but default half is top/bot based on order; user can cycle
+                } else {
+                  if (!botSel) cycleHalf(selIdx);
+                }
+              };
               return (
-                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`}>
-                  <div onClick={() => toggleCard(cid)} style={{ cursor: 'pointer' }}>
-                    <div className="ch">
-                      <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
-                      <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
-                        {c.loss && <span className="loss-tag">LOSS</span>}
-                      </span>
-                    </div>
-                    <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
-                    <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
+                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`} style={{ cursor: canPlan ? 'pointer' : 'default' }} onClick={() => canPlan && toggleCard(cid)}>
+                  <div className="ch">
+                    <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
+                    <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
+                      {c.loss && <span className="loss-tag">LOSS</span>}
+                    </span>
                   </div>
+                  <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
+                  <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
                   <div className="ceff"
-                    onClick={(e) => { e.stopPropagation(); if (sel) cycleHalf(selIdx); }}
+                    onClick={handleTopClick}
                     style={sel ? {
                       border: topSel ? '2px solid var(--cyan)' : '2px dashed transparent',
                       background: topSel ? 'rgba(60, 200, 220, 0.15)' : 'transparent',
                       cursor: 'pointer',
                       borderRadius: 3, padding: 2, marginTop: 2,
-                    } : {}}>
-                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단 {topSel && '✓'}</strong><br/>{effectSummary(c.top)}</>}
-                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인 {topSel && '✓'}</strong><br/>{effectSummary(c.main)}</>}
+                    } : { cursor: canPlan ? 'pointer' : 'default' }}>
+                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단 {sel && topSel && '✓'}</strong><br/>{effectSummary(c.top)}</>}
+                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인 {sel && topSel && '✓'}</strong><br/>{effectSummary(c.main)}</>}
                   </div>
                   <div className="cbot"
-                    onClick={(e) => { e.stopPropagation(); if (sel) cycleHalf(selIdx); }}
+                    onClick={handleBotClick}
                     style={sel ? {
                       border: botSel ? '2px solid var(--yellow)' : '2px dashed transparent',
                       background: botSel ? 'rgba(255, 235, 60, 0.15)' : 'transparent',
                       cursor: 'pointer',
                       borderRadius: 3, padding: 2, marginTop: 2,
-                    } : {}}>
-                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단 {botSel && '✓'}</strong><br/>{effectSummary(c.bot)}</>}
-                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드 {botSel && '✓'}</strong><br/>{effectSummary(c.side)}</>}
+                    } : { cursor: canPlan ? 'pointer' : 'default' }}>
+                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단 {sel && botSel && '✓'}</strong><br/>{effectSummary(c.bot)}</>}
+                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드 {sel && botSel && '✓'}</strong><br/>{effectSummary(c.side)}</>}
                   </div>
                 </div>
               );
@@ -2687,13 +2707,49 @@ function GameScreen({ state, dispatch }) {
             </button>
           )}
           {state.meta.phase === 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
-              <div style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: 12 }}>
-                📊 시장 개장 — 주가 박스에서 매수/매도
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(60,200,220,0.08)', border: '1px solid var(--cyan)', borderRadius: 4, padding: 8 }}>
+                <div style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: 12 }}>📊 시장 개장</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>현재 ₵{me.resources.credit || 0} 보유</div>
+                <button className="pa-btn primary" style={{ marginLeft: 'auto' }} onClick={() => dispatch({ type: 'SET_PHASE', phase: 2 })}>
+                  ▶ 거래 끝 / 계획 단계로
+                </button>
               </div>
-              <button className="pa-btn primary" style={{ marginLeft: 'auto' }} onClick={() => dispatch({ type: 'SET_PHASE', phase: 2 })}>
-                ▶ 거래 끝 / 계획 단계로
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+                {Object.entries(state.stocks).map(([bl, v]) => {
+                  const myQty = me.stocks[bl] || 0;
+                  const isOwnBloc = me.role === 'bloc' && me.specific === bl;
+                  const canBuy = !isOwnBloc && (me.resources.credit || 0) >= v;
+                  const canSell = !isOwnBloc && myQty > 0;
+                  const color = v > 12 ? 'var(--green)' : (v < 8 ? 'var(--magenta)' : 'var(--text)');
+                  return (
+                    <div key={bl} style={{ background: 'var(--bg2)', border: `1px solid ${isOwnBloc ? 'var(--yellow)' : 'var(--border)'}`, borderRadius: 3, padding: 6, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: 11 }}>{bl}{isOwnBloc && ' ★'}</strong>
+                        <span style={{ color, fontSize: 14, fontWeight: 700 }}>₵{v}</span>
+                      </div>
+                      <div style={{ color: 'var(--text-dim)', fontSize: 9, marginBottom: 4 }}>보유 {myQty}주</div>
+                      {!isOwnBloc && (
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          <button
+                            style={{ flex: 1, fontSize: 9, padding: '3px', background: canBuy ? 'var(--bg3)' : 'var(--bg1)', color: canBuy ? 'var(--green)' : 'var(--text-dim)', border: `1px solid ${canBuy ? 'var(--green)' : 'var(--border)'}`, borderRadius: 2, cursor: canBuy ? 'pointer' : 'not-allowed' }}
+                            disabled={!canBuy}
+                            onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>
+                            + 매수
+                          </button>
+                          <button
+                            style={{ flex: 1, fontSize: 9, padding: '3px', background: canSell ? 'var(--bg3)' : 'var(--bg1)', color: canSell ? 'var(--magenta)' : 'var(--text-dim)', border: `1px solid ${canSell ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: canSell ? 'pointer' : 'not-allowed' }}
+                            disabled={!canSell}
+                            onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>
+                            - 매도
+                          </button>
+                        </div>
+                      )}
+                      {isOwnBloc && <div style={{ fontSize: 9, color: 'var(--yellow)', textAlign: 'center' }}>자사 (거래 불가)</div>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
           {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
