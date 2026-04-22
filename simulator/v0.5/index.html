@@ -643,13 +643,23 @@ const coordsAdj = (c) => {
   ].filter(Boolean);
 };
 
-const assetValue = (p, stocks) => {
+// 자기 블록 주식은 통제권 표시일 뿐 개인 순자산에서 제외 (0x)
+// 타 블록 주식만 자산에 계산. 구역 점유 가치도 추가.
+const assetValue = (p, stocks, state) => {
   let total = 0;
   for (const [bl, qty] of Object.entries(p.stocks)) {
+    const isOwn = p.role === 'bloc' && p.specific === bl;
+    if (isOwn) continue; // 자기 블록 주식 제외
     const price = stocks[bl] ?? 10;
-    const mult = (p.role === 'bloc' && p.specific === bl) ? 0.5 : 1;
-    total += qty * price * mult;
+    total += qty * price;
   }
+  // 구역 점유 가치 (5 per zone)
+  if (state?.map) {
+    const zonesOwned = Object.values(state.map).filter(c => c.owner === p.id).length;
+    total += zonesOwned * 5;
+  }
+  // 크레딧도 소액 반영 (1:1)
+  total += (p.resources?.credit || 0);
   return Math.floor(total);
 };
 
@@ -1131,7 +1141,7 @@ function checkVictoryByPoints(state) {
   let topRep = -Infinity;
   state.players.forEach((p, i) => {
     if (p.role === 'bloc') {
-      const av = assetValue(p, state.stocks);
+      const av = assetValue(p, state.stocks, state);
       if (av > topAsset) { topAsset = av; winner = { idx: i, reason: `시간 종료 · 최고 자산 ${av}` }; }
     } else {
       if (p.resources.rep > topRep) { topRep = p.resources.rep; winner = { idx: i, reason: `시간 종료 · 최고 렙 ${p.resources.rep}` }; }
@@ -1145,7 +1155,7 @@ function checkInstantVictory(state) {
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.role === 'bloc') {
-      if (assetValue(p, state.stocks) >= 25) {
+      if (assetValue(p, state.stocks, state) >= 25) {
         return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 25 도달` } };
       }
     } else {
@@ -1386,7 +1396,7 @@ function GameScreen({ state, dispatch }) {
           </div>
           <div className="stat-box">
             <div className="lbl">{me.role === 'bloc' ? 'ASSET' : 'REP'}</div>
-            <div className="val">{me.role === 'bloc' ? assetValue(me, state.stocks) : me.resources.rep}</div>
+            <div className="val">{me.role === 'bloc' ? assetValue(me, state.stocks, state) : me.resources.rep}</div>
           </div>
           <div className="stat-box">
             <div className="lbl">ACHIEVEMENTS</div>
@@ -1432,7 +1442,7 @@ function GameScreen({ state, dispatch }) {
               <div>⚙️ <strong>{p.resources.parts}</strong></div>
               {p.role === 'ghost'
                 ? <div>★ <strong>{p.resources.rep}</strong></div>
-                : <div>📊 <strong>{assetValue(p, state.stocks)}</strong></div>
+                : <div>📊 <strong>{assetValue(p, state.stocks, state)}</strong></div>
               }
             </div>
             {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
