@@ -13,9 +13,10 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     // Phase 0 → 1
     state = reducer(state, { type: 'SET_PHASE', phase: 1 });
 
-    // Phase 1: 뉴스 + 봇 거래
+    // Phase 1: 뉴스 + 봇 거래 + 봇 상점
     state = reducer(state, { type: 'DRAW_NEWS' });
     state = reducer(state, { type: 'BOT_MARKET' });
+    state = reducer(state, { type: 'BOT_SHOP' });
 
     // Phase 2 계획
     state = reducer(state, { type: 'SET_PHASE', phase: 2 });

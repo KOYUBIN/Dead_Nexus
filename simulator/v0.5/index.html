@@ -491,7 +491,7 @@ const GHOST_STATS = {
 //  raid_bonus:N, rep:N, credit:N
 const GHOST_CARDS = {
   // CIPHER
-  PORT_SCAN:      { name: 'PORT SCAN',      cls: 'CIPHER', init: 12, attr: ['M'],      top: { gen: 'M', move: 3, scout: 1 },                    bot: { cost: ['M','S'], reveal: 'zone', break_veil: 1 } },
+  PORT_SCAN:      { name: 'PORT SCAN',      cls: 'CIPHER', init: 12, attr: ['M'],      top: { gen: 'M', move: 2, scout: 2, peek_news: 1 },       bot: { cost: ['M','S'], reveal: 'zone', break_veil: 1, sell_info: 1 } },
   DATA_SPIKE:     { name: 'DATA SPIKE',     cls: 'CIPHER', init: 22, attr: ['M'], loss: true, top: { gen: 'M', atk: 1 },                         bot: { cost: ['M','M','S'], atk: 5, def_ignore: true, steal: 'M' } },
   GHOST_ACCESS:   { name: 'GHOST ACCESS',   cls: 'CIPHER', init: 8,  attr: ['S'],      top: { gen: 'S', stealth: 1 },                            bot: { cost: ['S'], clear_wanted: true } },
   MESH_DIVE:      { name: 'MESH DIVE',      cls: 'CIPHER', init: 30, attr: ['M','S'],  top: { gen: 'GRID', move: 1, scout: 2 },                  bot: { cost: ['M','M'], draw_quest: 1 } },
@@ -539,10 +539,10 @@ const GHOST_CARDS = {
   BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // DRIFTER
-  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 4 },                               bot: { cost: ['A'], move_any: 3 } },
+  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 3 },                               bot: { cost: ['A'], move_any: 3 } },
   SUPPLY_CONV:    { name: 'SUPPLY CONVOY',  cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { gen: 'GRID', fuel: 3 },                            bot: { transfer_ally: 3 } },
   AMBUSH:         { name: 'AMBUSH',         cls: 'DRIFTER',init: 14, attr: ['A'],      top: { gen: 'A', spd: 5, atk: 2 },                        bot: { cost: ['A'], surprise: 1 } },
-  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 5, ignore_obstacles: 1 },             bot: { cost: ['A','A'], move_3_nowalls: 1 } },
+  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 3, ignore_obstacles: 1 },             bot: { cost: ['A','A'], move_3_nowalls: 1 } },
   BACKROADS:      { name: 'BACKROADS',      cls: 'DRIFTER',init: 28, attr: ['GRID'],   top: { gen: 'GRID', untrack: 1 },                         bot: { shortcut: 2 } },
   SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
   CARGO_HAUL:     { name: 'CARGO HAUL',     cls: 'DRIFTER',init: 22, attr: ['A','GRID'], top: { gen: 'A', credit: 3 },                            bot: { smuggle: 1 } },
@@ -643,11 +643,11 @@ const BLOC_DECKS = {
 // random_zone_flip: 랜덤 구역 중립화  / stock_freeze: 주가 변동 1R 정지  / hp_all: 전 고스트 HP ±N
 const NEWS = [
   // === 시장 충격 (주가 축) ===
-  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -4, heat: 1 }, flavor: '패닉은 합리적이다.' },
-  { id: 12, title: '월가 붐', effect: { all_stock: 3 }, flavor: '낙관주의는 위험하다.' },
-  { id: 14, title: '루머 확산', effect: { random_crash: 5 }, flavor: '소문은 항상 먼저 도착한다.' },
-  { id: 15, title: '인수합병 열풍', effect: { all_stock: 2, target_credit: { role: 'bloc', delta: 4 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
-  { id: 16, title: '내부자 고발', effect: { random_crash: 8, heat: 2 }, flavor: '익명의 이메일 한 통.' },
+  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -3, heat: 1 }, flavor: '패닉은 합리적이다.' },
+  { id: 12, title: '월가 붐', effect: { all_stock: 2 }, flavor: '낙관주의는 위험하다.' },
+  { id: 14, title: '루머 확산', effect: { random_crash: 3 }, flavor: '소문은 항상 먼저 도착한다.' },
+  { id: 15, title: '인수합병 열풍', effect: { all_stock: 1, target_credit: { role: 'bloc', delta: 3 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
+  { id: 16, title: '내부자 고발', effect: { random_crash: 5, heat: 2 }, flavor: '익명의 이메일 한 통.' },
   { id: 17, title: '주가 동결령', effect: { stock_freeze: 1 }, flavor: '시장을 멈추면 문제가 해결될까?' },
 
   // === 블록별 호재/악재 ===
@@ -690,6 +690,13 @@ const NEWS = [
   { id: 70, title: '도로 봉쇄', effect: { ghost_move: -1, heat: 2 }, flavor: '그들은 출구를 닫았다.' },
   { id: 71, title: '지하 통로 개통', effect: { ghost_move: 1 }, flavor: '지도에 없는 길이 하나 생겼다.' },
   { id: 72, title: '구역 점령 해제', effect: { random_zone_flip: 2 }, flavor: '한 구역, 두 구역, 세 구역.' },
+
+  // === v0.5.11: Ghost-favorable 추가 ===
+  { id: 80, title: '시민 저항 집회', effect: { all_rep: 2, heat: -1 }, flavor: '이름 없는 얼굴이 모였다.' },
+  { id: 81, title: '블록 스캔들 폭로', effect: { all_stock: -2, all_rep: 1 }, flavor: '증거는 섬뜩하게 깔끔했다.' },
+  { id: 82, title: '지하 정보망 활성화', effect: { target_credit: { role: 'ghost', delta: 3 }, all_data: 1 }, flavor: '말은 소문보다 빠르다.' },
+  { id: 83, title: '경찰 부패 수사', effect: { heat: -3, wanted_all: -1 }, flavor: '그들의 집도 압수수색됐다.' },
+  { id: 84, title: '고스트 영웅 서사', effect: { all_rep: 3 }, flavor: '이야기가 역사보다 오래 남는다.' },
 ];
 
 // Hidden objectives (10 simplified for MVP)
@@ -936,7 +943,7 @@ function initGame(humanRole, humanSpecific) {
     players,
     map,
     pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
-    stocks: { VANTA: 10, IRONWALL: 10, HELIX: 10, AXIOM: 10, CARBON: 10 },
+    stocks: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
     heat: 5,
     signalDie: rollSignalDie(),
     currentNews: null,
@@ -1205,7 +1212,7 @@ function reducer(state, action) {
         stocks: { ...p.stocks, [action.bloc]: (p.stocks[action.bloc] || 0) + action.qty },
       };
       // Bloc 본인 매수 유동성 부여: 주가 +1 (매수세)
-      const newStocks = { ...state.stocks, [action.bloc]: Math.min(20, price + (action.qty >= 2 ? 1 : 0)) };
+      const newStocks = { ...state.stocks, [action.bloc]: Math.min(20, price + (action.qty >= 3 ? 1 : 0)) };
       const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
       return {
         ...state,
@@ -1229,7 +1236,7 @@ function reducer(state, action) {
         resources: { ...p.resources, credit: (p.resources.credit || 0) + earn },
         stocks: { ...p.stocks, [action.bloc]: have - qty },
       };
-      const newStocks = { ...state.stocks, [action.bloc]: Math.max(1, price - (qty >= 2 ? 1 : 0)) };
+      const newStocks = { ...state.stocks, [action.bloc]: Math.max(1, price - (qty >= 3 ? 1 : 0)) };
       const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
       return {
         ...state,
@@ -1237,6 +1244,65 @@ function reducer(state, action) {
         stocks: newStocks,
         log: [...state.log, { round: state.meta.round, phase: 1, message: `📉 ${marker}P${action.playerIdx} · ${action.bloc} ${qty}주 매도 (₵+${earn}) — 주가 ${price}${newStocks[action.bloc] !== price ? `→${newStocks[action.bloc]}` : ''}` }].slice(-150),
       };
+    }
+
+    case 'SHOP_BUY': {
+      // 공용 상점 — 누구나 Phase 1에 구매 가능
+      // action.playerIdx, action.item
+      const items = {
+        medical:   { cost: 5, name: '의료 치료',   apply: p => ({ ...p, hp: p.maxHp }) },
+        arms:      { cost: 4, name: '무기상',      apply: p => ({ ...p, resources: { ...p.resources, weapons: (p.resources.weapons||0) + 2 } }) },
+        info:      { cost: 3, name: '정보상',      apply: p => ({ ...p, resources: { ...p.resources, data: (p.resources.data||0) + 2, rep: (p.resources.rep||0) + 1 } }) },
+        bribe:     { cost: 3, name: '뇌물',        apply: p => ({ ...p, wanted: Math.max(0, (p.wanted||0) - 2) }) },
+        bounty:    { cost: 4, name: '현상금 청구', apply: p => ({ ...p, resources: { ...p.resources, rep: (p.resources.rep||0) + 2 } }) },
+        recruit:   { cost: 6, name: '용병 영입',   apply: p => ({ ...p, resources: { ...p.resources, weapons: (p.resources.weapons||0) + 3, parts: (p.resources.parts||0) + 1 } }) },
+      };
+      const it = items[action.item];
+      if (!it) return state;
+      const p = state.players[action.playerIdx];
+      if ((p.resources.credit||0) < it.cost) return state;
+      const ps = [...state.players];
+      let updated = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
+      updated = it.apply(updated);
+      ps[action.playerIdx] = updated;
+      let s = { ...state, players: ps };
+      if (action.item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
+      const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
+      s = logEntry(s, `🏪 ${marker}P${action.playerIdx} · 상점: ${it.name} (₵-${it.cost})`);
+      return s;
+    }
+
+    case 'BOT_SHOP': {
+      // 봇 상점 AI — 상황에 맞게 자동 구매
+      let s = { ...state };
+      const ps = [...state.players];
+      state.players.forEach((p, pi) => {
+        if (p.kind !== 'bot' || p.defeated) return;
+        const credit = p.resources.credit || 0;
+        // 우선순위: HP 낮으면 의료 > 수배 높으면 뇌물 > 무기 부족하면 무기상 > 렙 < 10이면 정보상/현상금
+        const actions = [];
+        if (p.hp < p.maxHp * 0.5 && credit >= 5) actions.push('medical');
+        if ((p.wanted||0) >= 3 && credit >= 3) actions.push('bribe');
+        if (p.role === 'ghost' && (p.resources.rep||0) < 12 && credit >= 4) actions.push('bounty');
+        if ((p.resources.weapons||0) < 2 && credit >= 4) actions.push('arms');
+        if (p.role === 'ghost' && (p.resources.data||0) < 2 && credit >= 3) actions.push('info');
+        if (actions.length === 0) return;
+        const item = actions[0];
+        const items = {
+          medical: { cost: 5, apply: pp => ({ ...pp, hp: pp.maxHp }) },
+          arms:    { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, weapons: (pp.resources.weapons||0) + 2 } }) },
+          info:    { cost: 3, apply: pp => ({ ...pp, resources: { ...pp.resources, data: (pp.resources.data||0) + 2, rep: (pp.resources.rep||0) + 1 } }) },
+          bribe:   { cost: 3, apply: pp => ({ ...pp, wanted: Math.max(0, (pp.wanted||0) - 2) }) },
+          bounty:  { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, rep: (pp.resources.rep||0) + 2 } }) },
+        };
+        const it = items[item];
+        let upd = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
+        upd = it.apply(upd);
+        ps[pi] = upd;
+        s = logEntry({ ...s, players: ps }, `🏪 P${pi} [${p.specific}] · 상점 구매 (${item}, ₵-${it.cost})`);
+        if (item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
+      });
+      return s;
     }
 
     case 'BOT_MARKET': {
@@ -1367,7 +1433,7 @@ function reducer(state, action) {
         } else {
           const av = assetValue(p, state.stocks, state);
           const ownZones = Object.values(state.map).filter(c => c.owner === i).length;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/55 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/50 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
       // 개인 풀 요약
@@ -2320,6 +2386,98 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = { ...s, players: ps };
     s = logEntry(s, `💰 P${playerIdx} · 보상 ₵+${effect.reward}, ★+1`);
   }
+  // === CARBON/HELIX/AXIOM Bloc 미구현 효과 폴백 ===
+  if (effect.zone_income_2x || effect.div_2x) {
+    // 자사 구역 수입 2배 시뮬: 즉시 크레딧 보너스
+    const pNow = s.players[playerIdx];
+    const ownCount = Object.values(s.map).filter(c => c.owner === playerIdx).length;
+    const bonus = ownCount * 3;
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (pNow.resources.credit || 0) + bonus } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `⚡ P${playerIdx} [${p.specific}] · 수입 2배 보너스 ₵+${bonus} (${ownCount}구역)`);
+  }
+  if (effect.zero_income || effect.block_resource) {
+    // 적 1회 수입 차단 시뮬: 랜덤 경쟁자 크레딧 -3
+    const rivals = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated);
+    if (rivals.length > 0) {
+      const target = rand(rivals);
+      const tIdx = s.players.indexOf(target);
+      const ps = [...s.players];
+      ps[tIdx] = { ...ps[tIdx], resources: { ...ps[tIdx].resources, credit: Math.max(0, (target.resources.credit || 0) - 3) } };
+      s = { ...s, players: ps };
+      s = logEntry(s, `⛔ P${playerIdx} [${p.specific}] · P${tIdx} 수입 봉쇄 ₵-3`);
+      if (tIdx === 0 && playerIdx !== 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'block_resource', detail: `₵-3` } };
+    }
+  }
+  if (effect.fortify || effect.veil_up) {
+    // 방어 강화: 모든 자사 구역 fortified +1
+    const newMap = { ...s.map };
+    let count = 0;
+    Object.entries(newMap).forEach(([coord, cell]) => {
+      if (cell.owner === playerIdx) {
+        newMap[coord] = { ...cell, fortified: (cell.fortified || 0) + 1 };
+        count++;
+      }
+    });
+    if (count > 0) {
+      s = { ...s, map: newMap };
+      s = logEntry(s, `🛡 P${playerIdx} [${p.specific}] · 자사 ${count}구역 방어+1`);
+    }
+  }
+  if (effect.heal_all) {
+    // HELIX 아군 전체 힐
+    const ps = s.players.map(pp => pp.role === 'ghost' && !pp.defeated ? { ...pp, hp: Math.min(pp.maxHp, pp.hp + 3) } : pp);
+    s = { ...s, players: ps };
+    s = logEntry(s, `❤️ P${playerIdx} [${p.specific}] · Ghost 전원 HP+3`);
+  }
+  if (effect.ghost_extra_card || effect.contracts_boost) {
+    // Ghost 카드 드로우 보너스 → 크레딧 + data
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 3, data: (ps[playerIdx].resources.data || 0) + 1 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `📄 P${playerIdx} [${p.specific}] · 계약 보너스 ₵+3, 📡+1`);
+  }
+  if (effect.same_round_trade || effect.flash_trade) {
+    // AXIOM FLASH TRADE → 크레딧 보너스
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 4 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `⚡ P${playerIdx} · 플래시 트레이드 ₵+4`);
+  }
+  if (effect.algorithm || effect.long_contract) {
+    // 대형 계약: 크레딧 + 자산 연상
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 6, influence: (ps[playerIdx].resources.influence || 0) + 2 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `📊 P${playerIdx} · 대형 계약 ₵+6, 🎙+2`);
+  }
+  if (effect.bond) {
+    // 채권 → 크레딧 축적
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.bond } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
+  }
+  if (effect.destroy_zone) {
+    // IRONWALL SCORCHED — 타 블록 구역 1곳 파괴
+    const targets = Object.entries(s.map).filter(([c, cell]) => cell.owner !== null && cell.owner !== undefined && cell.owner !== playerIdx);
+    if (targets.length > 0) {
+      const [coord, cell] = rand(targets);
+      const targetP = s.players[cell.owner];
+      const newMap = { ...s.map, [coord]: { ...cell, owner: null, destroyed: true } };
+      s = { ...s, map: newMap };
+      s = logEntry(s, `💥 P${playerIdx} [${p.specific}] · ${coord} 파괴 (P${cell.owner} ${targetP.specific})`);
+      if (cell.owner === 0 && playerIdx !== 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'destroy_zone', detail: `${coord} 파괴` } };
+    }
+  }
+  if (effect.remove_scandals || effect.clear_ghost_wanted) {
+    // 평판 청소 → 자신 or 아군 쿨
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🧹 P${playerIdx} · 평판 청소 ★+2`);
+  }
 
   // === Bloc 신규 효과들 ===
   // 임의 블록 N주 자동 매수 (저가 순)
@@ -2458,15 +2616,15 @@ function checkVictoryByPoints(state) {
 
 function checkInstantVictory(state) {
   // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
-  // Bloc: asset >= 55
+  // Bloc: asset >= 50
   // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 60) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥60)` } };
+      if (av >= 50) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥50)` } };
       }
     } else {
       const rep = p.resources.rep || 0;
@@ -2569,11 +2727,30 @@ function scoreBlocCard(state, pIdx, cid) {
   if (c.tl <= p.tl) score += 15;
   if (c.tl > p.tl) score -= 20;
 
+  // === v0.5.11: 신규 구현 효과들 점수 ===
+  const m = c.main || {};
+  if (m.move) score += 8;
+  if (m.deploy_op) score += 12;
+  if (m.hire_raid) score += 10;
+  if (m.stock_buy_any) score += m.stock_buy_any * 3;
+  if (m.crash_target || m.destroy_zone) score += 8;
+  if (m.zone_income_2x || m.div_2x) score += 10;
+  if (m.zero_income || m.block_resource) score += 6;
+  if (m.fortify || m.veil_up || m.fortify_here) score += 5;
+  if (m.heal_all) score += 7;
+  if (m.same_round_trade || m.flash_trade) score += 6;
+  if (m.algorithm || m.long_contract) score += 10;
+  if (m.bond) score += m.bond;
+  if (m.ghost_wanted_all) score += 5;
+  if (m.heat && m.heat < 0) score += 5;
+  if (m.peek_news || m.scout_all) score += 4;
+  if (m.credit) score += m.credit;
+
   // Resource efficiency
   const costLen = c.main?.cost?.length || 0;
   if (costLen > 0) {
     let payable = true;
-    const poolCopy = { ...state.pool };
+    const poolCopy = { ...(p.pool || {}) };
     for (const a of c.main.cost) {
       if (poolCopy[a] > 0) poolCopy[a]--;
       else if (poolCopy.GRID > 0) poolCopy.GRID--;
@@ -3123,12 +3300,12 @@ function GameScreen({ state, dispatch }) {
             needLabel = `렙 ${rep}/13 · 레이드 ${raids}/2`;
           } else {
             const asset = assetValue(p, state.stocks, state);
-            progressPct = Math.min(100, Math.round(asset / 55 * 100));
-            const assetLeft = Math.max(0, 55 - asset);
-            if (asset >= 55) { threatLevel = 'won'; threatBadge = '🏆'; }
+            progressPct = Math.min(100, Math.round(asset / 50 * 100));
+            const assetLeft = Math.max(0, 50 - asset);
+            if (asset >= 50) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (assetLeft <= 15) { threatLevel = 'warn'; }
-            needLabel = `자산 ${asset}/55`;
+            needLabel = `자산 ${asset}/50`;
           }
           const borderColor = threatLevel === 'danger' ? 'var(--magenta)' : threatLevel === 'won' ? 'var(--green)' : threatLevel === 'warn' ? 'var(--yellow)' : undefined;
           const extraStyle = borderColor ? { borderColor, boxShadow: threatLevel === 'danger' ? '0 0 8px rgba(255,60,140,0.4)' : undefined } : {};
@@ -3395,6 +3572,33 @@ function GameScreen({ state, dispatch }) {
                   );
                 })}
               </div>
+              {/* 공용 상점 */}
+              <div style={{ background: 'rgba(255, 235, 60, 0.08)', border: '1px solid var(--yellow)', borderRadius: 4, padding: 8, marginTop: 8 }}>
+                <div style={{ color: 'var(--yellow)', fontWeight: 700, fontSize: 11, letterSpacing: 1, marginBottom: 6 }}>🏪 공용 상점 (누구나 이용)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, fontSize: 10, fontFamily: 'Share Tech Mono, monospace' }}>
+                  {[
+                    { k: 'medical', icon: '❤️', name: '의료', cost: 5, desc: 'HP 완전 회복' },
+                    { k: 'arms',    icon: '🔩', name: '무기상', cost: 4, desc: '무기+2' },
+                    { k: 'info',    icon: '📡', name: '정보상', cost: 3, desc: '데이터+2·렙+1' },
+                    { k: 'bribe',   icon: '💸', name: '뇌물', cost: 3, desc: '수배-2·공권력-1' },
+                    { k: 'bounty',  icon: '🎯', name: '현상금', cost: 4, desc: '렙+2' },
+                    { k: 'recruit', icon: '🪖', name: '용병', cost: 6, desc: '무기+3·부품+1' },
+                  ].map(it => {
+                    const canBuy = (me.resources.credit || 0) >= it.cost;
+                    return (
+                      <button key={it.k}
+                        disabled={!canBuy}
+                        onClick={() => dispatch({ type: 'SHOP_BUY', playerIdx: 0, item: it.k })}
+                        style={{ background: canBuy ? 'var(--bg3)' : 'var(--bg1)', color: canBuy ? 'var(--text)' : 'var(--text-dim)', border: `1px solid ${canBuy ? 'var(--yellow)' : 'var(--border)'}`, borderRadius: 2, padding: 4, cursor: canBuy ? 'pointer' : 'not-allowed', textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                        <div style={{ fontSize: 14 }}>{it.icon}</div>
+                        <div style={{ fontWeight: 700 }}>{it.name}</div>
+                        <div style={{ color: canBuy ? 'var(--green)' : 'var(--text-dim)' }}>₵{it.cost}</div>
+                        <div style={{ color: 'var(--text-dim)', fontSize: 8 }}>{it.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
           {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
@@ -3461,7 +3665,7 @@ function GameScreen({ state, dispatch }) {
               </div>
             );
           } else {
-            const assetGoal = 55;
+            const assetGoal = 50;
             const asset = assetValue(me, state.stocks, state);
             const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
             const assetDone = asset >= assetGoal;
