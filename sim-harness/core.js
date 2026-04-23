@@ -61,7 +61,7 @@ const GHOST_STATS = {
   BLADE:   { hp: 10, atk: 5, def: 3, spd: 3, hack: 1, primary: 'I', secondary: 'A', startZone: 'A5' },
   BROKER:  { hp: 6,  atk: 2, def: 2, spd: 5, hack: 2, primary: 'S', secondary: 'GRID', startZone: 'A3' },
   RIGGER:  { hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'V', secondary: 'I', startZone: 'B5' },
-  DRIFTER: { hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
+  DRIFTER: { hp: 8,  atk: 2, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
   MOLE:    { hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'S', secondary: 'M', startZone: 'D3' },
 };
 
@@ -96,9 +96,9 @@ const GHOST_CARDS = {
   BASIC_MOVE_B:   { name: 'BASIC MOVE',     cls: 'BLADE',  init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // BROKER
-  NETWORK:        { name: 'NETWORK',        cls: 'BROKER', init: 15, attr: ['S'],      top: { gen: 'S', contact: 1, scout: 1 },                  bot: { cost: ['S'], contact: 2, blackmarket: 1 } },
+  NETWORK:        { name: 'NETWORK',        cls: 'BROKER', init: 15, attr: ['S'],      top: { gen: 'S', contact: 2, scout: 1, extort: 1 },       bot: { cost: ['S'], contact: 3, blackmarket: 1 } },
   BACK_DEAL:      { name: 'BACK DEAL',      cls: 'BROKER', init: 18, attr: ['S'],      top: { gen: 'S', swap_ratio: 2 },                         bot: { cost: ['S'], blackmarket: 1 } },
-  BLACKMAIL:      { name: 'BLACKMAIL',      cls: 'BROKER', init: 22, attr: ['S'],      top: { gen: 'S', extort: 1 },                             bot: { cost: ['S','S'], cancel_action: 1, extort: 2 } },
+  BLACKMAIL:      { name: 'BLACKMAIL',      cls: 'BROKER', init: 22, attr: ['S'],      top: { gen: 'S', extort: 2 },                             bot: { cost: ['S','S'], cancel_action: 1, extort: 3 } },
   MIDDLE_DEAL:    { name: 'MIDDLE DEAL',    cls: 'BROKER', init: 25, attr: ['GRID'],   top: { gen: 'GRID', broker_fee: 10 },                     bot: { passive_ma_fee: 5 } },
   INFO_BROKER:    { name: 'INFO BROKER',    cls: 'BROKER', init: 30, attr: ['S'],      top: { gen: 'S', peek_objective: 1 },                     bot: { cost: ['S','S'], sell_info: 5, lock: 1 } },
   CRISIS_TALK:    { name: 'CRISIS TALK',    cls: 'BROKER', init: 28, attr: ['GRID'],   top: { gen: 'GRID', stop_combat: 1 },                     bot: { reward: 2, cooldown: 1 } },
@@ -120,15 +120,15 @@ const GHOST_CARDS = {
   BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // DRIFTER
-  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 3 },                               bot: { cost: ['A'], move_any: 3 } },
+  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 2 },                               bot: { cost: ['A'], move_any: 2 } },
   SUPPLY_CONV:    { name: 'SUPPLY CONVOY',  cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { gen: 'GRID', fuel: 3 },                            bot: { transfer_ally: 3 } },
   AMBUSH:         { name: 'AMBUSH',         cls: 'DRIFTER',init: 14, attr: ['A'],      top: { gen: 'A', spd: 5, atk: 2 },                        bot: { cost: ['A'], surprise: 1 } },
-  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 3, ignore_obstacles: 1 },             bot: { cost: ['A','A'], move_3_nowalls: 1 } },
+  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 2, ignore_obstacles: 1, atk: 2 },       bot: { cost: ['A','A'], move_3_nowalls: 1 } },
   BACKROADS:      { name: 'BACKROADS',      cls: 'DRIFTER',init: 28, attr: ['GRID'],   top: { gen: 'GRID', untrack: 1 },                         bot: { shortcut: 2 } },
   SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
   CARGO_HAUL:     { name: 'CARGO HAUL',     cls: 'DRIFTER',init: 22, attr: ['A','GRID'], top: { gen: 'A', credit: 3 },                            bot: { smuggle: 1 } },
-  IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 2 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
-  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 3, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
+  IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 1 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
+  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 2, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
   BASIC_MOVE_D:   { name: 'BASIC MOVE',     cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // MOLE
@@ -1854,11 +1854,11 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   }
   if (effect.extort) {
     // 정보 착취: rep + credit (BROKER 렙 루트 주력)
-    const repGain = effect.extort * 2;
+    const repGain = Math.ceil(effect.extort * 1.5);
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort * 2 } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort } };
     s = { ...s, players: ps };
-    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort * 2}`);
+    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort}`);
   }
   if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
     // 정보 수집/판매 → rep + data
@@ -2213,8 +2213,8 @@ function checkInstantVictory(state) {
       if (rep >= 14 && raids >= 2) {
         return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
       }
-      if (rep >= 18) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥18)` } };
+      if (rep >= 20) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥20)` } };
       }
     }
   }
