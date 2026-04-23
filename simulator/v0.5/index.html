@@ -3627,11 +3627,29 @@ function GameScreen({ state, dispatch }) {
                 }
               </div>
               {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
-              <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
-                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>
-                  ({p.tlProgress || 0}/{tlCostFor(p.tl)})
-                </span>
+                {/* 5칸 진척도 게이지 — 현재 레벨 목표 대비 */}
+                {p.tl < 5 && (() => {
+                  const cost = tlCostFor(p.tl);
+                  const prog = p.tlProgress || 0;
+                  const filled = Math.min(5, Math.floor((prog / cost) * 5));
+                  return (
+                    <span style={{ display: 'inline-flex', gap: 1 }}>
+                      {[0,1,2,3,4].map(k => (
+                        <span key={k} style={{
+                          display: 'inline-block',
+                          width: 8, height: 10,
+                          background: k < filled ? 'var(--green)' : 'var(--bg3)',
+                          border: '1px solid var(--border)',
+                          boxShadow: k < filled ? '0 0 3px var(--green)' : 'none',
+                        }}/>
+                      ))}
+                      <span style={{ color: 'var(--text-dim)', fontSize: 9, marginLeft: 2 }}>{prog}/{cost}</span>
+                    </span>
+                  );
+                })()}
+                {p.tl === 5 && <span style={{ color: 'var(--yellow)', fontSize: 9 }}>MAX</span>}
                 <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
               </div>
               {i === 0 && (
