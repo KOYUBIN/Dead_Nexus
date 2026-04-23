@@ -1078,7 +1078,7 @@ function reducer(state, action) {
         } else {
           const av = assetValue(p, state.stocks, state);
           const ownZones = Object.values(state.map).filter(c => c.owner === i).length;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/48 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/55 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
       // 개인 풀 요약
@@ -1289,7 +1289,7 @@ function reducer(state, action) {
 
       s = { ...s, players: newPlayers, log: newLog.slice(-150) };
 
-      // === Bloc 패시브 확장: 라운드마다 자사 소유 구역 인접한 빈 buildable 구역 1개 자동 점령 ===
+      // === Bloc 패시브 확장: 매 라운드 자동 점령 (v0.5.19 롤백 - Bloc 너무 약해짐) ===
       const expandedMap = { ...s.map };
       const expandLog = [];
       for (let pi = 0; pi < s.players.length; pi++) {
@@ -1927,12 +1927,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort}`);
   }
   if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
-    // 정보 수집/판매 → rep + data
+    // v0.5.18: 정보 수집/판매 → rep + data + 크레딧 (Bloc의 경우 자산 직결)
     const amount = effect.sell_info ? 3 : 2;
+    const isBloc = p.role === 'bloc';
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount, credit: (ps[playerIdx].resources.credit || 0) + (isBloc ? amount * 2 : 0) } };
     s = { ...s, players: ps };
-    s = logEntry(s, `👁 P${playerIdx} · 정보 행동 · ★+${amount}, 📡+${amount}`);
+    s = logEntry(s, `👁 P${playerIdx} · 정보 행동 · ★+${amount}, 📡+${amount}${isBloc ? `, ₵+${amount*2}` : ''}`);
   }
   if (effect.scout || effect.scout_all || effect.drone_scan) {
     // v0.5.17: 정찰 → data + 렙 (RIGGER 구제)
@@ -2102,11 +2103,27 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `📊 P${playerIdx} · 대형 계약 ₵+6, 🎙+2`);
   }
   if (effect.bond) {
-    // 채권 → 크레딧 축적
+    // v0.5.18: 채권 → 크레딧 + 타 블록 주식 1주 자동 매수 (CARBON 자산 가속)
+    const pNow = s.players[playerIdx];
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.bond } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (pNow.resources.credit || 0) + effect.bond } };
+    // 저가 타 블록 주식 1주 매수
+    const blocs = Object.entries(s.stocks).filter(([bl]) => !(pNow.role === 'bloc' && pNow.specific === bl));
+    blocs.sort((a, b) => a[1] - b[1]);
+    if (blocs.length > 0) {
+      const [bl, price] = blocs[0];
+      if (ps[playerIdx].resources.credit >= price) {
+        ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: ps[playerIdx].resources.credit - price }, stocks: { ...ps[playerIdx].stocks, [bl]: (ps[playerIdx].stocks[bl] || 0) + 1 } };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond} + ${bl} 1주 자동매수`);
+      } else {
+        s = { ...s, players: ps };
+        s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
+      }
+    } else {
+      s = { ...s, players: ps };
+      s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
+    }
   }
   if (effect.destroy_zone) {
     // IRONWALL SCORCHED — 타 블록 구역 1곳 파괴
@@ -2438,24 +2455,24 @@ function checkVictoryByPoints(state) {
 
 function checkInstantVictory(state) {
   // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
-  // Bloc: asset >= 48
+  // Bloc: asset >= 55
   // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 48) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥48)` } };
+      if (av >= 55) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥55)` } };
       }
     } else {
       const rep = p.resources.rep || 0;
       const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= 14 && raids >= 2) {
+      if (rep >= 16 && raids >= 2) {
         return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
       }
-      if (rep >= 20) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥20)` } };
+      if (rep >= 24) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥24)` } };
       }
     }
   }
@@ -2491,7 +2508,7 @@ function scoreGhostCard(state, pIdx, cid) {
 
   const rep = p.resources.rep || 0;
   const raids = state.meta.raidsThisGame?.[pIdx] || 0;
-  const repNeeded = Math.max(0, 13 - rep);
+  const repNeeded = Math.max(0, 16 - rep);
   const raidNeeded = Math.max(0, 2 - raids);
   const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
 
@@ -2608,6 +2625,3 @@ function scoreBlocCard(state, pIdx, cid) {
   return score + Math.random() * 2;
 }
 
-// ============================================================================
-// UI COMPONENTS
-// ============================================================================

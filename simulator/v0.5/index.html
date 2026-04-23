@@ -1497,7 +1497,7 @@ function reducer(state, action) {
         } else {
           const av = assetValue(p, state.stocks, state);
           const ownZones = Object.values(state.map).filter(c => c.owner === i).length;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/48 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/55 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
       // 개인 풀 요약
@@ -1708,7 +1708,7 @@ function reducer(state, action) {
 
       s = { ...s, players: newPlayers, log: newLog.slice(-150) };
 
-      // === Bloc 패시브 확장: 라운드마다 자사 소유 구역 인접한 빈 buildable 구역 1개 자동 점령 ===
+      // === Bloc 패시브 확장: 매 라운드 자동 점령 (v0.5.19 롤백 - Bloc 너무 약해짐) ===
       const expandedMap = { ...s.map };
       const expandLog = [];
       for (let pi = 0; pi < s.players.length; pi++) {
@@ -2874,24 +2874,24 @@ function checkVictoryByPoints(state) {
 
 function checkInstantVictory(state) {
   // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
-  // Bloc: asset >= 48
+  // Bloc: asset >= 55
   // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 48) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥48)` } };
+      if (av >= 55) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥55)` } };
       }
     } else {
       const rep = p.resources.rep || 0;
       const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= 14 && raids >= 2) {
+      if (rep >= 16 && raids >= 2) {
         return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
       }
-      if (rep >= 20) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥20)` } };
+      if (rep >= 24) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥24)` } };
       }
     }
   }
@@ -2927,7 +2927,7 @@ function scoreGhostCard(state, pIdx, cid) {
 
   const rep = p.resources.rep || 0;
   const raids = state.meta.raidsThisGame?.[pIdx] || 0;
-  const repNeeded = Math.max(0, 13 - rep);
+  const repNeeded = Math.max(0, 16 - rep);
   const raidNeeded = Math.max(0, 2 - raids);
   const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
 
@@ -3403,7 +3403,7 @@ function GameScreen({ state, dispatch }) {
         const succRolls = Math.max(0, Math.min(6, 6 - (pr.threshold - effAtk - 1)));
         const successPct = Math.round(succRolls / 6 * 100);
         const newRep = (me.resources.rep || 0) + 3;
-        const wouldWin = newRep >= 13 && ((state.meta.raidsThisGame?.[0] || 0) + 1 >= 2);
+        const wouldWin = newRep >= 16 && ((state.meta.raidsThisGame?.[0] || 0) + 1 >= 2);
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(255, 60, 140, 0.3)' }}>
@@ -3575,22 +3575,22 @@ function GameScreen({ state, dispatch }) {
           if (p.role === 'ghost') {
             const rep = p.resources.rep || 0;
             const raids = state.meta.raidsThisGame?.[i] || 0;
-            const repDone = rep >= 13;
+            const repDone = rep >= 16;
             const raidDone = raids >= 2;
-            progressPct = Math.min(100, Math.round(rep / 13 * 100));
-            const repLeft = Math.max(0, 13 - rep);
+            progressPct = Math.min(100, Math.round(rep / 16 * 100));
+            const repLeft = Math.max(0, 16 - rep);
             if (repDone && raidDone) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (repLeft <= 6) { threatLevel = 'warn'; }
-            needLabel = `렙 ${rep}/13 · 레이드 ${raids}/2`;
+            needLabel = `렙 ${rep}/16 · 레이드 ${raids}/2`;
           } else {
             const asset = assetValue(p, state.stocks, state);
-            progressPct = Math.min(100, Math.round(asset / 48 * 100));
-            const assetLeft = Math.max(0, 48 - asset);
-            if (asset >= 48) { threatLevel = 'won'; threatBadge = '🏆'; }
+            progressPct = Math.min(100, Math.round(asset / 55 * 100));
+            const assetLeft = Math.max(0, 55 - asset);
+            if (asset >= 55) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (assetLeft <= 15) { threatLevel = 'warn'; }
-            needLabel = `자산 ${asset}/48`;
+            needLabel = `자산 ${asset}/55`;
           }
           const borderColor = threatLevel === 'danger' ? 'var(--magenta)' : threatLevel === 'won' ? 'var(--green)' : threatLevel === 'warn' ? 'var(--yellow)' : undefined;
           const extraStyle = borderColor ? { borderColor, boxShadow: threatLevel === 'danger' ? '0 0 8px rgba(255,60,140,0.4)' : undefined } : {};
@@ -3905,7 +3905,7 @@ function GameScreen({ state, dispatch }) {
         {/* === 승리 진척 (상시 표시) === */}
         {(() => {
           if (me.role === 'ghost') {
-            const repGoal = 13;
+            const repGoal = 16;
             const raidGoal = 2;
             const rep = me.resources.rep || 0;
             const raids = state.meta.raidsThisGame?.[0] || 0;
@@ -3950,7 +3950,7 @@ function GameScreen({ state, dispatch }) {
               </div>
             );
           } else {
-            const assetGoal = 48;
+            const assetGoal = 55;
             const asset = assetValue(me, state.stocks, state);
             const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
             const assetDone = asset >= assetGoal;
