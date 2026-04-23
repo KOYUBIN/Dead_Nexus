@@ -381,10 +381,10 @@ const MAP_RULES = {
 };
 const getMapRules = (mapSize) => MAP_RULES[mapSize] || MAP_RULES['5x5'];
 
-// TL 승급 비용: 1→2=4pt, 2→3=7pt, 3→4=10pt, 4→5=14pt
+// TL 승급 비용: v0.5.21 — 전 레벨 5pt 균일 (1칸=1pt 직관 보장)
 const tlCostFor = (curTl) => {
   if (curTl >= 5) return 99;
-  return [4, 7, 10, 14][curTl - 1] || 99;
+  return 5;
 };
 
 // ============================================================================
@@ -1331,14 +1331,18 @@ function reducer(state, action) {
         const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
         let gain = 0;
         let breakdown = '';
+        // v0.5.21: 5pt 균일 비용에 맞춰 공식 축소 (속도 조정)
         if (p.role === 'ghost') {
-          const repPart = Math.floor((p.resources.rep || 0) / 3);
-          const raidPart = raids * 2;
-          gain = repPart + raidPart + poolHalf;
-          breakdown = `렙⅓${repPart} +레이드×2${raidPart} +풀½${poolHalf}`;
+          const repPart = Math.floor((p.resources.rep || 0) / 5);  // ⅓ → ⅕
+          const raidPart = raids;                                  // ×2 → ×1
+          const poolPart = Math.floor(poolSum / 3);                // ½ → ⅓
+          gain = repPart + raidPart + poolPart;
+          breakdown = `렙⅕${repPart} +레이드${raidPart} +풀⅓${poolPart}`;
         } else {
-          gain = ownCount + poolHalf;
-          breakdown = `구역${ownCount} +풀½${poolHalf}`;
+          const zonePart = Math.floor(ownCount / 2);               // 구역 → ½
+          const poolPart = Math.floor(poolSum / 3);                // ½ → ⅓
+          gain = zonePart + poolPart;
+          breakdown = `구역½${zonePart} +풀⅓${poolPart}`;
         }
         let tl = p.tl || 1;
         let tlProgress = (p.tlProgress || 0) + gain;
