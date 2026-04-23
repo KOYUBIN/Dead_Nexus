@@ -14,6 +14,68 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [0.5.10] — 헤드리스 배치 시뮬 기반 밸런스 패스 (2026-04-23)
+
+### 방법론
+
+봇 vs 봇으로 **200판 헤드리스 시뮬**을 돌려 승률·라운드·클래스 불균형 데이터를 수집하고 수정 반복. 하네스는 `/sim-harness/` 에 있음 (Node.js 전용, brainstorming / balance tool).
+
+### 발견된 문제 (v0.5.9 기준)
+
+1. **게임이 너무 짧음**: 평균 2.86R에 종료. 설계 의도(5~7R)의 절반
+2. **BROKER 0% 승률** (0/17): 이론상 비전투 클래스인데 승리 조건이 전투 2회 강제
+3. **DRIFTER 62.5%** 과강세: 이동 카드 과다
+4. **미구현 효과 키 9개**: `contact`, `blackmarket`, `extort`, `peek_objective`, `broker_fee`, `scout_all`, `stop_combat` 등이 applyEffect에 없음 → BROKER/CIPHER/MOLE 카드 대부분이 "속성만 생성"하는 무효 카드
+
+### 변경 (v0.5.10)
+
+- **승리 조건 전면 조정**:
+  - Bloc 자산 40 → **60** (튜토리얼)
+  - Ghost **듀얼 경로** 신설:
+    - 전투 루트: 렙 14 + 레이드 2
+    - 평판 루트 (신규): 렙 18 단독 (레이드 0~∞)
+- **라운드 상한 8 → 10**
+- **미구현 효과 키 16개 구현** (applyEffect 폴백 보상):
+  - `contact`: 인플루언스 + 크레딧
+  - `blackmarket`: 무기 + 크레딧
+  - `extort`: 렙 ×2 + 크레딧 ×2 (BROKER 렙 루트 주력)
+  - `peek_*`/`sell_info`: 렙 +2~3, 데이터 +2~3
+  - `broker_fee`: 크레딧 + 렙
+  - `scout_all`/`drone_scan`: 데이터
+  - `stop_combat`/`cancel_*`: 렙 +2
+  - `invisible`/`stealth`/`hide_actions`: 수배 -1, 렙 +1
+  - `clear_wanted`/`burn_identity`: 수배 초기화
+  - `heal`: HP 회복
+  - `stat_boost`: 다음 판정 보너스 누적
+  - `swap`/`swap_ratio`: 크레딧 +3
+  - `draw_quest`/`quest_two`/`slot_plus`: 렙 + 크레딧
+  - `deploy_trap`/`trap`: 현위치 요새화
+  - `cargo_haul`/`supply_drop`: 크레딧 + 부품
+  - `ambush`: 다음 판정+2 + 렙
+  - `copy_bloc_card`: 크레딧 + 렙
+  - `reward`: 크레딧 + 렙
+- **scoreGhostCard 확장**: 16종 신규 효과의 AI 평가 가중치 추가 (BROKER/CIPHER/MOLE 카드를 AI가 제대로 선택)
+- **승리 근접 휴리스틱**: 렙·레이드 목표 근접 시 공격/이동/협박 카드 점수 +10
+- **UI 갱신**: 우측 승리 진척 패널 표기, 레이드 모달 즉시 승리 계산, 위협 대시보드 목표값 조정
+
+### 결과 (200판 시뮬 기준)
+
+| 지표 | v0.5.9 | v0.5.10 | 변화 |
+|---|---|---|---|
+| 평균 라운드 | 2.86 | 4.84 | +69% |
+| 최대 라운드 | 5 | 9 | 10R 상한 활용 |
+| BROKER 승률 | 0% | 9.1% | 부활 |
+| CIPHER 승률 | 17.6% | 11.8% | (소폭 하향) |
+| DRIFTER 승률 | 62.5% | 66.7% | 여전히 높음 (차후 과제) |
+
+### 남은 과제 (v0.5.11+)
+
+- DRIFTER 이동 3칸 카드 너무 강력 → 비용 부여 검토
+- Bloc 전체 P0 승률 15% (Ghost 29% 대비 열세) — Bloc AI/경제 시스템 보강 필요
+- CARBON 5% 최약 — 전용 카드 밸런스 재점검
+
+---
+
 ## [0.5.9] — 플레이어간 인터랙션: 위협 대시보드 + Ghost PvP + 타겟 알림 (2026-04-22)
 
 ### Design Intent

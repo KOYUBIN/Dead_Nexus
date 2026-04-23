@@ -1,422 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DEAD NEXUS · Simulator v0.5</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<style>
-  * { box-sizing: border-box; }
-  html, body, #root { height: 100%; margin: 0; background: #06060e; color: #e0e0e0; }
-  body { font-family: 'Rajdhani', system-ui, sans-serif; overflow-x: hidden; }
-  .mono { font-family: 'Share Tech Mono', monospace; }
-  button { font-family: inherit; cursor: pointer; }
-
-  /* ---- Color palette ---- */
-  :root {
-    --bg: #06060e;
-    --bg2: #0f0f1a;
-    --bg3: #1a1a2e;
-    --border: #2d2d4f;
-    --cyan: #00e5ff;
-    --magenta: #ff003c;
-    --yellow: #ffd700;
-    --green: #b4ff39;
-    --orange: #ff9100;
-    --purple: #a855f7;
-    --text-dim: #9090a8;
-    --text: #e0e0e0;
-  }
-
-  /* ---- Boot screen ---- */
-  #boot {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: #06060e; color: var(--cyan);
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 4px; font-size: 14px;
-  }
-
-  /* ---- Setup screen ---- */
-  .setup {
-    max-width: 900px; margin: 0 auto; padding: 40px 24px;
-  }
-  .setup h1 {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 42px; letter-spacing: 4px; margin: 0;
-    background: linear-gradient(90deg, var(--cyan), var(--magenta));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .setup .tagline {
-    color: var(--text-dim); letter-spacing: 3px; font-size: 11px;
-    margin-top: 4px; font-family: 'Share Tech Mono', monospace;
-  }
-  .setup h2 {
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--cyan); letter-spacing: 2px;
-    font-size: 16px; margin: 32px 0 12px;
-    border-bottom: 1px solid var(--border); padding-bottom: 6px;
-  }
-  .role-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  }
-  .role-card {
-    border: 2px solid var(--border); background: var(--bg2);
-    padding: 16px; border-radius: 4px; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .role-card.selected { border-color: var(--cyan); background: var(--bg3); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
-  .role-card h3 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; color: var(--cyan); }
-  .role-card p { margin: 0; color: var(--text-dim); font-size: 13px; }
-
-  .class-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-  }
-  .class-card {
-    border: 1.5px solid var(--border); background: var(--bg2);
-    padding: 12px; border-radius: 3px; cursor: pointer; transition: all 0.15s;
-  }
-  .class-card.selected { border-color: var(--cyan); background: rgba(0,229,255,0.1); }
-  .class-card .cname { font-family: 'Share Tech Mono', monospace; font-size: 14px; font-weight: 700; color: var(--cyan); letter-spacing: 1px; }
-  .class-card .cstats { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
-
-  .start-btn {
-    background: linear-gradient(90deg, var(--cyan), var(--magenta));
-    border: none; color: #000; font-weight: 700;
-    font-family: 'Share Tech Mono', monospace; letter-spacing: 3px;
-    padding: 14px 36px; font-size: 16px; border-radius: 3px;
-    margin-top: 32px; width: 100%;
-  }
-  .start-btn:hover { filter: brightness(1.15); box-shadow: 0 0 30px rgba(0,229,255,0.4); }
-
-  /* ---- Game layout ---- */
-  .game {
-    display: grid;
-    grid-template-columns: 300px 1fr 280px;
-    grid-template-rows: 50px 1fr;
-    height: 100vh; max-height: 100vh;
-    grid-template-areas:
-      "top top top"
-      "left center right";
-  }
-  .top-bar {
-    grid-area: top;
-    background: var(--bg2); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; padding: 0 16px; gap: 24px;
-    font-family: 'Share Tech Mono', monospace; font-size: 12px;
-  }
-  .top-bar .title {
-    font-weight: 700; letter-spacing: 3px; color: var(--cyan);
-  }
-  .top-bar .phases {
-    display: flex; gap: 4px; flex: 1; justify-content: center;
-  }
-  .phase-chip {
-    padding: 2px 10px; border: 1px solid var(--border); border-radius: 2px;
-    font-size: 10px; letter-spacing: 1px; color: var(--text-dim);
-  }
-  .phase-chip.active { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
-  .phase-chip.done { color: #555; border-color: #333; }
-  .top-bar .round { color: var(--yellow); }
-  .top-bar .heat { color: var(--magenta); }
-
-  /* Left panel — player state */
-  .left-panel {
-    grid-area: left; background: var(--bg2); border-right: 1px solid var(--border);
-    padding: 12px; overflow-y: auto;
-  }
-  .player-card {
-    border: 1.5px solid var(--border); background: var(--bg3);
-    padding: 10px; border-radius: 3px; margin-bottom: 10px;
-  }
-  .player-card.me { border-color: var(--cyan); }
-  .player-card.turn { box-shadow: 0 0 15px rgba(0,229,255,0.3); }
-  .player-card .pheader {
-    display: flex; justify-content: space-between; align-items: baseline;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    margin-bottom: 6px;
-  }
-  .player-card .pname { color: var(--cyan); letter-spacing: 1px; }
-  .player-card .php {
-    color: var(--magenta); font-weight: 700;
-  }
-  .player-card .pstats {
-    font-family: 'Share Tech Mono', monospace; font-size: 10px;
-    color: var(--text-dim); display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px;
-  }
-  .player-card .pstats strong { color: var(--text); }
-
-  /* Center - map */
-  .center-panel {
-    grid-area: center; display: flex; flex-direction: column; padding: 12px;
-    overflow: auto;
-  }
-  .map-wrap { display: flex; gap: 16px; }
-  .map-board {
-    display: grid;
-    grid-template-columns: 28px repeat(5, 1fr);
-    grid-template-rows: 28px repeat(5, 1fr);
-    gap: 2px;
-    background: #000;
-    padding: 2px;
-    border: 2px solid var(--border);
-    max-width: 520px;
-    aspect-ratio: 5.5/5.5;
-  }
-  .map-cell {
-    background: var(--bg3); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center;
-    font-size: 10px; padding: 4px;
-    position: relative; cursor: pointer;
-    transition: all 0.1s;
-    font-family: 'Share Tech Mono', monospace;
-  }
-  .map-cell:hover { filter: brightness(1.3); outline: 1px solid var(--cyan); z-index: 1; }
-  .map-cell.label { background: transparent; cursor: default; color: var(--text-dim); }
-  .map-cell.corner { background: transparent; cursor: default; }
-  .map-cell .coord {
-    position: absolute; top: 2px; left: 3px; font-size: 8px; opacity: 0.5;
-  }
-  .map-cell .ztype { font-size: 9px; color: #000; font-weight: 700; }
-  .map-cell .owner {
-    position: absolute; bottom: 2px; right: 3px;
-    font-size: 7px; padding: 0 3px;
-    background: rgba(0,0,0,0.5); color: white; font-weight: 700;
-  }
-  .map-cell .pm {
-    position: absolute; top: 14px; right: 3px; font-size: 9px;
-    background: var(--cyan); color: #000; padding: 1px 3px; font-weight: 700;
-  }
-  /* Zone colors */
-  .z-ruin { background: #3a3a2a; color: #999; }
-  .z-home { background: #4a3a5a; color: #fff; }
-  .z-bank { background: #8a6a10; color: #fff; }
-  .z-data { background: #1a4a7a; color: #fff; }
-  .z-heal { background: #2a7a5a; color: #fff; }
-  .z-work { background: #7a5a2a; color: #fff; }
-  .z-arms { background: #5a5a5a; color: #fff; }
-  .z-club { background: #7a2a5a; color: #fff; }
-  .z-port { background: #3a4a7a; color: #fff; }
-  .z-cop  { background: #222; color: #fff; }
-  .z-nex  { background: #ffd700; color: #000; font-weight: 900; }
-  .z-aux  { background: #5a3a3a; color: #fff; }
-
-  /* Right panel */
-  .right-panel {
-    grid-area: right; background: var(--bg2); border-left: 1px solid var(--border);
-    padding: 12px; overflow-y: auto; display: flex; flex-direction: column;
-  }
-  .pool-box {
-    background: var(--bg3); border: 1px solid var(--border);
-    padding: 8px; border-radius: 3px; margin-bottom: 10px;
-  }
-  .pool-box h4 {
-    margin: 0 0 6px; font-family: 'Share Tech Mono', monospace;
-    font-size: 10px; letter-spacing: 2px; color: var(--text-dim);
-  }
-  .attr-row { display: flex; gap: 4px; flex-wrap: wrap; font-family: 'Share Tech Mono', monospace; font-size: 11px; }
-  .attr-tag {
-    padding: 2px 6px; border-radius: 2px; color: white; font-weight: 700;
-    display: inline-flex; align-items: center; gap: 3px;
-  }
-  .a-M { background: #185FA5; }
-  .a-I { background: #888780; }
-  .a-V { background: #854F0B; }
-  .a-S { background: #534AB7; }
-  .a-B { background: #1D9E75; }
-  .a-A { background: #C04828; }
-  .a-GRID { background: #666; }
-
-  .signal-box { text-align: center; font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; padding: 6px; }
-  .sig-MESH_UP { background: rgba(24,95,165,0.3); color: var(--cyan); }
-  .sig-MESH_DOWN { background: rgba(192,72,40,0.3); color: var(--magenta); }
-  .sig-SURGE { background: rgba(255,215,0,0.3); color: var(--yellow); }
-  .sig-BLACKOUT { background: #000; color: #555; border: 1px solid #333; }
-
-  .news-box {
-    background: var(--bg3); border: 1px solid var(--border);
-    padding: 10px; border-radius: 3px; margin-bottom: 10px;
-    font-size: 12px;
-  }
-  .news-box .nh { color: var(--yellow); font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; margin-bottom: 4px; }
-
-  .log-box {
-    background: var(--bg3); border: 1px solid var(--border);
-    padding: 10px; border-radius: 3px; font-size: 12px; flex: 1 1 auto;
-    overflow-y: auto; min-height: 200px;
-    font-family: 'Share Tech Mono', monospace;
-    display: flex; flex-direction: column;
-  }
-  .log-box .log-head {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 8px; padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .log-box .log-head h4 {
-    margin: 0; font-size: 11px; letter-spacing: 3px; color: var(--cyan);
-  }
-  .log-box .copy-btn {
-    background: var(--bg2); border: 1px solid var(--cyan); color: var(--cyan);
-    font-family: 'Share Tech Mono', monospace; font-size: 9px;
-    padding: 3px 8px; letter-spacing: 1px; cursor: pointer;
-  }
-  .log-box .copy-btn:hover { background: var(--cyan); color: #000; }
-  .log-box .log-scroll {
-    flex: 1; overflow-y: auto; padding-right: 4px;
-    display: flex; flex-direction: column-reverse;
-  }
-  .log-entry {
-    padding: 3px 6px; margin-bottom: 2px;
-    line-height: 1.4; font-size: 11px;
-    color: var(--text-dim);
-    border-left: 2px solid transparent;
-    word-break: break-word;
-  }
-  .log-entry.me { border-left-color: var(--cyan); background: rgba(0,229,255,0.06); color: var(--text); }
-  .log-entry.combat { color: var(--magenta); }
-  .log-entry.income { color: var(--green); }
-  .log-entry.news { color: var(--yellow); }
-  .log-entry.move { color: #9fdcff; }
-  .log-entry.raid { color: #ff6b9e; font-weight: 700; }
-  .log-entry.round { color: var(--cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 4px 6px; background: rgba(0,229,255,0.08); }
-  .log-entry.summary { color: var(--yellow); background: rgba(255,215,0,0.08); padding: 4px 6px; font-weight: 700; }
-  .log-entry .tag { font-size: 9px; color: var(--text-dim); margin-right: 6px; font-weight: 400; }
-
-  /* Hand */
-  .hand-wrap {
-    background: var(--bg2); border-top: 1px solid var(--border);
-    padding: 10px; flex: 1 1 auto;
-    display: flex; flex-direction: column;
-    min-height: 0; max-height: 300px;
-  }
-  .hand-wrap h4 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
-  .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex: 1; align-items: flex-start; }
-  .card {
-    width: 150px; height: 240px;
-    background: #0a0a18; border: 1.5px solid var(--border);
-    border-radius: 4px; padding: 6px;
-    flex-shrink: 0;
-    font-size: 10px; display: flex; flex-direction: column;
-    cursor: pointer; transition: transform 0.15s, border-color 0.1s;
-    overflow: hidden;
-  }
-  .card:hover { transform: translateY(-4px); border-color: var(--cyan); }
-  .card.selected { border-color: var(--yellow); box-shadow: 0 0 12px rgba(255,215,0,0.4); }
-  .card.disabled { opacity: 0.4; cursor: not-allowed; }
-  .card .ch {
-    display: flex; justify-content: space-between; align-items: center;
-    font-family: 'Share Tech Mono', monospace; font-size: 9px;
-    border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 3px;
-  }
-  .card .ci { background: var(--cyan); color: #000; padding: 1px 5px; font-weight: 700; }
-  .card .ct {
-    font-family: 'Share Tech Mono', monospace; font-size: 11px;
-    color: var(--yellow); letter-spacing: 0.5px; text-align: center; margin: 4px 0;
-  }
-  .card .ceff {
-    font-size: 9.5px; line-height: 1.35; flex: 1;
-    overflow-y: auto; max-height: 90px;
-  }
-  .card .ceff strong { display: block; margin-bottom: 2px; font-size: 9px; }
-  .card .cbot {
-    border-top: 1px dashed #444; padding-top: 4px; margin-top: 3px;
-    font-size: 9.5px; line-height: 1.35;
-    max-height: 90px; overflow-y: auto;
-  }
-  .card .cbot strong { display: block; margin-bottom: 2px; font-size: 9px; }
-  .card .cost {
-    font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-dim);
-  }
-  .loss-tag { color: var(--magenta); font-weight: 700; font-size: 8px; padding: 1px 3px; background: rgba(255,0,60,0.2); }
-
-  /* Action buttons */
-  .phase-actions {
-    display: flex; gap: 8px; padding: 10px; background: var(--bg2);
-    border-top: 2px solid var(--cyan);
-    flex: 0 0 auto;
-    min-height: 54px;
-  }
-  .center-panel { display: flex; flex-direction: column; }
-  .map-wrap { flex: 0 0 auto; }
-  .pa-btn {
-    flex: 1; padding: 10px; background: var(--bg3);
-    border: 1.5px solid var(--border); color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    letter-spacing: 1px; border-radius: 2px; font-size: 12px;
-  }
-  .pa-btn:hover:not(:disabled) { background: var(--cyan); color: #000; border-color: var(--cyan); }
-  .pa-btn.primary { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
-  .pa-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* Modal */
-  .modal-bg {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .modal {
-    background: var(--bg2); border: 2px solid var(--cyan);
-    padding: 24px; border-radius: 4px; max-width: 560px; width: 90%;
-  }
-  .modal h2 {
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--cyan); letter-spacing: 3px; margin: 0 0 12px;
-  }
-  .modal p { color: var(--text-dim); line-height: 1.5; }
-  .modal .obj-list { margin: 16px 0; }
-  .modal .obj-item {
-    background: var(--bg3); border-left: 3px solid var(--yellow);
-    padding: 8px 12px; margin: 6px 0; font-size: 12px;
-  }
-
-  /* Game over */
-  .gameover {
-    text-align: center; padding: 60px 24px;
-  }
-  .gameover h1 {
-    font-family: 'Share Tech Mono', monospace; font-size: 56px;
-    letter-spacing: 6px; margin: 0 0 20px;
-  }
-  .gameover.win h1 { color: var(--green); text-shadow: 0 0 30px var(--green); }
-  .gameover.lose h1 { color: var(--magenta); text-shadow: 0 0 30px var(--magenta); }
-  .gameover .stats-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-    max-width: 600px; margin: 24px auto;
-  }
-  .gameover .stat-box {
-    background: var(--bg2); border: 1px solid var(--border);
-    padding: 16px; border-radius: 3px;
-  }
-  .gameover .stat-box .lbl { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 2px; }
-  .gameover .stat-box .val { font-family: 'Share Tech Mono', monospace; font-size: 28px; color: var(--cyan); margin-top: 4px; }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
-</style>
-</head>
-<body>
-
-<div id="root">
-  <div id="boot">INITIALIZING ASHGRID SIMULATION...</div>
-</div>
-
-<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
-
-<script type="text/babel" data-presets="react">
-'use strict';
-const { useState, useEffect, useReducer, useMemo, useCallback, useRef } = React;
-
-// ============================================================================
-// DATA
-// ============================================================================
-
 const ZONE_TYPES = {
   ruin: { name: '폐허', color: 'z-ruin', income: {}, attr: 'A', buildable: false, note: '거점 불가' },
   home: { name: '주택가', color: 'z-home', income: { credit: 1, operative: 1 }, attr: 'GRID', buildable: true },
@@ -1330,7 +911,7 @@ function reducer(state, action) {
 
     case 'NEXT_ROUND': {
       const newRound = state.meta.round + 1;
-      if (newRound > 10) {
+      if (newRound > 8) {
         return checkVictoryByPoints(state);
       }
       const nd = rollSignalDie();
@@ -1367,7 +948,7 @@ function reducer(state, action) {
         } else {
           const av = assetValue(p, state.stocks, state);
           const ownZones = Object.values(state.map).filter(c => c.owner === i).length;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/55 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/40 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
       // 개인 풀 요약
@@ -2190,137 +1771,6 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `🚨 공권력 ${effect.heat > 0 ? '+' : ''}${effect.heat} → ${newHeat}`);
   }
 
-  // === v0.5.10: 미구현 효과 키 폴백 보상 (BROKER·CIPHER·MOLE 언더파워 해소) ===
-  // 원래 카드 텍스트에 있던 효과가 구현 안 됐으면 최소 자원/렙 보상 부여해 Ghost 비대칭 전략 루트 강화
-  if (effect.contact) {
-    const ps = [...s.players];
-    const add = effect.contact * 2;
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, influence: (ps[playerIdx].resources.influence || 0) + effect.contact, credit: (ps[playerIdx].resources.credit || 0) + add } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🎙️ P${playerIdx} · 접선 +${effect.contact} · ₵+${add}`);
-  }
-  if (effect.blackmarket) {
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, weapons: (ps[playerIdx].resources.weapons || 0) + effect.blackmarket, credit: (ps[playerIdx].resources.credit || 0) + effect.blackmarket * 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🕶 P${playerIdx} · 블랙마켓 구매 (무기+${effect.blackmarket}, ₵+${effect.blackmarket * 2})`);
-  }
-  if (effect.extort) {
-    // 정보 착취: rep + credit (BROKER 렙 루트 주력)
-    const repGain = effect.extort * 2;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort * 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort * 2}`);
-  }
-  if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
-    // 정보 수집/판매 → rep + data
-    const amount = effect.sell_info ? 3 : 2;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `👁 P${playerIdx} · 정보 행동 · ★+${amount}, 📡+${amount}`);
-  }
-  if (effect.scout || effect.scout_all || effect.drone_scan) {
-    // 정찰 → data 축적
-    const amount = effect.scout_all ? 2 : 1;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + amount } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🛰 P${playerIdx} · 정찰 · 📡+${amount}`);
-  }
-  if (effect.broker_fee) {
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.broker_fee, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🤝 P${playerIdx} · 중개 수수료 ₵+${effect.broker_fee}, ★+1`);
-  }
-  if (effect.stop_combat || effect.cancel_card || effect.cancel_action) {
-    // 중단·취소 → rep 평판 (실제로는 다른 플레이어 타겟팅 필요하지만 여기선 보너스로)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🛑 P${playerIdx} · 개입 · ★+2`);
-  }
-  if (effect.invisible || effect.invisible_2r || effect.stealth || effect.hide_actions || effect.hide_actions_1r || effect.negate_scout) {
-    // 은신/은폐 → 수배 감소 + rep
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], wanted: Math.max(0, (ps[playerIdx].wanted || 0) - 1), resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🕶 P${playerIdx} · 은신 · 수배-1, ★+1`);
-  }
-  if (effect.clear_wanted || effect.burn_identity) {
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], wanted: 0 };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🧹 P${playerIdx} · 수배 초기화`);
-  }
-  if (effect.heal) {
-    const curP = s.players[playerIdx];
-    const healed = Math.min(curP.maxHp, curP.hp + effect.heal);
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], hp: healed };
-    s = { ...s, players: ps };
-    s = logEntry(s, `❤️ P${playerIdx} · HP +${effect.heal} (→${healed})`);
-  }
-  if (effect.stat_boost) {
-    // 일회성 판정 보너스 누적
-    s = { ...s, meta: { ...s.meta, attackBonusOnce: (s.meta.attackBonusOnce || 0) + effect.stat_boost } };
-    s = logEntry(s, `💪 P${playerIdx} · 다음 판정 +${effect.stat_boost}`);
-  }
-  if (effect.swap || effect.swap_ratio) {
-    // 자원 교환 → credit 전환
-    const add = 3;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + add } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🔄 P${playerIdx} · 거래 교환 ₵+${add}`);
-  }
-  if (effect.draw_quest || effect.quest_two || effect.slot_plus) {
-    // 퀘스트 수령 → rep + credit
-    const cnt = effect.quest_two ? 2 : 1;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + cnt, credit: (ps[playerIdx].resources.credit || 0) + cnt * 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `📜 P${playerIdx} · 퀘스트 수주 ★+${cnt}, ₵+${cnt * 2}`);
-  }
-  if (effect.deploy_trap || effect.trap || effect.trap_damage) {
-    // 함정 설치 → 다음 레이드 방어 보너스 (자기 위치에)
-    const curPos = s.players[playerIdx].position;
-    if (curPos && s.map[curPos]) {
-      const newMap = { ...s.map, [curPos]: { ...s.map[curPos], fortified: (s.map[curPos].fortified || 0) + 1 } };
-      s = { ...s, map: newMap };
-      s = logEntry(s, `🪤 P${playerIdx} · 함정 설치 (${curPos} 방어+1)`);
-    }
-  }
-  if (effect.cargo_haul || effect.supply_drop || effect.haul) {
-    // 화물 운반 → 다량 credit + parts
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 3, parts: (ps[playerIdx].resources.parts || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `📦 P${playerIdx} · 화물 운반 ₵+3, ⚙+2`);
-  }
-  if (effect.ambush) {
-    // 매복 → 다음 공격 보너스 + rep
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps, meta: { ...s.meta, attackBonusOnce: (s.meta.attackBonusOnce || 0) + 2 } };
-    s = logEntry(s, `🎯 P${playerIdx} · 매복 준비 (다음 판정+2, ★+1)`);
-  }
-  if (effect.copy_bloc_card) {
-    // 블록 카드 복사 → credit + rep
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 4, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🎭 P${playerIdx} · 신분 위장 ₵+4, ★+2`);
-  }
-  if (effect.reward) {
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.reward, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `💰 P${playerIdx} · 보상 ₵+${effect.reward}, ★+1`);
-  }
-
   // === Bloc 신규 효과들 ===
   // 임의 블록 N주 자동 매수 (저가 순)
   if (effect.stock_buy_any) {
@@ -2457,25 +1907,18 @@ function checkVictoryByPoints(state) {
 }
 
 function checkInstantVictory(state) {
-  // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
-  // Bloc: asset >= 55
-  // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
+  // Check tutorial victory conditions
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 60) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥60)` } };
+      if (av >= 40) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥40)` } };
       }
     } else {
-      const rep = p.resources.rep || 0;
-      const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= 14 && raids >= 2) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
-      }
-      if (rep >= 18) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥18)` } };
+      if (p.resources.rep >= 10 && (state.meta.raidsThisGame[i] || 0) >= 1) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리: 렙 ${p.resources.rep} + 레이드 ${state.meta.raidsThisGame[i]}회` } };
       }
     }
   }
@@ -2509,54 +1952,23 @@ function scoreGhostCard(state, pIdx, cid) {
   if (!c) return 0;
   let score = 10;
 
-  const rep = p.resources.rep || 0;
-  const raids = state.meta.raidsThisGame?.[pIdx] || 0;
-  const repNeeded = Math.max(0, 13 - rep);
-  const raidNeeded = Math.max(0, 2 - raids);
-  const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
+  // Prefer attacking when HP full
+  if (c.top?.atk && p.hp > p.maxHp * 0.5) score += 15;
+  if (c.bot?.atk || c.bot?.atk_x2 || c.bot?.atk_x3_retort) score += 10;
 
-  // 두 반쪽을 합쳐 카드 가치 평가 (하나만 쓰겠지만 잠재 기여도 둘 다 합산 X, 최대값)
-  const halves = [c.top, c.bot].filter(Boolean);
-  for (const h of halves) {
-    // 공격·이동: 기존 점수
-    if (h.atk || h.atk_x2 || h.atk_x3_retort) score += (p.hp > p.maxHp * 0.5 ? 12 : -5);
-    if (h.move) score += p.role === 'ghost' ? (raidNeeded > 0 ? 8 : 3) : 8;
-    // 속성 생성
-    if (h.gen) score += 4;
-    // === 신규: 폴백 보상 효과들 점수화 (BROKER/CIPHER/MOLE 살리기) ===
-    if (h.extort) score += h.extort * 5;       // rep + credit
-    if (h.contact) score += h.contact * 3;
-    if (h.blackmarket) score += h.blackmarket * 4;
-    if (h.peek_objective || h.sell_info) score += 6;  // rep + data
-    if (h.peek_hand || h.peek_full || h.peek_news) score += 3;
-    if (h.scout || h.scout_all || h.drone_scan) score += 2;
-    if (h.broker_fee) score += h.broker_fee;  // 중개 수수료는 credit + rep
-    if (h.stop_combat || h.cancel_card || h.cancel_action) score += 7;  // 개입 → rep +2
-    if (h.invisible || h.invisible_2r || h.stealth || h.hide_actions || h.hide_actions_1r) score += (p.wanted > 2 ? 8 : 3);
-    if (h.clear_wanted || h.burn_identity) score += (p.wanted > 3 ? 10 : 1);
-    if (h.heal) score += (p.hp < p.maxHp * 0.5 ? 10 : 2);
-    if (h.stat_boost) score += h.stat_boost * 2;
-    if (h.ambush) score += 6;
-    if (h.copy_bloc_card) score += 8;
-    if (h.reward) score += h.reward;
-    if (h.draw_quest || h.quest_two) score += 5;
-    if (h.cargo_haul || h.supply_drop || h.haul) score += 4;
-    if (h.deploy_trap || h.trap) score += 3;
-    if (h.swap || h.swap_ratio) score += 2;
-  }
+  // Prefer move when not near anything
+  if (c.top?.move && p.zonesOwned.length < 2) score += 8;
 
-  // LOSS 회피
+  // Avoid LOSS unless powerful
   if (c.loss) {
-    if (p.hp < p.maxHp * 0.3) score -= 15;
+    if (p.hp < p.maxHp * 0.3) score -= 10;
     else score += (c.bot?.atk || 0);
   }
 
-  // 승리 근접 시 공격·이동 선호
-  if (closeToWin) {
-    if (halves.some(h => h.atk || h.move || h.extort)) score += 10;
-  }
+  // Resource generation
+  if (c.top?.gen && state.pool[c.top.gen] < 2) score += 5;
 
-  return score + Math.random() * 3;
+  return score + Math.random() * 2;
 }
 
 function scoreBlocCard(state, pIdx, cid) {
@@ -2589,1200 +2001,216 @@ function scoreBlocCard(state, pIdx, cid) {
 }
 
 // ============================================================================
-// UI COMPONENTS
+// DEAD NEXUS 헤드리스 시뮬 하네스
+// 봇 4명(또는 4 블록)으로 N판 돌려 승률·라운드·밸런스 데이터 수집
 // ============================================================================
 
-function SetupScreen({ onStart }) {
-  const [role, setRole] = useState('ghost');
-  const [specific, setSpecific] = useState('CIPHER');
-  const [history, setHistory] = useState(() => loadHistory());
+// localStorage 스텁
+global.localStorage = {
+  _store: {},
+  getItem(k) { return this._store[k] || null; },
+  setItem(k, v) { this._store[k] = String(v); },
+  removeItem(k) { delete this._store[k]; },
+};
 
-  const options = role === 'ghost'
-    ? [['CIPHER','정보전·해킹'],['BLADE','전투·집행'],['BROKER','협상·중개'],['RIGGER','기술·제작'],['DRIFTER','이동·보급'],['MOLE','내부 침투']]
-    : [['VANTA','보안·정보'],['IRONWALL','군사·중화기'],['HELIX','생체공학'],['AXIOM','AI·예측'],['CARBON','에너지·인프라']];
+// core.js를 전역에 펼쳐서 로드
+const fs = require('fs');
+const coreJs = fs.readFileSync(__dirname + '/core.js', 'utf8');
+// eval 후 필요한 심볼을 global에 추출
+eval(coreJs);
 
-  const stats = useMemo(() => {
-    if (history.length === 0) return null;
-    const total = history.length;
-    const wins = history.filter(h => h.won).length;
-    const byRole = { ghost: { total: 0, wins: 0 }, bloc: { total: 0, wins: 0 } };
-    history.forEach(h => {
-      if (byRole[h.role]) {
-        byRole[h.role].total++;
-        if (h.won) byRole[h.role].wins++;
-      }
-    });
-    const bestRep = Math.max(...history.filter(h => h.role === 'ghost').map(h => h.rep || 0), 0);
-    const bestAsset = Math.max(...history.filter(h => h.role === 'bloc').map(h => h.asset || 0), 0);
-    const maxTl = Math.max(...history.map(h => h.tl || 1), 1);
-    return { total, wins, byRole, bestRep, bestAsset, maxTl };
-  }, [history]);
+// 시뮬 한 판 실행
+function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 8, trace = false } = {}) {
+  let state = initGame(humanRole, humanSpecific);
+  // 초기 덱: DRAW_INITIAL 액션 에뮬레이트
+  state = reducer(state, { type: 'DRAW_INITIAL' });
 
-  const statsFor = (sp) => role === 'ghost' ? GHOST_STATS[sp] : BLOC_STATS[sp];
-  const s = statsFor(specific);
+  let safety = 0;
+  while (!state.meta.gameOver && state.meta.round <= maxRounds && safety < 500) {
+    safety++;
+    // Phase 0 → 1: 시작
+    state = reducer(state, { type: 'SET_PHASE', phase: 1 });
 
-  return (
-    <div className="setup">
-      <h1>DEAD NEXUS</h1>
-      <div className="tagline">SIMULATOR v0.5 · TUTORIAL MODE · 5×5 ASHGRID</div>
+    // Phase 1: 뉴스 + 봇 거래
+    state = reducer(state, { type: 'DRAW_NEWS' });
+    state = reducer(state, { type: 'BOT_MARKET' });
 
-      <h2>1. 역할 선택</h2>
-      <div className="role-grid">
-        <div className={`role-card ${role === 'ghost' ? 'selected' : ''}`} onClick={() => { setRole('ghost'); setSpecific('CIPHER'); }}>
-          <h3>👻 GHOST</h3>
-          <p>독립 용병. 렙 10 + 레이드 1회로 승리.</p>
-        </div>
-        <div className={`role-card ${role === 'bloc' ? 'selected' : ''}`} onClick={() => { setRole('bloc'); setSpecific('VANTA'); }}>
-          <h3>🏢 BLOC</h3>
-          <p>메가기업 운영. 자산 40 도달로 승리.</p>
-        </div>
-      </div>
-
-      <h2>2. {role === 'ghost' ? '클래스' : '블록'} 선택</h2>
-      <div className="class-grid">
-        {options.map(([sp, desc]) => {
-          const st = statsFor(sp);
-          return (
-            <div key={sp} className={`class-card ${specific === sp ? 'selected' : ''}`} onClick={() => setSpecific(sp)}>
-              <div className="cname">{sp}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{desc}</div>
-              <div className="cstats">
-                HP:{st.hp} ATK:{st.atk}<br/>
-                DEF:{st.def} SPD:{st.spd}<br/>
-                HACK:{st.hack}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <h2>3. 상대 (봇 3명 자동 배정)</h2>
-      <div style={{ background: 'var(--bg2)', padding: 12, borderRadius: 3, fontSize: 13, color: 'var(--text-dim)' }}>
-        당신이 {role === 'ghost' ? 'Ghost' : 'Bloc'}이면 봇은 반대 역할 + 같은 역할 믹스로 배정됩니다.
-        시나리오 S01 표준 · 최대 8라운드 · 튜토리얼 승리 조건.
-      </div>
-
-      <button className="start-btn" onClick={() => onStart(role, specific)}>
-        🎮 START SIMULATION
-      </button>
-
-      {/* === 플레이 히스토리 === */}
-      {stats && (
-        <div style={{ marginTop: 30, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Share Tech Mono, monospace', color: 'var(--cyan)', letterSpacing: 2, fontSize: 13 }}>📊 내 플레이 기록 (이 브라우저)</h3>
-            <button className="pa-btn" style={{ fontSize: 10 }} onClick={() => { if (confirm('플레이 기록 전부 삭제?')) { clearHistory(); setHistory([]); } }}>🗑 초기화</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, fontFamily: 'Share Tech Mono, monospace', fontSize: 11, marginBottom: 12 }}>
-            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>총 판수</div>
-              <div style={{ color: 'var(--cyan)', fontSize: 18, fontWeight: 700 }}>{stats.total}</div>
-            </div>
-            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>승률</div>
-              <div style={{ color: stats.wins/stats.total >= 0.5 ? 'var(--green)' : 'var(--magenta)', fontSize: 18, fontWeight: 700 }}>{Math.round(stats.wins/stats.total*100)}%</div>
-            </div>
-            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 렙</div>
-              <div style={{ color: 'var(--yellow)', fontSize: 18, fontWeight: 700 }}>{stats.bestRep}</div>
-            </div>
-            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 자산</div>
-              <div style={{ color: 'var(--yellow)', fontSize: 18, fontWeight: 700 }}>{stats.bestAsset}</div>
-            </div>
-            <div style={{ background: 'var(--bg3)', padding: 8, borderRadius: 3, textAlign: 'center' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>최고 TL</div>
-              <div style={{ color: 'var(--green)', fontSize: 18, fontWeight: 700 }}>⚡{stats.maxTl}</div>
-            </div>
-          </div>
-          <div style={{ maxHeight: 220, overflowY: 'auto', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 50px 80px 50px 50px 50px 50px 50px 1fr', gap: 4, color: 'var(--text-dim)', fontSize: 9, paddingBottom: 4, borderBottom: '1px solid var(--border)' }}>
-              <div>일시</div><div>결과</div><div>클래스/블록</div><div>라운드</div><div>렙/자산</div><div>레이드</div><div>TL</div><div>업적</div><div>이유</div>
-            </div>
-            {history.map((h, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 50px 80px 50px 50px 50px 50px 50px 1fr', gap: 4, padding: '3px 0', borderBottom: '1px solid var(--bg3)' }}>
-                <div style={{ color: 'var(--text-dim)' }}>{formatHistoryTime(h.ts)}</div>
-                <div style={{ color: h.won ? 'var(--green)' : 'var(--magenta)', fontWeight: 700 }}>{h.won ? '승' : '패'}</div>
-                <div>{h.role === 'ghost' ? '👻' : '🏢'} {h.specific}</div>
-                <div style={{ textAlign: 'center' }}>R{h.round}</div>
-                <div style={{ textAlign: 'center', color: 'var(--yellow)' }}>{h.role === 'ghost' ? h.rep : h.asset}</div>
-                <div style={{ textAlign: 'center' }}>{h.raids || 0}</div>
-                <div style={{ textAlign: 'center', color: 'var(--green)' }}>⚡{h.tl}</div>
-                <div style={{ textAlign: 'center' }}>{h.achievements || 0}</div>
-                <div style={{ color: 'var(--text-dim)', fontSize: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.reason || '—'}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GameScreen({ state, dispatch }) {
-  const me = state.players[0];
-  const isMyTurn = state.meta.phase === 2;  // Plan phase
-  const [selectedCards, setSelectedCards] = useState([]);
-  const [selectedHalves, setSelectedHalves] = useState([]);  // 각 선택 카드의 'top'|'bot' (Ghost) / 'main'|'side' (Bloc)
-
-  // Auto-advance phases
-  useEffect(() => {
-    if (state.meta.gameOver) return;
-    const ph = state.meta.phase;
-
-    // Instantaneous phase handling
-    // Phase 1 (시장) — 뉴스 1장 공개 + 봇 거래. 사용자 거래는 "거래 끝" 버튼으로 진행.
-    if (ph === 1 && !state.currentNews) {
-      setTimeout(() => dispatch({ type: 'DRAW_NEWS' }), 400);
-      setTimeout(() => dispatch({ type: 'BOT_MARKET' }), 1200);
-      // phase 2로의 자동 이동은 사용자가 시장 패널의 "거래 끝" 버튼을 눌러야 함
-    }
-
-    if (ph === 2) {
-      // Bots auto-pick
-      state.players.forEach((p, i) => {
-        if (p.kind === 'bot' && !p.defeated && p.plannedCards.length === 0) {
-          const cards = botPickCards(state, i);
-          setTimeout(() => dispatch({ type: 'PLAN_CARDS', playerIdx: i, cards }), 300 + i * 200);
-        }
+    // Phase 2 계획: 모든 플레이어 카드 선택 (AI 공통)
+    state = reducer(state, { type: 'SET_PHASE', phase: 2 });
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      if (p.defeated) continue;
+      const cards = botPickCards(state, i);
+      // 기본 반쪽: 0번째=top/main, 1번째=bot/side
+      const halves = cards.map((_, idx) => {
+        if (p.role === 'ghost') return idx === 0 ? 'top' : 'bot';
+        return idx === 0 ? 'main' : 'side';
       });
+      state = reducer(state, { type: 'PLAN_CARDS', playerIdx: i, cards, halves });
     }
 
-    if (ph === 3) {
-      setTimeout(() => {
-        dispatch({ type: 'SNAPSHOT_TURN' });
-        setTimeout(() => dispatch({ type: 'EXECUTE_TURN' }), 150);
-        setTimeout(() => dispatch({ type: 'COMPUTE_TURN_DIFF' }), 900);
-        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 4 }), 1400);
-      }, 500);
+    // 스냅샷 + 실행 + 디프
+    state = reducer(state, { type: 'SNAPSHOT_TURN' });
+    state = reducer(state, { type: 'SET_PHASE', phase: 3 });
+    state = reducer(state, { type: 'EXECUTE_TURN' });
+
+    // Ghost 결투 모달·레이드 모달 자동 해결 (헤드리스: YES 기본)
+    if (state.meta.pendingRaid) state = reducer(state, { type: 'RESOLVE_RAID_YES' });
+    if (state.meta.pendingGhostDuel) state = reducer(state, { type: 'RESOLVE_DUEL_YES' });
+    if (state.meta.zoneBonusPending) {
+      // 첫 옵션 자동 선택
+      const opt = state.meta.zoneBonusPending.options[0];
+      state = reducer(state, { type: 'APPLY_ZONE_BONUS', opt });
     }
 
-    if (ph === 4) {
-      setTimeout(() => {
-        dispatch({ type: 'COLLECT_INCOME' });
-        setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 5 }), 800);
-      }, 400);
+    state = reducer(state, { type: 'COMPUTE_TURN_DIFF' });
+
+    // Phase 4 수익
+    state = reducer(state, { type: 'SET_PHASE', phase: 4 });
+    state = reducer(state, { type: 'COLLECT_INCOME' });
+
+    // Phase 5 R&D
+    state = reducer(state, { type: 'SET_PHASE', phase: 5 });
+    state = reducer(state, { type: 'RESEARCH_PHASE' });
+
+    // Phase 6 결산 - 즉시 승리 체크
+    state = reducer(state, { type: 'SET_PHASE', phase: 6 });
+    const after = checkInstantVictory(state);
+    if (after.meta.gameOver) {
+      state = reducer(state, { type: 'VICTORY', winner: after.meta.winner, reason: after.meta.winReason });
+      break;
     }
 
-    if (ph === 5) {
-      setTimeout(() => dispatch({ type: 'RESEARCH_PHASE' }), 300);
-      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 6 }), 900);
+    if (trace) {
+      console.log(`R${state.meta.round}: P0 ${state.players[0].specific} ${state.players[0].role === 'ghost' ? '렙' + state.players[0].resources.rep : '자산' + assetValue(state.players[0], state.stocks, state)} · P1 ${state.players[1].specific} ${state.players[1].role === 'ghost' ? '렙' + state.players[1].resources.rep : '자산' + assetValue(state.players[1], state.stocks, state)} · P2 ${state.players[2].specific} · P3 ${state.players[3].specific}`);
     }
 
-    if (ph === 6) {
-      setTimeout(() => {
-        // Check victory
-        const after = checkInstantVictory(state);
-        if (after.meta.gameOver) {
-          dispatch({ type: 'VICTORY', winner: after.meta.winner, reason: after.meta.winReason });
-        } else {
-          dispatch({ type: 'NEXT_ROUND' });
-        }
-      }, 500);
-    }
-  }, [state.meta.phase, state.meta.round]);
-
-  const canPlan = me.kind === 'human' && state.meta.phase === 2;
-  const needCards = 2; // Ghost·Bloc 모두 2장 플레이 (main/side 조합)
-
-  // 선택한 카드+반쪽의 총 이동 스텝 합계
-  const computeMoveBudget = (cards, halves) => {
-    let total = 0;
-    cards.forEach((cid, idx) => {
-      const c = getCard(cid);
-      if (!c) return;
-      const defaultHalf = me.role === 'ghost'
-        ? (idx === 0 ? 'top' : 'bot')
-        : (idx === 0 ? 'main' : 'side');
-      const half = halves[idx] || defaultHalf;
-      if (c[half]?.move) total += c[half].move;
-    });
-    return total;
-  };
-
-  const confirmPlan = () => {
-    dispatch({ type: 'PLAN_CARDS', playerIdx: 0, cards: selectedCards, halves: selectedHalves });
-    const budget = computeMoveBudget(selectedCards, selectedHalves);
-    // 이동 스텝이 있으면 사용자에게 목표 클릭 요청
-    if (budget > 0) {
-      dispatch({ type: 'REQUEST_MOVE_TARGET', budget });
-    } else {
-      setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 600);
-    }
-    setSelectedCards([]);
-    setSelectedHalves([]);
-  };
-
-  const skipMovePick = () => {
-    // 목표 찍지 않고 AI 라우팅에 위임
-    dispatch({ type: 'CLEAR_MOVE_TARGET' });
-    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 300);
-  };
-
-  const pickMoveTarget = (coord) => {
-    if (!state.meta.awaitingMoveTarget) return;
-    dispatch({ type: 'SET_MOVE_TARGET', coord });
-    setTimeout(() => dispatch({ type: 'SET_PHASE', phase: 3 }), 300);
-  };
-
-  // 내 현재 위치에서 moveBudget 만큼 BFS로 도달 가능한 셀 집합
-  const reachableCells = useMemo(() => {
-    if (!state.meta.awaitingMoveTarget) return new Set();
-    const from = me.position;
-    if (!from) return new Set();
-    const budget = state.meta.moveBudget || 0;
-    const visited = new Map();
-    visited.set(from, 0);
-    let frontier = [from];
-    for (let step = 0; step < budget; step++) {
-      const next = [];
-      frontier.forEach(c => {
-        coordsAdj(c).forEach(a => {
-          if (!visited.has(a) && state.map[a]) {
-            visited.set(a, step + 1);
-            next.push(a);
-          }
-        });
-      });
-      frontier = next;
-    }
-    visited.delete(from);  // 제자리는 선택 불가
-    return new Set(visited.keys());
-  }, [state.meta.awaitingMoveTarget, state.meta.moveBudget, me.position]);
-
-  const toggleCard = (cid) => {
-    if (!canPlan) return;
-    if (selectedCards.includes(cid)) {
-      const idx = selectedCards.indexOf(cid);
-      setSelectedCards(selectedCards.filter(c => c !== cid));
-      setSelectedHalves(selectedHalves.filter((_, i) => i !== idx));
-    } else if (selectedCards.length < needCards) {
-      const newSel = [...selectedCards, cid];
-      // 기본: 첫 카드=top/main, 두 번째 카드=bot/side
-      let defaultHalf;
-      if (me.role === 'ghost') {
-        defaultHalf = selectedCards.length === 0 ? 'top' : 'bot';
-      } else {
-        defaultHalf = selectedCards.length === 0 ? 'main' : 'side';
-      }
-      setSelectedCards(newSel);
-      setSelectedHalves([...selectedHalves, defaultHalf]);
-    }
-  };
-
-  // 특정 선택 카드의 반쪽 토글
-  const cycleHalf = (idx) => {
-    if (!canPlan) return;
-    const next = [...selectedHalves];
-    if (me.role === 'ghost') {
-      next[idx] = next[idx] === 'top' ? 'bot' : 'top';
-    } else {
-      next[idx] = next[idx] === 'main' ? 'side' : 'main';
-    }
-    setSelectedHalves(next);
-  };
-
-  if (state.meta.gameOver) {
-    const iWon = state.meta.winner === 0;
-    return (
-      <div className={`gameover ${iWon ? 'win' : 'lose'}`} style={{ overflow: 'auto', height: '100vh', padding: 24 }}>
-        <h1>{iWon ? 'VICTORY' : 'DEFEAT'}</h1>
-        <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
-          {state.meta.winReason || '게임 종료'}
-        </div>
-        <div className="stats-grid">
-          <div className="stat-box">
-            <div className="lbl">ROUND</div>
-            <div className="val">{state.meta.round}</div>
-          </div>
-          <div className="stat-box">
-            <div className="lbl">{me.role === 'bloc' ? 'ASSET' : 'REP'}</div>
-            <div className="val">{me.role === 'bloc' ? assetValue(me, state.stocks, state) : me.resources.rep}</div>
-          </div>
-          <div className="stat-box">
-            <div className="lbl">ACHIEVEMENTS</div>
-            <div className="val">{me.achievements.length}</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button className="start-btn" style={{ maxWidth: 180 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
-            🔄 다시
-          </button>
-          <button className="start-btn" style={{ maxWidth: 180, background: 'var(--bg3)', color: 'var(--yellow)', border: '1px solid var(--yellow)' }} onClick={() => dispatch({ type: 'BACK_TO_MENU' })}>
-            📊 메뉴 & 히스토리
-          </button>
-          <button className="start-btn" style={{ maxWidth: 180, background: 'var(--bg3)', color: 'var(--cyan)', border: '1px solid var(--cyan)' }} onClick={() => copyLogToClipboard(state.log)}>
-            📋 로그 복사
-          </button>
-        </div>
-
-        {/* 게임 끝나도 로그 표시 */}
-        <div style={{ maxWidth: 900, margin: '20px auto', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, padding: 16, textAlign: 'left' }}>
-          <h3 style={{ margin: 0, fontFamily: 'Share Tech Mono, monospace', color: 'var(--cyan)', letterSpacing: 2, fontSize: 14, marginBottom: 12 }}>📜 전체 플레이 로그 ({state.log.length}개 엔트리)</h3>
-          <div style={{ maxHeight: '50vh', overflowY: 'auto', fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
-            {state.log.map((l, i) => {
-              const cls = classifyLog(l.message);
-              return (
-                <div key={i} className={`log-entry ${cls}`} style={{ padding: '3px 6px', marginBottom: 2, lineHeight: 1.4 }}>
-                  <span className="tag" style={{ fontSize: 9, color: 'var(--text-dim)', marginRight: 6 }}>R{l.round}·P{l.phase + 1}</span>
-                  {l.message}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
+    state = reducer(state, { type: 'NEXT_ROUND' });
   }
 
-  return (
-    <div className="game">
-      {/* === 레이드 결정 모달 === */}
-      {state.meta.pendingRaid && (() => {
-        const pr = state.meta.pendingRaid;
-        // d6 + atk ≥ threshold. 성공 케이스 수 = max(0, 6 - (threshold - atk - 1))
-        const succRolls = Math.max(0, Math.min(6, 6 - (pr.threshold - pr.atk - 1)));
-        const successPct = Math.round(succRolls / 6 * 100);
-        const newRep = (me.resources.rep || 0) + 3;
-        const wouldWin = newRep >= 13 && ((state.meta.raidsThisGame?.[0] || 0) + 1 >= 2);
-        return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(255, 60, 140, 0.3)' }}>
-              <div style={{ color: 'var(--magenta)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🗡️ RAID DECISION</div>
-              <h2 style={{ margin: 0, color: 'var(--text)', letterSpacing: 1 }}>
-                {pr.coord} · {pr.zoneNm} · <span style={{ color: 'var(--magenta)' }}>{pr.bloc}</span> 거점
-              </h2>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 6, marginBottom: 16 }}>
-                Bloc 거점에 잠입했다. 칠 것인가, 관찰하고 물러날 것인가?
-              </div>
-              {/* 확률 바 */}
-              <div style={{ background: 'var(--bg1)', borderRadius: 4, padding: 12, marginBottom: 16, fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>성공 조건</span>
-                  <span>d6 + ATK {pr.atk} ≥ <strong>{pr.threshold}</strong></span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>성공 확률</span>
-                  <strong style={{ color: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 20 }}>{successPct}%</strong>
-                </div>
-                <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-                  <div style={{ height: '100%', width: `${successPct}%`, background: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)') }}/>
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>주사위 {6 - succRolls + 1}~6 굴려야 성공</div>
-              </div>
-              {/* 보상 vs 위험 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                <div style={{ background: 'rgba(60, 220, 100, 0.1)', border: '1px solid var(--green)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--green)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✓ 성공 시</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>★ 렙 +3 → {newRep}<br/>📉 {pr.bloc} 주가 -3<br/>🗺️ 구역 중립화<br/>🚨 수배 +1</div>
-                  {wouldWin && <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>🏆 즉시 승리!</div>}
-                </div>
-                <div style={{ background: 'rgba(255, 60, 140, 0.1)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--magenta)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✗ 실패 시</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>❤️ HP -3 ({me.hp} → {me.hp - 3})<br/>🚨 수배 +1<br/>🔥 공권력 +1</div>
-                  {me.hp - 3 <= 0 && <div style={{ color: 'var(--magenta)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>⚰️ 전사</div>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="pa-btn primary" style={{ flex: 1, padding: '14px', fontSize: 13, background: 'var(--magenta)', color: 'var(--bg1)', border: '1px solid var(--magenta)' }} onClick={() => dispatch({ type: 'RESOLVE_RAID_YES' })}>
-                  🗡️ 레이드! ({successPct}% 성공)
-                </button>
-                <button className="pa-btn" style={{ flex: 1, padding: '14px', fontSize: 13 }} onClick={() => dispatch({ type: 'RESOLVE_RAID_NO' })}>
-                  🕶 물러나기 (피해 없음)
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* === Ghost 결투 결정 모달 === */}
-      {state.meta.pendingGhostDuel && (() => {
-        const d = state.meta.pendingGhostDuel;
-        const rival = state.players[d.defGhostIdx];
-        // 승리 확률: atk+roll vs def+roll, 승리 = (atk-def) >= 2 after rolls
-        // 간단 추정: 확률 ~ 50% ± (atk-def)*10%
-        const diff = d.atkStat - d.defStat;
-        const winPct = Math.max(15, Math.min(85, 50 + diff * 10));
-        return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'var(--bg2)', border: '2px solid var(--cyan)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(60,200,220,0.3)' }}>
-              <div style={{ color: 'var(--cyan)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>⚔️ GHOST DUEL</div>
-              <h2 style={{ margin: 0, color: 'var(--text)' }}>
-                {d.coord} · {d.zoneNm} · <span style={{ color: 'var(--cyan)' }}>P{d.defGhostIdx} {rival.specific}</span>와 조우
-              </h2>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 6, marginBottom: 16 }}>
-                같은 구역에 라이벌 Ghost가 있다. 선제 타격할 것인가?
-              </div>
-              <div style={{ background: 'var(--bg1)', borderRadius: 4, padding: 12, marginBottom: 16, fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>내 ATK {d.atkStat} vs 상대 DEF {d.defStat}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>개략 승률</span>
-                  <strong style={{ color: winPct >= 60 ? 'var(--green)' : (winPct >= 40 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 18 }}>~{winPct}%</strong>
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>양측 d6 굴림. 2점 이상 차이로 승리·패배, 그 외 무승부</div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                <div style={{ background: 'rgba(60,220,100,0.1)', border: '1px solid var(--green)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--green)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✓ 승리 시</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>★ 렙 +2<br/>₵ +최대 3 (상대 자산 탈취)<br/>🗡 상대 HP -2</div>
-                </div>
-                <div style={{ background: 'rgba(255,60,140,0.1)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--magenta)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✗ 반격당함</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>❤️ HP -2 ({me.hp} → {me.hp - 2})<br/>무승부 시: 피해 없음</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="pa-btn primary" style={{ flex: 1, padding: '14px', fontSize: 13, background: 'var(--cyan)', color: 'var(--bg1)', border: '1px solid var(--cyan)' }} onClick={() => dispatch({ type: 'RESOLVE_DUEL_YES' })}>
-                  ⚔️ 선제 공격 (~{winPct}%)
-                </button>
-                <button className="pa-btn" style={{ flex: 1, padding: '14px', fontSize: 13 }} onClick={() => dispatch({ type: 'RESOLVE_DUEL_NO' })}>
-                  🕶 회피 (공존)
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* === 타겟 당함 알림 === */}
-      {state.meta.lastTargetedBy && (() => {
-        const t = state.meta.lastTargetedBy;
-        const atk = state.players[t.attacker];
-        return (
-          <div style={{ position: 'fixed', top: 70, right: 16, zIndex: 150, background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 12, maxWidth: 280, boxShadow: '0 0 20px rgba(255,60,140,0.4)', animation: 'pulse 1.5s infinite' }}>
-            <div style={{ color: 'var(--magenta)', fontSize: 10, letterSpacing: 2, fontWeight: 700 }}>🔴 INCOMING</div>
-            <div style={{ fontSize: 12, marginTop: 3, fontWeight: 700 }}>
-              P{t.attacker} {atk?.specific}가 당신을 공격
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>{t.detail}</div>
-            <button style={{ marginTop: 6, fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'DISMISS_TARGETED' })}>확인</button>
-          </div>
-        );
-      })()}
-
-      {/* === 구역 첫 방문 보너스 모달 === */}
-      {state.meta.zoneBonusPending && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
-          <div style={{ background: 'var(--bg2)', border: '2px solid var(--yellow)', borderRadius: 6, padding: 24, maxWidth: 600, width: '90%', boxShadow: '0 0 30px rgba(255, 235, 60, 0.3)' }}>
-            <div style={{ color: 'var(--yellow)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🌟 FIRST VISIT DRAFT</div>
-            <h2 style={{ margin: 0, color: 'var(--text)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: 1 }}>
-              {state.meta.zoneBonusPending.coord} · {ZONE_TYPES[state.meta.zoneBonusPending.zone]?.name}
-            </h2>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4, marginBottom: 16 }}>
-              이 구역을 처음 밟았다 — 세 가지 기회 중 하나를 선택하라
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${state.meta.zoneBonusPending.options.length}, 1fr)`, gap: 10 }}>
-              {state.meta.zoneBonusPending.options.map((opt, i) => (
-                <button key={i}
-                  className="pa-btn"
-                  style={{ padding: '18px 12px', fontSize: 13, textAlign: 'center', borderColor: 'var(--yellow)', color: 'var(--text)', lineHeight: 1.4, whiteSpace: 'normal', minHeight: 80 }}
-                  onClick={() => dispatch({ type: 'APPLY_ZONE_BONUS', opt })}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <div style={{ textAlign: 'center', marginTop: 12 }}>
-              <button className="pa-btn" style={{ fontSize: 10, color: 'var(--text-dim)' }} onClick={() => dispatch({ type: 'SKIP_ZONE_BONUS' })}>건너뛰기</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="top-bar">
-        <div className="title">DEAD NEXUS · SIM v0.5</div>
-        <div className="phases">
-          {PHASE_NAMES.map((name, i) => (
-            <div key={i} className={`phase-chip ${i === state.meta.phase ? 'active' : (i < state.meta.phase ? 'done' : '')}`}>
-              {i+1}.{name}
-            </div>
-          ))}
-        </div>
-        <div className="round">R{state.meta.round}/10</div>
-        <div className="heat">🚨HEAT {state.heat}</div>
-      </div>
-
-      {/* LEFT — Players */}
-      <div className="left-panel">
-        <h4 style={{ margin: '4px 0 8px', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2 }}>PLAYERS</h4>
-        {state.players.map((p, i) => {
-          // 위협도 계산: 승리 조건 대비 남은 수치
-          let progressPct = 0, needLabel = '', threatLevel = 'safe', threatBadge = null;
-          if (p.role === 'ghost') {
-            const rep = p.resources.rep || 0;
-            const raids = state.meta.raidsThisGame?.[i] || 0;
-            const repDone = rep >= 13;
-            const raidDone = raids >= 2;
-            progressPct = Math.min(100, Math.round(rep / 13 * 100));
-            const repLeft = Math.max(0, 13 - rep);
-            if (repDone && raidDone) { threatLevel = 'won'; threatBadge = '🏆'; }
-            else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
-            else if (repLeft <= 6) { threatLevel = 'warn'; }
-            needLabel = `렙 ${rep}/13 · 레이드 ${raids}/2`;
-          } else {
-            const asset = assetValue(p, state.stocks, state);
-            progressPct = Math.min(100, Math.round(asset / 55 * 100));
-            const assetLeft = Math.max(0, 55 - asset);
-            if (asset >= 55) { threatLevel = 'won'; threatBadge = '🏆'; }
-            else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
-            else if (assetLeft <= 15) { threatLevel = 'warn'; }
-            needLabel = `자산 ${asset}/55`;
-          }
-          const borderColor = threatLevel === 'danger' ? 'var(--magenta)' : threatLevel === 'won' ? 'var(--green)' : threatLevel === 'warn' ? 'var(--yellow)' : undefined;
-          const extraStyle = borderColor ? { borderColor, boxShadow: threatLevel === 'danger' ? '0 0 8px rgba(255,60,140,0.4)' : undefined } : {};
-          // "내가 타겟됨" 하이라이트 (P0 아닌데 최근에 나를 공격한 경우)
-          const targetedMe = state.meta.lastTargetedBy?.attacker === i;
-          return (
-            <div key={i} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`} style={{ ...extraStyle, opacity: p.defeated ? 0.4 : 1 }}>
-              <div className="pheader">
-                <div className="pname">
-                  {p.kind === 'human' ? '👤' : '🤖'} P{i} · {p.specific}
-                  {targetedMe && <span style={{ marginLeft: 4, color: 'var(--magenta)', fontSize: 10 }}>🔴</span>}
-                </div>
-                <div className="php">HP {p.hp}/{p.maxHp}</div>
-              </div>
-              {/* 위협 배지 + 진척 바 */}
-              {i !== 0 && threatBadge && (
-                <div style={{ fontSize: 10, color: threatLevel === 'danger' ? 'var(--magenta)' : 'var(--yellow)', fontWeight: 700, marginTop: 2, letterSpacing: 1 }}>{threatBadge}</div>
-              )}
-              <div style={{ marginTop: 3, marginBottom: 3 }}>
-                <div style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'Share Tech Mono, monospace' }}>{needLabel}</div>
-                <div style={{ height: 3, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
-                  <div style={{ height: '100%', width: `${progressPct}%`, background: threatLevel === 'won' ? 'var(--green)' : threatLevel === 'danger' ? 'var(--magenta)' : (threatLevel === 'warn' ? 'var(--yellow)' : 'var(--cyan)') }}/>
-                </div>
-              </div>
-              <div className="pstats">
-                <div>₵ <strong>{p.resources.credit}</strong></div>
-                <div>📡 <strong>{p.resources.data}</strong></div>
-                <div>🎙 <strong>{p.resources.influence}</strong></div>
-                <div>🔩 <strong>{p.resources.weapons}</strong></div>
-                <div>⚙️ <strong>{p.resources.parts}</strong></div>
-                {p.role === 'ghost'
-                  ? <div>★ <strong>{p.resources.rep}</strong></div>
-                  : <div>📊 <strong>{assetValue(p, state.stocks, state)}</strong></div>
-                }
-              </div>
-              {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
-              <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
-                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>
-                  ({p.tlProgress || 0}/{tlCostFor(p.tl)})
-                </span>
-                <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
-              </div>
-              {i === 0 && (
-                <div style={{ fontSize: 10, marginTop: 6, color: 'var(--yellow)' }}>
-                  🎯 {p.objectives.map(o => o.name).join(' · ')}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* CENTER — Map + Hand */}
-      <div className="center-panel">
-        <div className="map-wrap">
-          <div className="map-board">
-            <div className="map-cell corner"></div>
-            <div className="map-cell label">A</div>
-            <div className="map-cell label">B</div>
-            <div className="map-cell label">C</div>
-            <div className="map-cell label">D</div>
-            <div className="map-cell label">E</div>
-            {[1,2,3,4,5].map(r => (
-              <React.Fragment key={r}>
-                <div className="map-cell label">{r}</div>
-                {['A','B','C','D','E'].map(c => {
-                  const cd = c + r;
-                  const cell = state.map[cd];
-                  if (!cell) return <div key={cd} className="map-cell"></div>;
-                  const z = ZONE_TYPES[cell.zone];
-                  const owner = cell.owner !== null && cell.owner !== undefined ? state.players[cell.owner] : null;
-                  const pm = state.players.filter(p => p.position === cd && !p.defeated);
-                  const hasMe = pm.some(p => p.id === 0);
-                  const isReachable = reachableCells.has(cd);
-                  const isTargeting = state.meta.awaitingMoveTarget;
-                  // 도착 시 예상 결과 계산
-                  let previewTag = null;
-                  let previewColor = 'var(--yellow)';
-                  if (isTargeting && isReachable) {
-                    const visitedByMe = state.meta.visitedBonusZones?.[0] || {};
-                    const ownerP = owner;
-                    if (ownerP && ownerP.role === 'bloc' && me.role === 'ghost') {
-                      // 레이드 가능
-                      const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
-                      const pct = Math.round(succRolls / 6 * 100);
-                      previewTag = `🗡️ ${pct}%`;
-                      previewColor = pct >= 66 ? 'var(--green)' : (pct >= 33 ? 'var(--yellow)' : 'var(--magenta)');
-                    } else if (ownerP && ownerP.id === 0) {
-                      previewTag = '🏠 내 땅';
-                      previewColor = 'var(--cyan)';
-                    } else if (!ownerP && !visitedByMe[cd] && ZONE_BONUS_POOL[cell.zone]) {
-                      previewTag = '🌟 보너스';
-                      previewColor = 'var(--yellow)';
-                    } else if (visitedByMe[cd]) {
-                      previewTag = '✓ 방문';
-                      previewColor = 'var(--text-dim)';
-                    }
-                  }
-                  const style = {};
-                  if (hasMe) { style.outline = '3px solid var(--cyan)'; style.zIndex = 2; }
-                  if (isTargeting && isReachable) {
-                    style.outline = `2px dashed ${previewColor}`;
-                    style.boxShadow = `0 0 12px ${previewColor}`;
-                    style.cursor = 'crosshair';
-                    style.zIndex = 3;
-                  }
-                  if (isTargeting && !isReachable && !hasMe) { style.opacity = 0.4; }
-                  const onClick = (isTargeting && isReachable) ? () => pickMoveTarget(cd) : undefined;
-                  return (
-                    <div key={cd} className={`map-cell ${z.color}`} style={style} onClick={onClick}>
-                      <div className="coord">{cd}</div>
-                      <div className="ztype">{z.name}</div>
-                      {owner && <div className="owner" style={{ background: owner.role === 'bloc' ? BLOC_SETUP[owner.specific]?.color || '#555' : '#333' }}>P{cell.owner}</div>}
-                      {pm.length > 0 && (
-                        <div className="pm" style={hasMe ? { background: 'var(--cyan)', color: '#000', fontWeight: 900, boxShadow: '0 0 6px var(--cyan)' } : {}}>
-                          {hasMe ? '★' + pm.map(p => p.specific.slice(0,2)).join(',') : pm.map(p => p.specific.slice(0,2)).join(',')}
-                        </div>
-                      )}
-                      {isTargeting && isReachable && previewTag && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 10, color: previewColor, background: 'rgba(0,0,0,0.85)', padding: '2px 4px', borderRadius: 2, pointerEvents: 'none', fontWeight: 900, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{previewTag}</div>
-                      )}
-                      {isTargeting && isReachable && !previewTag && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 16, color: previewColor, textShadow: '0 0 4px #000', pointerEvents: 'none', fontWeight: 900 }}>◎</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        {/* Hand */}
-        <div className="hand-wrap">
-          <h4>
-            ✋ 내 손패 ({me.hand.length}) · {canPlan ? `카드 ${needCards}장 선택 (${selectedCards.length}/${needCards})` : '대기'}
-            {canPlan && selectedCards.length === needCards && (
-              <button className="pa-btn primary" style={{ float: 'right', marginTop: -4 }} onClick={confirmPlan}>✓ 확정</button>
-            )}
-          </h4>
-          {canPlan && selectedCards.length > 0 && (
-            <div style={{ fontSize: 10, color: 'var(--text-dim)', padding: '0 4px 4px', fontFamily: 'Share Tech Mono, monospace' }}>
-              💡 선택한 카드의 <span style={{ color: 'var(--cyan)' }}>▲ 상단</span>/<span style={{ color: 'var(--yellow)' }}>▼ 하단</span> 영역을 클릭해 반쪽 전환 (카드 자체 클릭은 선택/해제)
-            </div>
-          )}
-          <div className="hand">
-            {me.hand.map((cid, idx) => {
-              const c = getCard(cid);
-              if (!c) return null;
-              const sel = selectedCards.includes(cid);
-              const selIdx = sel ? selectedCards.indexOf(cid) : -1;
-              const chosen = selIdx >= 0 ? selectedHalves[selIdx] : null;
-              const topSel = chosen === 'top' || chosen === 'main';
-              const botSel = chosen === 'bot' || chosen === 'side';
-              const handleTopClick = (e) => {
-                e.stopPropagation();
-                if (!canPlan) return;
-                if (!sel) {
-                  // 카드 선택 + top으로 고정
-                  toggleCard(cid);
-                } else {
-                  // 이미 선택됨 → top 아니면 top으로
-                  if (!topSel) cycleHalf(selIdx);
-                }
-              };
-              const handleBotClick = (e) => {
-                e.stopPropagation();
-                if (!canPlan) return;
-                if (!sel) {
-                  // 카드 선택 + 그 다음 bot으로 설정하기 위해 선택 후 toggle
-                  toggleCard(cid);
-                  // selection toggled but default half is top/bot based on order; user can cycle
-                } else {
-                  if (!botSel) cycleHalf(selIdx);
-                }
-              };
-              return (
-                <div key={idx} className={`card ${sel ? 'selected' : ''} ${!canPlan ? 'disabled' : ''}`} style={{ cursor: canPlan ? 'pointer' : 'default' }} onClick={() => canPlan && toggleCard(cid)}>
-                  <div className="ch">
-                    <span className="ci">{c.init || (c.tl ? `T${c.tl}` : '-')}</span>
-                    <span>{c.attr?.map((a, i) => <span key={i} className={`attr-tag a-${a}`} style={{ fontSize: 8, marginLeft: 2 }}>◈{a}</span>)}
-                      {c.loss && <span className="loss-tag">LOSS</span>}
-                    </span>
-                  </div>
-                  <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
-                  <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
-                  <div className="ceff"
-                    onClick={handleTopClick}
-                    style={sel ? {
-                      border: topSel ? '2px solid var(--cyan)' : '2px dashed transparent',
-                      background: topSel ? 'rgba(60, 200, 220, 0.15)' : 'transparent',
-                      cursor: 'pointer',
-                      borderRadius: 3, padding: 2, marginTop: 2,
-                    } : { cursor: canPlan ? 'pointer' : 'default' }}>
-                    {c.top && <><strong style={{ color: 'var(--cyan)' }}>▲ 상단 {sel && topSel && '✓'}</strong><br/>{effectSummary(c.top)}</>}
-                    {c.main && <><strong style={{ color: 'var(--cyan)' }}>▶ 메인 {sel && topSel && '✓'}</strong><br/>{effectSummary(c.main)}</>}
-                  </div>
-                  <div className="cbot"
-                    onClick={handleBotClick}
-                    style={sel ? {
-                      border: botSel ? '2px solid var(--yellow)' : '2px dashed transparent',
-                      background: botSel ? 'rgba(255, 235, 60, 0.15)' : 'transparent',
-                      cursor: 'pointer',
-                      borderRadius: 3, padding: 2, marginTop: 2,
-                    } : { cursor: canPlan ? 'pointer' : 'default' }}>
-                    {c.bot && <><strong style={{ color: 'var(--yellow)' }}>▼ 하단 {sel && botSel && '✓'}</strong><br/>{effectSummary(c.bot)}</>}
-                    {c.side && <><strong style={{ color: 'var(--yellow)' }}>↻ 사이드 {sel && botSel && '✓'}</strong><br/>{effectSummary(c.side)}</>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Phase actions */}
-        <div className="phase-actions">
-          {state.meta.phase === 0 && (
-            <button className="pa-btn primary" onClick={() => dispatch({ type: 'SET_PHASE', phase: 1 })}>
-              ▶ 시장 → 뉴스
-            </button>
-          )}
-          {state.meta.phase === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(60,200,220,0.08)', border: '1px solid var(--cyan)', borderRadius: 4, padding: 8 }}>
-                <div style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: 12 }}>📊 시장 개장</div>
-                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>현재 ₵{me.resources.credit || 0} 보유</div>
-                <button className="pa-btn primary" style={{ marginLeft: 'auto' }} onClick={() => dispatch({ type: 'SET_PHASE', phase: 2 })}>
-                  ▶ 거래 끝 / 계획 단계로
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-                {Object.entries(state.stocks).map(([bl, v]) => {
-                  const myQty = me.stocks[bl] || 0;
-                  const isOwnBloc = me.role === 'bloc' && me.specific === bl;
-                  const canBuy = !isOwnBloc && (me.resources.credit || 0) >= v;
-                  const canSell = !isOwnBloc && myQty > 0;
-                  const color = v > 12 ? 'var(--green)' : (v < 8 ? 'var(--magenta)' : 'var(--text)');
-                  return (
-                    <div key={bl} style={{ background: 'var(--bg2)', border: `1px solid ${isOwnBloc ? 'var(--yellow)' : 'var(--border)'}`, borderRadius: 3, padding: 6, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: 11 }}>{bl}{isOwnBloc && ' ★'}</strong>
-                        <span style={{ color, fontSize: 14, fontWeight: 700 }}>₵{v}</span>
-                      </div>
-                      <div style={{ color: 'var(--text-dim)', fontSize: 9, marginBottom: 4 }}>보유 {myQty}주</div>
-                      {!isOwnBloc && (
-                        <div style={{ display: 'flex', gap: 3 }}>
-                          <button
-                            style={{ flex: 1, fontSize: 9, padding: '3px', background: canBuy ? 'var(--bg3)' : 'var(--bg1)', color: canBuy ? 'var(--green)' : 'var(--text-dim)', border: `1px solid ${canBuy ? 'var(--green)' : 'var(--border)'}`, borderRadius: 2, cursor: canBuy ? 'pointer' : 'not-allowed' }}
-                            disabled={!canBuy}
-                            onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>
-                            + 매수
-                          </button>
-                          <button
-                            style={{ flex: 1, fontSize: 9, padding: '3px', background: canSell ? 'var(--bg3)' : 'var(--bg1)', color: canSell ? 'var(--magenta)' : 'var(--text-dim)', border: `1px solid ${canSell ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: canSell ? 'pointer' : 'not-allowed' }}
-                            disabled={!canSell}
-                            onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>
-                            - 매도
-                          </button>
-                        </div>
-                      )}
-                      {isOwnBloc && <div style={{ fontSize: 9, color: 'var(--yellow)', textAlign: 'center' }}>자사 (거래 불가)</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
-            <button className="pa-btn" disabled>봇 계획 중...</button>
-          )}
-          {state.meta.awaitingMoveTarget && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ color: 'var(--yellow)', fontWeight: 700, fontSize: 13 }}>
-                🎯 이동 목표 선택 — 노란 ◎ 칸 클릭 (최대 {state.meta.moveBudget}칸)
-              </div>
-              <button className="pa-btn" onClick={skipMovePick}>AI에게 맡기기</button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT — Pool, News, Log */}
-      <div className="right-panel">
-        {/* === 승리 진척 (상시 표시) === */}
-        {(() => {
-          if (me.role === 'ghost') {
-            const repGoal = 13;
-            const raidGoal = 2;
-            const rep = me.resources.rep || 0;
-            const raids = state.meta.raidsThisGame?.[0] || 0;
-            const repPct = Math.min(100, Math.round(rep / repGoal * 100));
-            const raidDone = raids >= raidGoal;
-            const repDone = rep >= repGoal;
-            // 가장 가까운 Bloc 구역 + 레이드 성공률 계산
-            const nearest = me.position ? findNearestBlocZone(state, me.position) : null;
-            const nearestDist = nearest ? (nearest === me.position ? 0 : bfsDistance(state, me.position, nearest)) : null;
-            const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
-            const raidPct = Math.round(succRolls / 6 * 100);
-            // 승리 예측: 현재 렙 + 성공 시 +3, 레이드 목표도 충족?
-            const repNeeded = Math.max(0, repGoal - rep);
-            const raidsNeeded = Math.max(0, raidGoal - raids);
-            const oneRaidWins = !repDone && repNeeded <= 3 && raidsNeeded <= 1;
-            const nextTip = repDone && raidDone
-              ? '✅ 승리 조건 충족! 라운드 끝까지 생존'
-              : oneRaidWins && nearest
-                ? `🎯 ${nearest} 레이드 성공 시 즉시 승리 (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`
-                : !nearest
-                  ? 'Bloc 구역이 맵에 없음 — 다음 Bloc 확장 기다리기'
-                  : `${nearest} 레이드 시 렙+3 → ${rep + 3}/${repGoal} (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`;
-            return (
-              <div className="pool-box" style={{ borderColor: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)'), boxShadow: oneRaidWins ? '0 0 12px rgba(255,60,140,0.3)' : undefined }}>
-                <h4 style={{ color: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)') }}>
-                  🎯 승리 조건 (Ghost) {oneRaidWins && <span style={{ fontSize: 9, background: 'var(--magenta)', color: 'var(--bg1)', padding: '1px 5px', borderRadius: 2, marginLeft: 4 }}>한 턴 남음</span>}
-                </h4>
-                <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <span style={{ color: repDone ? 'var(--green)' : 'var(--text)' }}>{repDone ? '✓' : '•'} 렙 </span>
-                    <strong style={{ color: repDone ? 'var(--green)' : 'var(--yellow)' }}>{rep}/{repGoal}</strong>
-                    <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
-                      <div style={{ height: '100%', width: `${repPct}%`, background: repDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 4 }}>
-                    <span style={{ color: raidDone ? 'var(--green)' : 'var(--text)' }}>{raidDone ? '✓' : '•'} 누적 레이드 </span>
-                    <strong style={{ color: raidDone ? 'var(--green)' : 'var(--magenta)' }}>{raids}/{raidGoal}</strong>
-                  </div>
-                  <div style={{ fontSize: 10, color: oneRaidWins ? 'var(--magenta)' : 'var(--text-dim)', marginTop: 6, lineHeight: 1.4, fontWeight: oneRaidWins ? 700 : 400 }}>💡 {nextTip}</div>
-                </div>
-              </div>
-            );
-          } else {
-            const assetGoal = 55;
-            const asset = assetValue(me, state.stocks, state);
-            const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
-            const assetDone = asset >= assetGoal;
-            // 남은 간격 계산
-            const gap = Math.max(0, assetGoal - asset);
-            const myZones = Object.values(state.map).filter(c => c.owner === 0).length;
-            const tip = assetDone
-              ? '✅ 승리 조건 충족! 라운드 끝까지 버티기'
-              : gap <= 10
-                ? `자산 ${gap} 남음 — 구역 확장 2곳 또는 타 블록 주식 매수로 마무리 가능`
-                : `구역 ${Math.ceil(gap / 5)}곳 확장 or 타 블록 주식 모으기 (현재 ${myZones}구역)`;
-            return (
-              <div className="pool-box" style={{ borderColor: assetDone ? 'var(--green)' : 'var(--yellow)' }}>
-                <h4 style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Bloc 튜토리얼)</h4>
-                <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <span style={{ color: assetDone ? 'var(--green)' : 'var(--text)' }}>{assetDone ? '✓' : '•'} 자산 </span>
-                    <strong style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>{asset}/{assetGoal}</strong>
-                    <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
-                      <div style={{ height: '100%', width: `${assetPct}%`, background: assetDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6, lineHeight: 1.4 }}>💡 {tip}</div>
-                </div>
-              </div>
-            );
-          }
-        })()}
-
-        <div className="pool-box">
-          <h4>🎨 내 속성 풀 (개인)</h4>
-          <div className="attr-row">
-            {Object.entries(me.pool || {}).map(([k, v]) => (
-              <span key={k} className={`attr-tag a-${k}`} style={{ opacity: v > 0 ? 1 : 0.3 }}>◈{k}<span style={{ marginLeft: 2 }}>{v}</span></span>
-            ))}
-          </div>
-          <div style={{ fontSize: 9, color: 'var(--text-dim)', marginTop: 4 }}>
-            ※ 개인 풀 — 매 라운드 ½ 감쇠 (올림)
-          </div>
-        </div>
-
-        {/* === 이번 턴 변화 요약 === */}
-        {state.meta.turnDiff && (
-          <div className="pool-box" style={{ borderColor: 'var(--yellow)' }}>
-            <h4 style={{ color: 'var(--yellow)' }}>⚡ 이번 턴 변화</h4>
-            {state.meta.turnDiff.map((d, i) => {
-              const p = state.players[i];
-              if (!p || p.defeated) return null;
-              const marker = i === 0 ? '⭐ ' : '   ';
-              const parts = [];
-              if (d.hp !== 0) parts.push(<span key="hp" style={{ color: d.hp > 0 ? 'var(--green)' : 'var(--magenta)' }}>HP{d.hp>0?'+':''}{d.hp}</span>);
-              if (d.rep !== 0) parts.push(<span key="rep" style={{ color: d.rep > 0 ? 'var(--green)' : 'var(--magenta)' }}>렙{d.rep>0?'+':''}{d.rep}</span>);
-              if (d.credit !== 0) parts.push(<span key="cr" style={{ color: d.credit > 0 ? 'var(--green)' : 'var(--magenta)' }}>₵{d.credit>0?'+':''}{d.credit}</span>);
-              if (d.asset !== 0) parts.push(<span key="as" style={{ color: d.asset > 0 ? 'var(--green)' : 'var(--magenta)' }}>자산{d.asset>0?'+':''}{d.asset}</span>);
-              if (d.zones !== 0) parts.push(<span key="zo" style={{ color: d.zones > 0 ? 'var(--green)' : 'var(--magenta)' }}>구역{d.zones>0?'+':''}{d.zones}</span>);
-              if (d.wanted !== 0) parts.push(<span key="wt" style={{ color: 'var(--magenta)' }}>수배{d.wanted>0?'+':''}{d.wanted}</span>);
-              if (d.moved) parts.push(<span key="mv" style={{ color: 'var(--cyan)' }}>🚶{d.moved}</span>);
-              if (d.poolDelta) parts.push(<span key="pl" style={{ color: 'var(--text-dim)' }}>[{d.poolDelta}]</span>);
-              return (
-                <div key={i} style={{ fontSize: 10, fontFamily: 'Share Tech Mono, monospace', marginBottom: 2, lineHeight: 1.4 }}>
-                  {marker}P{i} {p.specific.slice(0,4)} · {parts.length > 0 ? parts.reduce((acc, el, j) => j === 0 ? [el] : [...acc, ' · ', el], []) : <span style={{ color: 'var(--text-dim)' }}>변화 없음</span>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className={`pool-box signal-box sig-${state.signalDie}`}>
-          📡 {state.signalDie}
-        </div>
-
-        <div className="pool-box">
-          <h4>📊 주가 · 보유 · 거래</h4>
-          <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
-            {Object.entries(state.stocks).map(([bl, v]) => {
-              const myQty = me.stocks[bl] || 0;
-              const isOwnBloc = me.role === 'bloc' && me.specific === bl;
-              const canTrade = state.meta.phase === 1;
-              const canBuy = canTrade && !isOwnBloc && (me.resources.credit || 0) >= v;
-              const canSell = canTrade && !isOwnBloc && myQty > 0;
-              return (
-                <div key={bl} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 0', borderBottom: '1px solid var(--bg3)' }}>
-                  <span style={{ color: 'var(--text-dim)', width: 60 }}>{bl}{isOwnBloc ? '★' : ''}:</span>
-                  <span style={{ color: v > 10 ? 'var(--green)' : (v < 10 ? 'var(--magenta)' : 'var(--text)'), width: 24, textAlign: 'right' }}>{v}</span>
-                  <span style={{ color: 'var(--text-dim)', width: 36 }}>보유 {myQty}</span>
-                  {canBuy && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매수 ₵{v}</button>}
-                  {canSell && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--magenta)', border: '1px solid var(--magenta)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매도 ₵{v}</button>}
-                </div>
-              );
-            })}
-          </div>
-          {state.meta.phase === 1 && (
-            <div style={{ fontSize: 9, color: 'var(--cyan)', marginTop: 4 }}>
-              💡 시장 개장 중 — 매수(녹)/매도(자주) 클릭. ₵보유 {me.resources.credit || 0}
-            </div>
-          )}
-        </div>
-
-        {state.currentNews && (
-          <div className="news-box">
-            <div className="nh">📰 뉴스 {state.currentNews.id}</div>
-            <div style={{ fontWeight: 700 }}>{state.currentNews.title}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic', marginTop: 3 }}>{state.currentNews.flavor}</div>
-          </div>
-        )}
-
-        <div className="pool-box">
-          <h4>🏆 업적 (선언)</h4>
-          <div style={{ display: 'grid', gap: 3, fontSize: 10 }}>
-            {ACHIEVEMENTS_IN.map(a => {
-              const claimed = state.meta.claimedAchievements[a.id] !== undefined;
-              const mine = state.meta.claimedAchievements[a.id] === 0;
-              return (
-                <button
-                  key={a.id}
-                  className="pa-btn"
-                  style={{ fontSize: 10, padding: '4px 6px', opacity: claimed ? 0.4 : 1, background: mine ? 'var(--green)' : 'var(--bg3)', color: mine ? '#000' : 'var(--text)' }}
-                  disabled={claimed}
-                  onClick={() => dispatch({ type: 'CLAIM_ACHIEVEMENT', playerIdx: 0, achievementId: a.id })}
-                >
-                  {a.tier === 'gold' ? '🥇' : a.tier === 'silver' ? '🥈' : '🥉'} {a.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="log-box">
-          <div className="log-head">
-            <h4>📜 플레이 로그</h4>
-            <button className="copy-btn" onClick={() => copyLogToClipboard(state.log)}>📋 복사</button>
-          </div>
-          <div className="log-scroll">
-            {state.log.slice().reverse().map((l, i) => {
-              const cls = classifyLog(l.message);
-              return (
-                <div key={i} className={`log-entry ${cls}`}>
-                  <span className="tag">R{l.round}·P{l.phase + 1}</span>
-                  {l.message}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function classifyLog(msg) {
-  if (!msg) return '';
-  const classes = [];
-  if (msg.includes('⭐ 당신')) classes.push('me');
-  if (msg.includes('🔄 R') || msg.includes('R시작') || msg.includes('시작 ·')) classes.push('round');
-  if (msg.includes('📊') || msg.includes('요약')) classes.push('summary');
-  if (msg.includes('🗡️') || msg.includes('레이드')) classes.push('raid');
-  else if (msg.includes('💥')) classes.push('combat');
-  if (msg.includes('💰') || msg.includes('📈') || msg.includes('수입')) classes.push('income');
-  if (msg.includes('📰')) classes.push('news');
-  if (msg.includes('🚶')) classes.push('move');
-  return classes.join(' ');
-}
-
-function copyLogToClipboard(log) {
-  const text = log.map(l => `[R${l.round}·P${l.phase + 1}] ${l.message}`).join('\n');
-  navigator.clipboard.writeText(text).then(
-    () => alert('✅ 로그 복사 완료 · ' + log.length + '개 엔트리'),
-    () => {
-      // Fallback for file:// or clipboard blocked
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); alert('✅ 로그 복사 완료 (fallback)'); }
-      catch (e) { alert('❌ 복사 실패. 로그창 스크롤해서 수동 선택·Ctrl+C'); }
-      document.body.removeChild(ta);
-    }
-  );
-}
-
-function effectSummary(eff) {
-  if (!eff) return '-';
-  const parts = [];
-
-  if (eff.cost && eff.cost.length) parts.push(`[${eff.cost.join('+')} 소비]`);
-  if (eff.gen) parts.push(`속성 ${eff.gen.split(':').map(x => `${x}+1`).join(' ')} 생성`);
-
-  if (eff.move) parts.push(`이동 ${eff.move}칸`);
-  if (eff.atk) parts.push(`공격 +${eff.atk} (같은 구역 적)`);
-  if (eff.atk_x2) parts.push(`공격 2배 (이번 라운드)`);
-  if (eff.atk_x3_retort) parts.push(`반격 공격 3배`);
-  if (eff.def) parts.push(`방어 +${eff.def}`);
-  if (eff.def_ignore) parts.push(`적 방어 무시`);
-
-  if (eff.scout) parts.push(`정찰 ${eff.scout}칸 (토큰 확인)`);
-  if (eff.stealth) parts.push('은신 (추적 불가)');
-  if (eff.break_veil === 99) parts.push('베일 완전 해제');
-  else if (eff.break_veil) parts.push(`베일 강도 -${eff.break_veil}`);
-
-  if (eff.deploy_op) parts.push(`OPERATIVE ${eff.deploy_op}명 배치 → 인접 빈 구역 자동 점령`);
-  if (eff.fortify) parts.push(`자사 구역 방어력 +${eff.fortify} 영구`);
-
-  if (eff.crash_stock) parts.push(`대상 블록 주가 -${eff.crash_stock}`);
-  if (eff.crash_target) parts.push(`지정 블록 주가 -${eff.crash_target}`);
-  if (eff.peek_hand) parts.push('상대 패 1장 엿보기');
-  if (eff.peek_full) parts.push('상대 패 전체 확인');
-  if (eff.peek_news) parts.push(`뉴스 다음 ${eff.peek_news}장 미리 보기`);
-
-  if (eff.heal_all) parts.push(`아군 Ghost 전원 HP ${eff.heal_all}% 회복`);
-  if (eff.heal) parts.push(`HP +${eff.heal} 회복`);
-
-  if (eff.weapons) parts.push(`무기 +${eff.weapons}`);
-  if (eff.credit) parts.push(`₵ +${eff.credit}`);
-  if (eff.parts) parts.push(`부품 +${eff.parts}`);
-  if (eff.data) parts.push(`데이터 +${eff.data}`);
-  if (eff.rep) parts.push(`렙 +${eff.rep}`);
-  if (eff.contact) parts.push(`접선 +${eff.contact}`);
-
-  if (eff.heat) parts.push(`공권력 ${eff.heat > 0 ? '+' : ''}${eff.heat}`);
-  if (eff.clear_wanted) parts.push('현상수배 0 초기화');
-  if (eff.clear_track) parts.push('추적 기록 삭제');
-  if (eff.spd) parts.push(`속도 +${eff.spd}`);
-  if (eff.always_first) parts.push('무조건 선공');
-  if (eff.enemy_spd) parts.push(`적 속도 ${eff.enemy_spd}`);
-
-  if (eff.cancel_card) parts.push('상대 행동 카드 1장 취소');
-  if (eff.cancel_action) parts.push('상대 행동 1개 취소');
-  if (eff.stop_combat) parts.push('진행 중 전투 즉시 중단');
-  if (eff.hide_actions_1r) parts.push('자사 행동 1R 비공개');
-  if (eff.hide_actions) parts.push('이번 라운드 행동 비공개');
-  if (eff.veil_up) parts.push(`자사 구역 베일 강도 +${eff.veil_up} 영구`);
-
-  if (eff.draw_quest) parts.push(`퀘스트 카드 ${eff.draw_quest}장 획득`);
-  if (eff.blackmarket) parts.push(`블랙마켓 카드 ${eff.blackmarket}장 획득`);
-  if (eff.revive) parts.push('사망 고스트 1명 부활');
-  if (eff.broker_fee) parts.push(`거래 수수료 +${eff.broker_fee}%`);
-
-  if (eff.trap) parts.push('구역에 함정 설치');
-  if (eff.trap_damage) parts.push(`함정 발동 시 HP -${eff.trap_damage}`);
-  if (eff.steal) parts.push(`적 ${eff.steal} 속성 1개 탈취`);
-  if (eff.infiltrate) parts.push('블록 소속 위장');
-  if (eff.disguise) parts.push('이번 라운드 블록 위장');
-
-  if (eff.swap) parts.push('자원 2종 1:1 교환');
-  if (eff.swap_ratio) parts.push(`자원 1:${eff.swap_ratio} 유리한 교환`);
-
-  if (eff.stock_op) parts.push('블록 1곳 주가 ±1 비공개 조작');
-  if (eff.zone_income_2x) parts.push('자사 구역 수입 2배 (이번 라운드)');
-  if (eff.zero_income) parts.push('대상 구역 수입 0 (이번 라운드)');
-
-  if (eff.loss) parts.push('⚠ 소각 (Long Rest만 복구)');
-
-  if (parts.length === 0) return '특수 효과';
-  return parts.join(' · ');
-}
-
-// ============================================================================
-// ROOT
-// ============================================================================
-
-function buildInitial(role, specific) {
-  const initial = initGame(role, specific);
-  initial.players = initial.players.map(p => {
-    const handSize = 6;
-    return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
-  });
-  return initial;
-}
-
-function App() {
-  const [state, setState] = useState(null);
-  const savedRef = useRef(false);
-
-  const startGame = useCallback((role, specific) => {
-    console.log('[SIM] Start game:', role, specific);
-    savedRef.current = false;
-    setState(buildInitial(role, specific));
-  }, []);
-
-  const dispatch = useCallback((action) => {
-    if (action.type === 'RESET') {
-      savedRef.current = false;
-      setState(buildInitial(action.humanRole, action.humanSpecific));
-      return;
-    }
-    if (action.type === 'BACK_TO_MENU') {
-      savedRef.current = false;
-      setState(null);
-      return;
-    }
-    setState(prev => {
-      if (!prev) return prev;
-      try {
-        return reducer(prev, action);
-      } catch (e) {
-        console.error('[SIM] Reducer error:', e, 'Action:', action);
-        return prev;
-      }
-    });
-  }, []);
-
-  // 게임 종료 시 히스토리 저장 (한 번만)
-  useEffect(() => {
-    if (state?.meta?.gameOver && !savedRef.current) {
-      savedRef.current = true;
-      saveGameRecord(buildGameRecord(state));
-    }
-  }, [state?.meta?.gameOver]);
-
-  if (!state) {
-    return <SetupScreen onStart={startGame} />;
+  // 만약 라운드 상한 초과로 끝났으면 점수로 결정
+  if (!state.meta.gameOver) {
+    state = checkVictoryByPoints(state);
   }
 
-  return <GameScreen state={state} dispatch={dispatch} />;
+  return {
+    winner: state.meta.winner,
+    winnerRole: state.meta.winner != null ? state.players[state.meta.winner].role : null,
+    winnerSpecific: state.meta.winner != null ? state.players[state.meta.winner].specific : null,
+    reason: state.meta.winReason,
+    round: state.meta.round,
+    p0Rep: state.players[0].resources.rep,
+    p0Asset: assetValue(state.players[0], state.stocks, state),
+    p0Raids: state.meta.raidsThisGame[0] || 0,
+    p0Tl: state.players[0].tl,
+    p0Hp: state.players[0].hp,
+    p0Defeated: state.players[0].defeated,
+    p0Role: state.players[0].role,
+    p0Specific: state.players[0].specific,
+    p0Pool: { ...state.players[0].pool },
+    heat: state.heat,
+    finalState: state,
+  };
 }
 
-// Mount
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+// 배치 실행
+function batchRun(N = 100) {
+  const ghostClasses = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
+  const blocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
 
-</script>
+  const results = [];
+  let errors = 0;
+  for (let i = 0; i < N; i++) {
+    const humanRole = i % 2 === 0 ? 'ghost' : 'bloc';
+    const humanSpecific = humanRole === 'ghost' ? ghostClasses[i % ghostClasses.length] : blocs[i % blocs.length];
+    try {
+      const r = runOneGame({ humanRole, humanSpecific });
+      results.push(r);
+    } catch (e) {
+      errors++;
+      if (errors <= 3) console.error(`Game ${i} error:`, e.message);
+    }
+  }
+  return { results, errors };
+}
 
-</body>
-</html>
+// 분석
+function analyze(results) {
+  const byRole = { ghost: { total: 0, wins: 0, avgRound: 0, avgRep: 0, avgRaids: 0, avgTl: 0 }, bloc: { total: 0, wins: 0, avgRound: 0, avgAsset: 0, avgTl: 0 } };
+  const bySpecific = {};
+  const winnerRoles = { ghost: 0, bloc: 0, null: 0 };
+  const reasons = {};
+  const rounds = [];
+  const ghostDefeats = [];
+
+  for (const r of results) {
+    const rk = r.p0Role;
+    byRole[rk].total++;
+    if (r.winner === 0) byRole[rk].wins++;
+    byRole[rk].avgRound += r.round;
+    byRole[rk].avgTl += r.p0Tl;
+    if (rk === 'ghost') { byRole[rk].avgRep += r.p0Rep; byRole[rk].avgRaids += r.p0Raids; }
+    else byRole[rk].avgAsset += r.p0Asset;
+
+    bySpecific[r.p0Specific] = bySpecific[r.p0Specific] || { total: 0, wins: 0 };
+    bySpecific[r.p0Specific].total++;
+    if (r.winner === 0) bySpecific[r.p0Specific].wins++;
+
+    winnerRoles[r.winnerRole || 'null']++;
+    const reasonKey = (r.reason || '무승부').slice(0, 30);
+    reasons[reasonKey] = (reasons[reasonKey] || 0) + 1;
+    rounds.push(r.round);
+    if (r.p0Defeated) ghostDefeats.push(r.p0Specific);
+  }
+
+  for (const rk of ['ghost', 'bloc']) {
+    const b = byRole[rk];
+    if (b.total > 0) {
+      b.winRate = (b.wins / b.total * 100).toFixed(1) + '%';
+      b.avgRound = (b.avgRound / b.total).toFixed(1);
+      b.avgTl = (b.avgTl / b.total).toFixed(1);
+      if (rk === 'ghost') { b.avgRep = (b.avgRep / b.total).toFixed(1); b.avgRaids = (b.avgRaids / b.total).toFixed(2); }
+      else b.avgAsset = (b.avgAsset / b.total).toFixed(1);
+    }
+  }
+
+  for (const k of Object.keys(bySpecific)) {
+    bySpecific[k].winRate = (bySpecific[k].wins / bySpecific[k].total * 100).toFixed(1) + '%';
+  }
+
+  return {
+    N: results.length,
+    byRole,
+    bySpecific,
+    winnerRoles,
+    topReasons: Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 8),
+    avgRound: (rounds.reduce((a, b) => a + b, 0) / rounds.length).toFixed(2),
+    minRound: Math.min(...rounds),
+    maxRound: Math.max(...rounds),
+    ghostDefeatCount: ghostDefeats.length,
+  };
+}
+
+// 실행
+const N = parseInt(process.argv[2]) || 50;
+console.log(`\n=== DEAD NEXUS 헤드리스 시뮬 · ${N}판 ===\n`);
+const { results, errors } = batchRun(N);
+const a = analyze(results);
+
+console.log(`판수: ${a.N} (에러 ${errors})`);
+console.log(`평균 라운드: ${a.avgRound} (최소 ${a.minRound}, 최대 ${a.maxRound})`);
+console.log(`승자 역할: Ghost ${a.winnerRoles.ghost} / Bloc ${a.winnerRoles.bloc} / 없음 ${a.winnerRoles.null}`);
+console.log('');
+console.log('역할별 P0 성적:');
+console.log('  Ghost:', a.byRole.ghost);
+console.log('  Bloc: ', a.byRole.bloc);
+console.log('');
+console.log('클래스/블록별 승률:');
+Object.entries(a.bySpecific).sort((a, b) => parseFloat(b[1].winRate) - parseFloat(a[1].winRate)).forEach(([k, v]) => {
+  console.log(`  ${k}: ${v.winRate} (${v.wins}/${v.total})`);
+});
+console.log('');
+console.log('주요 승리 사유 Top 8:');
+a.topReasons.forEach(([r, c]) => console.log(`  [${c}] ${r}`));
+console.log('');
+console.log(`P0 패배(사망): ${a.ghostDefeatCount}판`);
