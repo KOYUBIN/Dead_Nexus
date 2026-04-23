@@ -99,7 +99,9 @@ function batchRun(N = 100) {
   const errorList = [];
   for (let i = 0; i < N; i++) {
     const humanRole = i % 2 === 0 ? 'ghost' : 'bloc';
-    const humanSpecific = humanRole === 'ghost' ? ghostClasses[i % ghostClasses.length] : blocs[i % blocs.length];
+    // FIX: i/2 used so all 6 Ghost classes + 5 Blocs cycle properly
+    const slot = Math.floor(i / 2);
+    const humanSpecific = humanRole === 'ghost' ? ghostClasses[slot % ghostClasses.length] : blocs[slot % blocs.length];
     try {
       const r = runOneGame({ humanRole, humanSpecific });
       results.push(r);

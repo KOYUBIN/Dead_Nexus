@@ -14,6 +14,80 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [0.5.13] — 캐릭터 상성 + BLADE/MOLE/RIGGER 부활 + 맵 규칙 프레임워크 (2026-04-23)
+
+### 🐛 하네스 버그 수정
+v0.5.9~0.5.12 시뮬에 **BLADE/RIGGER/MOLE이 한 번도 P0로 배정 안 되던 버그**. `ghostClasses[i % 6]`에서 i가 짝수일 때만 ghost 턴이라 0,2,4 (CIPHER/BROKER/DRIFTER)만 뽑혔음. `Math.floor(i/2) % 6`로 수정. 드러난 진짜 현실:
+- BLADE 2.9% (v0.5.12 시뮬 첫 정확한 데이터)
+- MOLE 0~6% 
+- RIGGER 0~3%
+
+이유: 세 클래스 고유 효과 키(`execute`, `peek_bloc`, `frame`, `emp_pulse`, `shield_gen` 등 **22종**)가 `applyEffect`에 미구현. 카드 내면서 아무 일도 안 일어남.
+
+### 🎯 캐릭터 상성 시스템 (신규)
+
+**Ghost 6-방향 사이클**: 공격자가 방어자를 카운터하면 결투 atk +2
+```
+BLADE → CIPHER → MOLE → BROKER → DRIFTER → RIGGER → BLADE
+```
+테마: 물리>해킹, 해킹>잠입, 잠입>협상, 협상>기동, 기동>기술, 기술>물리
+
+**Ghost → Bloc 카운터**: Ghost 클래스가 타겟 Bloc과 상성 시 레이드 atk +1
+- BLADE → IRONWALL (물리 대 물리)
+- CIPHER → VANTA (정보 대 정보)
+- BROKER → CARBON (중개 대 자원)
+- MOLE → HELIX (잠입 대 생체)
+- DRIFTER → AXIOM (기동 대 AI 예측)
+- RIGGER → CARBON (기술 대 인프라)
+
+UI 반영: 결투 모달·레이드 모달에 "🎯 상성 유리" 녹색 배지 + 보너스 수치 표시, 로그에 `🎲5+4+상성2=11` 형식 출력.
+
+### 🔧 BLADE/MOLE/RIGGER 효과 22종 폴백 구현
+
+**BLADE 전투 계열**: `execute` (렙+4), `frenzy`/`atk_per_hp` (HP비례 렙), `hp_to_1`/`last_stand` (HP→1 후 렙+5), `negate`/`shield` (HP+2), `point_blank`/`surprise` (렙+2·₵+2)
+
+**MOLE 침투 계열**: `peek_bloc`/`steal_card` (렙+2·₵+3), `bloc_resource`/`vote_flip` (렙+3·₵+4), `frame`/`swap_blame` (수배-2·렙+2), `infiltrate`/`disguise` (지도 3R 노출·렙+1), `scandal`/`stock_dmg` (타겟 주가-2·렙+2), `permanent_clear` (수배→0·렙+2)
+
+**RIGGER 기술 계열**: `emp_pulse`/`tech_breach` (주가-3·데이터+2·렙+1), `field_craft`/`jury_rig` (부품+3·무기+1·렙+1), `shield_gen`/`drone_swarm`/`overclock` (판정+2·렙+2), `disable_tl`/`force_tl_down` (적 TL-1·렙+3), `temp_tl` (렙+2), `transfer_ally`/`fuel` (₵+2·부품+1)
+
+**공통**: `break_veil`, `force_enter`, `leave_fire`/`burn_behind`/`smuggle` 등 경로·잠입 관련
+
+### 🗺️ 맵 크기별 규칙 프레임워크 (신규)
+
+```js
+MAP_RULES = {
+  '5x5':   { roundLimit: 10, driftAtkOverride: 2, driftHpOverride: 8, assetGoal: 50, repGoal: 20 },
+  '11x11': { roundLimit: 12, driftAtkOverride: 4, driftHpOverride: 9, assetGoal: 60, repGoal: 40 },
+}
+```
+
+DRIFTER 너프는 **5×5 튜토리얼 전용**, 11×11 표준에선 원래 HP 9·ATK 4 유지. 맵이 넓으면 이동 카드 가치가 자연 하락하므로 풀 파워 정상.
+
+### 📊 결과 (400판 시뮬)
+
+| 클래스 | v0.5.9 | v0.5.12 | v0.5.13 | 변화 (v0.5.9→v0.5.13) |
+|---|---|---|---|---|
+| DRIFTER | 62.5% | 47% | **30.3%** | -32pt |
+| CIPHER | 17.6% | 16.4% | 20.6% | +3pt |
+| BLADE | — (측정 불가) | 2.9% | **20.6%** | 정상화 |
+| IRONWALL | 0% | 10% | 17.5% | +17.5pt |
+| VANTA | 10% | 10% | 12.5% | +2.5pt |
+| HELIX | 10% | 22.5% | 12.5% | +2.5pt |
+| CARBON | 5% | 7.5% | 10% | +5pt |
+| BROKER | 0% | 22.4% | 9.1% | +9pt |
+| AXIOM | 20% | 10% | 7.5% | -12.5pt |
+| MOLE | — | — | 6.1% | 측정 시작 |
+| RIGGER | — | — | 3% | 측정 시작 |
+
+**격차 개선**: v0.5.9 DRIFTER 62%와 BROKER 0%의 62pt 격차 → v0.5.13에서 30%와 3%의 **27pt로 절반**. 평균 라운드 2.86 → 3.74 유지.
+
+### 남은 과제 (v0.5.14+)
+- MOLE·RIGGER 6%·3%로 여전히 저조 — 효과 폴백 금액 상향 or 클래스 전용 보너스
+- AXIOM 7.5% — V 속성 공급 구조 개편 필요
+- 11×11 맵 시뮬레이터 구현 (현재는 데이터만)
+
+---
+
 ## [0.5.12] — DRIFTER 너프 + 전역 이동 수치 재조정 + BROKER 복구 (2026-04-23)
 
 ### 발견
