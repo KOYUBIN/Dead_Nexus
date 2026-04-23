@@ -773,6 +773,61 @@ const countersGhost = (attacker, defender) => GHOST_COUNTERS[attacker]?.beats ==
 const countersBloc  = (ghost, bloc) => GHOST_COUNTERS[ghost]?.bloc === bloc;
 
 // ============================================================================
+// 레이드 풀세트 시스템 (v0.5.22)
+// ============================================================================
+const RAID_TYPES = {
+  violent: {
+    name: '폭력형', icon: '🗡',
+    desc: '정면 돌격. 큰 보상, 큰 위험',
+    useStat: 'atk',
+    threshold: 5,
+    success: { rep: 4, stockHit: 3, wanted: 2, heat: 1 },
+    failure: { hp: 2, wanted: 1, heat: 1 },
+  },
+  stealth: {
+    name: '은밀형', icon: '🕶',
+    desc: '조용히 털기. 보상 낮지만 안전',
+    useStat: 'spd',
+    threshold: 5,
+    success: { rep: 2, stockHit: 2, wanted: 0, heat: 0 },
+    failure: { hp: 0, wanted: 1, heat: 0 },
+  },
+  hack: {
+    name: '해킹형', icon: '💾',
+    desc: '원격 타격. 경제 큰 타격, HP 안전',
+    useStat: 'hack',
+    threshold: 5,
+    success: { rep: 2, stockHit: 4, wanted: 1, heat: 0, data: 2 },
+    failure: { hp: 0, wanted: 0, heat: 2, data: -1 },
+  },
+};
+
+// 구역 타입별 추가 전리품 (성공 시 합산)
+const ZONE_LOOT = {
+  bank:  { credit: 5, label: '₵+5' },
+  data:  { data: 3, peek_news: 1, label: '데이터+3 · 뉴스 미리보기' },
+  arms:  { weapons: 3, label: '🔩+3' },
+  work:  { parts: 3, label: '⚙+3' },
+  heal:  { full_heal: 1, label: 'HP 완전 회복' },
+  club:  { credit: 3, influence: 1, label: '₵+3 · 🎙+1' },
+  home:  { credit: 2, parts: 1, label: '₵+2 · ⚙+1' },
+  aux:   { credit: 2, all_attr: 1, label: '₵+2 · 전속성+1' },
+  nex:   { rep: 3, all_attr: 1, label: '★+3 추가 · 전속성+1' },
+  port:  { weapons: 2, credit: 2, label: '🔩+2 · ₵+2' },
+  ruin:  { parts: 5, label: '⚙+5 (잡동사니 탈취)' },
+  cop:   { wanted: -2, label: '수배-2 (압수 기록 훔침)' },
+};
+
+// Bloc별 자동 반격 (구역 방어 시 자동 소비)
+const BLOC_DEFENSE = {
+  VANTA:    { detect: 1 },        // 감지 → 접근 판정에 -2
+  IRONWALL: { threshold_plus: 1 }, // 무장 → 실행 threshold +1 (완화 v0.5.22)
+  HELIX:    { threshold_plus: 0 }, // 거의 없음
+  AXIOM:    { all_plus: 1 },       // AI 보조 → 판정 -1 (약간)
+  CARBON:   { threshold_plus: 0 }, // 방어 없음
+};
+
+// ============================================================================
 // 맵 크기별 특수 규칙 (v0.5.13)
 // ============================================================================
 // 5×5 튜토리얼: 좁은 맵 → 이동 가치 상향 / DRIFTER HP·ATK 보정 (이미 적용)
@@ -1175,7 +1230,171 @@ function reducer(state, action) {
     case 'SKIP_ZONE_BONUS':
       return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
 
+    case 'RAID_SELECT_TYPE': {
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, selectedType: action.raidType, phase: 'invest' } } };
+    }
+
+    case 'RAID_INVEST': {
+      // action.item: 'weapons' | 'data' | 'poolAttr' (with action.attr for pool)
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      const me = state.players[0];
+      const inv = { ...pr.invested };
+      if (action.item === 'weapons' && (me.resources.weapons || 0) > inv.weapons) {
+        inv.weapons++;
+      } else if (action.item === 'data' && (me.resources.data || 0) > inv.data) {
+        inv.data++;
+      } else if (action.item === 'poolAttr' && action.attr) {
+        if ((me.pool?.[action.attr] || 0) > 0 && !inv.poolAttr) {
+          inv.poolAttr = action.attr;
+        }
+      } else if (action.item === 'unset_pool') {
+        inv.poolAttr = null;
+      } else if (action.item === 'reset') {
+        inv.weapons = 0; inv.data = 0; inv.poolAttr = null;
+      }
+      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, invested: inv } } };
+    }
+
+    case 'RAID_EXECUTE': {
+      const pr = state.meta.pendingRaid;
+      if (!pr || !pr.selectedType) return state;
+      let s = { ...state };
+      const me = s.players[0];
+      const rtype = RAID_TYPES[pr.selectedType];
+      const zoneLoot = ZONE_LOOT[pr.zoneType] || {};
+      const bloc = pr.bloc;
+      const counterBonus = countersBloc(me.specific, bloc) ? 1 : 0;
+
+      // 투자 자원 소비
+      const inv = pr.invested;
+      const newRes = { ...me.resources };
+      if (inv.weapons > 0) newRes.weapons = Math.max(0, (newRes.weapons || 0) - inv.weapons);
+      if (inv.data > 0) newRes.data = Math.max(0, (newRes.data || 0) - inv.data);
+      const newPool = { ...(me.pool || {}) };
+      if (inv.poolAttr) newPool[inv.poolAttr] = Math.max(0, (newPool[inv.poolAttr] || 0) - 1);
+
+      // Bloc 자동 반격
+      const defense = BLOC_DEFENSE[bloc] || {};
+      let thresholdMod = 0;
+      let approachMod = 0;
+      let executeMod = 0;
+      let escapeMod = 0;
+      const defenseLogs = [];
+      if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseLogs.push(`${bloc} 방어 +${defense.threshold_plus} threshold`); }
+      if (defense.detect) { approachMod -= 2; defenseLogs.push(`${bloc} 센서 감지 (접근 -2)`); }
+      if (defense.all_plus) { approachMod += 0 - defense.all_plus; executeMod -= defense.all_plus; escapeMod -= defense.all_plus; defenseLogs.push(`${bloc} AI 보조 (전 판정 ${-defense.all_plus})`); }
+      if (pr.fortified > 0) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
+
+      const finalThreshold = rtype.threshold + thresholdMod;
+
+      // 투자 보너스
+      const zoneAttr = ZONE_TYPES[pr.zoneType]?.attr;
+      const poolBonus = inv.poolAttr === zoneAttr ? 2 : (inv.poolAttr ? 1 : 0);
+      const execBonus = inv.weapons + counterBonus + executeMod;
+      const approachBonus = inv.data + approachMod;
+      const escapeBonus = escapeMod;
+
+      // === 3단계 판정 ===
+      // 1. Approach (접근) — d6 + SHADE 속성 투자 (data) vs 4
+      const approachRoll = d6();
+      const approachTotal = approachRoll + approachBonus + (inv.poolAttr === 'S' ? 2 : 0);
+      const approachOK = approachTotal >= 4;
+
+      // 2. Execute (실행) — d6 + 선택한 스탯 + 투자 + 상성 vs threshold
+      const execRoll = d6();
+      const statVal = me.stats[rtype.useStat] || 0;
+      const execTotal = execRoll + statVal + execBonus + poolBonus + (approachOK ? 0 : -2);
+      const execOK = execTotal >= finalThreshold;
+
+      // 3. Escape (도주) — d6 + SPD vs 3
+      const escapeRoll = d6();
+      const escapeTotal = escapeRoll + me.stats.spd + escapeBonus;
+      const escapeOK = escapeTotal >= 3;
+
+      // 결과 적용
+      const cell = s.map[pr.coord];
+      let rewards = rtype.success;
+      let outcome = 'success';
+      if (!execOK) {
+        rewards = rtype.failure;
+        outcome = 'failure';
+      }
+
+      const ps = [...s.players];
+      let updatedP = { ...me, resources: newRes, pool: newPool };
+
+      // 보상/페널티 적용
+      if (outcome === 'success') {
+        updatedP.resources.rep = (updatedP.resources.rep || 0) + (rewards.rep || 0);
+        if (rewards.data) updatedP.resources.data = (updatedP.resources.data || 0) + rewards.data;
+        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
+        // 구역 차등 전리품
+        if (zoneLoot.credit) updatedP.resources.credit = (updatedP.resources.credit || 0) + zoneLoot.credit;
+        if (zoneLoot.data) updatedP.resources.data = (updatedP.resources.data || 0) + zoneLoot.data;
+        if (zoneLoot.weapons) updatedP.resources.weapons = (updatedP.resources.weapons || 0) + zoneLoot.weapons;
+        if (zoneLoot.parts) updatedP.resources.parts = (updatedP.resources.parts || 0) + zoneLoot.parts;
+        if (zoneLoot.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + zoneLoot.influence;
+        if (zoneLoot.rep) updatedP.resources.rep += zoneLoot.rep;
+        if (zoneLoot.wanted) updatedP.wanted = Math.max(0, (updatedP.wanted || 0) + zoneLoot.wanted);
+        if (zoneLoot.full_heal) updatedP.hp = updatedP.maxHp;
+        if (zoneLoot.all_attr) ['M','I','V','S','B','A'].forEach(a => { updatedP.pool[a] = (updatedP.pool[a] || 0) + 1; });
+        if (zoneLoot.peek_news) s = { ...s, meta: { ...s.meta, peekNews: (s.meta.peekNews || 0) + 1 } };
+      } else {
+        updatedP.hp = Math.max(0, updatedP.hp - (rewards.hp || 0));
+        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
+        if (rewards.data) updatedP.resources.data = Math.max(0, (updatedP.resources.data || 0) + rewards.data);
+      }
+
+      // Escape 실패 추가 페널티
+      if (!escapeOK && outcome === 'success') {
+        updatedP.wanted = (updatedP.wanted || 0) + 1;
+      }
+
+      // 맵/주식 업데이트 (성공 시)
+      let newMap = s.map;
+      let newStocks = s.stocks;
+      if (outcome === 'success') {
+        newMap = { ...s.map, [pr.coord]: { ...cell, owner: null, fortified: 0 } };
+        newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - (rewards.stockHit || 0)) };
+      }
+
+      ps[0] = updatedP;
+      const newHeat = Math.min(10, Math.max(0, s.heat + (rewards.heat || 0)));
+      s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
+
+      // 레이드 카운트 증가 (성공만)
+      if (outcome === 'success') {
+        s.meta = { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+      }
+
+      // 결과 상세 로그
+      const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
+      const invStr = [
+        inv.weapons ? `🔩×${inv.weapons}` : null,
+        inv.data ? `📡×${inv.data}` : null,
+        inv.poolAttr ? `◈${inv.poolAttr}${poolBonus>1?'(매치+2)':'+1'}` : null,
+      ].filter(Boolean).join(' ');
+      const defStr = defenseLogs.length > 0 ? ` | 🛡 ${defenseLogs.join(', ')}` : '';
+      const rtn = rtype.name;
+      s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtn} 레이드 [${pr.coord} ${pr.zoneNm}] — ${pr.bloc}${defStr}`);
+      if (invStr) s = logEntry(s, `  투자: ${invStr}`);
+      s = logEntry(s, `  🎲 접근 ${approachRoll}+${approachBonus}=${approachTotal} ${approachOK ? '✓' : '✗(실행-2)'} · 실행 ${execRoll}+${statVal}${cbStr}+${execBonus+poolBonus}=${execTotal} vs ${finalThreshold} ${execOK ? '✓' : '✗'} · 도주 ${escapeRoll}+${me.stats.spd}=${escapeTotal} ${escapeOK ? '✓' : '✗(수배+1)'}`);
+      if (outcome === 'success') {
+        const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
+        s = logEntry(s, `  ✅ 성공 · 렙+${rewards.rep} · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}`);
+      } else {
+        s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
+      }
+
+      s.meta = { ...s.meta, pendingRaid: null };
+      return s;
+    }
+
     case 'RESOLVE_RAID_YES': {
+      // 레거시 호환 — 아직 호출되는 코드 있으면 즉시 새 EXECUTE로 위임
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
       let s = { ...state };
@@ -2104,7 +2323,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
           const threshold = 5;
           if (playerIdx === 0) {
-            // 결정 대기 상태 저장 — UI 모달이 떠서 확률·보상 보여주고 결정 받음
+            // v0.5.22: 확장된 레이드 상태 — 타입 선택 + 자원 투자 + 3단계 판정
+            const zoneType = cellThere.zone;
             s = {
               ...s,
               meta: {
@@ -2113,12 +2333,19 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                   coord: pAfterMove.position,
                   bloc,
                   zoneNm,
-                  atk: pAfterMove.stats.atk,
-                  threshold,
+                  zoneType,
+                  blocIdx,
+                  stats: { atk: pAfterMove.stats.atk, spd: pAfterMove.stats.spd, hack: pAfterMove.stats.hack },
+                  fortified: cellThere.fortified || 0,
+                  // 사용자가 단계적으로 채움
+                  selectedType: null,
+                  invested: { weapons: 0, data: 0, poolAttr: null },
+                  executed: false,
+                  phase: 'type',  // 'type' | 'invest' | 'done'
                 },
               },
             };
-            s.meta._didAutoRaid = true; // 보너스 드래프트 스킵 (레이드 결정 우선)
+            s.meta._didAutoRaid = true;
           } else {
             // 봇: 기존 자동 로직 + 상성 보너스
             const raidRoll = d6();
@@ -3397,61 +3624,144 @@ function GameScreen({ state, dispatch }) {
 
   return (
     <div className="game">
-      {/* === 레이드 결정 모달 === */}
+      {/* === v0.5.22: 레이드 풀세트 모달 (타입 선택 → 자원 투자 → 실행) === */}
       {state.meta.pendingRaid && (() => {
         const pr = state.meta.pendingRaid;
         const counterActive = countersBloc(me.specific, pr.bloc);
         const counterBonus = counterActive ? 1 : 0;
-        // d6 + atk + counter ≥ threshold
-        const effAtk = pr.atk + counterBonus;
-        const succRolls = Math.max(0, Math.min(6, 6 - (pr.threshold - effAtk - 1)));
-        const successPct = Math.round(succRolls / 6 * 100);
-        const newRep = (me.resources.rep || 0) + 3;
-        const wouldWin = newRep >= 16 && ((state.meta.raidsThisGame?.[0] || 0) + 1 >= 2);
+        const zoneType = pr.zoneType;
+        const zoneAttr = ZONE_TYPES[zoneType]?.attr;
+        const zoneLoot = ZONE_LOOT[zoneType] || {};
+        const defense = BLOC_DEFENSE[pr.bloc] || {};
+        const rt = pr.selectedType ? RAID_TYPES[pr.selectedType] : null;
+
+        // 방어 효과 요약
+        let thresholdMod = 0;
+        const defenseDesc = [];
+        if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseDesc.push(`${pr.bloc} 방어 +${defense.threshold_plus}`); }
+        if (defense.detect) defenseDesc.push(`${pr.bloc} 센서 감지 (접근 -2)`);
+        if (defense.all_plus) defenseDesc.push(`${pr.bloc} AI 보조 (전 판정 -${defense.all_plus})`);
+        if (pr.fortified > 0) { thresholdMod += pr.fortified; defenseDesc.push(`요새화 +${pr.fortified}`); }
+
+        // 현재 예상 성공률 (대략)
+        let estPct = 50;
+        if (rt) {
+          const stat = me.stats[rt.useStat] || 0;
+          const poolBonus = pr.invested.poolAttr === zoneAttr ? 2 : (pr.invested.poolAttr ? 1 : 0);
+          const execBonus = pr.invested.weapons + counterBonus - (defense.all_plus || 0);
+          const effThreshold = rt.threshold + thresholdMod;
+          const effStat = stat + execBonus + poolBonus;
+          const needed = effThreshold - effStat;
+          estPct = Math.max(0, Math.min(100, Math.round((7 - needed) / 6 * 100)));
+        }
+
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 24, maxWidth: 560, width: '90%', boxShadow: '0 0 30px rgba(255, 60, 140, 0.3)' }}>
-              <div style={{ color: 'var(--magenta)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🗡️ RAID DECISION</div>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'auto', padding: 16 }}>
+            <div style={{ background: 'var(--bg2)', border: '2px solid var(--magenta)', borderRadius: 6, padding: 20, maxWidth: 720, width: '95%', boxShadow: '0 0 30px rgba(255, 60, 140, 0.3)' }}>
+              <div style={{ color: 'var(--magenta)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 4 }}>🗡️ RAID · 3-PHASE</div>
               <h2 style={{ margin: 0, color: 'var(--text)', letterSpacing: 1 }}>
                 {pr.coord} · {pr.zoneNm} · <span style={{ color: 'var(--magenta)' }}>{pr.bloc}</span> 거점
               </h2>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 6, marginBottom: 16 }}>
-                Bloc 거점에 잠입했다. 칠 것인가, 관찰하고 물러날 것인가?
+              {/* 방어 정보 */}
+              {defenseDesc.length > 0 && (
+                <div style={{ marginTop: 6, padding: '6px 8px', background: 'rgba(255, 60, 140, 0.08)', border: '1px dashed var(--magenta)', borderRadius: 3, fontSize: 10, color: 'var(--magenta)' }}>
+                  🛡 자동 방어: {defenseDesc.join(' · ')}
+                </div>
+              )}
+
+              {/* Step 1: 타입 선택 */}
+              <div style={{ marginTop: 12 }}>
+                <div style={{ color: 'var(--cyan)', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>1️⃣ 레이드 타입 선택</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {Object.entries(RAID_TYPES).map(([key, cfg]) => {
+                    const selected = pr.selectedType === key;
+                    const stat = me.stats[cfg.useStat];
+                    return (
+                      <button key={key}
+                        onClick={() => dispatch({ type: 'RAID_SELECT_TYPE', raidType: key })}
+                        style={{
+                          padding: 10, background: selected ? 'rgba(60,200,220,0.2)' : 'var(--bg3)',
+                          border: `2px solid ${selected ? 'var(--cyan)' : 'var(--border)'}`,
+                          borderRadius: 4, cursor: 'pointer', textAlign: 'left',
+                          color: 'var(--text)', fontSize: 11, lineHeight: 1.4,
+                        }}>
+                        <div style={{ fontSize: 16 }}>{cfg.icon} <strong>{cfg.name}</strong></div>
+                        <div style={{ color: 'var(--text-dim)', fontSize: 10, marginTop: 2 }}>{cfg.desc}</div>
+                        <div style={{ marginTop: 4, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
+                          {cfg.useStat.toUpperCase()} {stat} · 목표 {cfg.threshold}
+                        </div>
+                        <div style={{ marginTop: 3, color: 'var(--green)', fontSize: 10 }}>
+                          ✓ 렙+{cfg.success.rep}{cfg.success.data ? ` 📡+${cfg.success.data}` : ''} · 주가-{cfg.success.stockHit}
+                        </div>
+                        <div style={{ color: 'var(--magenta)', fontSize: 10 }}>
+                          ✗ {cfg.failure.hp ? `HP-${cfg.failure.hp} ` : ''}수배+{cfg.failure.wanted}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {/* 확률 바 */}
-              <div style={{ background: 'var(--bg1)', borderRadius: 4, padding: 12, marginBottom: 16, fontFamily: 'Share Tech Mono, monospace', fontSize: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>성공 조건</span>
-                  <span>d6 + ATK {pr.atk}{counterActive ? <span style={{color:'var(--green)'}}> +1 상성</span> : ''} ≥ <strong>{pr.threshold}</strong></span>
+
+              {/* Step 2: 자원 투자 (타입 선택 후 활성) */}
+              {pr.selectedType && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ color: 'var(--yellow)', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>2️⃣ 자원 투자 (선택)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 3, padding: 8, fontSize: 11 }}>
+                      <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>🔩 무기 ({pr.invested.weapons}) · 실행+1/개</div>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        <button className="pa-btn" style={{ flex: 1, fontSize: 10 }} disabled={(me.resources.weapons||0) <= pr.invested.weapons} onClick={() => dispatch({ type: 'RAID_INVEST', item: 'weapons' })}>+1</button>
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 3, padding: 8, fontSize: 11 }}>
+                      <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>📡 데이터 ({pr.invested.data}) · 접근+1/개</div>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        <button className="pa-btn" style={{ flex: 1, fontSize: 10 }} disabled={(me.resources.data||0) <= pr.invested.data} onClick={() => dispatch({ type: 'RAID_INVEST', item: 'data' })}>+1</button>
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 3, padding: 8, fontSize: 11 }}>
+                      <div style={{ color: 'var(--text-dim)', fontSize: 9 }}>◈ 속성 {pr.invested.poolAttr ? `(${pr.invested.poolAttr})` : ''} · 실행+1{zoneAttr ? ` · ${zoneAttr}매치+2` : ''}</div>
+                      <div style={{ display: 'flex', gap: 2, marginTop: 4, flexWrap: 'wrap' }}>
+                        {['M','I','V','S','B','A'].map(a => (me.pool?.[a] || 0) > 0 && (
+                          <button key={a} className={`attr-tag a-${a}`} style={{ fontSize: 9, padding: '2px 4px', cursor: 'pointer', border: pr.invested.poolAttr === a ? '2px solid var(--cyan)' : '1px solid transparent', opacity: (!pr.invested.poolAttr || pr.invested.poolAttr === a) ? 1 : 0.4 }} onClick={() => dispatch({ type: 'RAID_INVEST', item: pr.invested.poolAttr === a ? 'unset_pool' : 'poolAttr', attr: a })}>{a}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+                    💡 상대 Bloc의 구역 속성과 매치되면 +2 (일반 +1). 투자는 실행 시 영구 소모.
+                  </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ color: 'var(--text-dim)' }}>성공 확률</span>
-                  <strong style={{ color: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 20 }}>{successPct}%</strong>
+              )}
+
+              {/* Step 3: 예상 결과 + 실행 */}
+              {pr.selectedType && rt && (
+                <div style={{ marginTop: 14, background: 'var(--bg1)', borderRadius: 4, padding: 10, fontFamily: 'Share Tech Mono, monospace' }}>
+                  <div style={{ color: 'var(--cyan)', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>3️⃣ 예상 판정 (3단계)</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.7 }}>
+                    <div>🚶 <strong>접근</strong> d6 + 📡{pr.invested.data}{defense.detect ? ' -2 감지' : ''} vs 4</div>
+                    <div>⚔️ <strong>실행</strong> d6 + {rt.useStat.toUpperCase()} {me.stats[rt.useStat]}{counterActive ? ' +1상성' : ''} + 🔩{pr.invested.weapons}{pr.invested.poolAttr ? ` +${pr.invested.poolAttr === zoneAttr ? 2 : 1}속성` : ''}{defense.all_plus ? ` -${defense.all_plus} AI` : ''} vs <strong style={{ color: 'var(--magenta)' }}>{rt.threshold + thresholdMod}</strong></div>
+                    <div>🏃 <strong>도주</strong> d6 + SPD {me.stats.spd} vs 3</div>
+                  </div>
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>실행 성공률</span>
+                    <strong style={{ color: estPct >= 66 ? 'var(--green)' : (estPct >= 33 ? 'var(--yellow)' : 'var(--magenta)'), fontSize: 22 }}>~{estPct}%</strong>
+                  </div>
+                  {Object.keys(zoneLoot).length > 0 && (
+                    <div style={{ marginTop: 6, padding: 6, background: 'rgba(60,220,100,0.08)', borderRadius: 3, fontSize: 10, color: 'var(--green)' }}>
+                      🎁 구역 추가 전리품: {zoneLoot.label}
+                    </div>
+                  )}
                 </div>
-                <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-                  <div style={{ height: '100%', width: `${successPct}%`, background: successPct >= 66 ? 'var(--green)' : (successPct >= 33 ? 'var(--yellow)' : 'var(--magenta)') }}/>
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>주사위 {6 - succRolls + 1}~6 굴려야 성공</div>
-              </div>
-              {/* 보상 vs 위험 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                <div style={{ background: 'rgba(60, 220, 100, 0.1)', border: '1px solid var(--green)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--green)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✓ 성공 시</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>★ 렙 +3 → {newRep}<br/>📉 {pr.bloc} 주가 -3<br/>🗺️ 구역 중립화<br/>🚨 수배 +1</div>
-                  {wouldWin && <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>🏆 즉시 승리!</div>}
-                </div>
-                <div style={{ background: 'rgba(255, 60, 140, 0.1)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 10 }}>
-                  <div style={{ color: 'var(--magenta)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>✗ 실패 시</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.6 }}>❤️ HP -3 ({me.hp} → {me.hp - 3})<br/>🚨 수배 +1<br/>🔥 공권력 +1</div>
-                  {me.hp - 3 <= 0 && <div style={{ color: 'var(--magenta)', fontWeight: 700, fontSize: 13, marginTop: 8, textAlign: 'center', letterSpacing: 1 }}>⚰️ 전사</div>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="pa-btn primary" style={{ flex: 1, padding: '14px', fontSize: 13, background: 'var(--magenta)', color: 'var(--bg1)', border: '1px solid var(--magenta)' }} onClick={() => dispatch({ type: 'RESOLVE_RAID_YES' })}>
-                  🗡️ 레이드! ({successPct}% 성공)
+              )}
+
+              {/* 버튼 */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                <button className="pa-btn primary" disabled={!pr.selectedType} style={{ flex: 2, padding: '14px', fontSize: 13, background: pr.selectedType ? 'var(--magenta)' : 'var(--bg3)', color: pr.selectedType ? 'var(--bg1)' : 'var(--text-dim)', border: `1px solid ${pr.selectedType ? 'var(--magenta)' : 'var(--border)'}` }} onClick={() => dispatch({ type: 'RAID_EXECUTE' })}>
+                  {pr.selectedType ? `${RAID_TYPES[pr.selectedType].icon} 레이드 실행 (~${estPct}%)` : '타입을 먼저 선택'}
                 </button>
                 <button className="pa-btn" style={{ flex: 1, padding: '14px', fontSize: 13 }} onClick={() => dispatch({ type: 'RESOLVE_RAID_NO' })}>
-                  🕶 물러나기 (피해 없음)
+                  🕶 물러나기
                 </button>
               </div>
             </div>

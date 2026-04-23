@@ -354,6 +354,61 @@ const countersGhost = (attacker, defender) => GHOST_COUNTERS[attacker]?.beats ==
 const countersBloc  = (ghost, bloc) => GHOST_COUNTERS[ghost]?.bloc === bloc;
 
 // ============================================================================
+// 레이드 풀세트 시스템 (v0.5.22)
+// ============================================================================
+const RAID_TYPES = {
+  violent: {
+    name: '폭력형', icon: '🗡',
+    desc: '정면 돌격. 큰 보상, 큰 위험',
+    useStat: 'atk',
+    threshold: 5,
+    success: { rep: 4, stockHit: 3, wanted: 2, heat: 1 },
+    failure: { hp: 2, wanted: 1, heat: 1 },
+  },
+  stealth: {
+    name: '은밀형', icon: '🕶',
+    desc: '조용히 털기. 보상 낮지만 안전',
+    useStat: 'spd',
+    threshold: 5,
+    success: { rep: 2, stockHit: 2, wanted: 0, heat: 0 },
+    failure: { hp: 0, wanted: 1, heat: 0 },
+  },
+  hack: {
+    name: '해킹형', icon: '💾',
+    desc: '원격 타격. 경제 큰 타격, HP 안전',
+    useStat: 'hack',
+    threshold: 5,
+    success: { rep: 2, stockHit: 4, wanted: 1, heat: 0, data: 2 },
+    failure: { hp: 0, wanted: 0, heat: 2, data: -1 },
+  },
+};
+
+// 구역 타입별 추가 전리품 (성공 시 합산)
+const ZONE_LOOT = {
+  bank:  { credit: 5, label: '₵+5' },
+  data:  { data: 3, peek_news: 1, label: '데이터+3 · 뉴스 미리보기' },
+  arms:  { weapons: 3, label: '🔩+3' },
+  work:  { parts: 3, label: '⚙+3' },
+  heal:  { full_heal: 1, label: 'HP 완전 회복' },
+  club:  { credit: 3, influence: 1, label: '₵+3 · 🎙+1' },
+  home:  { credit: 2, parts: 1, label: '₵+2 · ⚙+1' },
+  aux:   { credit: 2, all_attr: 1, label: '₵+2 · 전속성+1' },
+  nex:   { rep: 3, all_attr: 1, label: '★+3 추가 · 전속성+1' },
+  port:  { weapons: 2, credit: 2, label: '🔩+2 · ₵+2' },
+  ruin:  { parts: 5, label: '⚙+5 (잡동사니 탈취)' },
+  cop:   { wanted: -2, label: '수배-2 (압수 기록 훔침)' },
+};
+
+// Bloc별 자동 반격 (구역 방어 시 자동 소비)
+const BLOC_DEFENSE = {
+  VANTA:    { detect: 1 },        // 감지 → 접근 판정에 -2
+  IRONWALL: { threshold_plus: 1 }, // 무장 → 실행 threshold +1 (완화 v0.5.22)
+  HELIX:    { threshold_plus: 0 }, // 거의 없음
+  AXIOM:    { all_plus: 1 },       // AI 보조 → 판정 -1 (약간)
+  CARBON:   { threshold_plus: 0 }, // 방어 없음
+};
+
+// ============================================================================
 // 맵 크기별 특수 규칙 (v0.5.13)
 // ============================================================================
 // 5×5 튜토리얼: 좁은 맵 → 이동 가치 상향 / DRIFTER HP·ATK 보정 (이미 적용)
@@ -756,7 +811,171 @@ function reducer(state, action) {
     case 'SKIP_ZONE_BONUS':
       return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
 
+    case 'RAID_SELECT_TYPE': {
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, selectedType: action.raidType, phase: 'invest' } } };
+    }
+
+    case 'RAID_INVEST': {
+      // action.item: 'weapons' | 'data' | 'poolAttr' (with action.attr for pool)
+      const pr = state.meta.pendingRaid;
+      if (!pr) return state;
+      const me = state.players[0];
+      const inv = { ...pr.invested };
+      if (action.item === 'weapons' && (me.resources.weapons || 0) > inv.weapons) {
+        inv.weapons++;
+      } else if (action.item === 'data' && (me.resources.data || 0) > inv.data) {
+        inv.data++;
+      } else if (action.item === 'poolAttr' && action.attr) {
+        if ((me.pool?.[action.attr] || 0) > 0 && !inv.poolAttr) {
+          inv.poolAttr = action.attr;
+        }
+      } else if (action.item === 'unset_pool') {
+        inv.poolAttr = null;
+      } else if (action.item === 'reset') {
+        inv.weapons = 0; inv.data = 0; inv.poolAttr = null;
+      }
+      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, invested: inv } } };
+    }
+
+    case 'RAID_EXECUTE': {
+      const pr = state.meta.pendingRaid;
+      if (!pr || !pr.selectedType) return state;
+      let s = { ...state };
+      const me = s.players[0];
+      const rtype = RAID_TYPES[pr.selectedType];
+      const zoneLoot = ZONE_LOOT[pr.zoneType] || {};
+      const bloc = pr.bloc;
+      const counterBonus = countersBloc(me.specific, bloc) ? 1 : 0;
+
+      // 투자 자원 소비
+      const inv = pr.invested;
+      const newRes = { ...me.resources };
+      if (inv.weapons > 0) newRes.weapons = Math.max(0, (newRes.weapons || 0) - inv.weapons);
+      if (inv.data > 0) newRes.data = Math.max(0, (newRes.data || 0) - inv.data);
+      const newPool = { ...(me.pool || {}) };
+      if (inv.poolAttr) newPool[inv.poolAttr] = Math.max(0, (newPool[inv.poolAttr] || 0) - 1);
+
+      // Bloc 자동 반격
+      const defense = BLOC_DEFENSE[bloc] || {};
+      let thresholdMod = 0;
+      let approachMod = 0;
+      let executeMod = 0;
+      let escapeMod = 0;
+      const defenseLogs = [];
+      if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseLogs.push(`${bloc} 방어 +${defense.threshold_plus} threshold`); }
+      if (defense.detect) { approachMod -= 2; defenseLogs.push(`${bloc} 센서 감지 (접근 -2)`); }
+      if (defense.all_plus) { approachMod += 0 - defense.all_plus; executeMod -= defense.all_plus; escapeMod -= defense.all_plus; defenseLogs.push(`${bloc} AI 보조 (전 판정 ${-defense.all_plus})`); }
+      if (pr.fortified > 0) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
+
+      const finalThreshold = rtype.threshold + thresholdMod;
+
+      // 투자 보너스
+      const zoneAttr = ZONE_TYPES[pr.zoneType]?.attr;
+      const poolBonus = inv.poolAttr === zoneAttr ? 2 : (inv.poolAttr ? 1 : 0);
+      const execBonus = inv.weapons + counterBonus + executeMod;
+      const approachBonus = inv.data + approachMod;
+      const escapeBonus = escapeMod;
+
+      // === 3단계 판정 ===
+      // 1. Approach (접근) — d6 + SHADE 속성 투자 (data) vs 4
+      const approachRoll = d6();
+      const approachTotal = approachRoll + approachBonus + (inv.poolAttr === 'S' ? 2 : 0);
+      const approachOK = approachTotal >= 4;
+
+      // 2. Execute (실행) — d6 + 선택한 스탯 + 투자 + 상성 vs threshold
+      const execRoll = d6();
+      const statVal = me.stats[rtype.useStat] || 0;
+      const execTotal = execRoll + statVal + execBonus + poolBonus + (approachOK ? 0 : -2);
+      const execOK = execTotal >= finalThreshold;
+
+      // 3. Escape (도주) — d6 + SPD vs 3
+      const escapeRoll = d6();
+      const escapeTotal = escapeRoll + me.stats.spd + escapeBonus;
+      const escapeOK = escapeTotal >= 3;
+
+      // 결과 적용
+      const cell = s.map[pr.coord];
+      let rewards = rtype.success;
+      let outcome = 'success';
+      if (!execOK) {
+        rewards = rtype.failure;
+        outcome = 'failure';
+      }
+
+      const ps = [...s.players];
+      let updatedP = { ...me, resources: newRes, pool: newPool };
+
+      // 보상/페널티 적용
+      if (outcome === 'success') {
+        updatedP.resources.rep = (updatedP.resources.rep || 0) + (rewards.rep || 0);
+        if (rewards.data) updatedP.resources.data = (updatedP.resources.data || 0) + rewards.data;
+        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
+        // 구역 차등 전리품
+        if (zoneLoot.credit) updatedP.resources.credit = (updatedP.resources.credit || 0) + zoneLoot.credit;
+        if (zoneLoot.data) updatedP.resources.data = (updatedP.resources.data || 0) + zoneLoot.data;
+        if (zoneLoot.weapons) updatedP.resources.weapons = (updatedP.resources.weapons || 0) + zoneLoot.weapons;
+        if (zoneLoot.parts) updatedP.resources.parts = (updatedP.resources.parts || 0) + zoneLoot.parts;
+        if (zoneLoot.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + zoneLoot.influence;
+        if (zoneLoot.rep) updatedP.resources.rep += zoneLoot.rep;
+        if (zoneLoot.wanted) updatedP.wanted = Math.max(0, (updatedP.wanted || 0) + zoneLoot.wanted);
+        if (zoneLoot.full_heal) updatedP.hp = updatedP.maxHp;
+        if (zoneLoot.all_attr) ['M','I','V','S','B','A'].forEach(a => { updatedP.pool[a] = (updatedP.pool[a] || 0) + 1; });
+        if (zoneLoot.peek_news) s = { ...s, meta: { ...s.meta, peekNews: (s.meta.peekNews || 0) + 1 } };
+      } else {
+        updatedP.hp = Math.max(0, updatedP.hp - (rewards.hp || 0));
+        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
+        if (rewards.data) updatedP.resources.data = Math.max(0, (updatedP.resources.data || 0) + rewards.data);
+      }
+
+      // Escape 실패 추가 페널티
+      if (!escapeOK && outcome === 'success') {
+        updatedP.wanted = (updatedP.wanted || 0) + 1;
+      }
+
+      // 맵/주식 업데이트 (성공 시)
+      let newMap = s.map;
+      let newStocks = s.stocks;
+      if (outcome === 'success') {
+        newMap = { ...s.map, [pr.coord]: { ...cell, owner: null, fortified: 0 } };
+        newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - (rewards.stockHit || 0)) };
+      }
+
+      ps[0] = updatedP;
+      const newHeat = Math.min(10, Math.max(0, s.heat + (rewards.heat || 0)));
+      s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
+
+      // 레이드 카운트 증가 (성공만)
+      if (outcome === 'success') {
+        s.meta = { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+      }
+
+      // 결과 상세 로그
+      const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
+      const invStr = [
+        inv.weapons ? `🔩×${inv.weapons}` : null,
+        inv.data ? `📡×${inv.data}` : null,
+        inv.poolAttr ? `◈${inv.poolAttr}${poolBonus>1?'(매치+2)':'+1'}` : null,
+      ].filter(Boolean).join(' ');
+      const defStr = defenseLogs.length > 0 ? ` | 🛡 ${defenseLogs.join(', ')}` : '';
+      const rtn = rtype.name;
+      s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtn} 레이드 [${pr.coord} ${pr.zoneNm}] — ${pr.bloc}${defStr}`);
+      if (invStr) s = logEntry(s, `  투자: ${invStr}`);
+      s = logEntry(s, `  🎲 접근 ${approachRoll}+${approachBonus}=${approachTotal} ${approachOK ? '✓' : '✗(실행-2)'} · 실행 ${execRoll}+${statVal}${cbStr}+${execBonus+poolBonus}=${execTotal} vs ${finalThreshold} ${execOK ? '✓' : '✗'} · 도주 ${escapeRoll}+${me.stats.spd}=${escapeTotal} ${escapeOK ? '✓' : '✗(수배+1)'}`);
+      if (outcome === 'success') {
+        const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
+        s = logEntry(s, `  ✅ 성공 · 렙+${rewards.rep} · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}`);
+      } else {
+        s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
+      }
+
+      s.meta = { ...s.meta, pendingRaid: null };
+      return s;
+    }
+
     case 'RESOLVE_RAID_YES': {
+      // 레거시 호환 — 아직 호출되는 코드 있으면 즉시 새 EXECUTE로 위임
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
       let s = { ...state };
@@ -1685,7 +1904,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
           const threshold = 5;
           if (playerIdx === 0) {
-            // 결정 대기 상태 저장 — UI 모달이 떠서 확률·보상 보여주고 결정 받음
+            // v0.5.22: 확장된 레이드 상태 — 타입 선택 + 자원 투자 + 3단계 판정
+            const zoneType = cellThere.zone;
             s = {
               ...s,
               meta: {
@@ -1694,12 +1914,19 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                   coord: pAfterMove.position,
                   bloc,
                   zoneNm,
-                  atk: pAfterMove.stats.atk,
-                  threshold,
+                  zoneType,
+                  blocIdx,
+                  stats: { atk: pAfterMove.stats.atk, spd: pAfterMove.stats.spd, hack: pAfterMove.stats.hack },
+                  fortified: cellThere.fortified || 0,
+                  // 사용자가 단계적으로 채움
+                  selectedType: null,
+                  invested: { weapons: 0, data: 0, poolAttr: null },
+                  executed: false,
+                  phase: 'type',  // 'type' | 'invest' | 'done'
                 },
               },
             };
-            s.meta._didAutoRaid = true; // 보너스 드래프트 스킵 (레이드 결정 우선)
+            s.meta._didAutoRaid = true;
           } else {
             // 봇: 기존 자동 로직 + 상성 보너스
             const raidRoll = d6();
@@ -2628,4 +2855,3 @@ function scoreBlocCard(state, pIdx, cid) {
 
   return score + Math.random() * 2;
 }
-

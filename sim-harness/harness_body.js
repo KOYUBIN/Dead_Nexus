@@ -35,8 +35,16 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     state = reducer(state, { type: 'SET_PHASE', phase: 3 });
     state = reducer(state, { type: 'EXECUTE_TURN' });
 
-    // P0용 모달 자동 결정
-    if (state.meta.pendingRaid) state = reducer(state, { type: 'RESOLVE_RAID_YES' });
+    // P0용 모달 자동 결정 — 상황별 타입 선택
+    if (state.meta.pendingRaid) {
+      const p0 = state.players[0];
+      let raidType = 'violent';
+      // HP 낮으면 stealth, HACK 3+ 이면 hack, 그외 violent
+      if (p0.hp < p0.maxHp * 0.4) raidType = 'stealth';
+      else if (p0.stats.hack >= 3) raidType = 'hack';
+      state = reducer(state, { type: 'RAID_SELECT_TYPE', raidType });
+      state = reducer(state, { type: 'RAID_EXECUTE' });
+    }
     if (state.meta.pendingGhostDuel) state = reducer(state, { type: 'RESOLVE_DUEL_YES' });
     if (state.meta.zoneBonusPending) {
       const opt = state.meta.zoneBonusPending.options[0];
