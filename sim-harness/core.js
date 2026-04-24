@@ -381,6 +381,26 @@ const RAID_TYPES = {
     success: { rep: 2, stockHit: 4, wanted: 1, heat: 0, data: 2 },
     failure: { hp: 0, wanted: 0, heat: 2, data: -1 },
   },
+  infiltrate: {
+    name: '잠입형', icon: '🕷',
+    desc: 'MOLE 전용. 방어 완전 무시. 정보 탈취',
+    useStat: 'hack',
+    threshold: 3,        // v0.5.24: 4→3 (거의 자동)
+    success: { rep: 4, stockHit: 2, wanted: 0, heat: 0, data: 3 },  // rep 3→4
+    failure: { hp: 1, wanted: 1, heat: 0 },
+    bypass_defense: true,
+    requiresClass: 'MOLE',
+  },
+  negotiate: {
+    name: '협상형', icon: '🤝',
+    desc: 'BROKER 전용. 크레딧 지불로 안전 합의',
+    useStat: 'spd',
+    threshold: 2,        // v0.5.24: 3→2 (사실상 자동)
+    cost: { credit: 4 }, // 5→4
+    success: { rep: 4, stockHit: 1, wanted: 0, heat: -1, influence: 2 },  // rep 3→4, inf+2
+    failure: { hp: 0, wanted: 0, heat: 0 },
+    requiresClass: 'BROKER',
+  },
 };
 
 // 구역 타입별 추가 전리품 (성공 시 합산)
@@ -857,17 +877,29 @@ function reducer(state, action) {
       const newPool = { ...(me.pool || {}) };
       if (inv.poolAttr) newPool[inv.poolAttr] = Math.max(0, (newPool[inv.poolAttr] || 0) - 1);
 
-      // Bloc 자동 반격
-      const defense = BLOC_DEFENSE[bloc] || {};
+      // 레이드 타입별 비용 선지불 (협상형 등)
+      if (rtype.cost) {
+        if (rtype.cost.credit && (newRes.credit || 0) >= rtype.cost.credit) {
+          newRes.credit -= rtype.cost.credit;
+        } else {
+          // 비용 부족 시 실패 처리
+          s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (비용 ₵${rtype.cost.credit} 부족)`);
+          return { ...s, meta: { ...s.meta, pendingRaid: null } };
+        }
+      }
+
+      // Bloc 자동 반격 (잠입형은 bypass)
+      const defense = rtype.bypass_defense ? {} : (BLOC_DEFENSE[bloc] || {});
       let thresholdMod = 0;
       let approachMod = 0;
       let executeMod = 0;
       let escapeMod = 0;
       const defenseLogs = [];
+      if (rtype.bypass_defense) defenseLogs.push('🕷 방어 우회');
       if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseLogs.push(`${bloc} 방어 +${defense.threshold_plus} threshold`); }
       if (defense.detect) { approachMod -= 2; defenseLogs.push(`${bloc} 센서 감지 (접근 -2)`); }
       if (defense.all_plus) { approachMod += 0 - defense.all_plus; executeMod -= defense.all_plus; escapeMod -= defense.all_plus; defenseLogs.push(`${bloc} AI 보조 (전 판정 ${-defense.all_plus})`); }
-      if (pr.fortified > 0) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
+      if (pr.fortified > 0 && !rtype.bypass_defense) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
 
       const finalThreshold = rtype.threshold + thresholdMod;
 
