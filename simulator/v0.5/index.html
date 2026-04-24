@@ -980,35 +980,42 @@ const initStocks = (role, specific) => {
 // GAME STATE + REDUCER
 // ============================================================================
 
-function initGame(humanRole, humanSpecific) {
+function initGame(humanRole, humanSpecific, playerCount) {
   // Build 5x5 map
   const map = {};
   MAP_5x5.forEach(([c, z]) => {
     map[c] = { zone: z, owner: null, token: Math.random() < 0.6 ? 'quest' : (Math.random() < 0.5 ? 'instant' : 'discovery'), tokenRevealed: false };
   });
 
-  // Build players: 1 human + 3 bots
+  // Build players: 1 human + (playerCount-1) bots (2~5인 지원, 기본 4)
+  const totalPlayers = Math.max(2, Math.min(5, playerCount || 4));
+  const botCount = totalPlayers - 1;
   const players = [];
   const allBlocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
   const allGhosts = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
 
-  // Human first
   players.push(buildPlayer(0, 'human', humanRole, humanSpecific));
 
-  // 3 bots: mixed roles opposite of human
+  // 봇 역할 분배: Bloc/Ghost 대략 균형
+  // 4인: 인간 ghost면 봇 [bloc, bloc, ghost], 인간 bloc이면 [ghost, ghost, bloc]
+  // 2인: 봇 1 (반대 역할)
+  // 3인: 봇 2 (인간 반대 역할 1 + 같은 역할 1)
+  // 5인: 봇 4 (균형)
   const botSpecs = [];
-  if (humanRole === 'bloc') {
-    // 2 Ghost bots + 1 Bloc bot
-    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
-    botSpecs.push({ role: 'ghost', sp: rand(allGhosts) });
-    const remaining = allBlocs.filter(b => b !== humanSpecific);
-    botSpecs.push({ role: 'bloc', sp: rand(remaining) });
-  } else {
-    // 2 Bloc bots + 1 Ghost bot
-    botSpecs.push({ role: 'bloc', sp: rand(allBlocs) });
-    botSpecs.push({ role: 'bloc', sp: rand(allBlocs.filter(b => b !== botSpecs[0].sp)) });
-    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
+  const usedBlocs = humanRole === 'bloc' ? [humanSpecific] : [];
+  const usedGhosts = humanRole === 'ghost' ? [humanSpecific] : [];
+  const pickBloc = () => { const avail = allBlocs.filter(b => !usedBlocs.includes(b)); const p = rand(avail); usedBlocs.push(p); return p; };
+  const pickGhost = () => { const avail = allGhosts.filter(g => !usedGhosts.includes(g)); const p = rand(avail); usedGhosts.push(p); return p; };
+
+  // Bot role 할당: 인간 반대 역할이 최소 1명, 나머지 적절히 섞음
+  const oppositeRole = humanRole === 'bloc' ? 'ghost' : 'bloc';
+  const botRoles = [];
+  for (let i = 0; i < botCount; i++) {
+    if (i === 0) botRoles.push(oppositeRole);           // 최소 1명은 반대
+    else if (i === 1 && botCount >= 2) botRoles.push(oppositeRole); // 2명째도 반대
+    else botRoles.push(i % 2 === 0 ? oppositeRole : humanRole);     // 이후 교차
   }
+  botRoles.forEach(r => botSpecs.push({ role: r, sp: r === 'bloc' ? pickBloc() : pickGhost() }));
   botSpecs.forEach((bs, i) => players.push(buildPlayer(i + 1, 'bot', bs.role, bs.sp)));
 
   // Set bloc HQ zones as owned
@@ -1048,10 +1055,10 @@ function initGame(humanRole, humanSpecific) {
       winner: null,
       winReason: null,
       newsSinceStart: 0,
-      raidsThisGame: { 0:0, 1:0, 2:0, 3:0 },
-      zonesVisited: { 0: new Set(), 1: new Set(), 2: new Set(), 3: new Set() },
-      attacksUsed: { 0:0, 1:0, 2:0, 3:0 },
-      lostCardsUsed: { 0:0, 1:0, 2:0, 3:0 },
+      raidsThisGame: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
+      zonesVisited: Object.fromEntries([...Array(5).keys()].map(k => [k, new Set()])),
+      attacksUsed: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
+      lostCardsUsed: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
       nexusHolder: null,
       nexusStreak: 0,
       claimedAchievements: {},  // id => playerIdx
