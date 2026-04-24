@@ -361,7 +361,7 @@ const RAID_TYPES = {
     name: '폭력형', icon: '🗡',
     desc: '정면 돌격. 큰 보상, 큰 위험',
     useStat: 'atk',
-    threshold: 5,
+    threshold: 5,       // v0.5.25: 원복 + 크리티컬 실패 규칙 (d6=1은 무조건 실패)
     success: { rep: 4, stockHit: 3, wanted: 2, heat: 1 },
     failure: { hp: 2, wanted: 1, heat: 1 },
   },
@@ -377,7 +377,7 @@ const RAID_TYPES = {
     name: '해킹형', icon: '💾',
     desc: '원격 타격. 경제 큰 타격, HP 안전',
     useStat: 'hack',
-    threshold: 5,
+    threshold: 5,       // v0.5.25: 원복 + 크리티컬 실패 규칙
     success: { rep: 2, stockHit: 4, wanted: 1, heat: 0, data: 2 },
     failure: { hp: 0, wanted: 0, heat: 2, data: -1 },
   },
@@ -917,10 +917,12 @@ function reducer(state, action) {
       const approachOK = approachTotal >= 4;
 
       // 2. Execute (실행) — d6 + 선택한 스탯 + 투자 + 상성 vs threshold
+      // v0.5.25: 크리티컬 실패 — d6 = 1은 자동 실패 (스탯 무관)
       const execRoll = d6();
       const statVal = me.stats[rtype.useStat] || 0;
       const execTotal = execRoll + statVal + execBonus + poolBonus + (approachOK ? 0 : -2);
-      const execOK = execTotal >= finalThreshold;
+      const critFail = execRoll === 1;
+      const execOK = !critFail && execTotal >= finalThreshold;
 
       // 3. Escape (도주) — d6 + SPD vs 3
       const escapeRoll = d6();
