@@ -35,6 +35,8 @@ function runOneGameN(opts, playerCount) {
       const p0 = state.players[0];
       let raidType = 'violent';
       if (p0.specific === 'MOLE') raidType = 'infiltrate';
+      else if (p0.specific === 'RIGGER' && (p0.resources.parts || 0) >= 2) raidType = 'drone';
+      else if (p0.specific === 'RIGGER') raidType = 'hack';
       else if (p0.specific === 'BROKER' && (p0.resources.credit || 0) >= 4) raidType = 'negotiate';
       else if (p0.specific === 'BROKER') raidType = 'stealth';
       else if (p0.hp < p0.maxHp * 0.4) raidType = 'stealth';

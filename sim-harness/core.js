@@ -395,11 +395,22 @@ const RAID_TYPES = {
     name: '협상형', icon: '🤝',
     desc: 'BROKER 전용. 크레딧 지불로 안전 합의',
     useStat: 'spd',
-    threshold: 2,        // v0.5.24: 3→2 (사실상 자동)
-    cost: { credit: 4 }, // 5→4
-    success: { rep: 4, stockHit: 1, wanted: 0, heat: -1, influence: 2 },  // rep 3→4, inf+2
+    threshold: 2,
+    cost: { credit: 4 },
+    success: { rep: 4, stockHit: 1, wanted: 0, heat: -1, influence: 2 },
     failure: { hp: 0, wanted: 0, heat: 0 },
     requiresClass: 'BROKER',
+  },
+  drone: {
+    name: '드론형', icon: '🛰',
+    desc: 'RIGGER 전용. 부품 소모, 원격 타격 (이동 불필요)',
+    useStat: 'hack',
+    threshold: 4,
+    cost: { parts: 2 }, // 부품 2개 소비 (드론 기체)
+    success: { rep: 3, stockHit: 3, wanted: 0, heat: 1, parts: -1 },  // 드론 1 소실
+    failure: { hp: 0, wanted: 0, heat: 1, parts: -2 }, // 드론 2 소실
+    requiresClass: 'RIGGER',
+    remote: true,  // 인접 구역까지 원격 가능 (move 없이)
   },
 };
 
@@ -884,14 +895,21 @@ function reducer(state, action) {
       const newPool = { ...(me.pool || {}) };
       if (inv.poolAttr) newPool[inv.poolAttr] = Math.max(0, (newPool[inv.poolAttr] || 0) - 1);
 
-      // 레이드 타입별 비용 선지불 (협상형 등)
+      // 레이드 타입별 비용 선지불 (협상형·드론형 등)
       if (rtype.cost) {
-        if (rtype.cost.credit && (newRes.credit || 0) >= rtype.cost.credit) {
-          newRes.credit -= rtype.cost.credit;
-        } else {
-          // 비용 부족 시 실패 처리
-          s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (비용 ₵${rtype.cost.credit} 부족)`);
-          return { ...s, meta: { ...s.meta, pendingRaid: null } };
+        if (rtype.cost.credit) {
+          if ((newRes.credit || 0) >= rtype.cost.credit) newRes.credit -= rtype.cost.credit;
+          else {
+            s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (비용 ₵${rtype.cost.credit} 부족)`);
+            return { ...s, meta: { ...s.meta, pendingRaid: null } };
+          }
+        }
+        if (rtype.cost.parts) {
+          if ((newRes.parts || 0) >= rtype.cost.parts) newRes.parts -= rtype.cost.parts;
+          else {
+            s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (부품 ${rtype.cost.parts}개 부족)`);
+            return { ...s, meta: { ...s.meta, pendingRaid: null } };
+          }
         }
       }
 
@@ -952,6 +970,8 @@ function reducer(state, action) {
       if (outcome === 'success') {
         updatedP.resources.rep = (updatedP.resources.rep || 0) + (rewards.rep || 0);
         if (rewards.data) updatedP.resources.data = (updatedP.resources.data || 0) + rewards.data;
+        if (rewards.parts) updatedP.resources.parts = Math.max(0, (updatedP.resources.parts || 0) + rewards.parts);
+        if (rewards.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + rewards.influence;
         updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
         // 구역 차등 전리품
         if (zoneLoot.credit) updatedP.resources.credit = (updatedP.resources.credit || 0) + zoneLoot.credit;
@@ -968,6 +988,7 @@ function reducer(state, action) {
         updatedP.hp = Math.max(0, updatedP.hp - (rewards.hp || 0));
         updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
         if (rewards.data) updatedP.resources.data = Math.max(0, (updatedP.resources.data || 0) + rewards.data);
+        if (rewards.parts) updatedP.resources.parts = Math.max(0, (updatedP.resources.parts || 0) + rewards.parts);
       }
 
       // Escape 실패 추가 페널티
@@ -1935,10 +1956,19 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       }
 
       // === Ghost가 Bloc 소유 구역에 도착 → 레이드 시도 ===
-      // P0: 모달로 명시 선택 (Raid? / Stand down?) — 확률·보상·위험 공개
-      // 봇: 기존 자동 시도 유지
+      // v0.6.0: RIGGER는 도착 + 인접 Bloc 구역도 드론 레이드 후보. 가까운 Bloc 찾음.
       if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
-        const cellThere = s.map[pAfterMove.position];
+        let cellThere = s.map[pAfterMove.position];
+        let effectiveCoord = pAfterMove.position;
+        // RIGGER 원격: 현위치에 Bloc 없으면 인접 Bloc 검색
+        if (pAfterMove.specific === 'RIGGER' && (!cellThere || cellThere.owner === null || cellThere.owner === undefined || s.players[cellThere.owner]?.role !== 'bloc')) {
+          const adj = coordsAdj(pAfterMove.position);
+          const adjBloc = adj.find(c => {
+            const cell = s.map[c];
+            return cell?.owner !== null && cell?.owner !== undefined && s.players[cell.owner]?.role === 'bloc';
+          });
+          if (adjBloc) { cellThere = s.map[adjBloc]; effectiveCoord = adjBloc; }
+        }
         if (cellThere?.owner !== null && cellThere?.owner !== undefined && s.players[cellThere.owner]?.role === 'bloc') {
           const blocIdx = cellThere.owner;
           const bloc = s.players[blocIdx].specific;
@@ -1952,7 +1982,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               meta: {
                 ...s.meta,
                 pendingRaid: {
-                  coord: pAfterMove.position,
+                  coord: effectiveCoord,
                   bloc,
                   zoneNm,
                   zoneType,
@@ -1981,13 +2011,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                 resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
                 wanted: ps[playerIdx].wanted + 1,
               };
-              const newMap = { ...s.map, [pAfterMove.position]: { ...cellThere, owner: null } };
+              const newMap = { ...s.map, [effectiveCoord]: { ...cellThere, owner: null } };
               s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
               s.meta._didAutoRaid = true;
               if (blocIdx === 0 && playerIdx !== 0) {
-                s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'raid', detail: `${pAfterMove.position} 잃음, ${bloc} 주가-3` } };
+                s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'raid', detail: `${effectiveCoord} 잃음, ${bloc} 주가-3` } };
               }
             } else {
               const ps = [...s.players];
@@ -1997,7 +2027,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                 wanted: ps[playerIdx].wanted + 1,
               };
               s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
+              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
               s.meta._didAutoRaid = true;
             }
           }

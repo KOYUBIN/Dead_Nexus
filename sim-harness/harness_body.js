@@ -39,10 +39,12 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     if (state.meta.pendingRaid) {
       const p0 = state.players[0];
       let raidType = 'violent';
-      // 클래스 전용 타입 우선
+      // 클래스 전용 타입 우선 (v0.6.0: RIGGER drone 추가)
       if (p0.specific === 'MOLE') raidType = 'infiltrate';
-      else if (p0.specific === 'BROKER' && (p0.resources.credit || 0) >= 5) raidType = 'negotiate';
-      // HP 낮으면 stealth, HACK 3+면 hack
+      else if (p0.specific === 'RIGGER' && (p0.resources.parts || 0) >= 2) raidType = 'drone';
+      else if (p0.specific === 'RIGGER') raidType = 'hack';  // parts 부족 시 hack
+      else if (p0.specific === 'BROKER' && (p0.resources.credit || 0) >= 4) raidType = 'negotiate';
+      else if (p0.specific === 'BROKER') raidType = 'stealth';
       else if (p0.hp < p0.maxHp * 0.4) raidType = 'stealth';
       else if (p0.stats.hack >= 3) raidType = 'hack';
       state = reducer(state, { type: 'RAID_SELECT_TYPE', raidType });
