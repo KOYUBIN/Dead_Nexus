@@ -20,7 +20,7 @@ function runOneGameN(opts, playerCount) {
     state = reducer(state, { type: 'SET_PHASE', phase: 2 });
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
-      if (p.defeated) continue;
+      if (p.defeated || p.isNpc) continue;
       const cards = botPickCards(state, i);
       const halves = cards.map((_, idx) => {
         if (p.role === 'ghost') return idx === 0 ? 'top' : 'bot';

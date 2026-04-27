@@ -610,6 +610,19 @@ function initGame(humanRole, humanSpecific, playerCount) {
   botRoles.forEach(r => botSpecs.push({ role: r, sp: r === 'bloc' ? pickBloc() : pickGhost() }));
   botSpecs.forEach((bs, i) => players.push(buildPlayer(i + 1, 'bot', bs.role, bs.sp)));
 
+  // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
+  // NPC는 카드 안 내고 자동 확장도 안 함. 구역만 차지하고 레이드 표적 역할.
+  if (totalPlayers === 2) {
+    const npc1 = pickBloc();
+    const npc2 = pickBloc();
+    const npcP1 = buildPlayer(players.length, 'npc', 'bloc', npc1);
+    const npcP2 = buildPlayer(players.length + 1, 'npc', 'bloc', npc2);
+    npcP1.isNpc = true;
+    npcP2.isNpc = true;
+    players.push(npcP1);
+    players.push(npcP2);
+  }
+
   // Set bloc HQ zones as owned
   players.forEach(p => {
     if (p.role === 'bloc') {
@@ -1575,7 +1588,7 @@ function reducer(state, action) {
       const expandLog = [];
       for (let pi = 0; pi < s.players.length; pi++) {
         const p = s.players[pi];
-        if (p.role !== 'bloc' || p.defeated) continue;
+        if (p.role !== 'bloc' || p.defeated || p.isNpc) continue;
         const myZones = Object.entries(expandedMap).filter(([c, cell]) => cell.owner === pi).map(([c]) => c);
         const candidates = new Set();
         myZones.forEach(c => {
@@ -2756,25 +2769,31 @@ function checkVictoryByPoints(state) {
 }
 
 function checkInstantVictory(state) {
-  // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
-  // Bloc: asset >= 55
-  // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
+  // Tutorial victory conditions (v0.6.2: 인원수별 동적 임계)
+  // 비-NPC 플레이어 수에 따라 게임 길이 보정
+  // 2인: 임계 -2 (게임 짧아짐), 4인: 기본, 5인: +3 (게임 길어지게)
+  const nonNpcCount = state.players.filter(p => !p.isNpc).length;
+  const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;  // v0.6.2: 5인은 보정 없음 (Bloc 부족 문제)
+  const blocGoal = 55 + adj;
+  const repBattleGoal = 16 + Math.floor(adj / 2);
+  const repOnlyGoal = 24 + adj;
+
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.defeated) continue;
+    if (p.defeated || p.isNpc) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 55) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥55)` } };
+      if (av >= blocGoal) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥${blocGoal}, ${nonNpcCount}인)` } };
       }
     } else {
       const rep = p.resources.rep || 0;
       const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= 16 && raids >= 2) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
+      if (rep >= repBattleGoal && raids >= 2) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투): 렙 ${rep}/${repBattleGoal} + 레이드 ${raids}` } };
       }
-      if (rep >= 24) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥24)` } };
+      if (rep >= repOnlyGoal) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판): 렙 ${rep} (≥${repOnlyGoal})` } };
       }
     }
   }
