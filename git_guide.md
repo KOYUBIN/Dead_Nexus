@@ -305,7 +305,7 @@ chore(repo): add .gitignore for node_modules
 ### 버전 태그 규칙
 ```bash
 # Minor 버전 태그
-git tag -a v0.2.0 -m "Core systems finalized: dual card + MTG attributes"
+git tag -a v0.2.0 -m "Core systems finalized: dual card + 6속성 마나형 attributes"
 
 # Patch 태그
 git tag -a v0.2.1 -m "Combat resolution clarifications"

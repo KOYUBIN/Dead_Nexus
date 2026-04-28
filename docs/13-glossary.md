@@ -5,7 +5,7 @@
 **최종 수정**: 2026-04  
 
 DEAD NEXUS에서 사용되는 모든 게임 용어·세계관 용어 정의.  
-저작권 안전을 위해 기존 작품(Cyberpunk 2077 등)의 용어는 모두 독자 용어로 대체되었다.
+저작권 안전을 위해 기존 작품(동명 라이선스 게임 등)의 용어는 모두 독자 용어로 대체되었다.
 
 ---
 
@@ -328,7 +328,7 @@ DEAD NEXUS 개발 초기에 사이버펑크 장르의 일반 용어를 사용했
 | Cyberpunk | Gridpunk | 장르 명칭 |
 | MegaCorp | Bloc | 메가기업 |
 | Edgerunner | Ghost | 용병·독립 세력 |
-| Netrunner | Cipher | 해커 클래스 |
+| 동시대 다른 IP | Cipher | 해커 클래스 |
 | Solo | Blade | 전투 클래스 |
 | Techie | Rigger | 기술자 클래스 |
 | Fixer | Broker | 중개인 클래스 |

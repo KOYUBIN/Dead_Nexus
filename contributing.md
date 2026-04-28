@@ -171,7 +171,7 @@ Closes #XX
 
 ### 저작권 안전
 
-- Cyberpunk 2077, Shadowrun, Netrunner 등 기존 작품 용어 **금지**
+- 동명 라이선스 게임, 동시대 다른 IP, 동시대 다른 IP 등 기존 작품 용어 **금지**
 - 실존 기업 이름 사용 금지 (Apple, Google, Microsoft 등)
 - 실존 인물 이름 사용 금지
 - 참고했으나 변형한 용어는 `13-glossary.md`에 출처 명시

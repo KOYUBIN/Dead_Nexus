@@ -16,7 +16,7 @@
 | **추천 연령** | 16세 이상 |
 | **난이도** | ★★★★★ |
 | **장르** | 전략 / 자원 관리 / 구역 장악 / 레거시 |
-| **핵심 메커니즘** | MTG식 속성 시스템 + Gloomhaven 2카드 액션 + Mage Knight 덱빌딩 |
+| **핵심 메커니즘** | MTG식 속성 시스템 + 2카드 TOP/BOTTOM 방식 2카드 액션 + 덱빌딩+사이드웨이 방식 덱빌딩 |
 | **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — 솔로 + 봇 3, 단일 HTML |
 
 ---
@@ -110,7 +110,7 @@ dead-nexus/
 
 ### 게임 규칙
 - **[02-core-rules.md](docs/02-core-rules.md)** — 턴 구조, 기본 규칙, 승리 조건
-- **[05-card-system.md](docs/05-card-system.md)** — Ghost 글룸헤이븐 방식 + Bloc 메이지나이트 방식
+- **[05-card-system.md](docs/05-card-system.md)** — Ghost 2카드 TOP/BOTTOM 방식 + Bloc 덱빌딩+사이드웨이 방식
 - **[06-attribute-system.md](docs/06-attribute-system.md)** — 6속성(MESH/IRON/VOLT/SHADE/BIO/ASH) + GRID
 
 ### 세력 & 캐릭터
@@ -139,9 +139,9 @@ dead-nexus/
 
 | 시스템 | 적용 | 모티브 |
 |---|---|---|
-| 2카드 탑/바텀 + 소각(LOSS) | **Ghost** | Gloomhaven |
-| 덱빌딩 + 사이드웨이 + 조합 | **Bloc** | Mage Knight |
-| 6속성 마나 비용 | **공통** | Magic: The Gathering |
+| 2카드 탑/바텀 + 소각(LOSS) | **Ghost** | 2카드 TOP/BOTTOM 방식 |
+| 덱빌딩 + 사이드웨이 + 조합 | **Bloc** | 덱빌딩+사이드웨이 방식 |
+| 6속성 마나 비용 | **공통** | 6속성 마나형 |
 
 ### 속성 시스템 (6+1)
 - ◈**M** MESH (해킹·데이터)

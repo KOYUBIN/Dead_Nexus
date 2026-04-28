@@ -1064,7 +1064,7 @@ function trackBonus(p, kind) {
   return b;
 }
 
-// v0.6.3e: Bloc 건물 건설 시스템 (산업 트랙형 + Gallerist 영감)
+// v0.6.3e: Bloc 건물 건설 시스템 (Brass + Gallerist 영감)
 // 자사 구역에 건물 1개 건설 → 영구 패시브. Ghost 레이드로 파괴 가능
 const BUILDINGS = {
   factory:   { name: '공장',     icon: '🏭', tl: 1, cost: { credit: 4, parts: 2 }, desc: '매 라운드 부품 +2' },
@@ -1088,7 +1088,7 @@ function canBuildBuilding(state, playerIdx, key, coord) {
   return { ok: true };
 }
 
-// v0.6.3d: 시그널 점진 공개형 시그널 — NPC 블록 정보 점진 공개
+// v0.6.3d: SETI 시그널 — NPC 블록 정보 점진 공개
 const SIGNAL_REVEAL_COST = { data: 3 };  // data 3 → +1 시그널
 const SIGNAL_LEVEL_DESC = {
   0: '정체 미상 (???)',
@@ -1132,7 +1132,7 @@ function trackIncomeBonus(p) {
 const INFAMY_MILESTONES = [6, 12, 18];
 const MILESTONES_ENABLED = true;  // v0.6.3b 디버그용 토글
 
-// v0.9.1: 하이라이트 모먼트 — 게임 중 기억할 만한 순간 (국내 보드게임 커뮤니티 "기억남는 한 수" 디자인)
+// v0.9.1: 하이라이트 모먼트 — 게임 중 기억할 만한 순간 (보드라이프 "기억남는 한 수" 디자인)
 const HIGHLIGHT_DEFS = {
   // v0.9.3-fix: 평판 보상 일괄 -2 (5×5에서 Ghost 폭주 방지)
   first_nexus_visit:    { icon: '🌐', label: '첫 NEXUS 도달',          rep: 3,  desc: '도시의 신경망에 첫 접속' },
@@ -1445,7 +1445,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   }
 
   // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
-  // v0.6.3d: NPC는 시그널 점진 공개형 시그널(정보)을 점진 공개하는 표적 역할
+  // v0.6.3d: NPC는 SETI식 시그널(정보)을 점진 공개하는 표적 역할
   if (totalPlayers === 2) {
     const npc1 = pickBloc();
     const npc2 = pickBloc();
@@ -1589,7 +1589,7 @@ function buildPlayer(id, kind, role, specific) {
     defeated: false,
     plannedCards: [],
     plannedHalves: [],
-    // v0.6.3: 5트랙 시스템 (악명형 악명식 — 직접 투자, 총악명=합)
+    // v0.6.3: 5트랙 시스템 (Speakeasy 악명식 — 직접 투자, 총악명=합)
     tracks: trackInit.tracks,
     onceAbilities: { critFailImmunity: false, droneFree: false, reroll: false, teleport: false, deathSave: false },
   };
@@ -2729,7 +2729,7 @@ function reducer(state, action) {
         }
       }
 
-      // === v0.7.4: Bloc 방어 비용 (악명형, 완화 버전) ===
+      // === v0.7.4: Bloc 방어 비용 (Speakeasy식, 완화 버전) ===
       // 4구역까지 무료, 5구역째부터 추가 1구역당 무기 OR 크레딧 1 소모
       // 부족 시 가장 약한 구역(요새화 0, 건물 없음, HQ 외) 잃음
       for (let pi = 0; pi < s.players.length; pi++) {
@@ -3210,7 +3210,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const zName = ZONE_TYPES[s.map[finalPos]?.zone]?.name || finalPos;
       const pathStr = path.join(' → ');
       s = logEntry(s, `${meTag}🚶 P${playerIdx} [${p.specific}] · ${pathStr} (${zName}, ${path.length - 1}칸 이동)`);
-      // v0.6.3b: 3칸 이상 이동 시 수송 트랙 +1 (악명형 단발 보상)
+      // v0.6.3b: 3칸 이상 이동 시 수송 트랙 +1 (Speakeasy식 단발 보상)
       if (path.length - 1 >= 3) s = raiseTrack(s, playerIdx, 'transport', 1, '장거리 이동');
       // v0.9.1: NEXUS 첫 도달 하이라이트
       if (s.map[finalPos]?.zone === 'nex') s = recordHighlight(s, 'first_nexus_visit', playerIdx);
@@ -3548,7 +3548,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   // === v0.5.10: 미구현 효과 키 폴백 보상 (BROKER·CIPHER·MOLE 언더파워 해소) ===
   // 원래 카드 텍스트에 있던 효과가 구현 안 됐으면 최소 자원/렙 보상 부여해 Ghost 비대칭 전략 루트 강화
   if (effect.contact) {
-    // v0.6.5d: 접선 강화 — 영향력+contact, ₵+contact*2, ★+contact (BROKER 평판 비대칭 팩션형)
+    // v0.6.5d: 접선 강화 — 영향력+contact, ₵+contact*2, ★+contact (BROKER 평판 루트)
     const ps = [...s.players];
     const add = effect.contact * 2;
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, influence: (ps[playerIdx].resources.influence || 0) + effect.contact, credit: (ps[playerIdx].resources.credit || 0) + add, rep: (ps[playerIdx].resources.rep || 0) + effect.contact } };
@@ -5631,7 +5631,7 @@ function GameScreen({ state, dispatch }) {
                 {p.tl === 5 && <span style={{ color: 'var(--yellow)', fontSize: 9 }}>MAX</span>}
                 <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
               </div>
-              {/* v0.6.3b: 5트랙 + 총악명 + 마일스톤 (악명형 악명식) */}
+              {/* v0.6.3b: 5트랙 + 총악명 + 마일스톤 (Speakeasy 악명식) */}
               {p.tracks && (() => {
                 const infamy = getInfamy(p);
                 const myMs = (state.meta.milestonesAwarded?.[i]) || [];
