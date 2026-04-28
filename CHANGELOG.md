@@ -9,8 +9,484 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 ## [Unreleased] — 작업 중
 
 ### Planned
-- 11×11 맵 시뮬레이터 확장 (v0.6)
-- Bloc 덱 확장 + 드래프트 규칙
+- 5×5 BLADE/MOLE 폭주 너프 (소규모 보드 mini-raid 빈도)
+- 사람용 협상 UI 모달 (자유 거래 제안/수락)
+- Cyberware 슬롯 시스템 (RPG식 character 발전)
+- 캠페인 시나리오 간 영구 변화 누적
+- 사람 플레이테스트 1회 (솔로 normal + 핫시트 3인)
+
+---
+
+## [1.0] — 트랙 사이버펑크 리네이밍 + 솔로/핫시트 모드 + 룰북·프린트킷 갱신 (2026-04-28)
+
+### v1.0.0 — 트랙 사이버펑크 정체성 (Speakeasy → DEAD NEXUS)
+사용자 피드백: 기존 트랙명(무력/수송/제조/파티/경호 + 악명)이 Speakeasy와 동일.
+사이버펑크 RPG/Ashgrid 2091 분위기로 전면 리네이밍:
+
+| 내부 키 | 기존 | 신규 (v1.0) | 라이프패스 | 아이콘 |
+|---|---|---|---|---|
+| combat | 무력 | **화력 (Firepower)** | Solo/킬러 | 💥 |
+| transport | 수송 | **그리드런 (Grid Run)** | Nomad | 🌃 |
+| mfg | 제조 | **코드 (Code)** | Netrunner/Rigger | 💾 |
+| party | 파티 | **인맥 (Network)** | Fixer | 🤝 |
+| security | 경호 | **그림자 (Shadow)** | 첩보 | 🎭 |
+
+**총합 지표 변경**: 악명 → **거리명성 (Street Cred)** — Cyberpunk RPG 핵심 용어 차용.
+- 모든 로그/UI/모달 라벨 일괄 갱신
+- HIGHLIGHT_DEFS / 마일스톤 메시지 / RAID_TYPES desc 동기화
+- 내부 키(`combat`/`transport`/`mfg`/`party`/`security`)는 호환성 유지
+
+### v1.0.1 — 솔로 모드 (1인 플레이)
+- SetupScreen 신규: **모드 선택** (솔로 / 핫시트), **난이도** (easy/normal/hard, 솔로 한정)
+- 난이도 보정:
+  - **easy**: 인간 시작 자원 ₵+5 무기/부품/데이터+1 / Bloc 자동확장 50%
+  - **normal**: 표준 (5×5 100% / 11×11 75%)
+  - **hard**: 봇 시작 자원 ₵+5 무기+1 / Bloc 자동확장 100%
+
+### v1.0.2 — 멀티-휴먼 핫시트 모드 (2~5인)
+- 한 기기에서 2~5명 차례 플레이
+- SetupScreen에서 인간 P1~P5 역할/클래스 개별 지정 (인간 추가/제거 버튼)
+- 빈 자리는 봇 자동 보충 (4인 기준 균형)
+- **PASS THE DEVICE 가림막**: Plan phase에서 활성 인간 변경 시 자동 표시 (이전 인간 손패 가림)
+- 신규 액션 `NEXT_HUMAN`: Plan 확정 후 다음 인간으로 자동 전환
+- `state.meta.activePlayer` — 현재 차례 인간 인덱스 트래킹
+- GameScreen `meIdx = state.meta.activePlayer` (멀티) / 0 (솔로)
+
+### v1.0.3 — 룰북 docs 업데이트
+- **신규** `docs/17-v1.0-systems.md` — v0.6~v1.0 시스템 통합 정리
+  - 5트랙·거리명성·마일스톤
+  - 협상 시스템 (3종 거래)
+  - NEXUS 동적 컨트롤 (5 Bloc별 룰)
+  - SETI 시그널 / 건물 / 하이라이트 / mini-raid / Bloc 능동 / 방어 비용
+  - 5×5 vs 11×11 비교표
+  - 게임 모드 (솔로/핫시트/봇 시뮬)
+- `docs/00-overview.md` — v1.0 시스템 doc 링크 추가
+- `docs/02-core-rules.md` — v1.0 신규 시스템 11개 요약 + 임계값 갱신
+
+### v1.0.4 — print-kit 업데이트
+- **신규** `print-kit/06-character-sheets.html` 추가 시트 2매:
+  - **v1.0 STREET CRED 시트**: 5트랙 LV 0~5 체크박스 + 거리명성 총합 + 마일스톤 6/12/18 + truce 약속 박스 3개 + 하이라이트 12 토큰 그리드
+  - **v1.0 NEXUS · 협상 참조 시트**: NEXUS 룰 5종 표 / 협상 거래 3종 / Bloc 능동 액션 카드 3종
+- **신규** `print-kit/01b-map-11x11.html` — 121 셀 정식 맵 (A3 권장, JS 자동 렌더, zone 색 + Bloc HQ + Ghost 시작 + NEXUS 룰 표 + zone 범례 12종)
+- `print-kit/index.html` 갱신 — 11×11 맵 + v1.0 시트 항목 추가
+
+### 검증 (200판 시뮬)
+- **5×5 튜토리얼**: 평균 5.54R, Ghost 128/Bloc 72, P0 33%/5%
+- **11×11 정식**: 평균 7.23R (5~12R), Ghost 61/Bloc 39, P0 17%
+- 무에러, 사이버펑크 리네이밍 완전 호환
+
+---
+
+## [0.9] — Above-the-Table 인터랙션 + 하이라이트 + NEXUS 동적 (2026-04-28)
+
+보드게임 커뮤니티 트렌드 조사 결과 반영: **협상/약속, 기억할 만한 한 수, 동적 컨트롤 포인트**
+
+### v0.9.1 — 하이라이트 모먼트 시스템
+- `HIGHLIGHT_DEFS` — 12종 정의: 첫 NEXUS 도달/점령, 첫 raid 성공, 첫 잠입형, 첫 건물 파괴, 첫 mini-raid, 악명 18, 최후 저항, deathSave, CLONE_DECOY 부활, 현상금 명중, 10구역 점유
+- `recordHighlight(state, key, playerIdx)` — 1회성, 평판 보상 +1~+5
+- `meta.highlights[]` 기록
+- 7개 트리거 hook 적용 (movement→NEXUS, raid 성공, infiltrate, 건물 파괴, mini-raid, last stand, deathSave, 마일스톤 18, clone revive)
+- UI: 플레이어 카드에 노란 하이라이트 토큰 배지 (hover로 라벨/라운드 표시)
+
+### v0.9.2 — 협상 페이즈 (Phase 1.5 NEGOTIATE)
+- 신규 액션 `NEGOTIATE_PHASE` — Phase 1 직후 자동 발동
+- 3종 거래: **자원 스왑** (credit↔weapons, data↔parts), **비공격 약속(truce)** (1R 유효), **BROKER 중개**
+- 봇 AI: 거래 net-value 평가, canAfford 체크, 작은 음수 가치는 수락 (외교 가치)
+- `meta.promises[]` — 약속 트래킹 (from/to/type/expiresR/status)
+- **약속 위반 페널티**: truce 무시 raid 시 위반자 ★-2, 피해자 ★+2 (관계 트래킹)
+- **약속 지킴 보상**: NEXT_ROUND에서 만료된 active truce → 양측 ★+1
+- 하네스에 `NEGOTIATE_PHASE` 호출 추가
+
+### v0.9.3 — BROKER 협상 특화 + NEXUS 동적 컨트롤
+- BROKER 협상 시 매 R **★+1 ₵+1 + party 트랙** (클래스 정체성 회복)
+- **`NEXUS_RULES`** — Bloc별 5종 글로벌 룰:
+  - VANTA `info_open`: 모든 NPC 시그널 +1, 정찰 +1
+  - IRONWALL `martial`: ATK +1, Ghost 전원 수배 +1/R
+  - HELIX `biocode`: 모든 플레이어 HP +1/R
+  - AXIOM `algo_market`: 데이터 +1/R, 주식 변동 ×2
+  - CARBON `energy_grid`: 자사 구역 수입 +1 크레딧
+- `getNexusController(state)` / `getActiveNexusRule(state)` 헬퍼
+- NEXT_ROUND에서 NEXUS 룰 자동 적용 (라운드 시작)
+- COLLECT_INCOME에 CARBON energy_grid 보너스
+- UI: top-bar에 NEXUS 룰 활성 배지 (점유 Bloc 명 표시)
+
+### 버그 수정
+- `applyEffect` deathSave 핸들러의 `const ps` 재할당 에러 → `let psMut` 변수 도입
+
+### 검증 (200판 5×5 + 100판 11×11)
+- **11×11 정식**: Ghost 62 / Bloc 38, **평균 7.29R (5~12)** ✅ 무에러
+- **5×5 튜토리얼**: Ghost 127 / Bloc 73, 평균 5.42R, MOLE 81% 폭주 (다음 사이클 과제)
+
+### 게임성 임팩트
+- 협상으로 *사이드 게임* 발생 → "이번 R 너 안 치면" 같은 미니 외교
+- 하이라이트 토큰으로 매 게임 *"오늘의 한 수"* 4~7개 자동 마킹
+- NEXUS 컨트롤이 *동적 룰 변경 포인트*로 작동 — 후반 집중 발생 예상
+- BROKER 클래스가 처음으로 *명목적 협상가*에서 *기능적 협상가*로
+
+---
+
+## [0.8] — 11×11 메인 격상 + UI 동적 + 카드 정체성 + Bloc 능동 액션 (2026-04-28)
+
+### v0.8.1 — 11×11 메인 모드 격상
+- SetupScreen에 맵 사이즈 선택 (11×11 정식 / 5×5 튜토리얼)
+- 기본값 **11×11** (5×5는 학습용 옵션)
+- `buildInitial(role, specific, mapSize)` 인자 추가
+- RESET 액션도 mapSize 받음
+
+### v0.8.2 — 11×11 UI 그리드 동적 렌더링
+- `.map-board.size-11` CSS 클래스 (22px 라벨, 11×11 그리드, 720px 최대)
+- 셀/좌표/zone 폰트 축소 (8px/7px) — 121 셀 압축 표시
+- 맵 렌더 JSX를 `cols`/`rows` 동적 배열로 (5×5 / 11×11 자동 분기)
+
+### v0.8.3 — 맵 크기별 임계/룰 분리
+- 5×5: 자산 65 / 평판 32·50 / maxRounds 8 (튜토리얼)
+- **11×11: 자산 95 / 평판 45·70 / maxRounds 12** (정식)
+- `R{round}/X` 헤더 표시도 맵별 분기
+
+### v0.8.4 — 11×11 균형 (Bloc 71/29 → 59/41)
+- `BLOC_SETUP_11x11`: 시작 구역 4 → 3 (support 3→2)
+- 11×11 한정 Bloc 자동 확장 100% → **50% 확률** (5×5는 100% 유지)
+- 11×11 Ghost 시작 자원 보강: ₵+5, 무기+1, 데이터+1, 부품+1, transport 트랙 +1
+
+### v0.8.5 — 카드 정체성 복원 (5종 distinct 효과)
+- `stat_boost`: 일회성 판정 보너스 + 다음 R 카드+1 (extraDrawNext)
+- `always_first` (BLADE QUICK_DRAW): 적 1명 HP-2 + 자기 ★+2 + combat 트랙
+- `target` (BLADE CONTRACT_KILL): hp 최고 적 HP-3 + ★+5
+- `reveal: 'zone'` (CIPHER PORT_SCAN): 한 구역 토큰 즉시 공개 + 📡+2
+- `swap_ratio` (BROKER BACK_DEAL): data 1 → credit 2 환전
+- `temp_tl` (RIGGER OVERCLOCK): 다음 R 카드+1, ⚙+2, ★+2
+- `NEXT_ROUND` 핸들러: P0가 `extraDrawNext` 만큼 추가 카드 드로우
+
+### v0.8.6 — Bloc 능동 액션 3종 (반응형 → 능동형)
+- **`bounty_post`** (BOUNTY POST 카드, TL1): 평판 1위 Ghost 수배+3, 자기 ₵+3 🎙+1
+- **`assassin_contract`** (ASSASSIN HIRE 카드, TL2): HP 1위 Ghost HP-4, 비용 ₵-3, 자기 ★+2
+- **`ghost_track`** (GHOST TRACKER 카드, TL2): 모든 Ghost 수배+1, 지도 5R 노출, 자기 📡+3 🎙+1
+- 3장 모두 BLOC_COMMON에 추가 (모든 Bloc 사용 가능)
+- 봇 점수: bounty +12, assassin +14, ghost_track +10
+- effectSummary에 한글 설명 추가
+
+### 검증 (스모크 테스트)
+- **5×5 튜토리얼 50판**: Ghost 31 / Bloc 19, 평균 5.54R, P0 28%/4%
+- **11×11 정식 100판**: Ghost 59 / Bloc 41, **평균 8.03R (5~12R)** ✅ 6~8R 목표 달성
+- 11×11 균형 71/29 → 59/41 (큰 개선)
+- 11×11 게임 길이 4.82R → 8.03R (+66%)
+
+---
+
+## [0.7.5] — 최소 5R 가드 (조기 승리 방지) (2026-04-28)
+
+### 추가
+- `checkInstantVictory(state)` 진입 시 `state.meta.round < 5` 가드 추가
+- 5R 종료 전엔 자산/평판 임계 도달해도 즉시 승리 X (모든 임계 게임 5R 이후 발효)
+- maxRounds(8) 한계 내에서 라운드 범위 확정: **5~9R**
+
+### 검증 (200판 시뮬)
+- 라운드 범위: **5~9 (최소 5R 보장)** ✅
+- 평균 라운드: 5.49 (이전 4.92 → +12%)
+- Ghost 114 / Bloc 86 — Ghost 약간 강세 (5R 가드 동안 봇 Ghost 평판 추가 누적)
+- P0 승률: Ghost 20% / Bloc 6%
+
+### 알려진 영향
+- Ghost 평판 평균 28.2로 상승 (이전 23) — 5R 가드로 누적 시간 증가
+- BROKER 여전히 0% (다음 사이클)
+
+---
+
+## [0.7] — MOLE 회복 + 게임 길이 + 11×11 + 방어 비용 (2026-04-28)
+
+### v0.7.1 — MOLE 디버깅 (botPickCards 트레이스)
+- 트레이스 결과: MOLE이 카드는 잘 사용하지만 평판 13~21에서 멈춤 (게임 4R로 너무 짧음)
+- `tryMoleMiniRaid()` 헬퍼 신설 — 50% 확률 발동 (mini-raid) / 50% 확률 정찰(★+1)
+- MOLE mini-raid 트리거 효과 확장: `peek_bloc`/`steal_card`, `copy_bloc_card`, `scandal`/`stock_dmg`
+- `bloc_resource`/`vote_flip`, `frame`/`swap_blame`은 mini-raid 제거 (너무 잦음)
+- 결과: MOLE 0% → 31.3% (목표 5~25% 진입)
+
+### v0.7.2 — 게임 길이 연장
+- 임계 상향: Bloc 자산 50→65, Ghost battle 24→32, alone 34→50
+- Bloc 자동 점령 빈도 100% 유지 (75%/50% 시도 실패 — Bloc 약화)
+- 결과: 평균 라운드 3.81 → 5.04 (32% 연장, 일부 게임 9R 도달). 6R 목표는 부분 달성.
+
+### v0.7.3 — 11×11 맵 인프라
+- `MAP_11x11_ZONES` (121 cells, 중앙 F6 NEXUS) + `MAP_11x11` 자동 생성
+- `BLOC_SETUP_11x11` — 5 Bloc 외곽 4방 분산 (각 4구역 시작)
+- `coordsAdj(c, maxIdx)` 인자 추가 (기본 10 = 11×11 호환)
+- `initGame(humanRole, humanSpecific, playerCount, mapSize)` mapSize 인자 추가
+- 11×11에서 Ghost 시작 위치 외곽 분산 (CIPHER A6, BLADE F1, BROKER K6, RIGGER F11, DRIFTER A1, MOLE K11)
+- Optional chain 안전 처리 (`s.map[c]?.zone`)
+- 5×5 회귀: 200판 무에러, Ghost 103/Bloc 97 균형
+- 11×11: 100판 무에러, 평균 4.82R, Bloc 71/29 (별도 튜닝 필요)
+
+### v0.7.4 — Bloc 방어 비용 시스템 (Speakeasy식, 완화 버전)
+- 매 라운드 phase 4 전 발동
+- 4구역까지 무료, 5구역째부터 추가 1구역당 무기 1 OR 크레딧 1 소모 (무기 우선)
+- 자원 부족 시 가장 약한 구역(요새화 0, 건물 없음, HQ 외) 잃음
+- 결과: 큰 Bloc 자연적 견제, 균형 안 깨짐
+
+### 최종 검증 (200판 시뮬, 5×5)
+- 총 승자: Ghost 106 / Bloc 94 (적정 균형)
+- P0 승률: Ghost 12% / Bloc 6% (Bloc 약간 약화)
+- 평균 라운드: 4.92 (2~9)
+- 클래스별: BLADE/RIGGER 23.5%, MOLE 18.8%, VANTA/IRONWALL/CARBON 10%, CIPHER 5.9%
+- 잔여 0%: BROKER, HELIX, AXIOM (다음 사이클 과제)
+
+---
+
+## [0.6.6] — 카드 효과 광역 강화 + 4종 mini-raid 도입 (2026-04-27)
+
+### v0.6.6 — RIGGER/CARBON 강화
+- `field_craft`/`jury_rig` ★+2→+4, ⚙+4→+5, 🔩+2→+3, mfg 트랙 +1
+- 신규 RIGGER 폴백: `repair`/`salvage`/`craft_item`/`zone_shield`/`atk_range`/`multi_target`/`disable_elec`/`zone_disable`
+- **드론 mini-raid**: atk_range/multi_target 등 효과 발동 시 인접 Bloc 자동 중립화 + raid count +1
+- `cargo_haul`/`supply_drop` ₵+3→+5 ⚙+2→+3 ★+0→+3 + transport+mfg 트랙
+- `deploy_trap` 요새+1→+2 ★+2→+4
+- `zone_income_2x` 구역×4→×6 ⚙+2→+3 (CARBON)
+
+### v0.6.6b — Bloc 카드 효과 강화
+- `deploy_op`: 점령 시 ₵+3 추가, 점령 실패해도 ₵+2 위로금
+- `algorithm`/`long_contract`: ₵+6→+8, 🎙+2→+3, Bloc은 자사 주식 +1
+- `heal_all` (HELIX): Ghost HP+3 + 자기 ₵+5 🎙+2 + party 트랙
+- `ghost_extra_card`/`contracts_boost`: ₵+3→+5 📡+1→+2 + mfg 트랙
+- `destroy_zone` (IRONWALL): + 자기 ₵+5 🔩+2 + combat 트랙
+- 신규 Bloc 폴백: `lock_zone`/`quarantine`, `steal_op`, `revive` (Ghost 부활), `ghost_move` (계엄령), `crash_target`
+
+### v0.6.6c — CIPHER/BLADE/DRIFTER 효과 강화 + 신규 mini-raid 3종
+- **BLADE mini-raid** (`execute`): 인접 Bloc 자동 중립화
+- **CIPHER mini-raid** (`def_ignore`/`steal`): 해킹형 인접 Bloc 자동 중립화
+- BLADE 신규 폴백: `assassin`/`atk_twice`/`atk_x3_retort`/`atk_reroll`/`force_enter`/`protect_ally`/`absorb`/`block_adj`/`enemy_spd`/`def_penalty`/`def_zero`
+- CIPHER 신규 폴백: `mimic`/`transfer_attack`/`redirect`/`wipe_log`/`slow_target`
+- DRIFTER 강화: `transfer_ally`/`fuel`, `untrack`/`shortcut`, `leave_fire`/`smuggle`, 신규 `ram_atk`
+- `crash_stock`: Ghost인 경우 ★+amt 📡+1 추가
+- `execute` ★+4→+5 + combat 트랙
+- `frenzy` bonus +1→+3
+- `last_stand` ★+5→+8 + raid count +1
+- `point_blank`/`surprise`/`same_zone_atk` ★+2→+5 ₵+2→+3
+
+### v0.6.6d — 임계값 + Bloc/Ghost 균형 재조정
+- Bloc 자산 임계 60 → 52
+- Ghost 평판 battle 18 → 20, alone 26 → 28
+
+### v0.6.6e — 봇 카드 점수 시스템 광역 보강
+- `scoreGhostCard`: mini-raid 트리거 효과(infiltrate +14, def_ignore +12, atk_range +12, execute +12) 점수 대폭 상향
+- 신규 효과 점수 추가: assassin/atk_twice/atk_x3_retort/atk_reroll/force_enter, repair/salvage, craft_item/zone_shield, mimic/transfer_attack/redirect, wipe_log/slow_target, protect_ally/absorb, block_adj/enemy_spd/def_penalty/def_zero, ram_atk
+- `scoreBlocCard`: deploy_op +14, crash_target/destroy_zone +10, zone_income_2x +12, heal_all +9, algorithm/long_contract +12, lock_zone/quarantine +7, steal_op +10, revive +5, ghost_move +6
+- 결과: RIGGER 0% → 41%, MOLE 0% → 25% (한 사이클에서 최대 변화)
+
+### v0.6.6f — 최종 임계 + mini-raid 점수 미세 조정
+- 평판 임계 32→34 / 22→24, Bloc 임계 56→50
+- mini-raid 점수 너프: infiltrate 14→12, def_ignore 10→8, atk_range 12→8, execute 12→8
+
+### 최종 검증 (200판 시뮬)
+- 총 승자: **Ghost 98 / Bloc 102** (완벽 대칭)
+- P0 승률: Ghost 10% / Bloc 12% (대칭)
+- 평균 라운드: 3.88 (2~7)
+- **클래스별 최종**:
+  - DRIFTER 25%, VANTA/IRONWALL/HELIX 15%, CIPHER/RIGGER 11.8%, CARBON 10%, BLADE/BROKER 5.9%, AXIOM 5%
+  - **MOLE 0%** (잔여 바닥권 — 봇 카드 사용 패턴 별도 분석 필요)
+- **누적 진전 vs v0.6.4 시작 시점**:
+  - 0% 클래스: 4개 → 1개
+  - 모든 클래스 0~5% 분포 → 5~25% 분포로 정상화
+
+### 핵심 발견
+**4종 mini-raid 패턴 확립** — atk 카드 없는 클래스들이 raid count를 채울 수 있는 결정적 메커니즘:
+- MOLE 침투형 (`infiltrate`/`disguise`)
+- RIGGER 드론형 (`atk_range`/`multi_target`)
+- BLADE 처형형 (`execute`)
+- CIPHER 해킹형 (`def_ignore`/`steal`)
+
+각 mini-raid: 인접 Bloc 자동 중립화 + 주가-2 + ★+2 + raidsThisGame +1
+
+---
+
+## [0.6.5] — 바닥권 클래스 종합 리워크 (MOLE/BROKER 회복) (2026-04-27)
+
+### 추가 / 변경
+**v0.6.5a — 시작 트랙 리워크**
+- CIPHER, BLADE: transport 1 추가
+- RIGGER: security → transport (드론 클래스 이동력 보강)
+- BROKER: party 2 + transport 2 + security 1 (협상가 발 빠르게)
+- MOLE: security 2 + transport 2 + party 1 (잠입가 발 빠르게)
+
+**v0.6.5b — 봇 R&D AI 회전 + pref 5트랙 확장**
+- prefByClass를 모든 11개 클래스에 5트랙 풀 명시
+- 매 라운드 `round % length`만큼 pref 시작점을 회전 → 한 트랙 몰빵 방지
+- 하네스 P0 AI 동일 적용 + transport 0 우선 룰 유지
+
+**v0.6.5c — 게임 길이 임계 +5 / +2**
+- Bloc 자산 임계 55 → 60
+- Ghost 평판 battle 16 → 18, alone 24 → 26
+- 평균 라운드 3.86 → 3.96
+
+**v0.6.5d — MOLE/BROKER 카드 효과 강화**
+- `infiltrate` / `disguise` 효과: ★+1 → ★+3 + 📡+2 + security 트랙 + NPC 시그널 +1
+  - **신규 mini-raid**: 인접/현재 Bloc 구역 자동 잠입 → 중립화 + 주가-2 + ★+2 + raidsThisGame +1
+  - 이로써 MOLE이 atk 카드 없이도 raid 카운트 누적 가능
+- `contact`: ★+contact 추가, party 트랙 +1
+- `extort`: 렙 ratio 1.5x → 2x
+- `broker_fee`: ★+broker_fee/3
+- `peek_bloc`/`steal_card`: ★+3 → ★+5
+- `bloc_resource`/`vote_flip`: ★+4 → ★+5
+- `frame`/`swap_blame`: ★+3 → ★+4
+- `copy_bloc_card`: ★+2 → ★+4
+
+### 검증 (200판 시뮬)
+- 총 승자: Ghost 106 / Bloc 94
+- P0 승률: Ghost 17% / Bloc 11%
+- 평균 라운드: 3.96 (2~7)
+- **클래스별 (이전 → 지금)**:
+  - MOLE: 0% → 18.8% ✅
+  - BROKER: 0% → 35.3% ✅
+  - BLADE: 0% → 11.8%
+  - AXIOM: 5% → 20%
+  - DRIFTER: 25% → 18.8%
+  - 새 바닥권: RIGGER 0%, CARBON 0% (다음 v0.6.6 과제)
+
+---
+
+## [0.6.4] — LV4-5 고급 효과 + LV5 궁극 능력 (2026-04-27)
+
+### 추가
+- **트랙 LV5 궁극 능력 (`onceAbilities`, 게임당 1회)**
+  - 무력 LV5 → `critFailImmunity` (크리티컬 실패 영구 면역)
+  - 수송 LV5 → `teleport` (구역 직행)
+  - 제조 LV5 → `droneFree` (1회 무료 드론)
+  - 파티 LV5 → `reroll` (주사위 1회 리롤)
+  - 경호 LV5 → `deathSave` (HP 0→1 부활)
+- `deathSave` 발동 로직: PvP 공격으로 HP=0 시 onceAbilities 소진하며 회복
+- `trackBonus` LV4(+2) / LV5(+1) 추가 가산 → 총 +1/+3/+4 단계
+- `trackIncomeBonus` 마찬가지로 LV4/LV5 가산
+
+### 검증 (200판 시뮬)
+- 총 승자 분포: Ghost 101 / Bloc 99 (균형)
+- P0 승률: Ghost 15% / Bloc 14% (대칭)
+- 평균 라운드: 3.90 (2~8)
+- 클래스별: DRIFTER 37.5% (강), MOLE 0% (바닥)
+
+---
+
+## [0.6.3e] — Bloc 건물 건설 시스템 (Brass + Gallerist 영감) (2026-04-27)
+
+### 추가
+- **5종 건물** (자사 빈 구역에 1개씩 건설 가능)
+  - 🏭 공장 (TL1, ₵4 ⚙2): 매 라운드 부품 +2
+  - 🛡 보안센터 (TL1, ₵3 ⚙1): 구역 요새화 +2 영구
+  - 🏢 사옥 (TL2, ₵6): 자산 +5 영구, 인플루언스 +1/R
+  - 📈 거래소 (TL2, ₵5): 매 라운드 자사 ₵+2
+  - 📡 미디어허브 (TL3, ₵5 ⚙2): 뉴스 효과 -50%
+- `BUILD_BUILDING` 액션, `canBuildBuilding` 검증
+- Bloc 봇 자동 건설 AI (수익 페이즈 종료 시)
+- Ghost 레이드 성공 시 건물 파괴 → ★+2 ₵+3 보너스
+- `assetValue`에 건물 가치 추가 합산 (hq+5, trading+3, 등)
+- 맵 셀에 건물 아이콘 배지, P0 Bloc 패널에 건설 버튼
+
+---
+
+## [0.6.3d] — SETI 시그널 시스템 (NPC 블록 정보 점진 공개) (2026-04-27)
+
+### 추가
+- NPC 블록에 `signal: { revealed, max }` 필드 (0~3 단계)
+- 시그널 0=정체 미상(???) → 1=정체 → 2=특성 → 3=완전 노출
+- `SIGNAL_INVEST` 액션: data 3 → 시그널 +1
+- 정찰(scout) 카드 효과 → 자동 시그널 +1
+- 잠입형 레이드 → +2, 일반 레이드 → +1
+- 시그널 LV3 도달 후 레이드 → ₵+5 📡+2 보너스 약탈
+- 플레이어 카드 헤더: 시그널 0이면 specific을 ??? 로 가림
+- NPC 패널에 시그널 게이지 + 즉시 투자 버튼
+
+---
+
+## [0.6.3c] — 트랙 LV2 패시브 + 레이드 타입 트랙 해금 (2026-04-27)
+
+### 추가
+- `trackBonus(p, kind)` 헬퍼: combat→atk, transport→spd, security→def, mfg→hack
+  - LV2 +1 / LV4 +3 / LV5 +4
+- `trackIncomeBonus`: party LV2+ → 크레딧 / mfg LV2+ → 부품 패시브 수익
+- 레이드 실행: `trackBonus(me, useStat)` 가산 적용
+- Escape: `trackBonus(me, 'spd')` 가산 적용
+- Ghost PvP 결투, 봇 자동 레이드, 카드 공격 효과: 모두 트랙 보너스 반영
+- COLLECT_INCOME에 트랙 패시브 수익 가산
+
+### 변경 — 레이드 타입 잠금 시스템
+- 클래스 전용(`requiresClass`) → 트랙 LV(`requiresTrack`)로 전환
+  - infiltrate: security LV3 (MOLE classAffinity)
+  - negotiate: party LV3 (BROKER classAffinity)
+  - drone: mfg LV4 (RIGGER classAffinity)
+- `RAID_SELECT_TYPE` reducer에 트랙 검증 추가
+- 레이드 모달에 잠금 표시(🔒) + LV 충족 안내
+- 하네스 봇 AI도 트랙 LV 기반 선택으로 변경
+
+---
+
+## [0.6.3b-2] — 악명 자동 누적 + 마일스톤 트리거 (2026-04-27)
+
+### 추가
+- `raiseTrack(state, idx, key, n)` — 자원 비용 없이 카드/액션 결과로 트랙 자동 +1
+- 자동 상승 트리거:
+  - 레이드 성공 → useStat에 따라 combat/transport/mfg +1
+  - 레이드 실패 → security +1 (방어 학습)
+  - 3칸 이상 이동 → transport +1
+  - 정찰/은신/수배 초기화/요새화 → security +1
+  - 상점 구매 → 무기/용병이면 combat, 그 외 party +1
+  - 큰 수입 라운드 (구역 ≥3) → party +1, (구역 ≥5) → mfg +1
+- 총악명 마일스톤 시스템 (`INFAMY_MILESTONES = [6, 12, 18]`)
+  - 6: Ghost ★+1 ₵+2 / Bloc ₵+3 ⚙+1
+  - 12: TL Progress +3 + 자원 약간
+  - 18: Ghost ★+3 / Bloc ₵+5 영향력+1
+- `meta.milestonesAwarded` 마일스톤 기록 추가 (중복 방지)
+- 플레이어 카드 헤더에 마일스톤 도장 (6/12/18) 표시
+
+---
+
+## [0.6.3b] — 트랙 시스템 (Speakeasy 악명식, 직접 투자형) (2026-04-27)
+
+### 추가
+**5트랙 진척 시스템 — Speakeasy 악명 + 사이버펑크 라이프패스 융합**
+
+- **5트랙**: 무력(💪) · 수송(🚚) · 제조(⚙) · 파티(🎉) · 경호(🛡), 각 0~5 LV
+- **총악명(Infamy)** = 5트랙 합계 (단일 지표 — 스피크이지의 악명 시스템 차용)
+- **클래스 시작 트랙** — 사이버펑크 라이프패스 풍 비대칭 시작점
+  - BLADE: 무력 2 + 경호 1 / CIPHER: 경호 1 + 제조 1
+  - BROKER: 파티 2 + 경호 1 + 수송 1 / DRIFTER: 수송 2 + 무력 1 + 제조 1
+  - RIGGER: 제조 2 + 경호 1 + 무력 1 / MOLE: 경호 2 + 파티 1
+  - VANTA: 파티 1 + 경호 2 / IRONWALL: 무력 2 + 경호 1
+  - HELIX: 제조 1 + 파티 1 + 경호 1 / AXIOM: 제조 2 + 경호 1 / CARBON: 제조 1 + 수송 1 + 파티 1
+- **레벨업 = 직접 투자** (XP 누적 방식 폐기): R&D 페이즈마다 트랙 1개 무료 +1
+- **트랙별 자원 비용 정의** (v0.6.3c 카드 추가 시 사용 예정):
+  - 무력: 무기 2 / 수송: ₵3 / 제조: 부품 2 / 파티: ₵3 / 경호: 정보 2
+
+### 설계 결정
+- **왜 XP→투자형 전환?** 플레이어가 "어떤 트랙에 무엇을 투자할지" 명시적 선택 → 전략 결정의 명료화. XP 자동 누적은 "그냥 플레이만 해도 다 차오르는" 무의미한 진척 → 폐기
+- **봇 휴리스틱**: 클래스별 선호 트랙 우선 (예: BLADE→combat>security>transport)
+- LV 임계 효과는 v0.6.3c~v0.6.4에서 단계적 적용
+
+### UI
+- 플레이어 카드 하단: **☠ 악명 N/25** 헤더 + 5트랙 라인 (LV 도트 0~5)
+- R&D 페이즈 종료 시 P0 모달: 5개 트랙 카드형 버튼 (MAX 도달 시 비활성)
+
+### 시뮬 200판 결과 (4인 모드 기준)
+
+| 클래스 | 승률 | | 블록 | 승률 |
+|---|---|---|---|---|
+| BROKER | 41.2% | | IRONWALL | 40.0% |
+| BLADE | 23.5% | | VANTA | 30.0% |
+| CIPHER | 23.5% | | HELIX | 30.0% |
+| DRIFTER | 6.3% | | CARBON | 30.0% |
+| MOLE | 6.3% | | AXIOM | 5.0% |
+| RIGGER | 5.9% | | | |
+
+**Ghost 18% / Bloc 27%** — BROKER 바닥권→최상위 점프(파티 트랙 선투자 효과 중첩). DRIFTER/MOLE/RIGGER/AXIOM 바닥권 잔존 → v0.6.3c LV2 패시브로 복구 예정.
+
+---
+
+## [0.6.3a] — 5트랙 데이터 + UI 골격 (2026-04-27)
+
+### 추가
+- `TRACK_KEYS`, `TRACK_NAMES`, `CLASS_STARTING_TRACKS` 데이터 구조
+- `initTracks(specific)` — 클래스별 시작 LV 부여
+- `buildPlayer`에 `tracks` 필드 통합
+- 플레이어 카드 5트랙 게이지 (초기 XP바 형식 — v0.6.3b에서 도트 형식으로 교체됨)
+
+### 의도
+v0.5 후반의 클래스간 깊이 격차(BLADE 33% / MOLE 0%) 해소를 위해 사이버펑크 라이프패스식 비대칭 시작점 + Speakeasy식 점진 진척 시스템 도입의 첫 단계.
 
 ---
 

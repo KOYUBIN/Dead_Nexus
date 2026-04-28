@@ -188,6 +188,69 @@
     gap: 4mm;
   }
 
+  /* v1.0: 5트랙 + 거리명성 시트 */
+  .v10-track-row {
+    display: grid;
+    grid-template-columns: 28mm 12mm 70mm 30mm;
+    gap: 2mm;
+    align-items: center;
+    border-bottom: 1px dashed #ccc;
+    padding: 1.2mm 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+  }
+  .v10-track-row .name { font-weight: 700; }
+  .v10-track-row .icon { font-size: 14pt; text-align: center; }
+  .v10-track-row .pips { display: flex; gap: 2mm; }
+  .v10-track-row .pip {
+    width: 8mm; height: 8mm;
+    border: 1.5px solid #000;
+    border-radius: 1mm;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7pt; color: #999;
+  }
+  .v10-track-row .pip.lv2, .v10-track-row .pip.lv4, .v10-track-row .pip.lv5 { background: #f0f0f0; font-weight: 700; color: #000; }
+  .v10-track-row .effect { font-size: 7pt; color: #444; }
+
+  .streetcred-bar {
+    border: 2px solid #000;
+    margin: 2mm 0;
+    padding: 2mm 3mm;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f8e8a0;
+  }
+  .streetcred-bar .label { font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: 11pt; letter-spacing: 0.05em; }
+  .streetcred-bar .total {
+    font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: 16pt;
+    border: 1.5px solid #000; padding: 0 4mm; background: white;
+  }
+  .streetcred-milestones { display: flex; gap: 3mm; }
+  .streetcred-milestones .ms {
+    width: 14mm; height: 9mm; border: 1.5px solid #000; border-radius: 2mm;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 9pt;
+  }
+
+  /* 하이라이트 모먼트 12종 토큰 시트 */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2mm;
+    margin-top: 2mm;
+  }
+  .highlight-token {
+    border: 1.5px solid #000;
+    padding: 2mm;
+    text-align: center;
+    background: #fffbe5;
+    font-size: 8pt;
+    border-radius: 1mm;
+  }
+  .highlight-token .icon { font-size: 16pt; }
+  .highlight-token .label { font-weight: 700; margin: 1mm 0 0.5mm; }
+  .highlight-token .desc { font-size: 7pt; color: #666; }
+  .highlight-token .rep { font-family: 'JetBrains Mono', monospace; font-size: 8pt; color: #d9534f; }
+
   /* Ghost class colors */
   .cipher .sheet-title { color: #185FA5; }
   .blade  .sheet-title { color: #C04828; }
@@ -538,6 +601,221 @@
 
   <div class="section-title">메모</div>
   <div class="notes-area"></div>
+</div>
+
+<!-- ============ v1.0 트랙 + 거리명성 시트 (전 클래스 공용) ============ -->
+<div class="sheet">
+  <div class="sheet-header">
+    <div class="sheet-title">v1.0 STREET CRED 시트<span class="sub">5트랙 + 거리명성 + 마일스톤 추적</span></div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; align-self:center;">플레이어: __________ · 클래스: __________</div>
+  </div>
+
+  <div class="streetcred-bar">
+    <div class="label">☠ 거리명성 (Street Cred)</div>
+    <div class="total" id="sc-total">__</div>
+    <div class="streetcred-milestones">
+      <div class="ms">6 ☐</div>
+      <div class="ms">12 ☐</div>
+      <div class="ms">18 🏆</div>
+    </div>
+  </div>
+
+  <div class="section-title">5트랙 (LV2 패시브 / LV3 레이드 해금 / LV4 강화 / LV5 once-ability)</div>
+  <div class="v10-track-row">
+    <div class="name">화력 (Solo)</div>
+    <div class="icon">💥</div>
+    <div class="pips">
+      <div class="pip">0</div><div class="pip lv2">2</div><div class="pip">3</div><div class="pip lv4">4</div><div class="pip lv5">5</div>
+    </div>
+    <div class="effect">LV2 ATK+1 / LV5 critFailImmunity</div>
+  </div>
+  <div class="v10-track-row">
+    <div class="name">그리드런 (Nomad)</div>
+    <div class="icon">🌃</div>
+    <div class="pips">
+      <div class="pip">0</div><div class="pip lv2">2</div><div class="pip">3</div><div class="pip lv4">4</div><div class="pip lv5">5</div>
+    </div>
+    <div class="effect">LV2 SPD+1 / LV5 teleport (1회)</div>
+  </div>
+  <div class="v10-track-row">
+    <div class="name">코드 (Netrunner)</div>
+    <div class="icon">💾</div>
+    <div class="pips">
+      <div class="pip">0</div><div class="pip lv2">2</div><div class="pip">3</div><div class="pip lv4">4</div><div class="pip lv5">5</div>
+    </div>
+    <div class="effect">LV2 HACK+1 / LV4 드론형 raid 해금 / LV5 droneFree</div>
+  </div>
+  <div class="v10-track-row">
+    <div class="name">인맥 (Fixer)</div>
+    <div class="icon">🤝</div>
+    <div class="pips">
+      <div class="pip">0</div><div class="pip lv2">2</div><div class="pip">3</div><div class="pip lv4">4</div><div class="pip lv5">5</div>
+    </div>
+    <div class="effect">LV2 ₵+1/R / LV3 협상형 raid 해금 / LV5 reroll</div>
+  </div>
+  <div class="v10-track-row">
+    <div class="name">그림자 (첩보)</div>
+    <div class="icon">🎭</div>
+    <div class="pips">
+      <div class="pip">0</div><div class="pip lv2">2</div><div class="pip">3</div><div class="pip lv4">4</div><div class="pip lv5">5</div>
+    </div>
+    <div class="effect">LV2 DEF+1 / LV3 잠입형 raid 해금 / LV5 deathSave</div>
+  </div>
+
+  <div style="margin-top:3mm; padding:2mm 3mm; background:#f0f0f0; border:1px solid #999; font-size:8pt;">
+    <strong>📌 R&D 페이즈 종료 시</strong> 트랙 1개 무료 +1. 또는 자원 투자로 추가 +1 (화력=무기2 / 그리드런·인맥=₵3 / 코드=부품2 / 그림자=데이터2)
+  </div>
+
+  <div class="section-title" style="margin-top:3mm;">📜 약속 트래킹 (협상 페이즈)</div>
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2mm; font-size:8pt; font-family:'JetBrains Mono',monospace;">
+    <div style="border:1px solid #000; padding:2mm;">
+      <div style="font-weight:700;">truce 1</div>
+      <div>상대: ______ R: __</div>
+      <div>☐ 지킴 ★+1 / ☐ 위반 ★-2</div>
+    </div>
+    <div style="border:1px solid #000; padding:2mm;">
+      <div style="font-weight:700;">truce 2</div>
+      <div>상대: ______ R: __</div>
+      <div>☐ 지킴 ★+1 / ☐ 위반 ★-2</div>
+    </div>
+    <div style="border:1px solid #000; padding:2mm;">
+      <div style="font-weight:700;">truce 3</div>
+      <div>상대: ______ R: __</div>
+      <div>☐ 지킴 ★+1 / ☐ 위반 ★-2</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:3mm;">🏆 하이라이트 모먼트 토큰 (게임당 1회씩, 받으면 ✓)</div>
+  <div class="highlight-grid">
+    <div class="highlight-token">
+      <div class="icon">🌐</div>
+      <div class="label">첫 NEXUS 도달</div>
+      <div class="desc">중앙 NEXUS 셀에 첫 진입</div>
+      <div class="rep">★+3</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">👑</div>
+      <div class="label">첫 NEXUS 점령</div>
+      <div class="desc">NEXUS 셀 raid 성공</div>
+      <div class="rep">★+5</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🗡</div>
+      <div class="label">첫 raid 성공</div>
+      <div class="desc">아무 Bloc 구역 중립화</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🕷</div>
+      <div class="label">첫 잠입형 raid</div>
+      <div class="desc">infiltrate 타입 raid</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🏚</div>
+      <div class="label">첫 건물 파괴</div>
+      <div class="desc">Bloc 건물 destroy</div>
+      <div class="rep">★+3</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">⚡</div>
+      <div class="label">첫 mini-raid</div>
+      <div class="desc">카드 효과 자동 raid</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🏆</div>
+      <div class="label">거리명성 18 전설</div>
+      <div class="desc">5트랙 합 18 도달</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">⚰️</div>
+      <div class="label">최후 저항</div>
+      <div class="desc">HP→1 광폭화 발동</div>
+      <div class="rep">★+3</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🛡</div>
+      <div class="label">deathSave 부활</div>
+      <div class="desc">그림자 LV5 능력</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🧬</div>
+      <div class="label">동료 부활</div>
+      <div class="desc">CLONE_DECOY 발동</div>
+      <div class="rep">★+2</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🎯</div>
+      <div class="label">현상금/청부 명중</div>
+      <div class="desc">Bloc 능동 액션 성공</div>
+      <div class="rep">★+1</div>
+    </div>
+    <div class="highlight-token">
+      <div class="icon">🏙</div>
+      <div class="label">10구역 동시 점유</div>
+      <div class="desc">Bloc 영토 정점</div>
+      <div class="rep">★+3</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NEXUS 컨트롤 + 협상 카드 참조 시트 ============ -->
+<div class="sheet">
+  <div class="sheet-header">
+    <div class="sheet-title">v1.0 NEXUS · 협상 참조<span class="sub">11×11 정식 모드 한정 · 게임 마스터/사회자 권장</span></div>
+  </div>
+
+  <div class="section-title">🌐 NEXUS 동적 컨트롤 (F6 점유자별 글로벌 룰)</div>
+  <table style="width:100%; border-collapse:collapse; font-size:9pt;">
+    <thead><tr style="background:#000; color:white;"><th style="padding:2mm; text-align:left;">점유 Bloc</th><th>룰 ID</th><th>효과 (매 R 시작 자동 적용)</th></tr></thead>
+    <tbody>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><strong>VANTA</strong></td><td style="padding:2mm; border:1px solid #ccc;">info_open</td><td style="padding:2mm; border:1px solid #ccc;">모든 NPC 시그널 +1, 정찰 효과 +1</td></tr>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><strong>IRONWALL</strong></td><td style="padding:2mm; border:1px solid #ccc;">martial</td><td style="padding:2mm; border:1px solid #ccc;">전 ATK +1, Ghost 전원 수배 +1/R</td></tr>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><strong>HELIX</strong></td><td style="padding:2mm; border:1px solid #ccc;">biocode</td><td style="padding:2mm; border:1px solid #ccc;">모든 플레이어 HP +1/R</td></tr>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><strong>AXIOM</strong></td><td style="padding:2mm; border:1px solid #ccc;">algo_market</td><td style="padding:2mm; border:1px solid #ccc;">데이터 +1/R, 주식 변동 ×2</td></tr>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><strong>CARBON</strong></td><td style="padding:2mm; border:1px solid #ccc;">energy_grid</td><td style="padding:2mm; border:1px solid #ccc;">자사 구역 수입 +1 크레딧</td></tr>
+      <tr><td style="padding:2mm; border:1px solid #ccc;"><em>Ghost / 비점유</em></td><td style="padding:2mm; border:1px solid #ccc;">— inactive</td><td style="padding:2mm; border:1px solid #ccc;">룰 비활성 (NEXUS 중립)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title" style="margin-top:4mm;">🤝 협상 페이즈 (Phase 1.5) — 거래 종류</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3mm; font-size:9pt;">
+    <div style="border:2px solid #000; padding:3mm;">
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">자원 스왑</h4>
+      <p>크레딧 4 ↔ 무기 2 / 데이터 2 ↔ 부품 2 등. 즉시 자원 교환.</p>
+      <p style="font-size:7pt; color:#666;">예: A가 ₵4 주고 B에게 무기2 받음. 즉시 양측 자원 변경.</p>
+    </div>
+    <div style="border:2px solid #000; padding:3mm; background:#e8f5e9;">
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">비공격 약속 (truce)</h4>
+      <p>1R 동안 서로 raid 안 함.</p>
+      <p style="font-size:8pt;"><strong>지킴</strong> → 양측 ★+1<br/><strong>위반</strong> (raid 발동) → 위반자 ★-2, 피해자 ★+2</p>
+      <p style="font-size:7pt; color:#666;">시트 좌측에 truce 박스 3개 있음. 체크.</p>
+    </div>
+    <div style="border:2px solid #000; padding:3mm; background:#fff3e0;">
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">BROKER 중개</h4>
+      <p>BROKER 클래스 한정. 상대가 동의하면 매 R 자동 ★+1 ₵+1 + 인맥 트랙 +1.</p>
+      <p style="font-size:7pt; color:#666;">BROKER 정체성 회복용. 상대는 거의 무조건 동의.</p>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top:4mm;">🎯 Bloc 능동 액션 카드 3종</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3mm; font-size:9pt;">
+    <div style="border:2px solid #000; padding:3mm;">
+      <h4 style="margin:0 0 2mm;">🎯 BOUNTY POST (TL1, ₵1🎯)</h4>
+      <p>평판 1위 Ghost → 수배+3<br/>자기 ₵+3 🎙+1</p>
+    </div>
+    <div style="border:2px solid #000; padding:3mm;">
+      <h4 style="margin:0 0 2mm;">🗡 ASSASSIN HIRE (TL2, ₵1🗡 ₵-3)</h4>
+      <p>HP 1위 Ghost → HP-4<br/>자기 ★+2 (3$ 비용)</p>
+    </div>
+    <div style="border:2px solid #000; padding:3mm;">
+      <h4 style="margin:0 0 2mm;">📡 GHOST TRACKER (TL2, ₵1💾 ₵1🎯)</h4>
+      <p>모든 Ghost → 수배+1, 지도 5R 노출<br/>자기 📡+3 🎙+1</p>
+    </div>
+  </div>
 </div>
 
 </body>

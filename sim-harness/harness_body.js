@@ -13,16 +13,15 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     // Phase 0 → 1
     state = reducer(state, { type: 'SET_PHASE', phase: 1 });
 
-    // Phase 1: 뉴스 + 봇 거래 + 봇 상점
+    // Phase 1: 뉴스 + 봇 거래
     state = reducer(state, { type: 'DRAW_NEWS' });
     state = reducer(state, { type: 'BOT_MARKET' });
-    state = reducer(state, { type: 'BOT_SHOP' });
 
     // Phase 2 계획
     state = reducer(state, { type: 'SET_PHASE', phase: 2 });
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
-      if (p.defeated || p.isNpc) continue;
+      if (p.defeated) continue;
       const cards = botPickCards(state, i);
       const halves = cards.map((_, idx) => {
         if (p.role === 'ghost') return idx === 0 ? 'top' : 'bot';
@@ -35,21 +34,8 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     state = reducer(state, { type: 'SET_PHASE', phase: 3 });
     state = reducer(state, { type: 'EXECUTE_TURN' });
 
-    // P0용 모달 자동 결정 — 클래스·상황별 타입 선택
-    if (state.meta.pendingRaid) {
-      const p0 = state.players[0];
-      let raidType = 'violent';
-      // 클래스 전용 타입 우선 (v0.6.0: RIGGER drone 추가)
-      if (p0.specific === 'MOLE') raidType = 'infiltrate';
-      else if (p0.specific === 'RIGGER' && (p0.resources.parts || 0) >= 2) raidType = 'drone';
-      else if (p0.specific === 'RIGGER') raidType = 'hack';  // parts 부족 시 hack
-      else if (p0.specific === 'BROKER' && (p0.resources.credit || 0) >= 4) raidType = 'negotiate';
-      else if (p0.specific === 'BROKER') raidType = 'stealth';
-      else if (p0.hp < p0.maxHp * 0.4) raidType = 'stealth';
-      else if (p0.stats.hack >= 3) raidType = 'hack';
-      state = reducer(state, { type: 'RAID_SELECT_TYPE', raidType });
-      state = reducer(state, { type: 'RAID_EXECUTE' });
-    }
+    // P0용 모달 자동 결정
+    if (state.meta.pendingRaid) state = reducer(state, { type: 'RESOLVE_RAID_YES' });
     if (state.meta.pendingGhostDuel) state = reducer(state, { type: 'RESOLVE_DUEL_YES' });
     if (state.meta.zoneBonusPending) {
       const opt = state.meta.zoneBonusPending.options[0];
@@ -112,9 +98,7 @@ function batchRun(N = 100) {
   const errorList = [];
   for (let i = 0; i < N; i++) {
     const humanRole = i % 2 === 0 ? 'ghost' : 'bloc';
-    // FIX: i/2 used so all 6 Ghost classes + 5 Blocs cycle properly
-    const slot = Math.floor(i / 2);
-    const humanSpecific = humanRole === 'ghost' ? ghostClasses[slot % ghostClasses.length] : blocs[slot % blocs.length];
+    const humanSpecific = humanRole === 'ghost' ? ghostClasses[i % ghostClasses.length] : blocs[i % blocs.length];
     try {
       const r = runOneGame({ humanRole, humanSpecific });
       results.push(r);

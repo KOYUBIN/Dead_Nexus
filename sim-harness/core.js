@@ -61,7 +61,7 @@ const GHOST_STATS = {
   BLADE:   { hp: 10, atk: 5, def: 3, spd: 3, hack: 1, primary: 'I', secondary: 'A', startZone: 'A5' },
   BROKER:  { hp: 6,  atk: 2, def: 2, spd: 5, hack: 2, primary: 'S', secondary: 'GRID', startZone: 'A3' },
   RIGGER:  { hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'V', secondary: 'I', startZone: 'B5' },
-  DRIFTER: { hp: 8,  atk: 2, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
+  DRIFTER: { hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
   MOLE:    { hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'S', secondary: 'M', startZone: 'D3' },
 };
 
@@ -72,7 +72,7 @@ const GHOST_STATS = {
 //  raid_bonus:N, rep:N, credit:N
 const GHOST_CARDS = {
   // CIPHER
-  PORT_SCAN:      { name: 'PORT SCAN',      cls: 'CIPHER', init: 12, attr: ['M'],      top: { gen: 'M', move: 2, scout: 2, peek_news: 1 },       bot: { cost: ['M','S'], reveal: 'zone', break_veil: 1, sell_info: 1 } },
+  PORT_SCAN:      { name: 'PORT SCAN',      cls: 'CIPHER', init: 12, attr: ['M'],      top: { gen: 'M', move: 3, scout: 1 },                    bot: { cost: ['M','S'], reveal: 'zone', break_veil: 1 } },
   DATA_SPIKE:     { name: 'DATA SPIKE',     cls: 'CIPHER', init: 22, attr: ['M'], loss: true, top: { gen: 'M', atk: 1 },                         bot: { cost: ['M','M','S'], atk: 5, def_ignore: true, steal: 'M' } },
   GHOST_ACCESS:   { name: 'GHOST ACCESS',   cls: 'CIPHER', init: 8,  attr: ['S'],      top: { gen: 'S', stealth: 1 },                            bot: { cost: ['S'], clear_wanted: true } },
   MESH_DIVE:      { name: 'MESH DIVE',      cls: 'CIPHER', init: 30, attr: ['M','S'],  top: { gen: 'GRID', move: 1, scout: 2 },                  bot: { cost: ['M','M'], draw_quest: 1 } },
@@ -96,9 +96,9 @@ const GHOST_CARDS = {
   BASIC_MOVE_B:   { name: 'BASIC MOVE',     cls: 'BLADE',  init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // BROKER
-  NETWORK:        { name: 'NETWORK',        cls: 'BROKER', init: 15, attr: ['S'],      top: { gen: 'S', contact: 2, scout: 1, extort: 1 },       bot: { cost: ['S'], contact: 3, blackmarket: 1 } },
+  NETWORK:        { name: 'NETWORK',        cls: 'BROKER', init: 15, attr: ['S'],      top: { gen: 'S', contact: 1, scout: 1 },                  bot: { cost: ['S'], contact: 2, blackmarket: 1 } },
   BACK_DEAL:      { name: 'BACK DEAL',      cls: 'BROKER', init: 18, attr: ['S'],      top: { gen: 'S', swap_ratio: 2 },                         bot: { cost: ['S'], blackmarket: 1 } },
-  BLACKMAIL:      { name: 'BLACKMAIL',      cls: 'BROKER', init: 22, attr: ['S'],      top: { gen: 'S', extort: 2 },                             bot: { cost: ['S','S'], cancel_action: 1, extort: 3 } },
+  BLACKMAIL:      { name: 'BLACKMAIL',      cls: 'BROKER', init: 22, attr: ['S'],      top: { gen: 'S', extort: 1 },                             bot: { cost: ['S','S'], cancel_action: 1, extort: 2 } },
   MIDDLE_DEAL:    { name: 'MIDDLE DEAL',    cls: 'BROKER', init: 25, attr: ['GRID'],   top: { gen: 'GRID', broker_fee: 10 },                     bot: { passive_ma_fee: 5 } },
   INFO_BROKER:    { name: 'INFO BROKER',    cls: 'BROKER', init: 30, attr: ['S'],      top: { gen: 'S', peek_objective: 1 },                     bot: { cost: ['S','S'], sell_info: 5, lock: 1 } },
   CRISIS_TALK:    { name: 'CRISIS TALK',    cls: 'BROKER', init: 28, attr: ['GRID'],   top: { gen: 'GRID', stop_combat: 1 },                     bot: { reward: 2, cooldown: 1 } },
@@ -120,15 +120,15 @@ const GHOST_CARDS = {
   BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // DRIFTER
-  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 2 },                               bot: { cost: ['A'], move_any: 2 } },
+  FAST_TRAVEL:    { name: 'FAST TRAVEL',    cls: 'DRIFTER',init: 10, attr: ['A'],      top: { gen: 'A', move: 4 },                               bot: { cost: ['A'], move_any: 3 } },
   SUPPLY_CONV:    { name: 'SUPPLY CONVOY',  cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { gen: 'GRID', fuel: 3 },                            bot: { transfer_ally: 3 } },
   AMBUSH:         { name: 'AMBUSH',         cls: 'DRIFTER',init: 14, attr: ['A'],      top: { gen: 'A', spd: 5, atk: 2 },                        bot: { cost: ['A'], surprise: 1 } },
-  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 2, ignore_obstacles: 1, atk: 2 },       bot: { cost: ['A','A'], move_3_nowalls: 1 } },
+  STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 5, ignore_obstacles: 1 },             bot: { cost: ['A','A'], move_3_nowalls: 1 } },
   BACKROADS:      { name: 'BACKROADS',      cls: 'DRIFTER',init: 28, attr: ['GRID'],   top: { gen: 'GRID', untrack: 1 },                         bot: { shortcut: 2 } },
   SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
   CARGO_HAUL:     { name: 'CARGO HAUL',     cls: 'DRIFTER',init: 22, attr: ['A','GRID'], top: { gen: 'A', credit: 3 },                            bot: { smuggle: 1 } },
-  IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 1 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
-  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 2, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
+  IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 2 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
+  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 3, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
   BASIC_MOVE_D:   { name: 'BASIC MOVE',     cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // MOLE
@@ -178,10 +178,10 @@ const BLOC_CARDS = {
   HARVEST:         { name: 'HARVEST',         bloc: 'HELIX',   tl: 3, main: { cost:['B','V','V'], steal_op: 2 }, side: { gen: 'V' }, combo: {} },
   CLONE_DECOY:     { name: 'CLONE DECOY',     bloc: 'HELIX',   tl: 4, main: { cost:['B','B','V'], revive: 1 }, side: { gen: 'B' }, combo: {} },
   // AXIOM
-  PREDICTION_E:    { name: 'PREDICTION ENGINE',bloc:'AXIOM',   tl: 2, main: { cost:['M','V'], peek_news: 3 }, side: { gen: 'V' }, combo: {} },
-  FLASH_CRASH:     { name: 'FLASH CRASH',     bloc: 'AXIOM',   tl: 3, main: { cost:['M','M','V'], crash_target: 4 }, side: { gen: 'V' }, combo: {} },
+  PREDICTION_E:    { name: 'PREDICTION ENGINE',bloc:'AXIOM',   tl: 2, main: { cost:['M','V'], peek_news: 3 }, side: { gen: 'M' }, combo: {} },
+  FLASH_CRASH:     { name: 'FLASH CRASH',     bloc: 'AXIOM',   tl: 3, main: { cost:['M','M','V'], crash_target: 4 }, side: { gen: 'M' }, combo: {} },
   ALGO_LOCK:       { name: 'ALGO LOCK',       bloc: 'AXIOM',   tl: 2, main: { cost:['M','V'], zone_hack_def: 4 }, side: { gen: 'V' }, combo: {} },
-  FLASH_TRADE:     { name: 'FLASH TRADE',     bloc: 'AXIOM',   tl: 2, main: { cost:['M'], same_round_trade: 1 }, side: { gen: 'V' }, combo: {} },
+  FLASH_TRADE:     { name: 'FLASH TRADE',     bloc: 'AXIOM',   tl: 2, main: { cost:['M'], same_round_trade: 1 }, side: { gen: 'M' }, combo: {} },
   SURVEILLANCE:    { name: 'SURVEILLANCE',    bloc: 'AXIOM',   tl: 3, main: { cost:['M','V'], scout_all: 1 }, side: { gen: 'M' }, combo: {} },
   SYS_TAKEOVER:    { name: 'SYS TAKEOVER',    bloc: 'AXIOM',   tl: 4, main: { cost:['M','M','V','V'], algorithm: 1 }, side: { gen: 'V' }, combo: {} },
   // === 공통 Bloc 추가 카드: 이동·투자·용병·합병 옵션 ===
@@ -224,11 +224,11 @@ const BLOC_DECKS = {
 // random_zone_flip: 랜덤 구역 중립화  / stock_freeze: 주가 변동 1R 정지  / hp_all: 전 고스트 HP ±N
 const NEWS = [
   // === 시장 충격 (주가 축) ===
-  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -3, heat: 1 }, flavor: '패닉은 합리적이다.' },
-  { id: 12, title: '월가 붐', effect: { all_stock: 2 }, flavor: '낙관주의는 위험하다.' },
-  { id: 14, title: '루머 확산', effect: { random_crash: 3 }, flavor: '소문은 항상 먼저 도착한다.' },
-  { id: 15, title: '인수합병 열풍', effect: { all_stock: 1, target_credit: { role: 'bloc', delta: 3 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
-  { id: 16, title: '내부자 고발', effect: { random_crash: 5, heat: 2 }, flavor: '익명의 이메일 한 통.' },
+  { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -4, heat: 1 }, flavor: '패닉은 합리적이다.' },
+  { id: 12, title: '월가 붐', effect: { all_stock: 3 }, flavor: '낙관주의는 위험하다.' },
+  { id: 14, title: '루머 확산', effect: { random_crash: 5 }, flavor: '소문은 항상 먼저 도착한다.' },
+  { id: 15, title: '인수합병 열풍', effect: { all_stock: 2, target_credit: { role: 'bloc', delta: 4 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
+  { id: 16, title: '내부자 고발', effect: { random_crash: 8, heat: 2 }, flavor: '익명의 이메일 한 통.' },
   { id: 17, title: '주가 동결령', effect: { stock_freeze: 1 }, flavor: '시장을 멈추면 문제가 해결될까?' },
 
   // === 블록별 호재/악재 ===
@@ -271,13 +271,6 @@ const NEWS = [
   { id: 70, title: '도로 봉쇄', effect: { ghost_move: -1, heat: 2 }, flavor: '그들은 출구를 닫았다.' },
   { id: 71, title: '지하 통로 개통', effect: { ghost_move: 1 }, flavor: '지도에 없는 길이 하나 생겼다.' },
   { id: 72, title: '구역 점령 해제', effect: { random_zone_flip: 2 }, flavor: '한 구역, 두 구역, 세 구역.' },
-
-  // === v0.5.11: Ghost-favorable 추가 ===
-  { id: 80, title: '시민 저항 집회', effect: { all_rep: 2, heat: -1 }, flavor: '이름 없는 얼굴이 모였다.' },
-  { id: 81, title: '블록 스캔들 폭로', effect: { all_stock: -2, all_rep: 1 }, flavor: '증거는 섬뜩하게 깔끔했다.' },
-  { id: 82, title: '지하 정보망 활성화', effect: { target_credit: { role: 'ghost', delta: 3 }, all_data: 1 }, flavor: '말은 소문보다 빠르다.' },
-  { id: 83, title: '경찰 부패 수사', effect: { heat: -3, wanted_all: -1 }, flavor: '그들의 집도 압수수색됐다.' },
-  { id: 84, title: '고스트 영웅 서사', effect: { all_rep: 3 }, flavor: '이야기가 역사보다 오래 남는다.' },
 ];
 
 // Hidden objectives (10 simplified for MVP)
@@ -329,148 +322,10 @@ const rollSignalDie = () => {
 
 const getCard = (id) => GHOST_CARDS[id] || BLOC_CARDS[id];
 
-// ============================================================================
-// 캐릭터 상성 시스템 (v0.5.13)
-// ============================================================================
-// Ghost vs Ghost: 6-방향 사이클 (카운터 시 +2 atk)
-//   BLADE → CIPHER → MOLE → BROKER → DRIFTER → RIGGER → BLADE
-// 해석:
-//   BLADE(물리) > CIPHER(해커)      : 물리력이 원격 해킹 압도
-//   CIPHER(정보) > MOLE(침투)       : 해킹으로 내부자 탐지
-//   MOLE(내부자) > BROKER(중개)     : 위장이 협상 테이블 엎어놓음
-//   BROKER(협상) > DRIFTER(기동)    : 교섭으로 이동 경로 봉쇄
-//   DRIFTER(기동) > RIGGER(기술)    : 기동성이 느린 기술자 농락
-//   RIGGER(기술) > BLADE(물리)      : 드론·함정이 단독 전투원 무력화
-const GHOST_COUNTERS = {
-  BLADE:   { beats: 'CIPHER',  bloc: 'IRONWALL' },  // 물리 대 물리 공방
-  CIPHER:  { beats: 'MOLE',    bloc: 'VANTA' },     // 정보 대 정보
-  BROKER:  { beats: 'DRIFTER', bloc: 'CARBON' },    // 중개 대 자원 독점
-  MOLE:    { beats: 'BROKER',  bloc: 'HELIX' },     // 잠입 대 생체
-  DRIFTER: { beats: 'RIGGER',  bloc: 'AXIOM' },     // 기동 대 AI 예측
-  RIGGER:  { beats: 'BLADE',   bloc: 'CARBON' },    // 기술 대 인프라 (CARBON 공동 타겟)
-};
-
-const countersGhost = (attacker, defender) => GHOST_COUNTERS[attacker]?.beats === defender;
-const countersBloc  = (ghost, bloc) => GHOST_COUNTERS[ghost]?.bloc === bloc;
-
-// ============================================================================
-// 레이드 풀세트 시스템 (v0.5.22)
-// ============================================================================
-const RAID_TYPES = {
-  violent: {
-    name: '폭력형', icon: '🗡',
-    desc: '정면 돌격. 큰 보상, 큰 위험',
-    useStat: 'atk',
-    threshold: 5,       // v0.5.25: 원복 + 크리티컬 실패 규칙 (d6=1은 무조건 실패)
-    success: { rep: 4, stockHit: 3, wanted: 2, heat: 1 },
-    failure: { hp: 2, wanted: 1, heat: 1 },
-  },
-  stealth: {
-    name: '은밀형', icon: '🕶',
-    desc: '조용히 털기. 보상 낮지만 안전',
-    useStat: 'spd',
-    threshold: 5,
-    success: { rep: 2, stockHit: 2, wanted: 0, heat: 0 },
-    failure: { hp: 0, wanted: 1, heat: 0 },
-  },
-  hack: {
-    name: '해킹형', icon: '💾',
-    desc: '원격 타격. 경제 큰 타격, HP 안전',
-    useStat: 'hack',
-    threshold: 5,       // v0.5.25: 원복 + 크리티컬 실패 규칙
-    success: { rep: 2, stockHit: 4, wanted: 1, heat: 0, data: 2 },
-    failure: { hp: 0, wanted: 0, heat: 2, data: -1 },
-  },
-  infiltrate: {
-    name: '잠입형', icon: '🕷',
-    desc: 'MOLE 전용. 방어 완전 무시. 정보 탈취',
-    useStat: 'hack',
-    threshold: 3,        // v0.5.24: 4→3 (거의 자동)
-    success: { rep: 4, stockHit: 2, wanted: 0, heat: 0, data: 3 },  // rep 3→4
-    failure: { hp: 1, wanted: 1, heat: 0 },
-    bypass_defense: true,
-    requiresClass: 'MOLE',
-  },
-  negotiate: {
-    name: '협상형', icon: '🤝',
-    desc: 'BROKER 전용. 크레딧 지불로 안전 합의',
-    useStat: 'spd',
-    threshold: 2,
-    cost: { credit: 4 },
-    success: { rep: 4, stockHit: 1, wanted: 0, heat: -1, influence: 2 },
-    failure: { hp: 0, wanted: 0, heat: 0 },
-    requiresClass: 'BROKER',
-  },
-  drone: {
-    name: '드론형', icon: '🛰',
-    desc: 'RIGGER 전용. 부품 소모, 원격 타격 (이동 불필요)',
-    useStat: 'hack',
-    threshold: 4,
-    cost: { parts: 2 }, // 부품 2개 소비 (드론 기체)
-    success: { rep: 3, stockHit: 3, wanted: 0, heat: 1, parts: -1 },  // 드론 1 소실
-    failure: { hp: 0, wanted: 0, heat: 1, parts: -2 }, // 드론 2 소실
-    requiresClass: 'RIGGER',
-    remote: true,  // 인접 구역까지 원격 가능 (move 없이)
-  },
-};
-
-// 구역 타입별 추가 전리품 (성공 시 합산)
-const ZONE_LOOT = {
-  bank:  { credit: 5, label: '₵+5' },
-  data:  { data: 3, peek_news: 1, label: '데이터+3 · 뉴스 미리보기' },
-  arms:  { weapons: 3, label: '🔩+3' },
-  work:  { parts: 3, label: '⚙+3' },
-  heal:  { full_heal: 1, label: 'HP 완전 회복' },
-  club:  { credit: 3, influence: 1, label: '₵+3 · 🎙+1' },
-  home:  { credit: 2, parts: 1, label: '₵+2 · ⚙+1' },
-  aux:   { credit: 2, all_attr: 1, label: '₵+2 · 전속성+1' },
-  nex:   { rep: 3, all_attr: 1, label: '★+3 추가 · 전속성+1' },
-  port:  { weapons: 2, credit: 2, label: '🔩+2 · ₵+2' },
-  ruin:  { parts: 5, label: '⚙+5 (잡동사니 탈취)' },
-  cop:   { wanted: -2, label: '수배-2 (압수 기록 훔침)' },
-};
-
-// Bloc별 자동 반격 (구역 방어 시 자동 소비)
-const BLOC_DEFENSE = {
-  VANTA:    { detect: 1 },        // 감지 → 접근 판정에 -2
-  IRONWALL: { threshold_plus: 1 }, // 무장 → 실행 threshold +1 (완화 v0.5.22)
-  HELIX:    { threshold_plus: 0 }, // 거의 없음
-  AXIOM:    { all_plus: 1 },       // AI 보조 → 판정 -1 (약간)
-  CARBON:   { threshold_plus: 0 }, // 방어 없음
-};
-
-// ============================================================================
-// 맵 크기별 특수 규칙 (v0.5.13)
-// ============================================================================
-// 5×5 튜토리얼: 좁은 맵 → 이동 가치 상향 / DRIFTER HP·ATK 보정 (이미 적용)
-// 11×11 표준: 이동 가치 정상 / DRIFTER 원래 스탯 복원 / 추가 공권력 감쇠
-// 13×13 확장: 하이웨이 강화 / M&A 빈도 증가
-const MAP_RULES = {
-  '5x5': {
-    roundLimit: 10,
-    moveMultiplier: 1.0,      // 이동 카드 기본 효율
-    driftAtkOverride: 2,       // DRIFTER atk (튜토리얼)
-    driftHpOverride: 8,
-    assetGoal: 50,
-    repGoal: { battle: 14, repOnly: 20 },
-    raidGoal: 2,
-  },
-  '11x11': {
-    roundLimit: 12,
-    moveMultiplier: 1.0,
-    driftAtkOverride: 4,       // DRIFTER 원래 스탯 (넓은 맵에서 이동 가치 정상)
-    driftHpOverride: 9,
-    assetGoal: 60,
-    repGoal: { battle: 30, repOnly: 40 },
-    raidGoal: 2,
-  },
-};
-const getMapRules = (mapSize) => MAP_RULES[mapSize] || MAP_RULES['5x5'];
-
-// TL 승급 비용: v0.5.21 — 전 레벨 5pt 균일 (1칸=1pt 직관 보장)
+// TL 승급 비용: 1→2=4pt, 2→3=7pt, 3→4=10pt, 4→5=14pt
 const tlCostFor = (curTl) => {
   if (curTl >= 5) return 99;
-  return 5;
+  return [4, 7, 10, 14][curTl - 1] || 99;
 };
 
 // ============================================================================
@@ -536,10 +391,6 @@ const coordsAdj = (c) => {
 // 자산 = Σ(타 블록 주식 × 주가) + 구역 수 × 5
 // 크레딧은 유동 자원이라 자본에 안 넣음 (자산 인플레 방지)
 const assetValue = (p, stocks, state) => {
-  // v0.5.16: Bloc 경제 개선
-  // - 구역 가치 5 → 7 (구역 확장 가속)
-  // - 크레딧 1/3 반영 (현금 보유도 자산의 일부, 단 유동성 할인)
-  // - 무기/부품/데이터도 소액 자산화 (각 1pt)
   let total = 0;
   for (const [bl, qty] of Object.entries(p.stocks)) {
     const isOwn = p.role === 'bloc' && p.specific === bl;
@@ -551,8 +402,6 @@ const assetValue = (p, stocks, state) => {
     const zonesOwned = Object.values(state.map).filter(c => c.owner === p.id).length;
     total += zonesOwned * 5;
   }
-  // v0.5.16 결론: 자산 구성은 순수하게 (타 블록 주식 + 구역)만 유지.
-  // Bloc/Ghost P0 격차는 assetGoal 이 아닌 Ghost 승리 루트 수 문제.
   return Math.floor(total);
 };
 
@@ -572,56 +421,36 @@ const initStocks = (role, specific) => {
 // GAME STATE + REDUCER
 // ============================================================================
 
-function initGame(humanRole, humanSpecific, playerCount) {
+function initGame(humanRole, humanSpecific) {
   // Build 5x5 map
   const map = {};
   MAP_5x5.forEach(([c, z]) => {
     map[c] = { zone: z, owner: null, token: Math.random() < 0.6 ? 'quest' : (Math.random() < 0.5 ? 'instant' : 'discovery'), tokenRevealed: false };
   });
 
-  // Build players: 1 human + (playerCount-1) bots (2~5인 지원, 기본 4)
-  const totalPlayers = Math.max(2, Math.min(5, playerCount || 4));
-  const botCount = totalPlayers - 1;
+  // Build players: 1 human + 3 bots
   const players = [];
   const allBlocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
   const allGhosts = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
 
+  // Human first
   players.push(buildPlayer(0, 'human', humanRole, humanSpecific));
 
-  // 봇 역할 분배: Bloc/Ghost 대략 균형
-  // 4인: 인간 ghost면 봇 [bloc, bloc, ghost], 인간 bloc이면 [ghost, ghost, bloc]
-  // 2인: 봇 1 (반대 역할)
-  // 3인: 봇 2 (인간 반대 역할 1 + 같은 역할 1)
-  // 5인: 봇 4 (균형)
+  // 3 bots: mixed roles opposite of human
   const botSpecs = [];
-  const usedBlocs = humanRole === 'bloc' ? [humanSpecific] : [];
-  const usedGhosts = humanRole === 'ghost' ? [humanSpecific] : [];
-  const pickBloc = () => { const avail = allBlocs.filter(b => !usedBlocs.includes(b)); const p = rand(avail); usedBlocs.push(p); return p; };
-  const pickGhost = () => { const avail = allGhosts.filter(g => !usedGhosts.includes(g)); const p = rand(avail); usedGhosts.push(p); return p; };
-
-  // Bot role 할당: 인간 반대 역할이 최소 1명, 나머지 적절히 섞음
-  const oppositeRole = humanRole === 'bloc' ? 'ghost' : 'bloc';
-  const botRoles = [];
-  for (let i = 0; i < botCount; i++) {
-    if (i === 0) botRoles.push(oppositeRole);           // 최소 1명은 반대
-    else if (i === 1 && botCount >= 2) botRoles.push(oppositeRole); // 2명째도 반대
-    else botRoles.push(i % 2 === 0 ? oppositeRole : humanRole);     // 이후 교차
+  if (humanRole === 'bloc') {
+    // 2 Ghost bots + 1 Bloc bot
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts) });
+    const remaining = allBlocs.filter(b => b !== humanSpecific);
+    botSpecs.push({ role: 'bloc', sp: rand(remaining) });
+  } else {
+    // 2 Bloc bots + 1 Ghost bot
+    botSpecs.push({ role: 'bloc', sp: rand(allBlocs) });
+    botSpecs.push({ role: 'bloc', sp: rand(allBlocs.filter(b => b !== botSpecs[0].sp)) });
+    botSpecs.push({ role: 'ghost', sp: rand(allGhosts.filter(g => g !== humanSpecific)) });
   }
-  botRoles.forEach(r => botSpecs.push({ role: r, sp: r === 'bloc' ? pickBloc() : pickGhost() }));
   botSpecs.forEach((bs, i) => players.push(buildPlayer(i + 1, 'bot', bs.role, bs.sp)));
-
-  // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
-  // NPC는 카드 안 내고 자동 확장도 안 함. 구역만 차지하고 레이드 표적 역할.
-  if (totalPlayers === 2) {
-    const npc1 = pickBloc();
-    const npc2 = pickBloc();
-    const npcP1 = buildPlayer(players.length, 'npc', 'bloc', npc1);
-    const npcP2 = buildPlayer(players.length + 1, 'npc', 'bloc', npc2);
-    npcP1.isNpc = true;
-    npcP2.isNpc = true;
-    players.push(npcP1);
-    players.push(npcP2);
-  }
 
   // Set bloc HQ zones as owned
   players.forEach(p => {
@@ -660,10 +489,10 @@ function initGame(humanRole, humanSpecific, playerCount) {
       winner: null,
       winReason: null,
       newsSinceStart: 0,
-      raidsThisGame: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
-      zonesVisited: Object.fromEntries([...Array(5).keys()].map(k => [k, new Set()])),
-      attacksUsed: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
-      lostCardsUsed: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
+      raidsThisGame: { 0:0, 1:0, 2:0, 3:0 },
+      zonesVisited: { 0: new Set(), 1: new Set(), 2: new Set(), 3: new Set() },
+      attacksUsed: { 0:0, 1:0, 2:0, 3:0 },
+      lostCardsUsed: { 0:0, 1:0, 2:0, 3:0 },
       nexusHolder: null,
       nexusStreak: 0,
       claimedAchievements: {},  // id => playerIdx
@@ -688,7 +517,7 @@ function initGame(humanRole, humanSpecific, playerCount) {
     players,
     map,
     pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
-    stocks: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
+    stocks: { VANTA: 10, IRONWALL: 10, HELIX: 10, AXIOM: 10, CARBON: 10 },
     heat: 5,
     signalDie: rollSignalDie(),
     currentNews: null,
@@ -862,203 +691,13 @@ function reducer(state, action) {
     case 'SKIP_ZONE_BONUS':
       return { ...state, meta: { ...state.meta, zoneBonusPending: null } };
 
-    case 'RAID_SELECT_TYPE': {
-      const pr = state.meta.pendingRaid;
-      if (!pr) return state;
-      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, selectedType: action.raidType, phase: 'invest' } } };
-    }
-
-    case 'RAID_INVEST': {
-      // action.item: 'weapons' | 'data' | 'poolAttr' (with action.attr for pool)
-      const pr = state.meta.pendingRaid;
-      if (!pr) return state;
-      const me = state.players[0];
-      const inv = { ...pr.invested };
-      if (action.item === 'weapons' && (me.resources.weapons || 0) > inv.weapons) {
-        inv.weapons++;
-      } else if (action.item === 'data' && (me.resources.data || 0) > inv.data) {
-        inv.data++;
-      } else if (action.item === 'poolAttr' && action.attr) {
-        if ((me.pool?.[action.attr] || 0) > 0 && !inv.poolAttr) {
-          inv.poolAttr = action.attr;
-        }
-      } else if (action.item === 'unset_pool') {
-        inv.poolAttr = null;
-      } else if (action.item === 'reset') {
-        inv.weapons = 0; inv.data = 0; inv.poolAttr = null;
-      }
-      return { ...state, meta: { ...state.meta, pendingRaid: { ...pr, invested: inv } } };
-    }
-
-    case 'RAID_EXECUTE': {
-      const pr = state.meta.pendingRaid;
-      if (!pr || !pr.selectedType) return state;
-      let s = { ...state };
-      const me = s.players[0];
-      const rtype = RAID_TYPES[pr.selectedType];
-      const zoneLoot = ZONE_LOOT[pr.zoneType] || {};
-      const bloc = pr.bloc;
-      const counterBonus = countersBloc(me.specific, bloc) ? 1 : 0;
-
-      // 투자 자원 소비
-      const inv = pr.invested;
-      const newRes = { ...me.resources };
-      if (inv.weapons > 0) newRes.weapons = Math.max(0, (newRes.weapons || 0) - inv.weapons);
-      if (inv.data > 0) newRes.data = Math.max(0, (newRes.data || 0) - inv.data);
-      const newPool = { ...(me.pool || {}) };
-      if (inv.poolAttr) newPool[inv.poolAttr] = Math.max(0, (newPool[inv.poolAttr] || 0) - 1);
-
-      // 레이드 타입별 비용 선지불 (협상형·드론형 등)
-      if (rtype.cost) {
-        if (rtype.cost.credit) {
-          if ((newRes.credit || 0) >= rtype.cost.credit) newRes.credit -= rtype.cost.credit;
-          else {
-            s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (비용 ₵${rtype.cost.credit} 부족)`);
-            return { ...s, meta: { ...s.meta, pendingRaid: null } };
-          }
-        }
-        if (rtype.cost.parts) {
-          if ((newRes.parts || 0) >= rtype.cost.parts) newRes.parts -= rtype.cost.parts;
-          else {
-            s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtype.name} 실패 (부품 ${rtype.cost.parts}개 부족)`);
-            return { ...s, meta: { ...s.meta, pendingRaid: null } };
-          }
-        }
-      }
-
-      // Bloc 자동 반격 (잠입형은 bypass)
-      const defense = rtype.bypass_defense ? {} : (BLOC_DEFENSE[bloc] || {});
-      let thresholdMod = 0;
-      let approachMod = 0;
-      let executeMod = 0;
-      let escapeMod = 0;
-      const defenseLogs = [];
-      if (rtype.bypass_defense) defenseLogs.push('🕷 방어 우회');
-      if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseLogs.push(`${bloc} 방어 +${defense.threshold_plus} threshold`); }
-      if (defense.detect) { approachMod -= 2; defenseLogs.push(`${bloc} 센서 감지 (접근 -2)`); }
-      if (defense.all_plus) { approachMod += 0 - defense.all_plus; executeMod -= defense.all_plus; escapeMod -= defense.all_plus; defenseLogs.push(`${bloc} AI 보조 (전 판정 ${-defense.all_plus})`); }
-      if (pr.fortified > 0 && !rtype.bypass_defense) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
-
-      const finalThreshold = rtype.threshold + thresholdMod;
-
-      // 투자 보너스
-      const zoneAttr = ZONE_TYPES[pr.zoneType]?.attr;
-      const poolBonus = inv.poolAttr === zoneAttr ? 2 : (inv.poolAttr ? 1 : 0);
-      const execBonus = inv.weapons + counterBonus + executeMod;
-      const approachBonus = inv.data + approachMod;
-      const escapeBonus = escapeMod;
-
-      // === 3단계 판정 ===
-      // 1. Approach (접근) — d6 + SHADE 속성 투자 (data) vs 4
-      const approachRoll = d6();
-      const approachTotal = approachRoll + approachBonus + (inv.poolAttr === 'S' ? 2 : 0);
-      const approachOK = approachTotal >= 4;
-
-      // 2. Execute (실행) — d6 + 선택한 스탯 + 투자 + 상성 vs threshold
-      // v0.5.25: 크리티컬 실패 — d6 = 1은 자동 실패 (스탯 무관)
-      const execRoll = d6();
-      const statVal = me.stats[rtype.useStat] || 0;
-      const execTotal = execRoll + statVal + execBonus + poolBonus + (approachOK ? 0 : -2);
-      const critFail = execRoll === 1;
-      const execOK = !critFail && execTotal >= finalThreshold;
-
-      // 3. Escape (도주) — d6 + SPD vs 3
-      const escapeRoll = d6();
-      const escapeTotal = escapeRoll + me.stats.spd + escapeBonus;
-      const escapeOK = escapeTotal >= 3;
-
-      // 결과 적용
-      const cell = s.map[pr.coord];
-      let rewards = rtype.success;
-      let outcome = 'success';
-      if (!execOK) {
-        rewards = rtype.failure;
-        outcome = 'failure';
-      }
-
-      const ps = [...s.players];
-      let updatedP = { ...me, resources: newRes, pool: newPool };
-
-      // 보상/페널티 적용
-      if (outcome === 'success') {
-        updatedP.resources.rep = (updatedP.resources.rep || 0) + (rewards.rep || 0);
-        if (rewards.data) updatedP.resources.data = (updatedP.resources.data || 0) + rewards.data;
-        if (rewards.parts) updatedP.resources.parts = Math.max(0, (updatedP.resources.parts || 0) + rewards.parts);
-        if (rewards.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + rewards.influence;
-        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
-        // 구역 차등 전리품
-        if (zoneLoot.credit) updatedP.resources.credit = (updatedP.resources.credit || 0) + zoneLoot.credit;
-        if (zoneLoot.data) updatedP.resources.data = (updatedP.resources.data || 0) + zoneLoot.data;
-        if (zoneLoot.weapons) updatedP.resources.weapons = (updatedP.resources.weapons || 0) + zoneLoot.weapons;
-        if (zoneLoot.parts) updatedP.resources.parts = (updatedP.resources.parts || 0) + zoneLoot.parts;
-        if (zoneLoot.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + zoneLoot.influence;
-        if (zoneLoot.rep) updatedP.resources.rep += zoneLoot.rep;
-        if (zoneLoot.wanted) updatedP.wanted = Math.max(0, (updatedP.wanted || 0) + zoneLoot.wanted);
-        if (zoneLoot.full_heal) updatedP.hp = updatedP.maxHp;
-        if (zoneLoot.all_attr) ['M','I','V','S','B','A'].forEach(a => { updatedP.pool[a] = (updatedP.pool[a] || 0) + 1; });
-        if (zoneLoot.peek_news) s = { ...s, meta: { ...s.meta, peekNews: (s.meta.peekNews || 0) + 1 } };
-      } else {
-        updatedP.hp = Math.max(0, updatedP.hp - (rewards.hp || 0));
-        updatedP.wanted = (updatedP.wanted || 0) + (rewards.wanted || 0);
-        if (rewards.data) updatedP.resources.data = Math.max(0, (updatedP.resources.data || 0) + rewards.data);
-        if (rewards.parts) updatedP.resources.parts = Math.max(0, (updatedP.resources.parts || 0) + rewards.parts);
-      }
-
-      // Escape 실패 추가 페널티
-      if (!escapeOK && outcome === 'success') {
-        updatedP.wanted = (updatedP.wanted || 0) + 1;
-      }
-
-      // 맵/주식 업데이트 (성공 시)
-      let newMap = s.map;
-      let newStocks = s.stocks;
-      if (outcome === 'success') {
-        newMap = { ...s.map, [pr.coord]: { ...cell, owner: null, fortified: 0 } };
-        newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - (rewards.stockHit || 0)) };
-      }
-
-      ps[0] = updatedP;
-      const newHeat = Math.min(10, Math.max(0, s.heat + (rewards.heat || 0)));
-      s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
-
-      // 레이드 카운트 증가 (성공만)
-      if (outcome === 'success') {
-        s.meta = { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
-      }
-
-      // 결과 상세 로그
-      const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-      const invStr = [
-        inv.weapons ? `🔩×${inv.weapons}` : null,
-        inv.data ? `📡×${inv.data}` : null,
-        inv.poolAttr ? `◈${inv.poolAttr}${poolBonus>1?'(매치+2)':'+1'}` : null,
-      ].filter(Boolean).join(' ');
-      const defStr = defenseLogs.length > 0 ? ` | 🛡 ${defenseLogs.join(', ')}` : '';
-      const rtn = rtype.name;
-      s = logEntry(s, `⭐ 당신 ${rtype.icon} ${rtn} 레이드 [${pr.coord} ${pr.zoneNm}] — ${pr.bloc}${defStr}`);
-      if (invStr) s = logEntry(s, `  투자: ${invStr}`);
-      s = logEntry(s, `  🎲 접근 ${approachRoll}+${approachBonus}=${approachTotal} ${approachOK ? '✓' : '✗(실행-2)'} · 실행 ${execRoll}+${statVal}${cbStr}+${execBonus+poolBonus}=${execTotal} vs ${finalThreshold} ${execOK ? '✓' : '✗'} · 도주 ${escapeRoll}+${me.stats.spd}=${escapeTotal} ${escapeOK ? '✓' : '✗(수배+1)'}`);
-      if (outcome === 'success') {
-        const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
-        s = logEntry(s, `  ✅ 성공 · 렙+${rewards.rep} · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}`);
-      } else {
-        s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
-      }
-
-      s.meta = { ...s.meta, pendingRaid: null };
-      return s;
-    }
-
     case 'RESOLVE_RAID_YES': {
-      // 레거시 호환 — 아직 호출되는 코드 있으면 즉시 새 EXECUTE로 위임
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
       let s = { ...state };
       const raidRoll = d6();
+      const raidTotal = raidRoll + pr.atk;
       const me = s.players[0];
-      // 상성 보너스: Ghost 클래스가 타겟 Bloc 카운터면 atk +1
-      const counterBonus = countersBloc(me.specific, pr.bloc) ? 1 : 0;
-      const raidTotal = raidRoll + pr.atk + counterBonus;
       const cell = s.map[pr.coord];
       if (raidTotal >= pr.threshold) {
         const newStocks = { ...s.stocks, [pr.bloc]: Math.max(1, s.stocks[pr.bloc] - 3) };
@@ -1071,8 +710,7 @@ function reducer(state, action) {
         const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
         s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
         s.meta = { ...s.meta, pendingRaid: null, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
-        const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}${cbStr}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 렙+3 (누적 ${ps[0].resources.rep})`);
+        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 렙+3 (누적 ${ps[0].resources.rep})`);
       } else {
         const ps = [...s.players];
         ps[0] = {
@@ -1100,20 +738,17 @@ function reducer(state, action) {
       let s = { ...state };
       const atkRoll = d6();
       const defRoll = d6();
+      const atkTotal = d.atkStat + atkRoll;
+      const defTotal = d.defStat + defRoll;
       const ps = [...s.players];
       const atkP = ps[d.atkGhostIdx];
       const defP = ps[d.defGhostIdx];
-      // 상성 보너스: 공격자 → 방어자 카운터 관계면 atk +2
-      const counterBonus = countersGhost(atkP.specific, defP.specific) ? 2 : 0;
-      const atkTotal = d.atkStat + atkRoll + counterBonus;
-      const defTotal = d.defStat + defRoll;
       if (atkTotal >= defTotal + 2) {
         const loot = Math.min(3, defP.resources.credit || 0);
         ps[d.atkGhostIdx] = { ...atkP, resources: { ...atkP.resources, rep: (atkP.resources.rep || 0) + 2, credit: (atkP.resources.credit || 0) + loot } };
         ps[d.defGhostIdx] = { ...defP, resources: { ...defP.resources, credit: Math.max(0, (defP.resources.credit || 0) - loot) }, hp: Math.max(0, defP.hp - 2) };
         s = { ...s, players: ps, meta: { ...s.meta, pendingGhostDuel: null } };
-        const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-        s = logEntry(s, `⭐ 당신 ⚔️ Ghost 결투 승리! → P${d.defGhostIdx} ${defP.specific} | 🎲${atkRoll}+${d.atkStat}${cbStr}=${atkTotal} vs ${defTotal} | 렙+2, ₵+${loot} 탈취`);
+        s = logEntry(s, `⭐ 당신 ⚔️ Ghost 결투 승리! → P${d.defGhostIdx} ${defP.specific} | 🎲${atkTotal} vs ${defTotal} | 렙+2, ₵+${loot} 탈취`);
       } else if (defTotal >= atkTotal + 2) {
         ps[d.atkGhostIdx] = { ...atkP, hp: Math.max(0, atkP.hp - 2) };
         s = { ...s, players: ps, meta: { ...s.meta, pendingGhostDuel: null } };
@@ -1151,7 +786,7 @@ function reducer(state, action) {
         stocks: { ...p.stocks, [action.bloc]: (p.stocks[action.bloc] || 0) + action.qty },
       };
       // Bloc 본인 매수 유동성 부여: 주가 +1 (매수세)
-      const newStocks = { ...state.stocks, [action.bloc]: Math.min(20, price + (action.qty >= 3 ? 1 : 0)) };
+      const newStocks = { ...state.stocks, [action.bloc]: Math.min(20, price + (action.qty >= 2 ? 1 : 0)) };
       const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
       return {
         ...state,
@@ -1175,7 +810,7 @@ function reducer(state, action) {
         resources: { ...p.resources, credit: (p.resources.credit || 0) + earn },
         stocks: { ...p.stocks, [action.bloc]: have - qty },
       };
-      const newStocks = { ...state.stocks, [action.bloc]: Math.max(1, price - (qty >= 3 ? 1 : 0)) };
+      const newStocks = { ...state.stocks, [action.bloc]: Math.max(1, price - (qty >= 2 ? 1 : 0)) };
       const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
       return {
         ...state,
@@ -1183,65 +818,6 @@ function reducer(state, action) {
         stocks: newStocks,
         log: [...state.log, { round: state.meta.round, phase: 1, message: `📉 ${marker}P${action.playerIdx} · ${action.bloc} ${qty}주 매도 (₵+${earn}) — 주가 ${price}${newStocks[action.bloc] !== price ? `→${newStocks[action.bloc]}` : ''}` }].slice(-150),
       };
-    }
-
-    case 'SHOP_BUY': {
-      // 공용 상점 — 누구나 Phase 1에 구매 가능
-      // action.playerIdx, action.item
-      const items = {
-        medical:   { cost: 5, name: '의료 치료',   apply: p => ({ ...p, hp: p.maxHp }) },
-        arms:      { cost: 4, name: '무기상',      apply: p => ({ ...p, resources: { ...p.resources, weapons: (p.resources.weapons||0) + 2 } }) },
-        info:      { cost: 3, name: '정보상',      apply: p => ({ ...p, resources: { ...p.resources, data: (p.resources.data||0) + 2, rep: (p.resources.rep||0) + 1 } }) },
-        bribe:     { cost: 3, name: '뇌물',        apply: p => ({ ...p, wanted: Math.max(0, (p.wanted||0) - 2) }) },
-        bounty:    { cost: 4, name: '현상금 청구', apply: p => ({ ...p, resources: { ...p.resources, rep: (p.resources.rep||0) + 2 } }) },
-        recruit:   { cost: 6, name: '용병 영입',   apply: p => ({ ...p, resources: { ...p.resources, weapons: (p.resources.weapons||0) + 3, parts: (p.resources.parts||0) + 1 } }) },
-      };
-      const it = items[action.item];
-      if (!it) return state;
-      const p = state.players[action.playerIdx];
-      if ((p.resources.credit||0) < it.cost) return state;
-      const ps = [...state.players];
-      let updated = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
-      updated = it.apply(updated);
-      ps[action.playerIdx] = updated;
-      let s = { ...state, players: ps };
-      if (action.item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
-      const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `🏪 ${marker}P${action.playerIdx} · 상점: ${it.name} (₵-${it.cost})`);
-      return s;
-    }
-
-    case 'BOT_SHOP': {
-      // 봇 상점 AI — 상황에 맞게 자동 구매
-      let s = { ...state };
-      const ps = [...state.players];
-      state.players.forEach((p, pi) => {
-        if (p.kind !== 'bot' || p.defeated) return;
-        const credit = p.resources.credit || 0;
-        // 우선순위: HP 낮으면 의료 > 수배 높으면 뇌물 > 무기 부족하면 무기상 > 렙 < 10이면 정보상/현상금
-        const actions = [];
-        if (p.hp < p.maxHp * 0.5 && credit >= 5) actions.push('medical');
-        if ((p.wanted||0) >= 3 && credit >= 3) actions.push('bribe');
-        if (p.role === 'ghost' && (p.resources.rep||0) < 12 && credit >= 4) actions.push('bounty');
-        if ((p.resources.weapons||0) < 2 && credit >= 4) actions.push('arms');
-        if (p.role === 'ghost' && (p.resources.data||0) < 2 && credit >= 3) actions.push('info');
-        if (actions.length === 0) return;
-        const item = actions[0];
-        const items = {
-          medical: { cost: 5, apply: pp => ({ ...pp, hp: pp.maxHp }) },
-          arms:    { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, weapons: (pp.resources.weapons||0) + 2 } }) },
-          info:    { cost: 3, apply: pp => ({ ...pp, resources: { ...pp.resources, data: (pp.resources.data||0) + 2, rep: (pp.resources.rep||0) + 1 } }) },
-          bribe:   { cost: 3, apply: pp => ({ ...pp, wanted: Math.max(0, (pp.wanted||0) - 2) }) },
-          bounty:  { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, rep: (pp.resources.rep||0) + 2 } }) },
-        };
-        const it = items[item];
-        let upd = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
-        upd = it.apply(upd);
-        ps[pi] = upd;
-        s = logEntry({ ...s, players: ps }, `🏪 P${pi} [${p.specific}] · 상점 구매 (${item}, ₵-${it.cost})`);
-        if (item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
-      });
-      return s;
     }
 
     case 'BOT_MARKET': {
@@ -1583,12 +1159,12 @@ function reducer(state, action) {
 
       s = { ...s, players: newPlayers, log: newLog.slice(-150) };
 
-      // === Bloc 패시브 확장: 매 라운드 자동 점령 (v0.5.19 롤백 - Bloc 너무 약해짐) ===
+      // === Bloc 패시브 확장: 라운드마다 자사 소유 구역 인접한 빈 buildable 구역 1개 자동 점령 ===
       const expandedMap = { ...s.map };
       const expandLog = [];
       for (let pi = 0; pi < s.players.length; pi++) {
         const p = s.players[pi];
-        if (p.role !== 'bloc' || p.defeated || p.isNpc) continue;
+        if (p.role !== 'bloc' || p.defeated) continue;
         const myZones = Object.entries(expandedMap).filter(([c, cell]) => cell.owner === pi).map(([c]) => c);
         const candidates = new Set();
         myZones.forEach(c => {
@@ -1625,18 +1201,14 @@ function reducer(state, action) {
         const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
         let gain = 0;
         let breakdown = '';
-        // v0.5.21: 5pt 균일 비용에 맞춰 공식 축소 (속도 조정)
         if (p.role === 'ghost') {
-          const repPart = Math.floor((p.resources.rep || 0) / 5);  // ⅓ → ⅕
-          const raidPart = raids;                                  // ×2 → ×1
-          const poolPart = Math.floor(poolSum / 3);                // ½ → ⅓
-          gain = repPart + raidPart + poolPart;
-          breakdown = `렙⅕${repPart} +레이드${raidPart} +풀⅓${poolPart}`;
+          const repPart = Math.floor((p.resources.rep || 0) / 3);
+          const raidPart = raids * 2;
+          gain = repPart + raidPart + poolHalf;
+          breakdown = `렙⅓${repPart} +레이드×2${raidPart} +풀½${poolHalf}`;
         } else {
-          const zonePart = Math.floor(ownCount / 2);               // 구역 → ½
-          const poolPart = Math.floor(poolSum / 3);                // ½ → ⅓
-          gain = zonePart + poolPart;
-          breakdown = `구역½${zonePart} +풀⅓${poolPart}`;
+          gain = ownCount + poolHalf;
+          breakdown = `구역${ownCount} +풀½${poolHalf}`;
         }
         let tl = p.tl || 1;
         let tlProgress = (p.tlProgress || 0) + gain;
@@ -1940,11 +1512,10 @@ function applyEffect(state, playerIdx, effect, kind, card) {
             };
             s.meta._didAutoRaid = true;
           } else {
-            // 봇이 P0를 공격하는 경우: 자동 결투 (상성 적용)
+            // 봇이 P0를 공격하는 경우: 자동 결투
             const atkRoll = d6();
             const defRoll = d6();
-            const counterBonus = countersGhost(pAfterMove.specific, rival.specific) ? 2 : 0;
-            const atkTotal = pAfterMove.stats.atk + atkRoll + counterBonus;
+            const atkTotal = pAfterMove.stats.atk + atkRoll;
             const defTotal = rival.stats.def + defRoll;
             const ps = [...s.players];
             if (atkTotal >= defTotal + 2) {
@@ -1969,53 +1540,35 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       }
 
       // === Ghost가 Bloc 소유 구역에 도착 → 레이드 시도 ===
-      // v0.6.0: RIGGER는 도착 + 인접 Bloc 구역도 드론 레이드 후보. 가까운 Bloc 찾음.
+      // P0: 모달로 명시 선택 (Raid? / Stand down?) — 확률·보상·위험 공개
+      // 봇: 기존 자동 시도 유지
       if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
-        let cellThere = s.map[pAfterMove.position];
-        let effectiveCoord = pAfterMove.position;
-        // RIGGER 원격: 현위치에 Bloc 없으면 인접 Bloc 검색
-        if (pAfterMove.specific === 'RIGGER' && (!cellThere || cellThere.owner === null || cellThere.owner === undefined || s.players[cellThere.owner]?.role !== 'bloc')) {
-          const adj = coordsAdj(pAfterMove.position);
-          const adjBloc = adj.find(c => {
-            const cell = s.map[c];
-            return cell?.owner !== null && cell?.owner !== undefined && s.players[cell.owner]?.role === 'bloc';
-          });
-          if (adjBloc) { cellThere = s.map[adjBloc]; effectiveCoord = adjBloc; }
-        }
+        const cellThere = s.map[pAfterMove.position];
         if (cellThere?.owner !== null && cellThere?.owner !== undefined && s.players[cellThere.owner]?.role === 'bloc') {
           const blocIdx = cellThere.owner;
           const bloc = s.players[blocIdx].specific;
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
           const threshold = 5;
           if (playerIdx === 0) {
-            // v0.5.22: 확장된 레이드 상태 — 타입 선택 + 자원 투자 + 3단계 판정
-            const zoneType = cellThere.zone;
+            // 결정 대기 상태 저장 — UI 모달이 떠서 확률·보상 보여주고 결정 받음
             s = {
               ...s,
               meta: {
                 ...s.meta,
                 pendingRaid: {
-                  coord: effectiveCoord,
+                  coord: pAfterMove.position,
                   bloc,
                   zoneNm,
-                  zoneType,
-                  blocIdx,
-                  stats: { atk: pAfterMove.stats.atk, spd: pAfterMove.stats.spd, hack: pAfterMove.stats.hack },
-                  fortified: cellThere.fortified || 0,
-                  // 사용자가 단계적으로 채움
-                  selectedType: null,
-                  invested: { weapons: 0, data: 0, poolAttr: null },
-                  executed: false,
-                  phase: 'type',  // 'type' | 'invest' | 'done'
+                  atk: pAfterMove.stats.atk,
+                  threshold,
                 },
               },
             };
-            s.meta._didAutoRaid = true;
+            s.meta._didAutoRaid = true; // 보너스 드래프트 스킵 (레이드 결정 우선)
           } else {
-            // 봇: 기존 자동 로직 + 상성 보너스
+            // 봇: 기존 자동 로직
             const raidRoll = d6();
-            const counterBonus = countersBloc(pAfterMove.specific, bloc) ? 1 : 0;
-            const raidTotal = raidRoll + pAfterMove.stats.atk + counterBonus;
+            const raidTotal = raidRoll + pAfterMove.stats.atk;
             if (raidTotal >= threshold) {
               const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
               const ps = [...s.players];
@@ -2024,13 +1577,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                 resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
                 wanted: ps[playerIdx].wanted + 1,
               };
-              const newMap = { ...s.map, [effectiveCoord]: { ...cellThere, owner: null } };
+              const newMap = { ...s.map, [pAfterMove.position]: { ...cellThere, owner: null } };
               s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
               s.meta._didAutoRaid = true;
               if (blocIdx === 0 && playerIdx !== 0) {
-                s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'raid', detail: `${effectiveCoord} 잃음, ${bloc} 주가-3` } };
+                s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'raid', detail: `${pAfterMove.position} 잃음, ${bloc} 주가-3` } };
               }
             } else {
               const ps = [...s.players];
@@ -2040,7 +1593,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                 wanted: ps[playerIdx].wanted + 1,
               };
               s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
+              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${pAfterMove.position} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
               s.meta._didAutoRaid = true;
             }
           }
@@ -2235,28 +1788,27 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   }
   if (effect.extort) {
     // 정보 착취: rep + credit (BROKER 렙 루트 주력)
-    const repGain = Math.ceil(effect.extort * 1.5);
+    const repGain = effect.extort * 2;
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort * 2 } };
     s = { ...s, players: ps };
-    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort}`);
+    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort * 2}`);
   }
   if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
-    // v0.5.18: 정보 수집/판매 → rep + data + 크레딧 (Bloc의 경우 자산 직결)
+    // 정보 수집/판매 → rep + data
     const amount = effect.sell_info ? 3 : 2;
-    const isBloc = p.role === 'bloc';
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount, credit: (ps[playerIdx].resources.credit || 0) + (isBloc ? amount * 2 : 0) } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount } };
     s = { ...s, players: ps };
-    s = logEntry(s, `👁 P${playerIdx} · 정보 행동 · ★+${amount}, 📡+${amount}${isBloc ? `, ₵+${amount*2}` : ''}`);
+    s = logEntry(s, `👁 P${playerIdx} · 정보 행동 · ★+${amount}, 📡+${amount}`);
   }
   if (effect.scout || effect.scout_all || effect.drone_scan) {
-    // v0.5.17: 정찰 → data + 렙 (RIGGER 구제)
+    // 정찰 → data 축적
     const amount = effect.scout_all ? 2 : 1;
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + amount, rep: (ps[playerIdx].resources.rep || 0) + amount } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + amount } };
     s = { ...s, players: ps };
-    s = logEntry(s, `🛰 P${playerIdx} · 정찰 · 📡+${amount}, ★+${amount}`);
+    s = logEntry(s, `🛰 P${playerIdx} · 정찰 · 📡+${amount}`);
   }
   if (effect.broker_fee) {
     const ps = [...s.players];
@@ -2314,14 +1866,12 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `📜 P${playerIdx} · 퀘스트 수주 ★+${cnt}, ₵+${cnt * 2}`);
   }
   if (effect.deploy_trap || effect.trap || effect.trap_damage) {
-    // v0.5.17: 함정 설치 → 방어 +1 + 렙+2 + 크레딧+2 (RIGGER 구제)
+    // 함정 설치 → 다음 레이드 방어 보너스 (자기 위치에)
     const curPos = s.players[playerIdx].position;
     if (curPos && s.map[curPos]) {
       const newMap = { ...s.map, [curPos]: { ...s.map[curPos], fortified: (s.map[curPos].fortified || 0) + 1 } };
-      const ps = [...s.players];
-      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2, credit: (ps[playerIdx].resources.credit || 0) + 2 } };
-      s = { ...s, map: newMap, players: ps };
-      s = logEntry(s, `🪤 P${playerIdx} · 함정 설치 (${curPos} 방어+1, ★+2, ₵+2)`);
+      s = { ...s, map: newMap };
+      s = logEntry(s, `🪤 P${playerIdx} · 함정 설치 (${curPos} 방어+1)`);
     }
   }
   if (effect.cargo_haul || effect.supply_drop || effect.haul) {
@@ -2350,287 +1900,6 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.reward, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
     s = { ...s, players: ps };
     s = logEntry(s, `💰 P${playerIdx} · 보상 ₵+${effect.reward}, ★+1`);
-  }
-  // === CARBON/HELIX/AXIOM Bloc 미구현 효과 폴백 ===
-  if (effect.zone_income_2x || effect.div_2x) {
-    // v0.5.17: 자사 구역 수입 2배 → 크레딧 구역×4 + 부품+2 (CARBON 구제)
-    const pNow = s.players[playerIdx];
-    const ownCount = Object.values(s.map).filter(c => c.owner === playerIdx).length;
-    const bonus = ownCount * 4;
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (pNow.resources.credit || 0) + bonus, parts: (pNow.resources.parts || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `⚡ P${playerIdx} [${p.specific}] · 수입 2배 ₵+${bonus} ⚙+2 (${ownCount}구역)`);
-  }
-  if (effect.zero_income || effect.block_resource) {
-    // 적 1회 수입 차단 시뮬: 랜덤 경쟁자 크레딧 -3
-    const rivals = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated);
-    if (rivals.length > 0) {
-      const target = rand(rivals);
-      const tIdx = s.players.indexOf(target);
-      const ps = [...s.players];
-      ps[tIdx] = { ...ps[tIdx], resources: { ...ps[tIdx].resources, credit: Math.max(0, (target.resources.credit || 0) - 3) } };
-      s = { ...s, players: ps };
-      s = logEntry(s, `⛔ P${playerIdx} [${p.specific}] · P${tIdx} 수입 봉쇄 ₵-3`);
-      if (tIdx === 0 && playerIdx !== 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'block_resource', detail: `₵-3` } };
-    }
-  }
-  if (effect.fortify || effect.veil_up) {
-    // 방어 강화: 모든 자사 구역 fortified +1
-    const newMap = { ...s.map };
-    let count = 0;
-    Object.entries(newMap).forEach(([coord, cell]) => {
-      if (cell.owner === playerIdx) {
-        newMap[coord] = { ...cell, fortified: (cell.fortified || 0) + 1 };
-        count++;
-      }
-    });
-    if (count > 0) {
-      s = { ...s, map: newMap };
-      s = logEntry(s, `🛡 P${playerIdx} [${p.specific}] · 자사 ${count}구역 방어+1`);
-    }
-  }
-  if (effect.heal_all) {
-    // HELIX 아군 전체 힐
-    const ps = s.players.map(pp => pp.role === 'ghost' && !pp.defeated ? { ...pp, hp: Math.min(pp.maxHp, pp.hp + 3) } : pp);
-    s = { ...s, players: ps };
-    s = logEntry(s, `❤️ P${playerIdx} [${p.specific}] · Ghost 전원 HP+3`);
-  }
-  if (effect.ghost_extra_card || effect.contracts_boost) {
-    // Ghost 카드 드로우 보너스 → 크레딧 + data
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 3, data: (ps[playerIdx].resources.data || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `📄 P${playerIdx} [${p.specific}] · 계약 보너스 ₵+3, 📡+1`);
-  }
-  if (effect.same_round_trade || effect.flash_trade) {
-    // AXIOM FLASH TRADE → 크레딧 보너스
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 4 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `⚡ P${playerIdx} · 플래시 트레이드 ₵+4`);
-  }
-  if (effect.algorithm || effect.long_contract) {
-    // 대형 계약: 크레딧 + 자산 연상
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 6, influence: (ps[playerIdx].resources.influence || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `📊 P${playerIdx} · 대형 계약 ₵+6, 🎙+2`);
-  }
-  if (effect.bond) {
-    // v0.5.18: 채권 → 크레딧 + 타 블록 주식 1주 자동 매수 (CARBON 자산 가속)
-    const pNow = s.players[playerIdx];
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (pNow.resources.credit || 0) + effect.bond } };
-    // 저가 타 블록 주식 1주 매수
-    const blocs = Object.entries(s.stocks).filter(([bl]) => !(pNow.role === 'bloc' && pNow.specific === bl));
-    blocs.sort((a, b) => a[1] - b[1]);
-    if (blocs.length > 0) {
-      const [bl, price] = blocs[0];
-      if (ps[playerIdx].resources.credit >= price) {
-        ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: ps[playerIdx].resources.credit - price }, stocks: { ...ps[playerIdx].stocks, [bl]: (ps[playerIdx].stocks[bl] || 0) + 1 } };
-        s = { ...s, players: ps };
-        s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond} + ${bl} 1주 자동매수`);
-      } else {
-        s = { ...s, players: ps };
-        s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
-      }
-    } else {
-      s = { ...s, players: ps };
-      s = logEntry(s, `🏦 P${playerIdx} · 채권 ₵+${effect.bond}`);
-    }
-  }
-  if (effect.destroy_zone) {
-    // IRONWALL SCORCHED — 타 블록 구역 1곳 파괴
-    const targets = Object.entries(s.map).filter(([c, cell]) => cell.owner !== null && cell.owner !== undefined && cell.owner !== playerIdx);
-    if (targets.length > 0) {
-      const [coord, cell] = rand(targets);
-      const targetP = s.players[cell.owner];
-      const newMap = { ...s.map, [coord]: { ...cell, owner: null, destroyed: true } };
-      s = { ...s, map: newMap };
-      s = logEntry(s, `💥 P${playerIdx} [${p.specific}] · ${coord} 파괴 (P${cell.owner} ${targetP.specific})`);
-      if (cell.owner === 0 && playerIdx !== 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'destroy_zone', detail: `${coord} 파괴` } };
-    }
-  }
-  if (effect.remove_scandals || effect.clear_ghost_wanted) {
-    // 평판 청소 → 자신 or 아군 쿨
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🧹 P${playerIdx} · 평판 청소 ★+2`);
-  }
-
-  // === v0.5.13: BLADE/MOLE/RIGGER 미구현 효과 폴백 ===
-  // BLADE — 처형·저항 계열
-  if (effect.execute) {
-    // 처형: 즉시 렙+4 + 수배+1 (강력한 hit)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 4 }, wanted: (ps[playerIdx].wanted || 0) + 1 };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🔪 P${playerIdx} · 처형 · ★+4, 수배+1`);
-  }
-  if (effect.frenzy || effect.atk_per_hp) {
-    // 광폭화: 남은 HP 비례 보너스 공격 → 렙+2 + 수배+1
-    const curP = s.players[playerIdx];
-    const bonus = Math.floor((curP.hp / curP.maxHp) * 3);
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + bonus + 1 }, wanted: (ps[playerIdx].wanted || 0) + 1 };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🩸 P${playerIdx} · 광폭 (HP%) · ★+${bonus+1}`);
-  }
-  if (effect.hp_to_1 || effect.last_stand) {
-    // 최후 저항: HP 1까지 낮추고 대신 렙+5 수배+2
-    const curP = s.players[playerIdx];
-    if (curP.hp > 1) {
-      const ps = [...s.players];
-      ps[playerIdx] = { ...ps[playerIdx], hp: 1, resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 5 }, wanted: (ps[playerIdx].wanted || 0) + 2 };
-      s = { ...s, players: ps };
-      s = logEntry(s, `⚰️ P${playerIdx} · 최후 저항 · HP→1, ★+5`);
-    }
-  }
-  if (effect.negate || effect.shield || effect.human_shield) {
-    // 방어: HP 회복 + 한 번 판정 감면
-    const curP = s.players[playerIdx];
-    const healed = Math.min(curP.maxHp, curP.hp + 2);
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], hp: healed };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🛡 P${playerIdx} · 방어 태세 · HP+2 (→${healed})`);
-  }
-  if (effect.point_blank || effect.surprise) {
-    // 근거리·기습: 렙+2 + 크레딧+2
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2, credit: (ps[playerIdx].resources.credit || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🎯 P${playerIdx} · 근거리 공격 · ★+2, ₵+2`);
-  }
-  // MOLE — 내부 침투 계열
-  if (effect.peek_bloc || effect.steal_card) {
-    // 블록 내부 엿보기 → 렙+3 + 크레딧+4 (v0.5.14 강화)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 3, credit: (ps[playerIdx].resources.credit || 0) + 4 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🕵 P${playerIdx} · 내부 엿보기 · ★+3, ₵+4`);
-  }
-  if (effect.bloc_resource || effect.vote_flip) {
-    // Bloc 자원 탈취·투표 조작 → 렙+4 + 크레딧+5 (v0.5.14 강화)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 4, credit: (ps[playerIdx].resources.credit || 0) + 5 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🗳 P${playerIdx} · Bloc 자원/투표 조작 · ★+4, ₵+5`);
-  }
-  if (effect.frame || effect.swap_blame) {
-    // 누명 씌우기 → 수배-2 + 렙+3 (v0.5.14 강화)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], wanted: Math.max(0, (ps[playerIdx].wanted || 0) - 2), resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 3 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `👺 P${playerIdx} · 누명 · 수배-2, ★+3`);
-  }
-  if (effect.infiltrate || effect.disguise || effect.bypass_veil) {
-    // 침투: 지도 3R 노출 + 렙+1
-    s = { ...s, meta: { ...s.meta, mapReveal: (s.meta.mapReveal || 0) + 3 } };
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🎭 P${playerIdx} · 위장 침투 · 지도 3R 노출, ★+1`);
-  }
-  if (effect.scandal || effect.stock_dmg) {
-    // 스캔들 심기 → 타겟 블록 주가-2 + 렙+2
-    const blocs = Object.keys(s.stocks);
-    const pick = rand(blocs);
-    const newStocks = { ...s.stocks, [pick]: Math.max(1, s.stocks[pick] - 2) };
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, stocks: newStocks, players: ps };
-    s = logEntry(s, `💣 P${playerIdx} · ${pick} 스캔들 · 주가-2, ★+2`);
-  }
-  if (effect.permanent_clear) {
-    // 영구 흔적 삭제: 수배 완전 초기화 + 렙+2
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], wanted: 0, resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🧹 P${playerIdx} · 영구 삭제 · 수배→0, ★+2`);
-  }
-  // RIGGER — 기술·제작 계열
-  if (effect.emp_pulse || effect.tech_breach) {
-    // EMP/해킹: 타겟 주가-3 + 데이터+2 + 렙+2 (v0.5.14)
-    const blocs = Object.keys(s.stocks);
-    const pick = rand(blocs);
-    const newStocks = { ...s.stocks, [pick]: Math.max(1, s.stocks[pick] - 3) };
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + 2, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, stocks: newStocks, players: ps };
-    s = logEntry(s, `⚡ P${playerIdx} · EMP/브리치 · ${pick} 주가-3, 📡+2, ★+2`);
-  }
-  if (effect.field_craft || effect.jury_rig) {
-    // 현장 제작: 부품+4 + 무기+2 + 렙+2 (v0.5.14 강화)
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, parts: (ps[playerIdx].resources.parts || 0) + 4, weapons: (ps[playerIdx].resources.weapons || 0) + 2, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🔧 P${playerIdx} · 현장 제작 · ⚙+4, 🔩+2, ★+2`);
-  }
-  if (effect.shield_gen || effect.drone_swarm || effect.overclock) {
-    // 드론·차폐: 다음 판정 +2 + 렙+3 (v0.5.14 강화)
-    s = { ...s, meta: { ...s.meta, attackBonusOnce: (s.meta.attackBonusOnce || 0) + 2 } };
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 3 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🛰 P${playerIdx} · 드론/차폐 · 다음 판정+2, ★+3`);
-  }
-  if (effect.disable_tl || effect.force_tl_down) {
-    // TL 방해 → 랜덤 Bloc TL 1 하락 + 렙+3
-    const rivalBlocs = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.role === 'bloc' && pp.tl > 1);
-    if (rivalBlocs.length > 0) {
-      const target = rand(rivalBlocs);
-      const tIdx = s.players.indexOf(target);
-      const ps = [...s.players];
-      ps[tIdx] = { ...ps[tIdx], tl: Math.max(1, (ps[tIdx].tl || 1) - 1) };
-      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 3 } };
-      s = { ...s, players: ps };
-      s = logEntry(s, `📉 P${playerIdx} · P${tIdx} TL 방해 (→${ps[tIdx].tl}), ★+3`);
-    }
-  }
-  if (effect.temp_tl) {
-    // 일시 TL+1 → 렙+2
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `⚡ P${playerIdx} · 일시 TL+1, ★+2`);
-  }
-  if (effect.transfer_ally || effect.fuel) {
-    // 보급·연료 → 크레딧+2 + 부품+1
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 2, parts: (ps[playerIdx].resources.parts || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `⛽ P${playerIdx} · 보급 · ₵+2, ⚙+1`);
-  }
-  if (effect.untrack || effect.shortcut || effect.ignore_obstacles || effect.ignore_all || effect.move_3_nowalls || effect.move_any || effect.teleport) {
-    // 경로 우회 → 렙+1 + 수배-1
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], wanted: Math.max(0, (ps[playerIdx].wanted || 0) - 1), resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🚶 P${playerIdx} · 경로 우회 · 수배-1, ★+1`);
-  }
-  if (effect.leave_fire || effect.burn_behind || effect.smuggle) {
-    // 흔적 남기기/밀수 → 크레딧+3 + 렙+1
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 3, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🔥 P${playerIdx} · 밀수/방화 · ₵+3, ★+1`);
-  }
-  if (effect.break_veil) {
-    // 베일 해제 → 데이터+1 + 렙+1
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + 1, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🔓 P${playerIdx} · 베일 해제 · 📡+1, ★+1`);
-  }
-  if (effect.force_enter) {
-    // 강제 진입 → 크레딧+1 + 렙+2
-    const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
-    s = { ...s, players: ps };
-    s = logEntry(s, `🚪 P${playerIdx} · 강제 진입 · ★+2`);
   }
 
   // === Bloc 신규 효과들 ===
@@ -2769,31 +2038,25 @@ function checkVictoryByPoints(state) {
 }
 
 function checkInstantVictory(state) {
-  // Tutorial victory conditions (v0.6.2: 인원수별 동적 임계)
-  // 비-NPC 플레이어 수에 따라 게임 길이 보정
-  // 2인: 임계 -2 (게임 짧아짐), 4인: 기본, 5인: +3 (게임 길어지게)
-  const nonNpcCount = state.players.filter(p => !p.isNpc).length;
-  const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;  // v0.6.2: 5인은 보정 없음 (Bloc 부족 문제)
-  const blocGoal = 55 + adj;
-  const repBattleGoal = 16 + Math.floor(adj / 2);
-  const repOnlyGoal = 24 + adj;
-
+  // Tutorial victory conditions (v0.5.10 headless-sim balance pass)
+  // Bloc: asset >= 55
+  // Ghost 듀얼 경로: (a) 렙 13 + 레이드 2  OR  (b) 렙 18 (비전투 평판 루트 — BROKER/CIPHER/MOLE 구제)
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.defeated || p.isNpc) continue;
+    if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= blocGoal) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥${blocGoal}, ${nonNpcCount}인)` } };
+      if (av >= 60) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥60)` } };
       }
     } else {
       const rep = p.resources.rep || 0;
       const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= repBattleGoal && raids >= 2) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투): 렙 ${rep}/${repBattleGoal} + 레이드 ${raids}` } };
+      if (rep >= 14 && raids >= 2) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
       }
-      if (rep >= repOnlyGoal) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판): 렙 ${rep} (≥${repOnlyGoal})` } };
+      if (rep >= 18) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥18)` } };
       }
     }
   }
@@ -2829,7 +2092,7 @@ function scoreGhostCard(state, pIdx, cid) {
 
   const rep = p.resources.rep || 0;
   const raids = state.meta.raidsThisGame?.[pIdx] || 0;
-  const repNeeded = Math.max(0, 16 - rep);
+  const repNeeded = Math.max(0, 13 - rep);
   const raidNeeded = Math.max(0, 2 - raids);
   const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
 
@@ -2861,27 +2124,6 @@ function scoreGhostCard(state, pIdx, cid) {
     if (h.cargo_haul || h.supply_drop || h.haul) score += 4;
     if (h.deploy_trap || h.trap) score += 3;
     if (h.swap || h.swap_ratio) score += 2;
-    // === v0.5.13: BLADE/MOLE/RIGGER 효과 점수 ===
-    if (h.execute) score += 12;            // 즉시 렙+4
-    if (h.frenzy || h.atk_per_hp) score += (p.hp > p.maxHp * 0.6 ? 10 : 3);
-    if (h.hp_to_1 || h.last_stand) score += (p.hp > p.maxHp * 0.7 ? 8 : -5);
-    if (h.negate || h.shield || h.human_shield) score += (p.hp < p.maxHp * 0.5 ? 8 : 2);
-    if (h.point_blank || h.surprise) score += 6;
-    if (h.peek_bloc || h.steal_card) score += 7;
-    if (h.bloc_resource || h.vote_flip) score += 10;
-    if (h.frame || h.swap_blame) score += (p.wanted > 2 ? 8 : 4);
-    if (h.infiltrate || h.disguise || h.bypass_veil) score += 4;
-    if (h.scandal || h.stock_dmg) score += 7;
-    if (h.permanent_clear) score += (p.wanted > 3 ? 12 : 2);
-    if (h.emp_pulse || h.tech_breach) score += 8;
-    if (h.field_craft || h.jury_rig) score += 6;
-    if (h.shield_gen || h.drone_swarm || h.overclock) score += 5;
-    if (h.disable_tl || h.force_tl_down) score += 9;
-    if (h.temp_tl) score += 5;
-    if (h.transfer_ally || h.fuel) score += 3;
-    if (h.leave_fire || h.burn_behind || h.smuggle) score += 4;
-    if (h.break_veil) score += 3;
-    if (h.force_enter) score += 4;
   }
 
   // LOSS 회피
@@ -2908,30 +2150,11 @@ function scoreBlocCard(state, pIdx, cid) {
   if (c.tl <= p.tl) score += 15;
   if (c.tl > p.tl) score -= 20;
 
-  // === v0.5.11: 신규 구현 효과들 점수 ===
-  const m = c.main || {};
-  if (m.move) score += 8;
-  if (m.deploy_op) score += 12;
-  if (m.hire_raid) score += 10;
-  if (m.stock_buy_any) score += m.stock_buy_any * 3;
-  if (m.crash_target || m.destroy_zone) score += 8;
-  if (m.zone_income_2x || m.div_2x) score += 10;
-  if (m.zero_income || m.block_resource) score += 6;
-  if (m.fortify || m.veil_up || m.fortify_here) score += 5;
-  if (m.heal_all) score += 7;
-  if (m.same_round_trade || m.flash_trade) score += 6;
-  if (m.algorithm || m.long_contract) score += 10;
-  if (m.bond) score += m.bond;
-  if (m.ghost_wanted_all) score += 5;
-  if (m.heat && m.heat < 0) score += 5;
-  if (m.peek_news || m.scout_all) score += 4;
-  if (m.credit) score += m.credit;
-
   // Resource efficiency
   const costLen = c.main?.cost?.length || 0;
   if (costLen > 0) {
     let payable = true;
-    const poolCopy = { ...(p.pool || {}) };
+    const poolCopy = { ...state.pool };
     for (const a of c.main.cost) {
       if (poolCopy[a] > 0) poolCopy[a]--;
       else if (poolCopy.GRID > 0) poolCopy.GRID--;
@@ -2945,3 +2168,5 @@ function scoreBlocCard(state, pIdx, cid) {
 
   return score + Math.random() * 2;
 }
+
+// ============================================================================

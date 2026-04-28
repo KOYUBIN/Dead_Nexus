@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>DEAD NEXUS — 11×11 정식 맵</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A3 landscape; margin: 8mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 8mm; background: white; color: #000;
+  }
+  .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
+  .no-print a { color: #2d6fff; }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24pt; margin: 0 0 2mm; letter-spacing: 0.05em;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid #000; padding-bottom: 2mm; margin-bottom: 4mm;
+  }
+  .header .meta { font-size: 9pt; color: #666; font-family: 'JetBrains Mono', monospace; }
+
+  .map-board {
+    display: grid;
+    grid-template-columns: 8mm repeat(11, 1fr);
+    grid-template-rows: 8mm repeat(11, 1fr);
+    gap: 0.5mm;
+    background: #000;
+    padding: 0.5mm;
+    width: 100%;
+    aspect-ratio: 1/1;
+    max-width: 270mm;
+    margin: 0 auto;
+  }
+  .cell {
+    background: #fff;
+    border: 1px solid #888;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6pt;
+    position: relative;
+    padding: 0.5mm;
+  }
+  .cell .coord {
+    position: absolute; top: 0.3mm; left: 0.5mm;
+    font-size: 5pt; color: #666;
+  }
+  .cell .ztype { font-size: 6pt; font-weight: 700; }
+  .cell .icon { font-size: 8pt; }
+  .label-cell { background: transparent; border: none; font-weight: 700; font-size: 8pt; }
+  .corner { background: transparent; border: none; }
+
+  /* Zone color codes */
+  .z-ruin  { background: #2a2a2a; color: #ddd; }
+  .z-home  { background: #c44; color: #fff; }
+  .z-bank  { background: #ffd700; }
+  .z-data  { background: #2d6fff; color: #fff; }
+  .z-aux   { background: #b8b8b8; }
+  .z-port  { background: #6e3b87; color: #fff; }
+  .z-work  { background: #663300; color: #fff; }
+  .z-arms  { background: #4a5d23; color: #fff; }
+  .z-heal  { background: #c5d68f; }
+  .z-club  { background: #ff3c8c; color: #fff; }
+  .z-cop   { background: #ff8800; color: #fff; }
+  .z-nex   { background: #ffd700; font-weight: 900; outline: 2px solid #000; }
+
+  .legend {
+    margin-top: 4mm;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2mm;
+    font-size: 8pt;
+  }
+  .legend .item { display: flex; align-items: center; gap: 1mm; }
+  .legend .swatch { width: 5mm; height: 5mm; border: 1px solid #000; }
+
+  .setup-info {
+    margin-top: 3mm; padding: 3mm;
+    background: #f5f5f5; border: 1px solid #999;
+    font-size: 9pt;
+  }
+  .setup-info table { width: 100%; border-collapse: collapse; }
+  .setup-info th, .setup-info td { border: 1px solid #ccc; padding: 1mm 2mm; text-align: left; }
+  .setup-info th { background: #ddd; }
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  ← <a href="index.html">인덱스</a> · v1.0 정식 맵 11×11 · A3 인쇄 권장 (A4 2×2 분할도 가능)
+</div>
+
+<div class="header">
+  <h1>ASHGRID 11×11 정식 맵</h1>
+  <div class="meta">
+    DEAD NEXUS v1.0 · 121 셀 · NEXUS 중앙 F6<br/>
+    Bloc 5종 외곽 분산 · Ghost 시작 6위치
+  </div>
+</div>
+
+<div class="map-board" id="map"></div>
+
+<div class="setup-info">
+  <strong>📍 시작 배치 (Bloc HQ + 2 support / Ghost 시작 위치)</strong>
+  <table style="margin-top:1mm;">
+    <thead><tr><th>Bloc</th><th>HQ</th><th>Support</th><th>색</th><th>NEXUS 룰 (점유 시)</th></tr></thead>
+    <tbody>
+      <tr><td>VANTA</td><td>C2</td><td>B2, C1</td><td style="background:#1a1a1a; color:white;">검정</td><td>info_open: NPC 시그널 +1, 정찰 +1</td></tr>
+      <tr><td>AXIOM</td><td>I2</td><td>I1, J2</td><td style="background:#2d6fff; color:white;">청색</td><td>algo_market: 데이터 +1/R, 주가 변동 ×2</td></tr>
+      <tr><td>HELIX</td><td>F4</td><td>F3, E4</td><td style="background:#8ab57c;">녹색</td><td>biocode: 모든 플레이어 HP +1/R</td></tr>
+      <tr><td>IRONWALL</td><td>C10</td><td>B10, C11</td><td style="background:#4a5d23; color:white;">군녹</td><td>martial: ATK +1, Ghost 수배 +1/R</td></tr>
+      <tr><td>CARBON</td><td>I10</td><td>J10, I11</td><td style="background:#8b5a2b; color:white;">갈색</td><td>energy_grid: 자사 구역 수입 +1 ₵</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:2mm;"><strong>Ghost 시작:</strong> CIPHER A6 / BLADE F1 / BROKER K6 / RIGGER F11 / DRIFTER A1 / MOLE K11</div>
+  <div style="margin-top:1mm; font-size:8pt; color:#666;">
+    승리 조건: Bloc 자산 95 / Ghost 평판 45+raid2 또는 평판 70 단독 / max 12R / 최소 5R 보장
+  </div>
+</div>
+
+<div class="legend">
+  <div class="item"><span class="swatch z-ruin"></span> ruin (폐허)</div>
+  <div class="item"><span class="swatch z-home"></span> home (주거)</div>
+  <div class="item"><span class="swatch z-bank"></span> bank (은행)</div>
+  <div class="item"><span class="swatch z-data"></span> data (데이터)</div>
+  <div class="item"><span class="swatch z-aux"></span> aux (보조)</div>
+  <div class="item"><span class="swatch z-port"></span> port (항구)</div>
+  <div class="item"><span class="swatch z-work"></span> work (산업)</div>
+  <div class="item"><span class="swatch z-arms"></span> arms (병참)</div>
+  <div class="item"><span class="swatch z-heal"></span> heal (의료)</div>
+  <div class="item"><span class="swatch z-club"></span> club (클럽)</div>
+  <div class="item"><span class="swatch z-cop"></span> cop (경찰)</div>
+  <div class="item"><span class="swatch z-nex"></span> NEXUS (중앙)</div>
+</div>
+
+<script>
+const ZONES = [
+  'ruin','home','ruin','aux','data','bank','data','aux','ruin','home','ruin',
+  'home','aux','work','arms','data','home','data','arms','work','aux','home',
+  'ruin','work','heal','club','aux','heal','aux','club','heal','work','ruin',
+  'aux','arms','club','port','work','data','work','port','club','arms','aux',
+  'data','data','aux','work','heal','arms','heal','work','aux','data','data',
+  'bank','home','heal','data','arms','nex','arms','data','heal','home','bank',
+  'data','data','aux','work','heal','arms','heal','work','aux','data','data',
+  'aux','arms','club','port','work','data','work','port','club','arms','aux',
+  'ruin','work','heal','club','aux','heal','aux','club','heal','work','ruin',
+  'home','aux','work','arms','data','home','data','arms','work','aux','home',
+  'ruin','home','ruin','aux','data','bank','data','aux','ruin','home','ruin',
+];
+const NAMES = {
+  ruin:'폐허', home:'주거', bank:'은행', data:'데이터', aux:'보조',
+  port:'항구', work:'산업', arms:'병참', heal:'의료', club:'클럽', cop:'경찰', nex:'NEXUS'
+};
+const map = document.getElementById('map');
+const cols = ['A','B','C','D','E','F','G','H','I','J','K'];
+// header row
+const corner = document.createElement('div'); corner.className='corner cell'; map.appendChild(corner);
+cols.forEach(c => { const d = document.createElement('div'); d.className='label-cell cell'; d.textContent=c; map.appendChild(d); });
+for (let r = 1; r <= 11; r++) {
+  const lc = document.createElement('div'); lc.className='label-cell cell'; lc.textContent=r; map.appendChild(lc);
+  for (let c = 0; c < 11; c++) {
+    const idx = (r-1)*11 + c;
+    const z = ZONES[idx];
+    const cell = document.createElement('div');
+    cell.className = `cell z-${z}`;
+    const coord = cols[c] + r;
+    cell.innerHTML = `<div class="coord">${coord}</div><div class="ztype">${NAMES[z] || z}</div>`;
+    map.appendChild(cell);
+  }
+}
+</script>
+
+</body>
+</html>
