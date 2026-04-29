@@ -1088,7 +1088,7 @@ function canBuildBuilding(state, playerIdx, key, coord) {
   return { ok: true };
 }
 
-// v0.6.3d: 시그널 점진 공개형 시그널 — NPC 블록 정보 점진 공개
+// v0.6.3d: 시그널 점진 공개 — NPC 블록 정보 점진 공개
 const SIGNAL_REVEAL_COST = { data: 3 };  // data 3 → +1 시그널
 const SIGNAL_LEVEL_DESC = {
   0: '정체 미상 (???)',
@@ -1445,7 +1445,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   }
 
   // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
-  // v0.6.3d: NPC는 시그널 점진 공개형 시그널(정보)을 점진 공개하는 표적 역할
+  // v0.6.3d: NPC는 시그널 점진 공개(정보)을 점진 공개하는 표적 역할
   if (totalPlayers === 2) {
     const npc1 = pickBloc();
     const npc2 = pickBloc();
