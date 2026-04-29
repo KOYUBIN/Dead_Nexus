@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>DEAD NEXUS — 퀵 레퍼런스 (1매)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 6mm; }
+  @media print { body { margin: 0; } .no-print { display: none !important; } }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0; padding: 6mm; background: white; color: #000;
+    font-size: 8pt;
+    line-height: 1.3;
+  }
+  .no-print { margin-bottom: 8px; color: #666; font-size: 11px; }
+  .no-print a { color: #2d6fff; }
+
+  h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14pt;
+    margin: 0 0 1mm 0;
+    padding-bottom: 1mm;
+    border-bottom: 3px solid #c04828;
+    letter-spacing: 0.05em;
+    color: #000;
+  }
+  .subtitle {
+    font-size: 8pt;
+    color: #666;
+    margin: 0 0 3mm 0;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    background: #000;
+    color: white;
+    padding: 1mm 2mm;
+    margin: 2mm 0 1.5mm 0;
+    letter-spacing: 0.1em;
+  }
+  h2 .accent { color: #ff6b35; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3mm;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.5pt;
+    margin-bottom: 2mm;
+  }
+  table th {
+    background: #f0f0f0;
+    text-align: left;
+    padding: 1mm 1.5mm;
+    border-bottom: 1px solid #888;
+    font-weight: 700;
+    font-size: 7pt;
+  }
+  table td {
+    padding: 1mm 1.5mm;
+    border-bottom: 1px dotted #ccc;
+    vertical-align: top;
+  }
+  table tr:last-child td { border-bottom: none; }
+
+  .phase-box {
+    border: 1px solid #888;
+    border-left: 3px solid #c04828;
+    padding: 2mm;
+    margin-bottom: 1.5mm;
+    background: #fafafa;
+  }
+  .phase-box .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    color: #c04828;
+    font-size: 11pt;
+    float: right;
+    margin-top: -1mm;
+  }
+  .phase-box .name {
+    font-weight: 700;
+    font-size: 8.5pt;
+    margin-bottom: 1mm;
+  }
+  .phase-box .desc {
+    font-size: 7.5pt;
+    color: #444;
+  }
+
+  .track-box {
+    border: 1px solid #888;
+    padding: 1.5mm;
+    margin-bottom: 1mm;
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+    background: #fff;
+  }
+  .track-icon {
+    font-size: 12pt;
+    width: 18pt;
+    text-align: center;
+  }
+  .track-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 8.5pt;
+    flex: 0 0 60pt;
+  }
+  .track-desc {
+    font-size: 7pt;
+    color: #555;
+    flex: 1;
+  }
+
+  .win-card {
+    border: 2px solid #000;
+    padding: 2mm;
+    margin-bottom: 2mm;
+    background: #fff8e1;
+  }
+  .win-card.bloc { background: #e3f2fd; border-color: #1976d2; }
+  .win-card .title {
+    font-weight: 900;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    margin-bottom: 1mm;
+    color: #000;
+  }
+  .win-card.bloc .title { color: #1976d2; }
+  .win-card ul { margin: 0; padding-left: 4mm; font-size: 7.5pt; }
+
+  .key-numbers {
+    background: #000;
+    color: white;
+    padding: 2mm 3mm;
+    border-radius: 2mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5pt;
+  }
+  .key-numbers .label { color: #ff6b35; font-weight: 700; }
+
+  .footer {
+    margin-top: 3mm;
+    padding-top: 1.5mm;
+    border-top: 1px solid #ccc;
+    font-size: 6.5pt;
+    color: #888;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .icon-set {
+    font-size: 7pt;
+    color: #555;
+  }
+  .icon-set b { color: #000; font-family: 'JetBrains Mono', monospace; }
+
+  .raid-formula {
+    font-family: 'JetBrains Mono', monospace;
+    background: #fff8e1;
+    padding: 1.5mm;
+    border-left: 3px solid #ffa726;
+    font-size: 7.5pt;
+    margin-bottom: 1.5mm;
+  }
+</style>
+</head>
+<body>
+<div class="no-print">
+  <a href="index.html">← 인덱스</a>
+  · DEAD NEXUS 퀵 레퍼런스 v1.0 — A4 1매, 모든 플레이어 자리에 1장씩 비치 권장
+  <button onclick="window.print()" style="margin-left:10px;">🖨 인쇄</button>
+</div>
+
+<h1>DEAD NEXUS — 퀵 레퍼런스</h1>
+<div class="subtitle">v1.0 · A4 1매 · 모든 플레이어 자리에 1장씩 · 7페이즈 + 5트랙 + 승리 조건</div>
+
+<div class="grid">
+  <!-- 좌단: 페이즈 -->
+  <div>
+    <h2>🎯 라운드 진행 (7페이즈)</h2>
+
+    <div class="phase-box">
+      <span class="num">1</span>
+      <div class="name">📰 시장 / 뉴스</div>
+      <div class="desc">뉴스 1장 공개 · 효과 적용 · 봇 거래 자동</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">1.5</span>
+      <div class="name">🤝 협상 (선택)</div>
+      <div class="desc">자원 스왑 / truce 약속 / BROKER 중개 · 30초 토론 권장</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">2</span>
+      <div class="name">🃏 계획 (비밀)</div>
+      <div class="desc">손패에서 카드 2장 선택 → TOP/BOT (Ghost) 또는 MAIN/SIDE (Bloc) 영역 배치</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">3</span>
+      <div class="name">⚡ 실행 (이니셔티브 순)</div>
+      <div class="desc">카드 동시 공개 → 낮은 init부터 효과 적용 · 이동 / 공격 / 레이드 / 생산</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">4</span>
+      <div class="name">💰 수익</div>
+      <div class="desc">소유 구역에서 자원 수확 · Bloc 영향권 자동 확장 (인접 1칸)</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">5</span>
+      <div class="name">🔬 R&D</div>
+      <div class="desc">트랙 1개 무료 LV+1 · R3, R6에 Cyberware 자동 장착 (Ghost)</div>
+    </div>
+
+    <div class="phase-box">
+      <span class="num">6</span>
+      <div class="name">📊 결산</div>
+      <div class="desc">즉시 승리 체크 → 미달 시 다음 라운드</div>
+    </div>
+
+    <h2>🎲 레이드 판정 공식</h2>
+    <div class="raid-formula">
+      🎲 d6 + 화력LV + 카드보너스<br>
+      ≥ 방어구역(전형 5/요새 7/NEXUS 9) → <b>성공</b>
+    </div>
+
+    <h2>🆔 자원 아이콘</h2>
+    <div class="icon-set">
+      <b>₵</b> 크레딧 · <b>📡</b> 데이터 · <b>🔩</b> 무기 · <b>⚙️</b> 부품 · <b>🎙</b> 인플루언스 · <b>★</b> 평판 · <b>🎯</b> 영향력 · <b>🌐</b> 시그널
+    </div>
+  </div>
+
+  <!-- 우단: 트랙 + 승리 -->
+  <div>
+    <h2>🌐 5 트랙 (Ghost · 거리명성)</h2>
+
+    <div class="track-box">
+      <span class="track-icon">💥</span>
+      <div class="track-name">화력</div>
+      <div class="track-desc">Solo / 킬러. ATK +1/LV · 처형 · 레이드</div>
+    </div>
+    <div class="track-box">
+      <span class="track-icon">🌃</span>
+      <div class="track-name">그리드런</div>
+      <div class="track-desc">Nomad. 이동 +1/LV · 추적 회피 · 운반</div>
+    </div>
+    <div class="track-box">
+      <span class="track-icon">💾</span>
+      <div class="track-name">코드</div>
+      <div class="track-desc">해커 / 제작자. 해킹 · 드론 · 정찰 무시</div>
+    </div>
+    <div class="track-box">
+      <span class="track-icon">🤝</span>
+      <div class="track-name">인맥</div>
+      <div class="track-desc">픽서. 협상 + 1 · 카드 ↑ · 중개 수수료</div>
+    </div>
+    <div class="track-box">
+      <span class="track-icon">🎭</span>
+      <div class="track-name">그림자</div>
+      <div class="track-desc">잠입가. 은신 · 스카웃 · LV5 deathSave</div>
+    </div>
+
+    <h2>🏆 승리 조건</h2>
+
+    <div class="win-card">
+      <div class="title">👻 Ghost (독립) — 둘 중 하나</div>
+      <ul>
+        <li><b>전투 루트</b>: 평판 ≥ 42(5×5) / 45(11×11) <b>+</b> 레이드 ≥ 2회</li>
+        <li><b>단독 루트</b>: 평판 ≥ 60(5×5) / 70(11×11) (레이드 무관)</li>
+      </ul>
+    </div>
+
+    <div class="win-card bloc">
+      <div class="title">🏢 Bloc (메가기업) — 자산 60 도달</div>
+      <ul>
+        <li>자산 = 자기자본 + 주식 + NEXUS 점유 보너스</li>
+        <li>NEXUS 점유 시 자기 룰 활성 (CARBON: 수입 +1 등)</li>
+      </ul>
+    </div>
+
+    <h2>⚙ 핵심 숫자</h2>
+    <div class="key-numbers">
+      <span class="label">맵</span> 5×5 (튜토리얼) / 11×11 (정식) ·
+      <span class="label">라운드</span> 평균 5~7R (최대 8R) ·
+      <span class="label">손패</span> 6장 시작 ·
+      <span class="label">계획</span> 라운드당 2장<br>
+      <span class="label">트랙</span> 5개 × LV 1~5 ·
+      <span class="label">Cyberware</span> 게임당 2개 (R3/R6) ·
+      <span class="label">하이라이트</span> 12종 (게임당 1회씩)<br>
+      <span class="label">HP</span> Ghost 8~10 (LV5 그림자 deathSave 1회) ·
+      <span class="label">시그널</span> d6 매 라운드 (NPC 정보 점진 공개)
+    </div>
+
+    <h2>🌐 NEXUS 동적 룰 (소유자별)</h2>
+    <table>
+      <thead><tr><th>소유</th><th>전 플레이어 효과</th></tr></thead>
+      <tbody>
+        <tr><td><b>VANTA</b></td><td>이번 R 정찰 자유 (모두 시야 +1)</td></tr>
+        <tr><td><b>IRONWALL</b></td><td>모두 ATK +1 (전쟁판)</td></tr>
+        <tr><td><b>HELIX</b></td><td>모두 시작시 HP+1 (안전판)</td></tr>
+        <tr><td><b>AXIOM</b></td><td>주가 변동 ×2</td></tr>
+        <tr><td><b>CARBON</b></td><td>모두 수입 +1 (자원판)</td></tr>
+        <tr><td><i>중립</i></td><td>효과 없음 — 점유 경쟁 발생</td></tr>
+      </tbody>
+    </table>
+
+    <h2>🎬 첫 게임 권장 (Ghost · BLADE)</h2>
+    <table>
+      <thead><tr><th>R</th><th>액션</th><th>R&D</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>인접 Bloc 구역 이동 → raid 시도</td><td>화력 LV3</td></tr>
+        <tr><td>2</td><td>두 번째 raid + execute</td><td>그리드런 LV2</td></tr>
+        <tr><td>3</td><td>Cyberware 자동 장착 (reflex)</td><td>화력 LV4</td></tr>
+        <tr><td>4</td><td>NEXUS 도전</td><td>그림자 LV2</td></tr>
+        <tr><td>5</td><td>승리 시도 (전투 루트)</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  DEAD NEXUS · v1.0 퀵 레퍼런스 · github.com/KOYUBIN/Dead_Nexus · 2026-04-29 · 7페이즈 / 5트랙 / 6 Ghost · 5 Bloc
+</div>
+
+</body>
+</html>

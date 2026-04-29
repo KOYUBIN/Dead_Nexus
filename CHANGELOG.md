@@ -10,6 +10,32 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [1.8] — print-kit Quick Reference 카드 (2026-04-29)
+
+### v1.8.0 — `print-kit/12-quick-reference.html`
+- A4 1매 압축 player aid: 7페이즈 + 5트랙 + 승리 조건 + 핵심 숫자
+- 좌단: 7페이즈 흐름 + 레이드 판정 공식 + 자원 아이콘
+- 우단: 5트랙 (화력/그리드런/코드/인맥/그림자) + 승리 조건 + NEXUS 룰표 + 첫 게임 가이드 표
+- 모든 플레이어 자리에 1장씩 비치 권장 (Session 00 체크리스트 추가)
+- 검은색 + 적갈색 컬러, 인쇄 친화적
+
+### v1.8.1 — `print-kit/index.html` 갱신
+- "12. 퀵 레퍼런스 카드 ⭐" 항목 추가 (가장 중요 표시)
+
+---
+
+## [1.7] — 다양한 클래스/맵 narrative 추가 (2026-04-29)
+
+### v1.7.0 — `docs/narratives/` 4종 추가
+- `mole_5x5_seed100.md`: 5×5 잠입 표본 (262줄)
+- `broker_11x11_seed999.md`: 11×11 협상 표본 (210줄)
+- `cipher_11x11_seed314.md`: 11×11 해킹 표본 (219줄)
+- `helix_11x11_seed7.md`: Bloc 시점 표본 (182줄)
+- 19-sample-game-narrative.md 상단에 5종 모음 표 추가
+- **관찰**: 봇 결정 시드 5종에서 모두 Bloc 승리 → 인간 적극성이 균형의 핵심
+
+---
+
 ## [1.6] — Narrative trace 모드 + 예시 게임 doc (2026-04-29)
 
 ### v1.6.0 — `sim-harness/narrative_trace.js`
