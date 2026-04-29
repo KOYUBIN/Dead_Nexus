@@ -93,12 +93,22 @@ function batchRun(N = 100) {
   const ghostClasses = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
   const blocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
 
+  // v2.2 FIX: i % 2 + i % 6 충돌로 BLADE/RIGGER/MOLE이 ghost P0로 샘플링되지 않던 버그.
+  // 별도 카운터로 회전.
   const results = [];
   let errors = 0;
+  let ghostIdx = 0, blocIdx = 0;
   const errorList = [];
   for (let i = 0; i < N; i++) {
     const humanRole = i % 2 === 0 ? 'ghost' : 'bloc';
-    const humanSpecific = humanRole === 'ghost' ? ghostClasses[i % ghostClasses.length] : blocs[i % blocs.length];
+    let humanSpecific;
+    if (humanRole === 'ghost') {
+      humanSpecific = ghostClasses[ghostIdx % ghostClasses.length];
+      ghostIdx++;
+    } else {
+      humanSpecific = blocs[blocIdx % blocs.length];
+      blocIdx++;
+    }
     try {
       const r = runOneGame({ humanRole, humanSpecific });
       results.push(r);

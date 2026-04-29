@@ -10,6 +10,24 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [2.2] — 테스트 클래스 샘플링 버그 수정 + 정정 audit (2026-04-29)
+
+### v2.2.0 — `sim-harness/harness_body.js` batchRun 버그
+- 발견: `i % 2 === 0` 짝수 i에서 `i % 6`은 항상 0/2/4 → BLADE/RIGGER/MOLE이 ghost P0로 한 번도 샘플링되지 않았음
+- 수정: ghostIdx/blocIdx 분리 카운터로 6종/5종 모두 회전
+- v2.1의 audit 데이터는 3종(CIPHER/BROKER/DRIFTER)만 의미 있고 나머지 누락이었음
+
+### v2.2.1 — `docs/20-balance-audit-v2.2.md` (정정)
+- v2.1 baseline 무효화 — v2.2가 새 baseline
+- 발견된 진짜 이슈:
+  - 🔴 **RIGGER 완전 비기능** (11×11/5×5 모두 0%)
+  - 🔴 **DRIFTER 폭주** (11×11 68.8%, 5×5 56.3%)
+  - 🔴 **MOLE 5×5 0%** (v1.1.1 너프 overshoot 의심)
+  - 🔴 **Bloc 진영 우세** (11×11 62.5%, 5×5 67.5%)
+- 다음 v2.3 패치 후보 정리
+
+---
+
 ## [2.1] — 밸런스 회귀 테스트 스위트 + audit doc (2026-04-29)
 
 ### v2.1.0 — `sim-harness/balance_test.js`
