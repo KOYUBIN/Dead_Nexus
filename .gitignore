@@ -1,3 +1,10 @@
+# Backups (sed/cleanup workflow)
+*.bak
+*.bak.*
+*.backup
+docs.bak.gamenames/
+print-kit.bak.gamenames/
+
 # OS
 .DS_Store
 Thumbs.db
