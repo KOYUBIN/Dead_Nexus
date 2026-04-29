@@ -8,6 +8,36 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+---
+
+## [1.1] — 5×5 폭주 너프 + Cyberware + Flavor text (2026-04-29)
+
+### v1.1.1 — 5×5 BLADE/MOLE 폭주 너프
+- mini-raid 발동률 5×5 한정 너프: MOLE 50%→33%, BLADE/CIPHER/RIGGER 100%→50%
+- execute (BLADE) 평판 보상 5×5 한정 ★+5 → ★+3
+- 5×5 평판 임계 +5 (battle 37→42 / alone 55→60)
+- 결과 (200판): BLADE 70.6→47%, MOLE 68.8→43%, 11×11 균형 유지
+
+### v1.1.2 — Cyberware 슬롯 시스템 (RPG식 캐릭터 발전)
+- `CYBERWARE_DEFS` 6종: reflex_booster / iron_skin / ocular_implant / neural_jack / myomer_legs / mood_chip
+- 각 임플란트 = pro (영구 보너스) + con (단점) + cost (자원)
+- 슬롯 최대 3개, R&D 페이즈 R3·R6에 자동 1개씩 장착 (게임당 2개)
+- 클래스별 추천 매핑 (BLADE→reflex_booster, IRONWALL→iron_skin 등)
+- player.cyberware[] 배열, applyCyberware() 헬퍼, install_ware 효과 키
+- UI: 플레이어 카드에 청록 임플란트 토큰 (hover로 효과/단점 표시)
+- 결과: P0 승률 9% → 21% (인간이 사이버웨어로 더 많이 승리)
+
+### v1.1.3 — 카드 flavor text (몰입감)
+- 60+ Ghost 카드에 1줄 flavor text 추가 (CARD_FLAVOR)
+- "포트 0번. 거기 항상 누가 있어" / "먼저 쏘는 자가 마지막 말을 한다" 등 캐릭터 톤
+- UI: 카드 제목 아래 마젠타 이탤릭 1줄로 표시
+
+### 검증 (200판 시뮬)
+- **5×5 튜토리얼**: 평균 5.84R, Ghost 114/Bloc 86, BLADE 41% / MOLE 43%
+- **11×11 정식**: 평균 6.80R, Ghost 57/Bloc 43, P0 11~21%
+
+---
+
 ### Planned
 - 5×5 BLADE/MOLE 폭주 너프 (소규모 보드 mini-raid 빈도)
 - 사람용 협상 UI 모달 (자유 거래 제안/수락)

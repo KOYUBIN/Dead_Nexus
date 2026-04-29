@@ -1130,6 +1130,62 @@ function trackIncomeBonus(p) {
 // 거리명성 마일스톤 (Street Cred 누적 보상)
 // 6: 자원 보상 / 12: TL Progress +3 / 18: 승점 마일스톤
 const INFAMY_MILESTONES = [6, 12, 18];
+
+// v1.1.2: Cyberware 슬롯 시스템 — 캐릭터별 임플란트 (영구 보너스 + 단점)
+// 게임 중 카드 효과 'install_ware'로 1~2개 장착, 슬롯 최대 3
+const CYBERWARE_DEFS = {
+  // 무력 강화
+  reflex_booster:  { name: '리플렉스 부스터',  icon: '⚡', slot: '신경계',  pro: 'ATK +1 영구', con: 'HP -1 영구', cost: { credit: 5, parts: 2 } },
+  iron_skin:       { name: '강철 피부',          icon: '🛡', slot: '외피',    pro: 'DEF +2 영구', con: '이동 -1', cost: { credit: 6, parts: 3 } },
+  // 정보 강화
+  ocular_implant:  { name: '광학 임플란트',      icon: '👁', slot: '시각',    pro: '정찰 효과 +1, 데이터 +1/R', con: '강한 빛 시 판정 -1', cost: { credit: 4, data: 3 } },
+  neural_jack:     { name: '뉴럴 잭',            icon: '🧠', slot: '신경계',  pro: 'HACK +2, 매 R 데이터+1', con: 'EMP 카드 받을 시 HP-2', cost: { credit: 5, data: 2, parts: 1 } },
+  // 이동 강화
+  myomer_legs:     { name: '미오머 다리',        icon: '🦿', slot: '외피',    pro: 'SPD +2, 이동 +1', con: '매 R 부품-1 유지비', cost: { credit: 6, parts: 3 } },
+  // 정신 강화
+  mood_chip:       { name: '무드 칩',            icon: '💊', slot: '신경계',  pro: '협상 ★ 보상 +1, 트랙 인맥 +1', con: '결투 시 -1 페널티', cost: { credit: 4, data: 2 } },
+};
+const CYBERWARE_KEYS = Object.keys(CYBERWARE_DEFS);
+const MAX_CYBERWARE_SLOTS = 3;
+
+// 장착 시 영구 보너스 적용 — buildPlayer에서 stats/resources 직접 변경
+function applyCyberware(state, playerIdx, wareKey) {
+  const ware = CYBERWARE_DEFS[wareKey];
+  const p = state.players[playerIdx];
+  if (!p || !ware) return state;
+  const installed = p.cyberware || [];
+  if (installed.length >= MAX_CYBERWARE_SLOTS) {
+    return logEntry(state, `❌ P${playerIdx} 슬롯 가득참 (${MAX_CYBERWARE_SLOTS}개 한도)`);
+  }
+  if (installed.includes(wareKey)) {
+    return logEntry(state, `❌ P${playerIdx} 이미 장착됨 (${ware.name})`);
+  }
+  // 비용 검증
+  for (const [r, amt] of Object.entries(ware.cost)) {
+    if ((p.resources[r] || 0) < amt) {
+      return logEntry(state, `❌ P${playerIdx} ${ware.name} 비용 부족 (${r} ${amt})`);
+    }
+  }
+  // 비용 차감 + 장착
+  const ps = [...state.players];
+  const newRes = { ...p.resources };
+  for (const [r, amt] of Object.entries(ware.cost)) newRes[r] = (newRes[r] || 0) - amt;
+  const newStats = { ...p.stats };
+  // 즉시 stats 변경
+  if (wareKey === 'reflex_booster') { newStats.atk = (newStats.atk || 0) + 1; }
+  if (wareKey === 'iron_skin')      { newStats.def = (newStats.def || 0) + 2; newStats.spd = Math.max(0, (newStats.spd || 0) - 1); }
+  if (wareKey === 'neural_jack')    { newStats.hack = (newStats.hack || 0) + 2; }
+  if (wareKey === 'myomer_legs')    { newStats.spd = (newStats.spd || 0) + 2; }
+  let newHp = p.hp, newMaxHp = p.maxHp;
+  if (wareKey === 'reflex_booster') { newMaxHp = Math.max(1, newMaxHp - 1); newHp = Math.min(newHp, newMaxHp); }
+  ps[playerIdx] = { ...p, resources: newRes, stats: newStats, hp: newHp, maxHp: newMaxHp, cyberware: [...installed, wareKey] };
+  let s = { ...state, players: ps };
+  const marker = playerIdx === 0 ? '⭐ 당신 ' : '';
+  s = logEntry(s, `${marker}${ware.icon} P${playerIdx} [${p.specific}] · ${ware.name} 장착! (${ware.pro}) — 단점: ${ware.con}`);
+  // 인맥 트랙 보너스 (mood_chip)
+  if (wareKey === 'mood_chip') s = raiseTrack(s, playerIdx, 'party', 1, '무드 칩');
+  return s;
+}
 const MILESTONES_ENABLED = true;  // v0.6.3b 디버그용 토글
 
 // v0.9.1: 하이라이트 모먼트 — 게임 중 기억할 만한 순간 (국내 보드게임 커뮤니티 "기억남는 한 수" 디자인)
@@ -1592,6 +1648,7 @@ function buildPlayer(id, kind, role, specific) {
     // v0.6.3: 5트랙 시스템 (악명형 악명식 — 직접 투자, 총악명=합)
     tracks: trackInit.tracks,
     onceAbilities: { critFailImmunity: false, droneFree: false, reroll: false, teleport: false, deathSave: false },
+    cyberware: [],  // v1.1.2: 장착된 임플란트 키 배열 (max 3)
   };
 }
 
@@ -2817,7 +2874,27 @@ function reducer(state, action) {
       // R&D: 각 플레이어가 tlProgress 축적 + 승급 판정
       // Bloc 공식: 구역수 + ⌊풀/2⌋  (구역 확장으로 자연 축적)
       // Ghost 공식: ⌊렙/3⌋ + 레이드×2 + ⌊풀/2⌋  (렙·레이드로 축적 — Bloc 대비 비대칭)
+      // v1.1.2: R&D 페이즈 시작 시 R==3 / R==6 에 자동 cyberware install (게임당 2개)
       let s = { ...state };
+      if (s.meta.round === 3 || s.meta.round === 6) {
+        for (let pi = 0; pi < s.players.length; pi++) {
+          const p = s.players[pi];
+          if (p.defeated || p.isNpc) continue;
+          if ((p.cyberware || []).length >= MAX_CYBERWARE_SLOTS) continue;
+          // 클래스 추천 시도, 비용 부족하면 가장 싼 것
+          const cls = p.specific;
+          const rec = { BLADE: 'reflex_booster', IRONWALL: 'iron_skin', CIPHER: 'neural_jack', RIGGER: 'neural_jack', AXIOM: 'ocular_implant', VANTA: 'ocular_implant', DRIFTER: 'myomer_legs', BROKER: 'mood_chip', MOLE: 'mood_chip', HELIX: 'iron_skin', CARBON: 'myomer_legs' };
+          const order = [rec[cls] || 'reflex_booster', 'mood_chip', 'ocular_implant', 'reflex_booster', 'neural_jack', 'iron_skin', 'myomer_legs'];
+          for (const wk of order) {
+            const installed = s.players[pi].cyberware || [];
+            if (installed.includes(wk)) continue;
+            const ware = CYBERWARE_DEFS[wk];
+            const pp = s.players[pi];
+            const canPay = Object.entries(ware.cost).every(([r, a]) => (pp.resources[r] || 0) >= a);
+            if (canPay) { s = applyCyberware(s, pi, wk); break; }
+          }
+        }
+      }
       const newLog = [...s.log];
       const newPlayers = state.players.map((p, pi) => {
         if (p.defeated) return p;
@@ -3991,16 +4068,18 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `🧹 P${playerIdx} · 평판 청소 ★+2`);
   }
 
-  // v0.7.1: MOLE mini-raid 헬퍼 — 인접 Bloc 자동 중립화
-  // 50% 확률로만 발동, 50% 확률은 평판+1만 (정찰 정도)
+  // v0.7.1 / v1.1.1: MOLE mini-raid 헬퍼 — 인접 Bloc 자동 중립화
+  // 5×5 작은 보드는 인접 빈도가 매우 높아 발동 확률 33%로 너프 (v1.1.1: MOLE 81% 폭주 해결)
+  // 11×11 정식은 50% 유지
   function tryMoleMiniRaid(state, pIdx, label) {
     const cur = state.players[pIdx];
     if (cur.role !== 'ghost' || !cur.position) return state;
     const adj = coordsAdj(cur.position).concat([cur.position]);
     const blocCoord = adj.find(c => state.map[c]?.owner != null && state.players[state.map[c].owner]?.role === 'bloc' && !state.players[state.map[c].owner]?.defeated);
     if (!blocCoord) return state;
-    // 50% 확률 발동
-    if (Math.random() < 0.5) {
+    // v1.1.1: 5×5는 33%, 11×11은 50% (작은 보드 인접 빈도 보정)
+    const triggerRate = state.meta.mapSize === '11x11' ? 0.5 : 0.67;
+    if (Math.random() < triggerRate) {
       const ps0 = [...state.players];
       ps0[pIdx] = { ...ps0[pIdx], resources: { ...ps0[pIdx].resources, rep: (ps0[pIdx].resources.rep || 0) + 1 } };
       let s0 = { ...state, players: ps0 };
@@ -4021,16 +4100,32 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     return s2;
   }
   // === v0.6.6c: BLADE 효과 강화 + combat 트랙
+  // v1.1.2: install_ware — 카드 효과로 cyberware 장착
+  // effect.install_ware = '키' (예: 'reflex_booster') 또는 'auto' (클래스 자동 추천)
+  if (effect.install_ware) {
+    let key = effect.install_ware;
+    if (key === 'auto') {
+      const cur = s.players[playerIdx];
+      const cls = cur.specific;
+      // 클래스별 추천
+      const rec = { BLADE: 'reflex_booster', IRONWALL: 'iron_skin', CIPHER: 'neural_jack', RIGGER: 'neural_jack', AXIOM: 'ocular_implant', VANTA: 'ocular_implant', DRIFTER: 'myomer_legs', BROKER: 'mood_chip', MOLE: 'mood_chip', HELIX: 'iron_skin', CARBON: 'myomer_legs' };
+      key = rec[cls] || 'reflex_booster';
+    }
+    s = applyCyberware(s, playerIdx, key);
+  }
+
   if (effect.execute) {
-    // v0.6.6c: 처형 강화 — ★+5 + combat 트랙 + 인접 Bloc mini-raid (★+6→+5 미세 조정)
+    // v1.1.1: 처형 평판 너프 ★+5 → ★+3 (BLADE 5×5 폭주 방지). 11×11은 영향 적음
+    const repGain = s.meta.mapSize === '11x11' ? 5 : 3;
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 5 }, wanted: (ps[playerIdx].wanted || 0) + 1 };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain }, wanted: (ps[playerIdx].wanted || 0) + 1 };
     s = { ...s, players: ps };
-    s = logEntry(s, `🔪 P${playerIdx} · 처형 · ★+5, 수배+1`);
+    s = logEntry(s, `🔪 P${playerIdx} · 처형 · ★+${repGain}, 수배+1`);
     s = raiseTrack(s, playerIdx, 'combat', 1, '처형');
-    // BLADE mini-raid (인접 Bloc 자동 중립화)
+    // v1.1.1: BLADE mini-raid 5×5에서 50% 확률로 너프 (작은 보드 폭주 방지). 11×11은 100%
     const cur = s.players[playerIdx];
-    if (cur.role === 'ghost' && cur.position) {
+    const bladeRate = s.meta.mapSize === '11x11' ? 1.0 : 0.5;
+    if (cur.role === 'ghost' && cur.position && Math.random() < bladeRate) {
       const adj = coordsAdj(cur.position).concat([cur.position]);
       const blocCoord = adj.find(c => s.map[c]?.owner != null && s.players[s.map[c].owner]?.role === 'bloc' && !s.players[s.map[c].owner]?.defeated);
       if (blocCoord) {
@@ -4102,9 +4197,10 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = { ...s, players: ps };
     s = logEntry(s, `🔓 P${playerIdx} · 방어 무시/탈취 ★+5 ₵+4`);
     s = raiseTrack(s, playerIdx, 'mfg', 1, '탈취');
-    // CIPHER mini-raid: 인접 Bloc 자동 (해킹형 mini-raid)
+    // v1.1.1: CIPHER mini-raid 5×5 50% / 11×11 100% (작은 보드 폭주 방지)
     const cur = s.players[playerIdx];
-    if (cur.role === 'ghost' && cur.position) {
+    const cipherRate = s.meta.mapSize === '11x11' ? 1.0 : 0.5;
+    if (cur.role === 'ghost' && cur.position && Math.random() < cipherRate) {
       const adj = coordsAdj(cur.position).concat([cur.position]);
       const blocCoord = adj.find(c => s.map[c]?.owner != null && s.players[s.map[c].owner]?.role === 'bloc' && !s.players[s.map[c].owner]?.defeated);
       if (blocCoord) {
@@ -4291,8 +4387,9 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = { ...s, players: ps };
     s = logEntry(s, `🛰 P${playerIdx} · 드론 광역 ★+3 📡+2`);
     s = raiseTrack(s, playerIdx, 'mfg', 1, '드론 광역');
-    // RIGGER mini-raid (인접 Bloc 자동 중립화 — MOLE infiltrate와 동일 패턴)
-    if (cur.role === 'ghost' && cur.position) {
+    // v1.1.1: RIGGER mini-raid 5×5 50% / 11×11 100%
+    const rigRate = s.meta.mapSize === '11x11' ? 1.0 : 0.5;
+    if (cur.role === 'ghost' && cur.position && Math.random() < rigRate) {
       const adj = coordsAdj(cur.position).concat([cur.position]);
       const blocCoord = adj.find(c => s.map[c]?.owner != null && s.players[s.map[c].owner]?.role === 'bloc' && !s.players[s.map[c].owner]?.defeated);
       if (blocCoord) {
@@ -4466,6 +4563,67 @@ function applyEffect(state, playerIdx, effect, kind, card) {
 }
 
 // 카드 한글 이름 매핑 (표시용)
+// v1.1.3: 카드 flavor text — 사용자 몰입감 + 캐릭터 기억점
+const CARD_FLAVOR = {
+  // CIPHER
+  PORT_SCAN: '"포트 0번. 거기 항상 누가 있어."',
+  DATA_SPIKE: '"한 줄 코드로 도시를 멈춘다."',
+  GHOST_ACCESS: '"이 ID는 어제 밤에 죽은 자의 것이다."',
+  MESH_DIVE: '"한 번 들어가면, 같은 사람으로 돌아오지 못한다."',
+  ICE_BREAK: '"방화벽도 결국 코드다."',
+  STOCK_CRASH: '"30초 동안 시장이 0이 된다."',
+  NEURAL_OVRD: '"머리에 직접 명령을 박는다."',
+  ZERO_TRACE: '"내가 여기 있었다는 증거조차 없다."',
+  // BLADE
+  QUICK_DRAW: '"먼저 쏘는 자가 마지막 말을 한다."',
+  SUPPRESS_FIRE: '"움직이지 마. 다음은 머리야."',
+  CONTRACT_KILL: '"이름은 묻지 않는다. 좌표만 받는다."',
+  HUMAN_SHIELD: '"어차피 그도 우리편은 아니었다."',
+  DOUBLE_TAP: '"확실히 끝낸다. 매번."',
+  POINT_BLANK: '"이 거리에선 운이 필요없다."',
+  BERSERKER: '"고통은 그 다음에 느낀다."',
+  LAST_STAND: '"여기서 죽으면, 너도 같이 간다."',
+  // BROKER
+  NETWORK: '"전화 한 통이면 도시가 움직인다."',
+  BACK_DEAL: '"이건 못 들은 걸로 해."',
+  BLACKMAIL: '"네 와이프, 어제 누구랑 있었지?"',
+  MIDDLE_DEAL: '"중간에서 5%. 항상 5%."',
+  INFO_BROKER: '"정보는 자유다. 다만 가격이 있을 뿐."',
+  CRISIS_TALK: '"진정해. 우린 협상할 수 있어."',
+  POKER_FACE: '"내 패는 절대 보여주지 않는다."',
+  BURN_BRIDGE: '"이게 마지막 거래다. 영원히."',
+  // RIGGER
+  DRONE_SCAN: '"내 눈은 도시 전체에 있다."',
+  TRAP_WIRE: '"여기 들어오면, 못 나간다."',
+  EMP_PULSE: '"3초만에 모든 전기를 죽인다."',
+  OVERCLOCK: '"한 번 더 짜낸다. 그게 마지막이라도."',
+  FIELD_CRAFT: '"폐품으로 무기를 만든다."',
+  SHIELD_GEN: '"한 발은 막아준다. 한 발만."',
+  DRONE_SWARM: '"한 마리는 막을 수 있어. 백 마리는?"',
+  JURY_RIG: '"임시 수리. 곧 진짜 부서질 거야."',
+  TECH_BREACH: '"네 시스템은 이제 내 거다."',
+  // DRIFTER
+  FAST_TRAVEL: '"지름길은 항상 위험한 곳에 있다."',
+  SUPPLY_CONV: '"3톤. 늦지 마라."',
+  AMBUSH: '"이 골목에선 절대 멈추지 마."',
+  STORM_RUSH: '"비, 안개, 어둠 — 다 우리 편이다."',
+  BACKROADS: '"공식 지도엔 없는 길."',
+  SCORCH_PATH: '"뒤에 남은 게 없으면 추적도 없다."',
+  CARGO_HAUL: '"안에 뭐가 들었는지 묻지 마."',
+  IRON_WHEELS: '"바퀴는 쇠로, 운전수는 강철로."',
+  GHOST_RUN: '"지금부터 1시간, 난 이 도시에 없다."',
+  // MOLE
+  INNER_DOCS: '"이 폴더 한 장이면 회사가 무너진다."',
+  AUTH_ABUSE: '"내 권한은 어디서 끝나는 줄 모르겠다."',
+  CLEAN_SLATE: '"그 사람 기록? 처음부터 없었어."',
+  FALSE_FLAG: '"네가 한 일이 됐어. 미안."',
+  DISGUISE: '"오늘은 보안팀, 내일은 청소부."',
+  BOARD_MANIP: '"이사회는 이미 내 편이야."',
+  LEAK: '"내일 아침 모든 신문에 나갈 거야."',
+  DEEP_COVER: '"3년 동안 누구도 의심하지 않았다."',
+  ID_COLLAPSE: '"내가 누군지, 나도 잊었다."',
+};
+
 const CARD_NAMES_KR = {
   PORT_SCAN: '포트 스캔', DATA_SPIKE: '데이터 스파이크', GHOST_ACCESS: '유령 접속',
   MESH_DIVE: '메시 다이브', ICE_BREAK: '아이스 브레이크', PROXY_RELAY: '프록시 릴레이',
@@ -4537,9 +4695,10 @@ function checkInstantVictory(state) {
   const isLarge = state.meta.mapSize === '11x11';
   const nonNpcCount = state.players.filter(p => !p.isNpc).length;
   const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;
+  // v1.1.1: 5×5 평판 임계 +5 (BLADE/MOLE 폭주 추가 보정)
   const blocGoal       = (isLarge ? 95 : 70) + adj;
-  const repBattleGoal  = (isLarge ? 45 : 37) + Math.floor(adj / 2);
-  const repOnlyGoal    = (isLarge ? 70 : 55) + adj;
+  const repBattleGoal  = (isLarge ? 45 : 42) + Math.floor(adj / 2);
+  const repOnlyGoal    = (isLarge ? 70 : 60) + adj;
 
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
@@ -5686,6 +5845,20 @@ function GameScreen({ state, dispatch }) {
                   🎯 {p.objectives.map(o => o.name).join(' · ')}
                 </div>
               )}
+              {/* v1.1.2: Cyberware 슬롯 표시 */}
+              {p.cyberware && p.cyberware.length > 0 && (
+                <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {p.cyberware.map((wk, idx) => {
+                    const w = CYBERWARE_DEFS[wk];
+                    if (!w) return null;
+                    return (
+                      <span key={idx} title={`${w.name} (${w.slot}) — ${w.pro} | ${w.con}`} style={{ fontSize: 10, padding: '0 2px', background: 'rgba(60,200,220,0.15)', border: '1px solid var(--cyan)', borderRadius: 2, cursor: 'help' }}>
+                        {w.icon}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
               {/* v0.9.1: 하이라이트 모먼트 토큰 */}
               {(() => {
                 const myHL = (state.meta.highlights || []).filter(h => h.playerIdx === i);
@@ -5888,6 +6061,12 @@ function GameScreen({ state, dispatch }) {
                   </div>
                   <div className="ct">{CARD_NAMES_KR[cid] || c.name}</div>
                   <div style={{ fontSize: 8, color: 'var(--text-dim)', textAlign: 'center', marginBottom: 2 }}>{c.name}</div>
+                  {/* v1.1.3: flavor text */}
+                  {CARD_FLAVOR[cid] && (
+                    <div style={{ fontSize: 8, color: 'var(--magenta)', fontStyle: 'italic', textAlign: 'center', padding: '0 2px 2px', borderBottom: '1px dashed var(--border)', marginBottom: 2, lineHeight: 1.25 }}>
+                      {CARD_FLAVOR[cid]}
+                    </div>
+                  )}
                   <div className="ceff"
                     onClick={handleTopClick}
                     style={sel ? {
