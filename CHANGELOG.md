@@ -10,6 +10,31 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [2.3] — RIGGER 카드 정합성 + 헤드리스/시뮬 분기 발견 (2026-04-29)
+
+### v2.3.0 — RIGGER 카드 cost-attr 정합성
+- TRAP_WIRE / FIELD_CRAFT / DRONE_SWARM bot half cost가 V+I였으나 RIGGER 덱은 I 미생성
+- 수정: V+I → V+V (FIELD_CRAFT attr도 V만으로 단순화)
+- 이로써 RIGGER 카드 효과가 실제로 발동 가능해짐 (이전엔 "I 부족 — 효과 불발" 무한 반복)
+
+### v2.3.1 — 헤드리스 vs 시뮬레이터 코드 분기 발견 🔴
+- **중대한 발견**: `sim-harness/core.js`와 `simulator/v0.5/index.html`는 별개 코드베이스
+- v1.1.1+ 변경 (RIGGER/BLADE/CIPHER/MOLE mini-raid, execute 너프, Cyberware)은 시뮬레이터에만 반영
+- 헤드리스 sim의 RIGGER 0%는 코드 부재 때문 (게임 디자인 결함 아님)
+- `balance_test.js` 결과는 "헤드리스 모델 회귀" 테스트로 재정의 (실제 시뮬 균형은 별도 측정 필요)
+- v2.3 DRIFTER 너프 / Bloc 임계 변경은 보류 (헤드리스 측정 신뢰성 낮음)
+
+### v2.3.2 — `docs/20-balance-audit-v2.2.md` 섹션 7 추가
+- v2.3 발견 기록
+- 후속 작업 v3.x: headless에 v1.1.x 포팅 또는 시뮬레이터 headless 모드 빌드
+
+### 산출물
+- `sim-harness/core.js`: RIGGER 6장 카드 cost 정합성 수정
+- `docs/20-balance-audit-v2.2.md`: 분기 발견 문서화
+- `sim-harness/trace_rigger.js`: RIGGER 디버그 trace 도구 (5판)
+
+---
+
 ## [2.2] — 테스트 클래스 샘플링 버그 수정 + 정정 audit (2026-04-29)
 
 ### v2.2.0 — `sim-harness/harness_body.js` batchRun 버그

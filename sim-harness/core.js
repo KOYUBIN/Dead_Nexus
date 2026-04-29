@@ -109,12 +109,12 @@ const GHOST_CARDS = {
 
   // RIGGER
   DRONE_SCAN:     { name: 'DRONE SCAN',     cls: 'RIGGER', init: 16, attr: ['V'],      top: { gen: 'V', scout: 3 },                              bot: { cost: ['V'], scout: 5, parts: 1 } },
-  TRAP_WIRE:      { name: 'TRAP WIRE',      cls: 'RIGGER', init: 25, attr: ['V'],      top: { gen: 'V', trap: 1 },                               bot: { cost: ['V','I'], trap_damage: 4 } },
+  TRAP_WIRE:      { name: 'TRAP WIRE',      cls: 'RIGGER', init: 25, attr: ['V'],      top: { gen: 'V', trap: 1 },                               bot: { cost: ['V','V'], trap_damage: 4 } },
   EMP_PULSE:      { name: 'EMP PULSE',      cls: 'RIGGER', init: 32, attr: ['V'], loss: true, top: { gen: 'V', disable_elec: 1 },                bot: { cost: ['V','V'], zone_disable: 1 } },
   OVERCLOCK:      { name: 'OVERCLOCK',      cls: 'RIGGER', init: 22, attr: ['V'],      top: { gen: 'V', temp_tl: 1 },                            bot: { cost: ['V','V'], stat_boost: 2 } },
-  FIELD_CRAFT:    { name: 'FIELD CRAFT',    cls: 'RIGGER', init: 26, attr: ['V','I'],  top: { gen: 'V', parts: 2 },                              bot: { cost: ['V','I'], craft_item: 1 } },
+  FIELD_CRAFT:    { name: 'FIELD CRAFT',    cls: 'RIGGER', init: 26, attr: ['V'],      top: { gen: 'V', parts: 2 },                              bot: { cost: ['V','V'], craft_item: 1 } },
   SHIELD_GEN:     { name: 'SHIELD GEN',     cls: 'RIGGER', init: 24, attr: ['V'],      top: { gen: 'V', def: 3 },                                bot: { cost: ['V','V'], zone_shield: 1 } },
-  DRONE_SWARM:    { name: 'DRONE SWARM',    cls: 'RIGGER', init: 38, attr: ['V','I'],  top: { gen: 'V', atk_range: 2 },                          bot: { cost: ['V','I','I'], multi_target: 3 } },
+  DRONE_SWARM:    { name: 'DRONE SWARM',    cls: 'RIGGER', init: 38, attr: ['V'],      top: { gen: 'V', atk_range: 2 },                          bot: { cost: ['V','V','V'], multi_target: 3 } },
   JURY_RIG:       { name: 'JURY RIG',       cls: 'RIGGER', init: 20, attr: ['V'],      top: { gen: 'V', repair: 3 },                             bot: { cost: ['V'], salvage: 2 } },
   TECH_BREACH:    { name: 'TECH BREACH',    cls: 'RIGGER', init: 42, attr: ['V'], loss: true, top: { gen: 'V', disable_tl: 1 },                  bot: { cost: ['V','V','V'], force_tl_down: 1 } },
   BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
