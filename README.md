@@ -5,7 +5,7 @@
 **DEAD NEXUS**는 5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v1.3 (2026-04-29) — 11×11 정식 + 5트랙·거리명성 + 협상 + NEXUS 룰 + Cyberware
+**현재 버전**: v1.8 (2026-04-29) — 11×11 정식 + 5트랙·거리명성 + 협상 + NEXUS 룰 + Cyberware + narrative trace + 퀵 레퍼런스
 
 ---
 
@@ -40,9 +40,15 @@
 
 ### 3️⃣ 인쇄 플레이 (오프라인)
 1. [print-kit/](print-kit/) 폴더 열기
-2. **필수**: `01b-map-11x11.html` (A3) + `06-character-sheets.html` (A4 인원수×1) + `07-reference.html`
-3. 카드: `02-cards-ghost.html` + `03-cards-bloc.html` (인쇄 후 슬리브 권장)
-4. 자세한 안내: `print-kit/index.html`
+2. ⭐ **최우선**: `12-quick-reference.html` (A4 1매 — 모든 플레이어 자리에 1장씩, v1.8 신규)
+3. **필수**: `01b-map-11x11.html` (A3) + `06-character-sheets.html` (A4 인원수×1)
+4. 카드: `02-cards-ghost.html` + `03-cards-bloc.html` (인쇄 후 슬리브 권장)
+5. 자세한 안내: `print-kit/index.html`
+
+### 4️⃣ 게임 흐름 학습 (narrative)
+- [docs/19-sample-game-narrative.md](docs/19-sample-game-narrative.md) — BLADE 11×11 표본 게임 narrative
+- [docs/narratives/](docs/narratives/) — MOLE / BROKER / CIPHER / HELIX 4종 추가 표본
+- 결정론적 시뮬: `cd sim-harness && node narrative_trace.js [role] [class] [map] [seed]`
 
 ---
 
@@ -192,29 +198,32 @@ dead-nexus/
 - 프린트 앤 플레이 세트 11종 HTML
 - 레거시 챕터 prev/next 체인 1~8 연결
 
-### 🔄 v0.5 — 시뮬레이터 & 플레이테스트 (**진행 중** · 라인 v0.5.9)
-- [x] 세션 0 가이드
-- [x] 웹 시뮬레이터 (단일 HTML, React + Babel CDN)
-- [x] 5×5 튜토리얼 솔로 플레이 (1인 + 봇 3)
-- [x] 숨은 목표·싱글 업적·메타 업적 시스템
-- [x] **결정감 대수정 (v0.5.7)**: 레이드 확률 모달·승리 예측·이동 셀 미리보기
-- [x] **Bloc 2카드 운용 (v0.5.8)**: 공통 10장 카드 + 이동 지원
-- [x] **플레이어 인터랙션 (v0.5.9)**: Ghost PvP + 위협 대시보드 + 타겟 알림
-- [ ] 대면 플레이테스트 1~3라운드
-- [ ] 밸런스 조정 후 v0.6 11×11 맵 확장
+### ✅ v0.5–0.9 — 시뮬레이터 + 시스템 통합 (완료)
+- 5×5 → 11×11 맵 확장 + 동적 그리드
+- 5트랙 거리명성 + 마일스톤
+- 협상 페이즈 (Phase 1.5) + truce 약속 트래킹
+- 하이라이트 모먼트 12종
+- BROKER 협상 특화 + NEXUS 동적 컨트롤
 
-### ⏳ v0.6 — 정식 맵 & M&A
-- 11×11 맵 시뮬레이터 확장
-- M&A 시스템 전체 (적대적 인수·방어 라운드·백기사)
-- 시나리오 S02~S06
+### ✅ v1.0–1.5 — 솔로/핫시트 + Cyberware (완료)
+- 솔로 + 멀티-휴먼 (Hot-seat) 모드
+- 트랙 사이버펑크 리네이밍 (화력/그리드런/코드/인맥/그림자)
+- Cyberware 슬롯 시스템 (R3/R6 자동 장착)
+- 카드 flavor text (Ghost 60+ / Bloc 30+)
+- 5×5 BLADE/MOLE 폭주 너프 (mini-raid 발동률)
+- 첫 플레이 가이드 (`docs/18-playtest-guide.md`)
 
-### ⏳ v0.7+ — 레거시 통합
-- 레거시 캠페인 시뮬레이터 연동
-- 메시 맵 (챕터 5+)
+### ✅ v1.6–1.8 — 학습 자료 + Player Aid (완료)
+- `sim-harness/narrative_trace.js`: 결정론 시드 narrative 자동 생성
+- `docs/19-sample-game-narrative.md` + `docs/narratives/` 5종 표본
+- `print-kit/12-quick-reference.html`: A4 1매 player aid
+
+### 🔄 v2.0+ — 다음 마일스톤
+- 대면 플레이테스트 1~3회 (실 데이터 수집)
 - TTS(Tabletop Simulator) 익스포트
-
-### ⏳ v1.0 — 최종 룰북
-- 일러스트 통합 · 공식 룰북 PDF · 카드 아트 완성 · 킥스타터 준비
+- 캠페인 시나리오 S02~S08 시뮬 통합
+- 일러스트 + 공식 룰북 PDF + 카드 아트
+- 킥스타터 준비
 
 ---
 
@@ -224,7 +233,7 @@ dead-nexus/
 2. **용어는 13-glossary.md를 먼저 확인** — 새 용어 추가 시 반드시 등록
 3. **카드 텍스트는 120자 이내** — 실제 카드 크기에 맞춰야 함
 4. **버전 관리** — 규칙 변경 시 CHANGELOG.md에 반드시 기록
-5. **저작권 안전** — 사이버펑크 2077 등 기존 작품 용어 사용 금지 (13-glossary.md 대조표 참조)
+5. **저작권 안전** — 외부 IP/작품의 직접 명칭 사용 금지 (메커니즘 일반어로 표현)
 
 ---
 
