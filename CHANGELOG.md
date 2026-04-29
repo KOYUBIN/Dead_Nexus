@@ -10,6 +10,22 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [1.6] — Narrative trace 모드 + 예시 게임 doc (2026-04-29)
+
+### v1.6.0 — `sim-harness/narrative_trace.js`
+- 헤드리스 시뮬레이터로 한 판 전체를 사람이 읽기 좋은 markdown으로 출력
+- 결정론적: 같은 시드 → 같은 게임 (Mulberry32 RNG 시드 가능)
+- 라운드별 구조: 📰뉴스 → 🃏계획(공개) → ⚡실행 사건 → 💰수익 → 🔬R&D → 📊스냅샷
+- 사용법: `node narrative_trace.js [role] [specific] [mapSize] [seed] > out.md`
+- 학습용으로 봇 손패도 모두 공개 표시
+
+### v1.6.1 — `docs/19-sample-game-narrative.md`
+- 시드 42, ghost BLADE, 11×11 표본 게임 (213줄)
+- DRIFTER가 R5에 평판 14 + 레이드 3회로 전투 루트 승리
+- 18-playtest-guide.md에서 추가 학습 자료로 링크
+
+---
+
 ## [1.1] — 5×5 폭주 너프 + Cyberware + Flavor text (2026-04-29)
 
 ### v1.1.1 — 5×5 BLADE/MOLE 폭주 너프

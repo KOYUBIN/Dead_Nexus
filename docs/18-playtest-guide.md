@@ -180,8 +180,20 @@ A. 그림자 LV5 도달 시 deathSave 능력 (1회 한정). 또는 HELIX의 CLON
 - [00-overview.md](00-overview.md) — 프로젝트 전체 그림
 - [02-core-rules.md](02-core-rules.md) — 규칙 디테일
 - [17-v1.0-systems.md](17-v1.0-systems.md) — 신규 시스템 11개 통합
+- [19-sample-game-narrative.md](19-sample-game-narrative.md) — **자동 생성된 한 판 예시** (R1~R7 흐름 따라가기)
 - [12-legacy-campaign.md](12-legacy-campaign.md) — 레거시 8챕터 (단판 검증 후)
 - [print-kit/index.html](../print-kit/index.html) — 인쇄 자료 인덱스
+
+### 새 narrative 직접 만들기
+
+```bash
+cd sim-harness/
+# 솔로 BLADE · 11x11 · 시드 42
+node narrative_trace.js ghost BLADE 11x11 42 > ../docs/19-sample-game-narrative.md
+# 다른 클래스 예시
+node narrative_trace.js ghost MOLE 5x5 100
+node narrative_trace.js bloc HELIX 11x11 7
+```
 
 ---
 
