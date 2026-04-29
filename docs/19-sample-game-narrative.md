@@ -8,6 +8,24 @@
 이 문서는 헤드리스 시뮬레이터(`sim-harness/narrative_trace.js`)로 한 판을 끝까지 돌린 자동 생성 narrative다. 결정론적 — 같은 시드는 같은 판을 만든다.
 실전 룰은 [02-core-rules.md](02-core-rules.md), 첫 플레이 가이드는 [18-playtest-guide.md](18-playtest-guide.md) 참조.
 
+---
+
+## 📚 narrative 모음 — 5종
+
+이 문서는 BLADE 11×11 표본을 본문으로 담고 있다. 다른 클래스/맵 표본은 `narratives/` 폴더에서 확인:
+
+| 파일 | 시점 P0 | 맵 | 시드 | 결과 (R) |
+|---|---|---|---|---|
+| **이 문서** | ⚔ BLADE (Ghost) | 11×11 | 42 | DRIFTER 승리 R5 |
+| [narratives/mole_5x5_seed100.md](narratives/mole_5x5_seed100.md) | 🕷 MOLE (Ghost) | 5×5 | 100 | IRONWALL 승리 |
+| [narratives/broker_11x11_seed999.md](narratives/broker_11x11_seed999.md) | 🤝 BROKER (Ghost) | 11×11 | 999 | CARBON 승리 |
+| [narratives/cipher_11x11_seed314.md](narratives/cipher_11x11_seed314.md) | 💾 CIPHER (Ghost) | 11×11 | 314 | HELIX 승리 |
+| [narratives/helix_11x11_seed7.md](narratives/helix_11x11_seed7.md) | 🧬 HELIX (Bloc) | 11×11 | 7 | IRONWALL 승리 |
+
+> **관찰**: 결정론 시드 5종에서 모두 Bloc 진영이 승리. 이는 봇 P0 자동 결정이 protective(보수적)인 영향이 큼 — 인간 플레이어의 적극적 결정은 200판 시뮬에서 Ghost 49% 승률 결과(README 참조).
+
+---
+
 > **시드**: `42` · **맵**: 11x11 · **시나리오**: S07 (정식 도전)
 > **시점 인간 (P0)**: 독립 용병 · ⚔ **BLADE**
 > 이 문서는 `sim-harness/narrative_trace.js`로 생성된 자동 narrative다.
