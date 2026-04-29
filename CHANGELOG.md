@@ -10,6 +10,48 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [2.1] — 밸런스 회귀 테스트 스위트 + audit doc (2026-04-29)
+
+### v2.1.0 — `sim-harness/balance_test.js`
+- 200판 시뮬 + 임계 검증 (Ghost/Bloc 비율, 평균 라운드, 클래스 폭주/저조)
+- 5×5/11×11 분리 임계값
+- CI 친화적: `--strict` 플래그로 임계 위반 시 exit 1
+- 컬러 출력 ✅/⚠/❌ + 경고/실패 분리
+
+### v2.1.1 — `sim-harness/package.json`
+- `npm test` / `npm run test:strict` / `npm run test:5x5` / `npm run narrative` 단축
+- node 16+ 요구
+
+### v2.1.2 — `docs/20-balance-audit-v2.1.md`
+- v2.1 baseline 공식 기록 (200판 결과)
+- **발견된 이슈**:
+  - 🔴 DRIFTER 11×11 63.6% / 5×5 78.8% (폭주)
+  - 🔴 게임 길이 4.8R (목표 6.8R, 임계 도달이 너무 쉬움)
+  - 🔴 5×5 Bloc 진영 우세 (61.5%)
+  - 🟡 CIPHER/VANTA/AXIOM 5×5 저조 (6~10%)
+- 다음 패치 우선순위 정리
+
+### 검증 비교 (v1.1 vs v2.1)
+| 항목 | v1.1 (기록) | v2.1 (측정) |
+|---|---|---|
+| 11×11 평균 라운드 | 6.8 | 4.8 |
+| 11×11 Ghost 승률 | 57% | 46% |
+| 5×5 평균 라운드 | 5.84 | 4.40 |
+→ **결론**: v1.1 측정 시드와 다른 baseline. v2.1을 새 기준으로 채택.
+
+---
+
+## [2.0] — README v1.8 갱신 (2026-04-29)
+
+### v2.0.0 — README 메이저 갱신
+- 헤더 v1.3 → v1.8
+- 빠른 시작에 4번 'narrative 학습' 섹션 추가
+- 인쇄 플레이에 12-quick-reference ⭐ 최우선 표시
+- 로드맵 전면 재구성: v0.5-0.9 / v1.0-1.5 / v1.6-1.8 모두 완료, v2.0+ 신규
+- 외부 IP 직접 명칭 금지 원칙 일반화
+
+---
+
 ## [1.8] — print-kit Quick Reference 카드 (2026-04-29)
 
 ### v1.8.0 — `print-kit/12-quick-reference.html`
