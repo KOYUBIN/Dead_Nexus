@@ -10,6 +10,44 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [3.2] — BROKER 너프 + CARBON 활성화 (2026-05-18)
+
+### v3.2.0 — BROKER 폴백 보상 너프
+v3.1 측정에서 BROKER 11×11 70.6% 폭주 발견. 폴백 보상이 v3.1 점수식과 강하게 결합되어 모든 어워드의 1위 후보였음.
+- `contact` 보상: credit×2 → credit×1
+- `extort` 보상: rep×2 → rep×1, credit×2 → credit×1
+- `sell_info` 보상: ★+3/📡+3 → ★+2/📡+2
+- `broker_fee` 보상: ₵+N ★+1 → ₵+N (rep+1 제거)
+
+### v3.2.1 — CARBON 11×11 활성화
+v3.1 측정에서 CARBON 11×11 0% 저조 발견.
+- BLOC_SETUP CARBON support: ['A4'] → ['A4', 'B4'] (시작 구역 1→2개)
+
+### 검증 (200판)
+
+**11×11 정식 — 모든 임계 통과 ✅**:
+- BROKER 70.6% → 17.6% (정상화)
+- CARBON 0% → 10% (활성화)
+- 평균 10R
+- 모든 11개 클래스 ≥5%, 폭주 0건
+
+**5×5 튜토리얼 — 거의 통과**:
+- CARBON 0% → 40% (대성공)
+- IRONWALL 40%, DRIFTER 37.5%, MOLE 25%, CIPHER 23.5%
+- AXIOM 0% 경고 1건만 (다음 사이클 v3.3 과제)
+
+### 산출물
+- `sim-harness/core.js` — 폴백 보상 핸들러 4종 + BLOC_SETUP CARBON
+- 노션: [v3.2 audit](https://www.notion.so/3492c75ff54a81219ac9dcd89a4b2872)
+
+### 다음 사이클 후보 (v3.3~)
+- 5×5 AXIOM 활성화 (0%)
+- simulator/v0.5에 v3.1+v3.2 시스템 포팅 (현재 headless만)
+- 공통 core 모듈 추출 (분기 재발 방지)
+- print-kit에 마일스톤/어워드 참조 시트
+
+---
+
 ## [3.1] — Terraforming Mars 스타일 마일스톤+어워드 시스템 (2026-05-18)
 
 ### v3.1.0 — 마일스톤 6종 + 어워드 5종 데이터 구조
@@ -1898,33 +1936,4 @@ Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대�
   - CARBON (에너지·인프라) — 엘더 HARLAN VOSS
 - **각 블록 정체성** — 실존 기업 모티브 + 픽션 설정 혼합
 - **블록 간 관계도** — 5 × 5 매트릭스 (동맹·적대·중립)
-- **수장 프로필** — 이름·나이·외모·성격·배경·명대사
-- **6인 고스트 NPC급 설정**
-  - CIPHER: **STATIC** (LENA GREY, 27세)
-  - BLADE: **RUST** (COLE HARKER, 34세)
-  - RIGGER: **PATCH** (CASS WIRE, 22세)
-  - BROKER: **SILK** (SERA HOLT, 39세)
-  - DRIFTER: **FLINT** (DANE CROSS, 41세)
-  - MOLE: **ECHO** (MIRA SHADE, 31세)
-- **고스트 간 관계도** — 6 × 6 매트릭스
-- **숨겨진 복선** — VOSS 성씨 연결(HELIX·CARBON 혈연 가능성)
-
-### Changed
-- 모든 캐릭터 이름을 한국어에서 **영어 전용**으로 교체
-- 명대사도 영어 원문 + 한국어 번역 병기
-
----
-
-## [0.1.4] — Bloc 전용 액션카드 설계
-
-### Added
-- **블록별 전용 카드 30장** (5블록 × 6장)
-  - VANTA: Shadow File, Leverage, Veil Deployment, Ghost Protocol, Data Wipe, Zero Record
-  - IRONWALL: Forward Strike, Arms Supply, Forward Base, Martial Law, Mercenary Surge, Scorched Earth
-  - HELIX: Field Splice, Neural Override, Augmentation, Quarantine Zone, Harvest Protocol, Clone Decoy
-  - AXIOM: Prediction Engine, Flash Crash, Algorithm Lock, Flash Trade, Surveillance Net, System Takeover
-  - CARBON: Power Surge, Blackout, Pipeline Lock, Infrastructure Bond, Hostile Dividend, Legacy Contract
-- **카드 해금 조건** — TL 1~4 단계별 해금
-- **블록 플레이스타일 정의**
-  - VANTA: 정보 우위 → 선제 대응 → 기록 말소
-  - IRONWALL: 충돌 
+-

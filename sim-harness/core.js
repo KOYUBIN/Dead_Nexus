@@ -44,7 +44,7 @@ const BLOC_SETUP = {
   AXIOM:    { hq: 'D2', support: ['D1'],      color: '#2d6fff' },
   HELIX:    { hq: 'D3', support: ['E2'],      color: '#8ab57c' },
   IRONWALL: { hq: 'C4', support: ['E4'],      color: '#4a5d23' },
-  CARBON:   { hq: 'B3', support: ['A4'],      color: '#8b5a2b' },
+  CARBON:   { hq: 'B3', support: ['A4', 'B4'], color: '#8b5a2b' },  // v3.2: B4 추가 (11×11 0% 활성화)
 };
 
 // Bloc stats (for direct combat)
@@ -1938,7 +1938,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   // 원래 카드 텍스트에 있던 효과가 구현 안 됐으면 최소 자원/렙 보상 부여해 Ghost 비대칭 전략 루트 강화
   if (effect.contact) {
     const ps = [...s.players];
-    const add = effect.contact * 2;
+    const add = effect.contact * 1;
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, influence: (ps[playerIdx].resources.influence || 0) + effect.contact, credit: (ps[playerIdx].resources.credit || 0) + add } };
     s = { ...s, players: ps };
     s = logEntry(s, `🎙️ P${playerIdx} · 접선 +${effect.contact} · ₵+${add}`);
@@ -1951,15 +1951,15 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   }
   if (effect.extort) {
     // 정보 착취: rep + credit (BROKER 렙 루트 주력)
-    const repGain = effect.extort * 2;
+    const repGain = effect.extort * 1;
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort * 2 } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort * 1 } };
     s = { ...s, players: ps };
-    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort * 2}`);
+    s = logEntry(s, `💼 P${playerIdx} · 협박 · ★+${repGain}, ₵+${effect.extort * 1}`);
   }
   if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
     // 정보 수집/판매 → rep + data
-    const amount = effect.sell_info ? 3 : 2;
+    const amount = effect.sell_info ? 2 : 2;
     const ps = [...s.players];
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount } };
     s = { ...s, players: ps };
@@ -1974,10 +1974,11 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `🛰 P${playerIdx} · 정찰 · 📡+${amount}`);
   }
   if (effect.broker_fee) {
+    // v3.2: rep+1 보너스 제거 (BROKER 70% 폭주 너프). 중개 수수료는 credit만.
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.broker_fee, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.broker_fee } };
     s = { ...s, players: ps };
-    s = logEntry(s, `🤝 P${playerIdx} · 중개 수수료 ₵+${effect.broker_fee}, ★+1`);
+    s = logEntry(s, `🤝 P${playerIdx} · 중개 수수료 ₵+${effect.broker_fee}`);
   }
   if (effect.stop_combat || effect.cancel_card || effect.cancel_action) {
     // 중단·취소 → rep 평판 (실제로는 다른 플레이어 타겟팅 필요하지만 여기선 보너스로)
@@ -2533,5 +2534,3 @@ function scoreBlocCard(state, pIdx, cid) {
 
   return score + Math.random() * 2;
 }
-
-// ============================================================================
