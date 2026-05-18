@@ -62,7 +62,7 @@ console.log('╚═════════════════════�
 console.log('');
 
 const start = Date.now();
-const { results, errors, errorList } = batchRun(N);
+const { results, errors, errorList } = batchRun(N, MAP_SIZE, MAP_SIZE === '11x11' ? 12 : 8);
 const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
 if (errors > 0) {

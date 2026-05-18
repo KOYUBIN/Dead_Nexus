@@ -2,8 +2,8 @@
 // 헤드리스 배치 시뮬 본체 (core.js 뒤에 붙어서 같은 스코프 내에서 실행)
 // ============================================================================
 
-function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 8, trace = false } = {}) {
-  let state = initGame(humanRole, humanSpecific);
+function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 8, mapSize = '5x5', trace = false } = {}) {
+  let state = initGame(humanRole, humanSpecific, mapSize);
   state = reducer(state, { type: 'DRAW_INITIAL' });
 
   let safety = 0;
@@ -89,7 +89,7 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
   };
 }
 
-function batchRun(N = 100) {
+function batchRun(N = 100, mapSize = '5x5', maxRounds = 8) {
   const ghostClasses = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
   const blocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
 
@@ -110,7 +110,7 @@ function batchRun(N = 100) {
       blocIdx++;
     }
     try {
-      const r = runOneGame({ humanRole, humanSpecific });
+      const r = runOneGame({ humanRole, humanSpecific, mapSize, maxRounds });
       results.push(r);
     } catch (e) {
       errors++;
@@ -198,3 +198,5 @@ console.log('주요 승리 사유 Top 10:');
 a.topReasons.forEach(([r, c]) => console.log(`  [${String(c).padStart(3)}] ${r}`));
 console.log('');
 console.log(`P0 패배(사망): ${a.defeatCount}판`);
+}`));
+console.log('');

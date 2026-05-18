@@ -10,6 +10,56 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [3.0] — headless/simulator 분기 통합 + v2.4 너프 (2026-05-14)
+
+### v3.0.0 — simulator v1.1.x → headless 포팅
+v2.3에서 발견된 코드 분기를 통합. simulator/v0.5/index.html의 v1.1.x 변경사항을 sim-harness/core.js에 이식:
+- **Cyberware 시스템** (v1.1.2): `CYBERWARE_DEFS` 6종 + `applyCyberware` + R3/R6 자동 1개씩 장착 (게임당 2개)
+- **Bloc 능동 액션 3종** (v0.8.6): `BOUNTY_POST` / `ASSASSIN_HIRE` / `GHOST_TRACKER` 카드 + 효과 핸들러
+- **execute 효과** (v1.1.1): BLADE 처형 + 5×5 ★+5→★+3 너프 + BLADE mini-raid 11×11 100% / 5×5 50%
+- **mini-raid 통합 헬퍼** `tryMiniRaid()`: BLADE/CIPHER/RIGGER/MOLE 카드 효과별 분기
+
+### v3.0.1 — mapSize 인자 전파 (중요 버그 수정)
+- 이전 headless는 `initGame()`이 항상 mapSize='5x5' 하드코딩 → balance_test의 "11x11" 라벨은 효과 없었음
+- `initGame(role, specific, mapSize)` + `batchRun(N, mapSize, maxRounds)` + balance_test에서 MAP_SIZE 전달
+- 이제 11×11 룰 분기(자산 임계 70, mini-raid 100%, execute ★+5)가 실제로 활성화됨
+
+### v2.4 — DRIFTER 너프 + 자산 임계 조정 + mini-raid 트리거 확대
+v3.0 통합 후 200판 측정 결과 발견된 폭주/저조 조정:
+- **DRIFTER atk 4→2** (5×5 75% / 11×11 56% 폭주)
+- **Bloc 자산 임계**: 11×11 60→70, 5×5 60→70 (게임 5R로 너무 빨리 끝남)
+- **BOUNTY_POST 너프**: ₵+3 수배+3 → ₵+2 수배+2
+- **GHOST_TRACKER 너프**: 📡+3 mapReveal+5R → 📡+2 mapReveal+3R
+- **MOLE mini-raid 트리거 확대**: infiltrate/steal_card/bloc_resource 추가 (5×5/11×11 0% → 회복)
+- **RIGGER mini-raid 트리거 확대**: zone_disable/force_tl_down/craft_item/zone_shield 추가
+
+### 검증 (200판)
+
+**11×11 정식**:
+- Ghost 43~50% / Bloc 50~57% (v2.2 baseline 37.5/62.5에서 큰 개선)
+- 평균 5.75R (v2.2 4.8R → +1R)
+- DRIFTER 31.3% (v2.2 68.8% → -37pt 정상화)
+- RIGGER 0% (다음 사이클 과제: bot scoring 가중치)
+
+**5×5 튜토리얼**:
+- Ghost 40.5% / Bloc 59.5% (v2.2 32.5/67.5에서 개선)
+- 평균 5.1R
+- DRIFTER 62.5% (여전히 폭주, 5×5 한정 작은 보드 효과)
+- MOLE 6.3% (v2.2 0% → 회복)
+
+### 산출물
+- `sim-harness/core.js` — CYBERWARE_DEFS, applyCyberware, mini-raid 헬퍼, install_ware/execute/bounty_post/assassin_contract/ghost_track 효과 핸들러, RESEARCH_PHASE R3/R6 자동 cyberware, initGame mapSize 인자
+- `sim-harness/harness_body.js` — batchRun mapSize/maxRounds 인자
+- `sim-harness/balance_test.js` — MAP_SIZE 전달
+- 노션: [v3.0 통합 + v2.4 너프 audit](https://www.notion.so/3602c75ff54a8153a267ee0549560215)
+
+### 다음 사이클 후보 (v2.5~v3.x)
+- RIGGER 11×11 활성화 (bot scoring 가중치)
+- 5×5 Bloc 너프 (시작 구역 또는 자동 확장 비율)
+- 공통 core 모듈 추출 (sim-harness와 simulator가 같은 룰 모듈 import) — v3.1 본격적 통합
+
+---
+
 ## [2.3] — RIGGER 카드 정합성 + 헤드리스/시뮬 분기 발견 (2026-04-29)
 
 ### v2.3.0 — RIGGER 카드 cost-attr 정합성

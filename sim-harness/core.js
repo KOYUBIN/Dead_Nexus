@@ -61,7 +61,7 @@ const GHOST_STATS = {
   BLADE:   { hp: 10, atk: 5, def: 3, spd: 3, hack: 1, primary: 'I', secondary: 'A', startZone: 'A5' },
   BROKER:  { hp: 6,  atk: 2, def: 2, spd: 5, hack: 2, primary: 'S', secondary: 'GRID', startZone: 'A3' },
   RIGGER:  { hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'V', secondary: 'I', startZone: 'B5' },
-  DRIFTER: { hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },
+  DRIFTER: { hp: 9,  atk: 2, def: 2, spd: 4, hack: 1, primary: 'A', secondary: 'GRID', startZone: 'E1' },  // v2.4: atk 4→3 (75%/56% 폭주 너프)
   MOLE:    { hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'S', secondary: 'M', startZone: 'D3' },
 };
 
@@ -154,6 +154,45 @@ const GHOST_DECKS = {
   MOLE:    ['INNER_DOCS','AUTH_ABUSE','CLEAN_SLATE','FALSE_FLAG','DISGUISE','BOARD_MANIP','LEAK','DEEP_COVER','ID_COLLAPSE','BASIC_MOVE_M'],
 };
 
+// v3.0: Cyberware 슬롯 시스템 (simulator/v0.5에서 포팅 — v1.1.2)
+// 캐릭터별 임플란트 (영구 보너스 + 단점), 슬롯 최대 3, R3/R6에 자동 1개씩 장착
+const CYBERWARE_DEFS = {
+  reflex_booster: { name: '리플렉스 부스터', icon: '⚡', slot: '신경계', pro: 'ATK +1 영구', con: 'HP -1 영구', cost: { credit: 5, parts: 2 } },
+  iron_skin:      { name: '강철 피부',       icon: '🛡', slot: '외피',   pro: 'DEF +2 영구', con: '이동 -1',   cost: { credit: 6, parts: 3 } },
+  ocular_implant: { name: '광학 임플란트',   icon: '👁', slot: '시각',   pro: '정찰 +1, 데이터 +1/R', con: '강한 빛 -1', cost: { credit: 4, data: 3 } },
+  neural_jack:    { name: '뉴럴 잭',         icon: '🧠', slot: '신경계', pro: 'HACK +2, 데이터+1/R', con: 'EMP HP-2', cost: { credit: 5, data: 2, parts: 1 } },
+  myomer_legs:    { name: '미오머 다리',     icon: '🦿', slot: '외피',   pro: 'SPD +2, 이동 +1', con: '부품-1/R', cost: { credit: 6, parts: 3 } },
+  mood_chip:      { name: '무드 칩',         icon: '💊', slot: '신경계', pro: '협상 ★+1, 인맥+1', con: '결투 -1', cost: { credit: 4, data: 2 } },
+};
+const CYBERWARE_KEYS = Object.keys(CYBERWARE_DEFS);
+const MAX_CYBERWARE_SLOTS = 3;
+
+function applyCyberware(state, playerIdx, wareKey) {
+  const ware = CYBERWARE_DEFS[wareKey];
+  const p = state.players[playerIdx];
+  if (!p || !ware) return state;
+  const installed = p.cyberware || [];
+  if (installed.length >= MAX_CYBERWARE_SLOTS) return state;
+  if (installed.includes(wareKey)) return state;
+  for (const [r, amt] of Object.entries(ware.cost)) {
+    if ((p.resources[r] || 0) < amt) return state;
+  }
+  const ps = [...state.players];
+  const newRes = { ...p.resources };
+  for (const [r, amt] of Object.entries(ware.cost)) newRes[r] = (newRes[r] || 0) - amt;
+  const newStats = { ...p.stats };
+  if (wareKey === 'reflex_booster') newStats.atk = (newStats.atk || 0) + 1;
+  if (wareKey === 'iron_skin')      { newStats.def = (newStats.def || 0) + 2; newStats.spd = Math.max(0, (newStats.spd || 0) - 1); }
+  if (wareKey === 'neural_jack')    newStats.hack = (newStats.hack || 0) + 2;
+  if (wareKey === 'myomer_legs')    newStats.spd = (newStats.spd || 0) + 2;
+  let newHp = p.hp, newMaxHp = p.maxHp;
+  if (wareKey === 'reflex_booster') { newMaxHp = Math.max(1, newMaxHp - 1); newHp = Math.min(newHp, newMaxHp); }
+  ps[playerIdx] = { ...p, resources: newRes, stats: newStats, hp: newHp, maxHp: newMaxHp, cyberware: [...installed, wareKey] };
+  let s = { ...state, players: ps };
+  s = logEntry(s, `${ware.icon} P${playerIdx} [${p.specific}] · ${ware.name} 장착! (${ware.pro})`);
+  return s;
+}
+
 // Bloc cards (compact)
 const BLOC_CARDS = {
   // VANTA
@@ -195,6 +234,10 @@ const BLOC_CARDS = {
   CRISIS_RESPONSE:  { name: 'CRISIS RESPONSE', bloc: 'any',     tl: 1, main: { heat: -2, credit: 3 },                      side: { gen: 'A' },    combo: {} },
   HOSTILE_BID:      { name: 'HOSTILE BID',     bloc: 'any',     tl: 3, main: { cost:['M','GRID'], crash_target: 3, credit: 4 }, side: { gen: 'M' }, combo: {} },
   SECURITY_SWEEP:   { name: 'SECURITY SWEEP',  bloc: 'any',     tl: 2, main: { cost:['I'], ghost_wanted_all: 1, heat: 1 }, side: { gen: 'I' },    combo: {} },
+  // v3.0: Bloc 능동 액션 3종 (simulator/v0.5에서 포팅 — v0.8.6)
+  BOUNTY_POST:      { name: 'BOUNTY POST',     bloc: 'any',     tl: 1, main: { cost:['I'], bounty_post: 1 },                side: { gen: 'I' },    combo: {} },
+  ASSASSIN_HIRE:    { name: 'ASSASSIN HIRE',   bloc: 'any',     tl: 2, main: { cost:['I','A'], assassin_contract: 1 },      side: { gen: 'A' },    combo: {} },
+  GHOST_TRACKER:    { name: 'GHOST TRACKER',   bloc: 'any',     tl: 2, main: { cost:['M','S'], ghost_track: 1 },             side: { gen: 'S' },    combo: {} },
   // CARBON
   POWER_SURGE:     { name: 'POWER SURGE',     bloc: 'CARBON',  tl: 1, main: { cost:['V'], zone_income_2x: 1 }, side: { gen: 'V' }, combo: {} },
   BLACKOUT_C:      { name: 'BLACKOUT',        bloc: 'CARBON',  tl: 2, main: { cost:['V','A'], zero_income: 1 }, side: { gen: 'A' }, combo: {} },
@@ -205,7 +248,7 @@ const BLOC_CARDS = {
 };
 
 // 모든 블록이 공통으로 받는 10장 (이동·투자·용병·요새·합병·정보 등)
-const BLOC_COMMON = ['BOARDROOM_MOVE','MARKET_TRADE','HIRE_GHOST','ZONE_FORTIFY','EXPAND_OP','INVEST_HEAVY','COUNTER_INTEL','CRISIS_RESPONSE','HOSTILE_BID','SECURITY_SWEEP'];
+const BLOC_COMMON = ['BOARDROOM_MOVE','MARKET_TRADE','HIRE_GHOST','ZONE_FORTIFY','EXPAND_OP','INVEST_HEAVY','COUNTER_INTEL','CRISIS_RESPONSE','HOSTILE_BID','SECURITY_SWEEP','BOUNTY_POST','ASSASSIN_HIRE','GHOST_TRACKER'];
 
 const BLOC_DECKS = {
   VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD', ...BLOC_COMMON],
@@ -421,8 +464,11 @@ const initStocks = (role, specific) => {
 // GAME STATE + REDUCER
 // ============================================================================
 
-function initGame(humanRole, humanSpecific) {
-  // Build 5x5 map
+// v3.0: mapSize 인자 추가 — '5x5' (기본, 튜토리얼) 또는 '11x11' (정식)
+// 현재 headless는 항상 5×5 격자에서 시뮬레이션하지만, 11×11 룰 분기(자산 임계 70, mini-raid 100%, execute ★+5)를 활성화하기 위한 모드 플래그로 사용
+function initGame(humanRole, humanSpecific, mapSize) {
+  if (!mapSize) mapSize = '5x5';
+  // Build 5x5 map (11x11 모드도 격자는 5x5 유지, 룰만 분기)
   const map = {};
   MAP_5x5.forEach(([c, z]) => {
     map[c] = { zone: z, owner: null, token: Math.random() < 0.6 ? 'quest' : (Math.random() < 0.5 ? 'instant' : 'discovery'), tokenRevealed: false };
@@ -479,7 +525,7 @@ function initGame(humanRole, humanSpecific) {
   return {
     meta: {
       scenario: 'S01',
-      mapSize: '5x5',
+      mapSize,
       round: 1,
       phase: 0,
       currentPlayer: 0,
@@ -1192,13 +1238,31 @@ function reducer(state, action) {
       // Bloc 공식: 구역수 + ⌊풀/2⌋  (구역 확장으로 자연 축적)
       // Ghost 공식: ⌊렙/3⌋ + 레이드×2 + ⌊풀/2⌋  (렙·레이드로 축적 — Bloc 대비 비대칭)
       let s = { ...state };
+      // v3.0 (v1.1.2 포팅): R3/R6 자동 cyberware 장착 (게임당 2개)
+      if (s.meta.round === 3 || s.meta.round === 6) {
+        for (let pi = 0; pi < s.players.length; pi++) {
+          const pp = s.players[pi];
+          if (pp.defeated) continue;
+          if ((pp.cyberware || []).length >= MAX_CYBERWARE_SLOTS) continue;
+          const rec = { BLADE: 'reflex_booster', IRONWALL: 'iron_skin', CIPHER: 'neural_jack', RIGGER: 'neural_jack', AXIOM: 'ocular_implant', VANTA: 'ocular_implant', DRIFTER: 'myomer_legs', BROKER: 'mood_chip', MOLE: 'mood_chip', HELIX: 'iron_skin', CARBON: 'myomer_legs' };
+          const order = [rec[pp.specific] || 'reflex_booster', 'mood_chip', 'ocular_implant', 'reflex_booster', 'neural_jack', 'iron_skin', 'myomer_legs'];
+          for (const wk of order) {
+            const installed = s.players[pi].cyberware || [];
+            if (installed.includes(wk)) continue;
+            const ware = CYBERWARE_DEFS[wk];
+            const cur = s.players[pi];
+            const canPay = Object.entries(ware.cost).every(([r, a]) => (cur.resources[r] || 0) >= a);
+            if (canPay) { s = applyCyberware(s, pi, wk); break; }
+          }
+        }
+      }
       const newLog = [...s.log];
-      const newPlayers = state.players.map((p, pi) => {
+      const newPlayers = s.players.map((p, pi) => {
         if (p.defeated) return p;
         const poolSum = ['M','I','V','S','B','A'].reduce((a,k) => a + (p.pool?.[k] || 0), 0);
         const poolHalf = Math.floor(poolSum / 2);
-        const raids = state.meta.raidsThisGame?.[pi] || 0;
-        const ownCount = Object.values(state.map).filter(c => c.owner === pi).length;
+        const raids = s.meta.raidsThisGame?.[pi] || 0;
+        const ownCount = Object.values(s.map).filter(c => c.owner === pi).length;
         let gain = 0;
         let breakdown = '';
         if (p.role === 'ghost') {
@@ -1971,6 +2035,116 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     }
   }
 
+  // ============================================================
+  // v3.0: simulator/v0.5에서 포팅한 v1.1.x 효과들
+  // ============================================================
+
+  // mini-raid 헬퍼 — Ghost가 인접 Bloc 구역을 일정 확률로 자동 중립화
+  // (BLADE/CIPHER/RIGGER/MOLE 카드 효과 발동 시 호출)
+  // v1.1.1: 5×5는 발동률 너프 (작은 보드 인접 빈도가 높아 폭주 방지)
+  function tryMiniRaid(state, pIdx, label, baseRate11, baseRate5) {
+    const cur = state.players[pIdx];
+    if (cur.role !== 'ghost' || !cur.position) return state;
+    const adj = coordsAdj(cur.position).concat([cur.position]);
+    const blocCoord = adj.find(c => state.map[c]?.owner != null && state.players[state.map[c].owner]?.role === 'bloc' && !state.players[state.map[c].owner]?.defeated);
+    if (!blocCoord) return state;
+    const triggerRate = state.meta.mapSize === '11x11' ? baseRate11 : baseRate5;
+    if (Math.random() >= triggerRate) {
+      return logEntry(state, `${label} P${pIdx} · mini-raid 미발동 (${state.meta.mapSize})`);
+    }
+    const bcell = state.map[blocCoord];
+    const bowner = state.players[bcell.owner];
+    const newStocks = { ...state.stocks, [bowner.specific]: Math.max(1, state.stocks[bowner.specific] - 2) };
+    const ps = [...state.players];
+    ps[pIdx] = { ...ps[pIdx], resources: { ...ps[pIdx].resources, rep: (ps[pIdx].resources.rep || 0) + 2 } };
+    const newMap = { ...state.map, [blocCoord]: { ...bcell, owner: null, fortified: 0, building: null } };
+    let s2 = { ...state, players: ps, stocks: newStocks, map: newMap };
+    s2.meta = { ...s2.meta, raidsThisGame: { ...s2.meta.raidsThisGame, [pIdx]: (s2.meta.raidsThisGame[pIdx] || 0) + 1 } };
+    s2 = logEntry(s2, `${label} P${pIdx} · mini-raid → ${blocCoord} ${bowner.specific} 중립화 ★+2 주가-2`);
+    return s2;
+  }
+
+  // install_ware — 카드 효과로 cyberware 장착 (v1.1.2)
+  if (effect.install_ware) {
+    let key = effect.install_ware;
+    if (key === 'auto') {
+      const cls = s.players[playerIdx].specific;
+      const rec = { BLADE: 'reflex_booster', IRONWALL: 'iron_skin', CIPHER: 'neural_jack', RIGGER: 'neural_jack', AXIOM: 'ocular_implant', VANTA: 'ocular_implant', DRIFTER: 'myomer_legs', BROKER: 'mood_chip', MOLE: 'mood_chip', HELIX: 'iron_skin', CARBON: 'myomer_legs' };
+      key = rec[cls] || 'reflex_booster';
+    }
+    s = applyCyberware(s, playerIdx, key);
+  }
+
+  // execute — BLADE 처형 (v1.1.1: 5×5에서 ★+5→★+3 너프 + mini-raid 50%)
+  if (effect.execute) {
+    const repGain = s.meta.mapSize === '11x11' ? 5 : 3;
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain }, wanted: (ps[playerIdx].wanted || 0) + 1 };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🔪 P${playerIdx} · 처형 · ★+${repGain}, 수배+1`);
+    // BLADE mini-raid: 11×11=100%, 5×5=50%
+    s = tryMiniRaid(s, playerIdx, '🔪 처형', 1.0, 0.5);
+  }
+
+  // CIPHER mini-raid — def_ignore/steal 효과 시 (v1.1.1: 5×5 50%)
+  if ((effect.def_ignore || effect.steal) && s.players[playerIdx]?.specific === 'CIPHER') {
+    s = tryMiniRaid(s, playerIdx, '💾 해킹', 1.0, 0.5);
+  }
+
+  // RIGGER mini-raid — trap_damage/multi_target 효과 시 (v1.1.1: 5×5 50%)
+  if ((effect.trap_damage || effect.multi_target || effect.zone_disable || effect.force_tl_down || effect.craft_item || effect.zone_shield) && s.players[playerIdx]?.specific === 'RIGGER') {
+    s = tryMiniRaid(s, playerIdx, '🛠 자동제압', 1.0, 0.5);
+  }
+
+  // MOLE mini-raid — disguise/bypass_veil/peek_bloc 효과 시 (v2.4: infiltrate 트리거 추가, 11×11 67% / 5×5 33%)
+  if ((effect.disguise || effect.bypass_veil || effect.peek_bloc || effect.scandal || effect.frame || effect.swap_blame || effect.copy_bloc_card || effect.infiltrate || effect.steal_card || effect.bloc_resource) && s.players[playerIdx]?.specific === 'MOLE') {
+    s = tryMiniRaid(s, playerIdx, '🕷 잠입', 0.67, 0.33);
+  }
+
+  // bounty_post — Bloc 능동 액션 (v2.4: ₵+3→₵+2, 수배+3→+2 너프)
+  if (effect.bounty_post && p.role === 'bloc') {
+    const ghosts = s.players.filter(pp => pp.role === 'ghost' && !pp.defeated);
+    if (ghosts.length > 0) {
+      ghosts.sort((a, b) => (b.resources.rep || 0) - (a.resources.rep || 0));
+      const target = ghosts[0];
+      const tIdx = s.players.indexOf(target);
+      const ps = [...s.players];
+      ps[tIdx] = { ...ps[tIdx], wanted: (ps[tIdx].wanted || 0) + 2 };
+      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 2, influence: (ps[playerIdx].resources.influence || 0) + 1 } };
+      s = { ...s, players: ps };
+      s = logEntry(s, `🎯 P${playerIdx} [${p.specific}] · 현상금 발행 → P${tIdx} ${target.specific} 수배+2, 자기 ₵+2 🎙+1`);
+      if (tIdx === 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'bounty_post', detail: '수배+2' } };
+    }
+  }
+
+  // assassin_contract — Bloc 능동 액션: HP 1위 Ghost HP-4, ₵-3 ★+2
+  if (effect.assassin_contract && p.role === 'bloc') {
+    const ghosts = s.players.filter(pp => pp.role === 'ghost' && !pp.defeated);
+    if (ghosts.length > 0 && (p.resources.credit || 0) >= 3) {
+      ghosts.sort((a, b) => b.hp - a.hp);
+      const target = ghosts[0];
+      const tIdx = s.players.indexOf(target);
+      const ps = [...s.players];
+      ps[tIdx] = { ...ps[tIdx], hp: Math.max(0, ps[tIdx].hp - 4) };
+      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) - 3, rep: (ps[playerIdx].resources.rep || 0) + 2 } };
+      s = { ...s, players: ps };
+      s = logEntry(s, `🗡 P${playerIdx} [${p.specific}] · 청부 살인 → P${tIdx} ${target.specific} HP-4 (₵-3 ★+2)`);
+      if (tIdx === 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'assassin_contract', detail: 'HP-4' } };
+    }
+  }
+
+  // ghost_track — Bloc 능동 액션 (v2.4: 📡+3→+2 너프)
+  if (effect.ghost_track && p.role === 'bloc') {
+    s = { ...s, meta: { ...s.meta, mapReveal: (s.meta.mapReveal || 0) + 3 } };
+    const ps = s.players.map(pp => pp.role === 'ghost' && !pp.defeated ? { ...pp, wanted: (pp.wanted || 0) + 1 } : pp);
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, data: (ps[playerIdx].resources.data || 0) + 2, influence: (ps[playerIdx].resources.influence || 0) + 1 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `📡 P${playerIdx} [${p.specific}] · Ghost 추적 → 모든 Ghost 수배+1, 자기 📡+2 🎙+1`);
+    if (s.players[0].role === 'ghost' && playerIdx !== 0) {
+      s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'ghost_track', detail: '수배+1' } };
+    }
+  }
+
   return s;
 }
 
@@ -2010,6 +2184,7 @@ const CARD_NAMES_KR = {
   ZONE_FORTIFY: '구역 요새화', EXPAND_OP: '작전 확장', INVEST_HEAVY: '대규모 투자',
   COUNTER_INTEL: '방첩', CRISIS_RESPONSE: '위기 대응', HOSTILE_BID: '적대적 매수',
   SECURITY_SWEEP: '치안 소탕',
+  BOUNTY_POST: '현상금 발행', ASSASSIN_HIRE: '청부 살인', GHOST_TRACKER: 'Ghost 추적',
 };
 
 function cardDisplayName(card) {
@@ -2046,8 +2221,10 @@ function checkInstantVictory(state) {
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      if (av >= 60) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥60)` } };
+      // v2.4: 11×11은 70, 5×5는 60 (11×11 게임 길이 5.0R 너무 짧음)
+      const assetThreshold = state.meta.mapSize === '11x11' ? 70 : 70;
+      if (av >= assetThreshold) {
+        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥${assetThreshold})` } };
       }
     } else {
       const rep = p.resources.rep || 0;
