@@ -1054,7 +1054,9 @@ function reducer(state, action) {
     }
 
     case 'NEXT_ROUND': {
-      // v4.0: 클래스 시그니처 메커닉 R 시작 처리
+      // v4.0.3: 라운드 끝 견제 결정 (이전 R 점수 보고 다음 R 견제)
+      state = applySuppression(state);
+      // v4.0: 클래스 시그니처 메커닉 R 시작 처리 + 견제 효과 적용
       state = applyClassSignatures(state);
       // v3.1: 라운드 시작 전 마일스톤 자동 청구 + 어워드 자동 펀딩
       state = tryClaimMilestones(state);
@@ -2410,6 +2412,47 @@ function tryFundAwards(state) {
   return s;
 }
 
+// v4.0.3: 견제 토큰 시스템 — 매 R 봇이 위협적 상대에게 견제
+// 무력(combat) / 정보(info) / 외교(diplomacy) 3종, 비용 ₵3
+function applySuppression(state) {
+  let s = state;
+  // v4.0.3a: 너프 — 매 R 1명만 견제 (라운드별 1명 선택), 비용 ₵5
+  // 가장 자원 많은 봇이 가장 위협적인 적에게 견제
+  const candidates = s.players
+    .map((p, pi) => ({ pi, p, credit: p.resources.credit || 0 }))
+    .filter(x => !x.p.defeated && x.credit >= 5);
+  if (candidates.length === 0) return s;
+  candidates.sort((a, b) => b.credit - a.credit);
+  // 30% 확률로 견제 (모든 R 견제 안 함)
+  if (Math.random() >= 0.3) return s;
+  const actor = candidates[0];
+  const pi = actor.pi;
+  const p = actor.p;
+  {
+    const enemies = s.players.map((pp, ppi) => ({ pi: ppi, pp })).filter(x => x.pi !== pi && !x.pp.defeated);
+    if (enemies.length === 0) return s;
+    enemies.sort((a, b) => {
+      const tA = (a.pp.resources.rep || 0) + (s.meta.raidsThisGame?.[a.pi] || 0) * 2 + Math.floor(assetValue(a.pp, s.stocks, s) / 10);
+      const tB = (b.pp.resources.rep || 0) + (s.meta.raidsThisGame?.[b.pi] || 0) * 2 + Math.floor(assetValue(b.pp, s.stocks, s) / 10);
+      return tB - tA;
+    });
+    const target = enemies[0];
+    // 토큰 종류 선택 — 상대 역할/타입에 따라
+    let tokenType = 'combat';
+    if (target.pp.role === 'bloc' && (s.meta.raidsThisGame?.[pi] || 0) < 2) tokenType = 'info';  // Bloc 상대 정보 우선
+    else if (Math.random() < 0.2) tokenType = 'diplomacy';  // 20% 외교
+    // 비용 차감 + 토큰 부여 (v4.0.3a: 비용 ₵5)
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) - 5 } };
+    const curTok = target.pp.suppressionTokens || { combat: 0, info: 0, diplomacy: 0 };
+    ps[target.pi] = { ...ps[target.pi], suppressionTokens: { ...curTok, [tokenType]: (curTok[tokenType] || 0) + 1 } };
+    s = { ...s, players: ps };
+    const icon = tokenType === 'combat' ? '🔥' : tokenType === 'info' ? '📡' : '🤝';
+    s = logEntry(s, `${icon} P${pi} → P${target.pi} ${target.pp.specific} ${tokenType} 견제 (₵-5)`);
+  }
+  return s;
+}
+
 // v4.0: 클래스 시그니처 메커닉 — 라운드 시작 시 자동 처리
 function applyClassSignatures(state) {
   let s = state;
@@ -2504,11 +2547,26 @@ function applyClassSignatures(state) {
       s = logEntry(s, `🕷 P${pi} MOLE · 위장 시작 → ${disguise} 블록으로 위장`);
     }
 
-    // 견제 토큰 초기화 (받은 압박은 1R만 유효)
+    // v4.0.3: 견제 토큰 효과 적용 (R 시작 시 직접 페널티)
     if (p.suppressionTokens && (p.suppressionTokens.combat || p.suppressionTokens.info || p.suppressionTokens.diplomacy)) {
       const ps = [...s.players];
-      ps[pi] = { ...ps[pi], suppressionTokens: { combat: 0, info: 0, diplomacy: 0 } };
+      let newRes = { ...ps[pi].resources };
+      let penalties = [];
+      if (p.suppressionTokens.combat > 0) {
+        newRes.rep = Math.max(0, (newRes.rep || 0) - p.suppressionTokens.combat);
+        penalties.push(`★-${p.suppressionTokens.combat}`);
+      }
+      if (p.suppressionTokens.info > 0) {
+        newRes.data = Math.max(0, (newRes.data || 0) - p.suppressionTokens.info);
+        penalties.push(`📡-${p.suppressionTokens.info}`);
+      }
+      if (p.suppressionTokens.diplomacy > 0) {
+        newRes.influence = Math.max(0, (newRes.influence || 0) - p.suppressionTokens.diplomacy);
+        penalties.push(`🎙-${p.suppressionTokens.diplomacy}`);
+      }
+      ps[pi] = { ...ps[pi], resources: newRes, suppressionTokens: { combat: 0, info: 0, diplomacy: 0 } };
       s = { ...s, players: ps };
+      s = logEntry(s, `🚧 P${pi} ${p.specific} · 견제 효과 적용 ${penalties.join(' ')}`);
     }
 
     // === Bloc 시그니처 메커닉 ===

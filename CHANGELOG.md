@@ -10,6 +10,41 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [4.0-beta] — 견제 토큰 시스템 추가 (2026-05-18)
+
+### v4.0.3 — 상대 압박 견제 토큰
+매 R 자원 가장 많은 봇이 30% 확률로 위협적인 적에게 견제 토큰 부여:
+
+**3종 토큰** (비용 ₵5):
+- 🔥 **무력 견제**: 다음 R 시작 시 상대 ★-1
+- 📡 **정보 견제**: 다음 R 시작 시 상대 data-1
+- 🤝 **외교 견제**: 다음 R 시작 시 상대 influence-1
+
+**휴리스틱**:
+- Bloc 상대 + raid 적음 → 정보 견제 우선
+- 20% 외교 견제
+- 나머지 무력 견제
+
+**효과 적용** (applyClassSignatures):
+- R 시작 시 받은 토큰만큼 직접 자원 페널티
+- 토큰은 1R만 유효 (초기화 후 클리어)
+
+### 200판 검증
+
+**11×11**: 거의 완벽 (CARBON 0% 경고 1건만)
+- BLADE 29%, DRIFTER 35%, MOLE 33%, AXIOM 30%
+- Ghost/Bloc 진영 균형 ✅
+
+**5×5**: Ghost 32.5% / Bloc 67.5% (견제가 5×5에서 약간 셈)
+- 9/11 클래스 ≥5%, CIPHER 0% 경고
+
+### 게임 디자인 임팩트
+- ✅ 상대 압박 결정 공간 생성 (매 R 누가 견제할까)
+- ✅ 외교 동기 생성 (견제 받으면 다음 R 약화)
+- ⚠ 5×5에서 견제 영향이 큼 (다음 너프 후보)
+
+---
+
 ## [4.0-alpha] — 클래스 시그니처 메커닉 11종 (2026-05-18)
 
 게임성 중심 메이저 사이클. v3.x는 밸런스 안정화였고, v4.0은 **클래스 정체성/결정 깊이/창발성/상대 압박**을 시스템 차원에서 강화.
@@ -1912,26 +1947,4 @@ Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대�
 
 ### Documentation
 - `docs/10-map-zones.md` v0.3 전면 개정
-- `docs/01-worldbuilding.md` — 격자 크기 갱신
-- `docs/02-core-rules.md` §2.2, §2.3 — 시작 셋업 갱신
-- `docs/03-factions-blocs.md` — 5 블록 시작 구역 좌표 명시
-- `docs/11-events-quests.md` — 토큰 구성 2 사이즈 버전
-- `cards/legacy/chapter-03-martial-night.md` — 병영 구역 (경찰서 4곳 주변)
-- `cards/legacy/chapter-04-price-of-splice.md` — B6 → B8 불법 시술소
-- `cards/legacy/chapter-05-mesh-ghost.md` — 메시 레이어 격자 갱신
-- `cards/legacy/chapter-06-bloc-acquisition.md` — D4 → F6 타워
-- `cards/legacy/chapter-07-heart-of-city.md` — D4 → F6 NEXUS 2회
-- `cards/events/quest-deck.md` — D4 → F6 (Q01, Q25)
-- `playtesting/session-00-guide.md` — 5×5 튜토리얼 맵 채택
-
----
-
-## [0.3.0] — 레거시 캠페인 8챕터 완성 (2026-04-21)
-
-### Added
-- **레거시 챕터 2 "Insider Game"** — 최초 M&A 선언 해금
-  - 봉투 B 내용물, 배신 기록 시스템, 상호 지분 상한 50%
-  - Bloc 6종 M&A 카드, Ghost 2종 내부자 카드
-- **레거시 챕터 3 "Martial Night"** — 공권력 트랙 10 해금
-  - 병영 구역·지하 저항소 타일, 검문소 시스템
-  - 정부 계약 이벤트, 현상수배
+- `docs/01-worldbuilding.md` — 격�
