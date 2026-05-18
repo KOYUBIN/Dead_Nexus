@@ -29,17 +29,17 @@ const MAP_SIZE = numericArgs[1] || '11x11';
 // 임계값 (200판 기준 검증된 v1.1 결과를 ±15% 허용)
 const THRESHOLDS = {
   '11x11': {
-    ghostWinRate: { min: 40, max: 65, target: 57 },   // 200판 57/43
-    blocWinRate:  { min: 35, max: 60, target: 43 },
-    avgRound:     { min: 5.5, max: 8.0, target: 6.8 },
-    classMaxWinRate: 60,   // 어떤 클래스도 60% 넘지 않음
-    classMinWinRate: 5,    // 어떤 클래스도 5% 밑으로 떨어지지 않음
+    ghostWinRate: { min: 40, max: 65, target: 50 },   // v3.1: TM 점수식 균형
+    blocWinRate:  { min: 35, max: 60, target: 50 },
+    avgRound:     { min: 8.0, max: 11.0, target: 10 }, // v3.1: maxRounds 10
+    classMaxWinRate: 60,
+    classMinWinRate: 5,
   },
   '5x5': {
-    ghostWinRate: { min: 45, max: 70, target: 57 },   // 200판 114/86
-    blocWinRate:  { min: 30, max: 55, target: 43 },
-    avgRound:     { min: 4.5, max: 7.0, target: 5.84 },
-    classMaxWinRate: 55,   // BLADE/MOLE 너프 후 47/43
+    ghostWinRate: { min: 40, max: 65, target: 50 },
+    blocWinRate:  { min: 35, max: 60, target: 50 },
+    avgRound:     { min: 5.0, max: 8.0, target: 7 },   // v3.1: maxRounds 7
+    classMaxWinRate: 55,
     classMinWinRate: 5,
   },
 };

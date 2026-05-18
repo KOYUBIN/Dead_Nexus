@@ -193,6 +193,91 @@ function applyCyberware(state, playerIdx, wareKey) {
   return s;
 }
 
+// ============================================================================
+// v3.1: Terraforming Mars 스타일 마일스톤 + 어워드 시스템
+// 즉시 승리 임계 폐지, maxRounds 강제 종료 + 점수 합산식 승자 결정
+// ============================================================================
+
+// 마일스톤: 6종 풀에서 게임 시작 시 3종 랜덤 선정.
+// 선착순 청구 (₵5 비용), 청구자 +5pt, 게임당 최대 3개 청구 (한 명이 다 가능)
+// check(p, state, pIdx) → true면 청구 가능
+// 헤드리스에는 트랙 시스템 없어 자원/구역/TL/평판 기반으로 정의
+const MILESTONES_TM = {
+  city_conqueror: {
+    name: '🏙 도시 정복자',
+    desc: '5구역 동시 점유 (Bloc)',
+    check: (p, s, pIdx) => p.role === 'bloc' && Object.values(s.map).filter(c => c.owner === pIdx).length >= 5,
+  },
+  bounty_hunter: {
+    name: '🎯 현상금 사냥꾼',
+    desc: 'Bloc 평판 ≥ 8 (현상금/청부 누적)',
+    check: (p, s) => p.role === 'bloc' && (p.resources.rep || 0) >= 8,
+  },
+  shadow_blade: {
+    name: '🗡 그림자 칼날',
+    desc: 'Ghost 평판 12 + 레이드 2회',
+    check: (p, s, pIdx) => p.role === 'ghost' && (p.resources.rep || 0) >= 12 && (s.meta.raidsThisGame?.[pIdx] || 0) >= 2,
+  },
+  veteran: {
+    name: '🌐 베테랑',
+    desc: 'TL 4 도달 + 자원 풀 합 5 이상',
+    check: (p, s) => (p.tl || 1) >= 4 && ['M','I','V','S','B','A','GRID'].reduce((a,k) => a + (p.pool?.[k] || 0), 0) >= 5,
+  },
+  data_god: {
+    name: '💾 데이터 신',
+    desc: 'TL 3 도달 + data 자원 8 이상',
+    check: (p, s) => (p.tl || 1) >= 3 && (p.resources.data || 0) >= 8,
+  },
+  diplomat: {
+    name: '🤝 외교가',
+    desc: 'influence 자원 5 이상 (Bloc) / credit 자원 20 이상 (Ghost)',
+    check: (p, s) => p.role === 'bloc' ? (p.resources.influence || 0) >= 5 : (p.resources.credit || 0) >= 20,
+  },
+};
+const MILESTONE_KEYS = Object.keys(MILESTONES_TM);
+const MILESTONE_CLAIM_COST = 5;
+const MILESTONE_POINTS = 5;
+const MAX_MILESTONES_CLAIMED = 3;
+
+// 어워드: 5종 풀에서 게임 시작 시 3종 랜덤 선정.
+// 누구나 펀딩 가능 (8/14/20 ₵ — 첫·둘째·셋째). 게임 끝에 측정 1위 +5pt / 2위 +2pt
+// measure(p, state, pIdx) → 점수 (높을수록 우위)
+// 헤드리스에는 트랙 없어 자원/raid/구역/카드 기반으로 정의
+const AWARDS_TM = {
+  warrior: {
+    name: '🔥 전사',
+    desc: '레이드 수 + 무기 자원',
+    measure: (p, s, pIdx) => (s.meta.raidsThisGame?.[pIdx] || 0) * 3 + (p.resources.weapons || 0),
+  },
+  asset_lord: {
+    name: '💰 자산가',
+    desc: '총 자산 (₵+주식 가치)',
+    measure: (p, s) => {
+      if (p.role === 'bloc') return assetValue(p, s.stocks, s);
+      return (p.resources.credit || 0) + Object.entries(p.stocks || {}).reduce((a, [b, n]) => a + n * (s.stocks[b] || 1), 0);
+    },
+  },
+  explorer: {
+    name: '🌃 탐험가',
+    desc: '방문 구역 수 + 부품 자원',
+    measure: (p, s, pIdx) => (s.meta.zonesVisited?.[pIdx]?.size || 0) * 2 + (p.resources.parts || 0),
+  },
+  info_king: {
+    name: '📡 정보왕',
+    desc: 'data + influence 자원 + TL',
+    measure: (p, s) => (p.resources.data || 0) + (p.resources.influence || 0) * 2 + (p.tl || 1) * 2,
+  },
+  street_legend: {
+    name: '⭐ 거리 명성',
+    desc: '평판 (Ghost) / 평판+인플루언스 (Bloc)',
+    measure: (p, s) => p.role === 'ghost' ? (p.resources.rep || 0) : ((p.resources.rep || 0) + (p.resources.influence || 0) * 2),
+  },
+};
+const AWARD_KEYS = Object.keys(AWARDS_TM);
+const AWARD_FUNDING_COSTS = [8, 14, 20];
+const AWARD_POINTS = [5, 2]; // 1위 / 2위
+const MAX_AWARDS_FUNDED = 3;
+
 // Bloc cards (compact)
 const BLOC_CARDS = {
   // VANTA
@@ -559,6 +644,12 @@ function initGame(humanRole, humanSpecific, mapSize) {
       mapReveal: 0,              // 남은 전체 지도 노출 라운드
       moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
       atkBonusOnce: 0,           // 일회성 공격 판정 보너스 (arms 보너스)
+      // v3.1: TM 스타일 마일스톤/어워드 시스템
+      milestonesPool: shuffle([...MILESTONE_KEYS]).slice(0, 3),   // 게임당 3종 선정
+      milestonesClaimed: {},     // { milestoneKey: playerIdx } — 선착순 청구 기록
+      awardsPool: shuffle([...AWARD_KEYS]).slice(0, 3),           // 게임당 3종 선정
+      awardsFunded: [],          // [{ key, playerIdx, cost }] — 펀딩 순서대로 (최대 3)
+      finalScores: null,         // 게임 종료 시 { playerIdx: scoreDetails }
     },
     players,
     map,
@@ -956,9 +1047,17 @@ function reducer(state, action) {
     }
 
     case 'NEXT_ROUND': {
+      // v3.1: 라운드 시작 전 마일스톤 자동 청구 + 어워드 자동 펀딩
+      state = tryClaimMilestones(state);
+      state = tryFundAwards(state);
+      // v3.1: 마일스톤 3개 모두 청구되어 final trigger 발동 시, 한 라운드 더 진행 후 종료
+      if (state.meta.finalRoundTrigger && state.meta.round >= state.meta.finalRoundTrigger) {
+        return computeFinalScore(state);
+      }
       const newRound = state.meta.round + 1;
-      if (newRound > 10) {
-        return checkVictoryByPoints(state);
+      const maxR = state.meta.mapSize === '11x11' ? 10 : 7;
+      if (newRound > maxR) {
+        return computeFinalScore(state);
       }
       const nd = rollSignalDie();
       // === 손패 리필 + 개인 풀 감쇠 ===
@@ -2221,23 +2320,112 @@ function checkInstantVictory(state) {
     if (p.defeated) continue;
     if (p.role === 'bloc') {
       const av = assetValue(p, state.stocks, state);
-      // v2.4: 11×11은 70, 5×5는 60 (11×11 게임 길이 5.0R 너무 짧음)
-      const assetThreshold = state.meta.mapSize === '11x11' ? 70 : 70;
-      if (av >= assetThreshold) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥${assetThreshold})` } };
-      }
-    } else {
-      const rep = p.resources.rep || 0;
-      const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= 14 && raids >= 2) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투 루트): 렙 ${rep} + 레이드 ${raids}회` } };
-      }
-      if (rep >= 18) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판 루트): 렙 ${rep} (≥18)` } };
-      }
+      // v3.1: 자산 임계 즉시 승리 폐지 (final round trigger로 대체)
+    }
+  }
+  // v3.1: 마일스톤 3개 모두 청구되면 final round trigger
+  if (state.meta.milestonesClaimed && Object.keys(state.meta.milestonesClaimed).length >= MAX_MILESTONES_CLAIMED) {
+    if (!state.meta.finalRoundTrigger) {
+      return { ...state, meta: { ...state.meta, finalRoundTrigger: state.meta.round + 1 } };
     }
   }
   return state;
+}
+
+// v3.1: 마일스톤 자동 청구 — 봇/P0가 조건 충족 + ₵5 보유 시 자동 청구
+function tryClaimMilestones(state) {
+  let s = state;
+  for (const mKey of (s.meta.milestonesPool || [])) {
+    if (s.meta.milestonesClaimed?.[mKey]) continue;
+    const milestone = MILESTONES_TM[mKey];
+    if (!milestone) continue;
+    for (let pi = 0; pi < s.players.length; pi++) {
+      const p = s.players[pi];
+      if (p.defeated) continue;
+      if ((p.resources.credit || 0) < MILESTONE_CLAIM_COST) continue;
+      if (!milestone.check(p, s, pi)) continue;
+      const ps = [...s.players];
+      ps[pi] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) - MILESTONE_CLAIM_COST } };
+      s = { ...s, players: ps, meta: { ...s.meta, milestonesClaimed: { ...s.meta.milestonesClaimed, [mKey]: pi } } };
+      s = logEntry(s, `🏆 P${pi} [${p.specific}] · 마일스톤 청구: ${milestone.name} (₵-${MILESTONE_CLAIM_COST}, +${MILESTONE_POINTS}pt)`);
+      break;
+    }
+  }
+  return s;
+}
+
+// v3.1: 어워드 자동 펀딩 — 자신이 1~2위 예상되는 어워드를 펀딩
+function tryFundAwards(state) {
+  let s = state;
+  const funded = s.meta.awardsFunded || [];
+  if (funded.length >= MAX_AWARDS_FUNDED) return s;
+  const nextCost = AWARD_FUNDING_COSTS[funded.length];
+
+  for (const aKey of (s.meta.awardsPool || [])) {
+    if (funded.some(f => f.key === aKey)) continue;
+    const award = AWARDS_TM[aKey];
+    if (!award) continue;
+    const scores = s.players.map((p, pi) => ({ pi, score: award.measure(p, s, pi), credit: p.resources.credit || 0 }));
+    scores.sort((a, b) => b.score - a.score);
+    const candidate = scores.find(c => c.credit >= nextCost && (c.pi === scores[0].pi || c.pi === scores[1]?.pi));
+    if (!candidate) continue;
+    const p = s.players[candidate.pi];
+    const ps = [...s.players];
+    ps[candidate.pi] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) - nextCost } };
+    const newFunded = [...funded, { key: aKey, playerIdx: candidate.pi, cost: nextCost }];
+    s = { ...s, players: ps, meta: { ...s.meta, awardsFunded: newFunded } };
+    s = logEntry(s, `🥇 P${candidate.pi} [${p.specific}] · 어워드 펀딩: ${award.name} (₵-${nextCost})`);
+    return s;
+  }
+  return s;
+}
+
+// v3.1: 점수 합산 후 승자 결정 (maxRounds 도달 또는 final round trigger 시)
+function computeFinalScore(state) {
+  const scores = state.players.map((p, pi) => {
+    let breakdown = {};
+    let base = 0;
+    if (p.role === 'bloc') {
+      base = Math.floor(assetValue(p, state.stocks, state) / 7);
+      breakdown.base = `자산÷7=${base}`;
+    } else {
+      base = (p.resources.rep || 0);
+      breakdown.base = `평판=${base}`;
+    }
+    const raids = state.meta.raidsThisGame?.[pi] || 0;
+    if (p.role === 'ghost' && raids > 0) {
+      base += raids * 3;
+      breakdown.raids = `+${raids * 3}(${raids}회)`;
+    }
+    let milestoneBonus = 0;
+    for (const [mKey, mPi] of Object.entries(state.meta.milestonesClaimed || {})) {
+      if (mPi === pi) milestoneBonus += MILESTONE_POINTS;
+    }
+    if (milestoneBonus > 0) breakdown.milestones = `+${milestoneBonus}`;
+    let awardBonus = 0;
+    for (const f of (state.meta.awardsFunded || [])) {
+      const award = AWARDS_TM[f.key];
+      if (!award) continue;
+      const ranked = state.players.map((pp, ppi) => ({ pi: ppi, score: award.measure(pp, state, ppi) }))
+                                    .sort((a, b) => b.score - a.score);
+      if (ranked[0].pi === pi) awardBonus += AWARD_POINTS[0];
+      else if (ranked[1]?.pi === pi) awardBonus += AWARD_POINTS[1];
+    }
+    if (awardBonus > 0) breakdown.awards = `+${awardBonus}`;
+    const total = base + milestoneBonus + awardBonus;
+    return { pi, role: p.role, specific: p.specific, total, breakdown, defeated: p.defeated };
+  });
+  scores.forEach(sc => { if (sc.defeated) sc.total = Math.floor(sc.total / 2); });
+  scores.sort((a, b) => b.total - a.total);
+  const winner = scores[0];
+  const reasonParts = Object.entries(winner.breakdown).map(([k, v]) => `${k}:${v}`).join(' / ');
+  return { ...state, meta: {
+    ...state.meta,
+    gameOver: true,
+    winner: winner.pi,
+    winReason: `점수 ${winner.total}pt (${reasonParts})`,
+    finalScores: scores,
+  }};
 }
 
 // ============================================================================
