@@ -41,7 +41,7 @@ const MAP_5x5 = [
 // Bloc HQ + support zones (tutorial)
 const BLOC_SETUP = {
   VANTA:    { hq: 'C2', support: ['C1'],      color: '#1a1a1a' },
-  AXIOM:    { hq: 'D2', support: ['D1'],      color: '#2d6fff' },
+  AXIOM:    { hq: 'D2', support: ['D1', 'E1'], color: '#2d6fff' },  // v3.3: E1 추가 (5×5 0% 활성화)
   HELIX:    { hq: 'D3', support: ['E2'],      color: '#8ab57c' },
   IRONWALL: { hq: 'C4', support: ['E4'],      color: '#4a5d23' },
   CARBON:   { hq: 'B3', support: ['A4', 'B4'], color: '#8b5a2b' },  // v3.2: B4 추가 (11×11 0% 활성화)
@@ -1896,6 +1896,26 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s.meta.lostCardsUsed[playerIdx] = (s.meta.lostCardsUsed[playerIdx] || 0) + 1;
   }
 
+  // v3.3: AXIOM 효과 폴백 (zone_hack_def, algorithm) — 5×5 0% 활성화
+  if (effect.zone_hack_def) {
+    // 알고리즘 잠금: 자사 구역 1곳 방어 +2 + ₵+2
+    const cur = s.players[playerIdx];
+    if (cur.position && s.map[cur.position]?.owner === playerIdx) {
+      const newMap = { ...s.map, [cur.position]: { ...s.map[cur.position], fortified: (s.map[cur.position].fortified || 0) + 2 } };
+      const ps = [...s.players];
+      ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 2, data: (ps[playerIdx].resources.data || 0) + 1 } };
+      s = { ...s, map: newMap, players: ps };
+      s = logEntry(s, `🔒 P${playerIdx} [${p.specific}] · 알고리즘 잠금 (방어+2, ₵+2 📡+1)`);
+    }
+  }
+  if (effect.algorithm) {
+    // v3.3.0a: 너프 — 자기 보상만 (전 적 주가 -1 제거), ₵+3 📡+2 🎙+1
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 3, data: (ps[playerIdx].resources.data || 0) + 2, influence: (ps[playerIdx].resources.influence || 0) + 1 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🧠 P${playerIdx} [${p.specific}] · 시스템 탈취 (₵+3 📡+2 🎙+1)`);
+  }
+
   // === 주가 조작 ===
   if (effect.crash_stock || effect.crash_target) {
     // 자기 블록 외 랜덤
@@ -2534,3 +2554,5 @@ function scoreBlocCard(state, pIdx, cid) {
 
   return score + Math.random() * 2;
 }
+
+// ============================================================================

@@ -505,10 +505,10 @@ const MAP_11x11 = (() => {
 // Bloc HQ + support zones (5x5 tutorial 기본; 11×11 별도 BLOC_SETUP_11x11 사용)
 const BLOC_SETUP = {
   VANTA:    { hq: 'C2', support: ['C1'],      color: '#1a1a1a' },
-  AXIOM:    { hq: 'D2', support: ['D1'],      color: '#2d6fff' },
+  AXIOM:    { hq: 'D2', support: ['D1', 'E1'], color: '#2d6fff' },  // v3.3: E1 추가 (5×5 AXIOM 활성화)
   HELIX:    { hq: 'D3', support: ['E2'],      color: '#8ab57c' },
   IRONWALL: { hq: 'C4', support: ['E4'],      color: '#4a5d23' },
-  CARBON:   { hq: 'B3', support: ['A4'],      color: '#8b5a2b' },
+  CARBON:   { hq: 'B3', support: ['A4', 'B4'], color: '#8b5a2b' },  // v3.2: B4 추가 (11×11 CARBON 활성화)
 };
 
 // v0.7.3: 11×11 BLOC_SETUP — 5 Bloc 외곽 사방 분산 (각 3 support = 4구역 시작)
@@ -3627,10 +3627,10 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   if (effect.contact) {
     // v0.6.5d: 접선 강화 — 영향력+contact, ₵+contact*2, ★+contact (BROKER 평판 비대칭 팩션형)
     const ps = [...s.players];
-    const add = effect.contact * 2;
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, influence: (ps[playerIdx].resources.influence || 0) + effect.contact, credit: (ps[playerIdx].resources.credit || 0) + add, rep: (ps[playerIdx].resources.rep || 0) + effect.contact } };
+    const add = effect.contact * 1; // v3.2 너프
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, influence: (ps[playerIdx].resources.influence || 0) + effect.contact, credit: (ps[playerIdx].resources.credit || 0) + add } };
     s = { ...s, players: ps };
-    s = logEntry(s, `🎙️ P${playerIdx} · 접선 +${effect.contact} · ₵+${add} ★+${effect.contact}`);
+    s = logEntry(s, `🎙️ P${playerIdx} · 접선 +${effect.contact} · ₵+${add}`);
     s = raiseTrack(s, playerIdx, 'party', 1, '접선');
   }
   if (effect.blackmarket) {
@@ -3640,8 +3640,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = logEntry(s, `🕶 P${playerIdx} · 블랙마켓 구매 (무기+${effect.blackmarket}, ₵+${effect.blackmarket * 2})`);
   }
   if (effect.extort) {
-    // v0.6.5d: 협박 강화 — 렙 ratio 1.5→2배 + party 트랙 +1
-    const repGain = effect.extort * 2;
+    // v3.2: BROKER 폭주 너프 — rep×2→×1
+    const repGain = effect.extort * 1;
     const ps = [...s.players];
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + repGain, credit: (ps[playerIdx].resources.credit || 0) + effect.extort } };
     s = { ...s, players: ps };
@@ -3649,8 +3649,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     s = raiseTrack(s, playerIdx, 'party', 1, '협박');
   }
   if (effect.peek_objective || effect.sell_info || effect.peek_hand || effect.peek_full || effect.peek_news) {
-    // v0.5.18: 정보 수집/판매 → rep + data + 크레딧 (Bloc의 경우 자산 직결)
-    const amount = effect.sell_info ? 3 : 2;
+    // v3.2: 정보 행동 너프 (sell_info 3→2)
+    const amount = effect.sell_info ? 2 : 2;
     const isBloc = p.role === 'bloc';
     const ps = [...s.players];
     ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + amount, data: (ps[playerIdx].resources.data || 0) + amount, credit: (ps[playerIdx].resources.credit || 0) + (isBloc ? amount * 2 : 0) } };
@@ -3670,12 +3670,11 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     if (npcIdx >= 0) s = revealSignal(s, npcIdx, playerIdx, 1);
   }
   if (effect.broker_fee) {
-    // v0.6.5d: 중개 수수료 강화 — ★+broker_fee/3
-    const repGain = Math.max(1, Math.floor(effect.broker_fee / 3));
+    // v3.2: BROKER 폭주 너프 — ★ 보너스 제거 (credit만)
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.broker_fee, rep: (ps[playerIdx].resources.rep || 0) + repGain } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + effect.broker_fee } };
     s = { ...s, players: ps };
-    s = logEntry(s, `🤝 P${playerIdx} · 중개 수수료 ₵+${effect.broker_fee}, ★+${repGain}`);
+    s = logEntry(s, `🤝 P${playerIdx} · 중개 수수료 ₵+${effect.broker_fee}`);
     s = raiseTrack(s, playerIdx, 'party', 1, '중개');
   }
   if (effect.stop_combat || effect.cancel_card || effect.cancel_action) {
@@ -6621,3 +6620,4 @@ root.render(<App />);
 
 </body>
 </html>
+                                                                                                                                                                                   

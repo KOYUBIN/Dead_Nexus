@@ -10,6 +10,48 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [3.3] — AXIOM 활성화 + simulator 부분 포팅 (2026-05-18)
+
+### v3.3.0 — 5×5 AXIOM 활성화
+v3.2 측정에서 AXIOM 5×5 0% 발견. 시작 자원 + 카드 효과 폴백 보강:
+- BLOC_SETUP AXIOM support: `['D1']` → `['D1', 'E1']` (시작 구역 1→2)
+- `effect.zone_hack_def` (ALGO_LOCK) 폴백 추가: 방어+2 ₵+2 📡+1
+- `effect.algorithm` (SYS_TAKEOVER) 폴백 추가: ₵+3 📡+2 🎙+1
+
+### v3.3.0a — algorithm 초기 너프
+첫 측정에서 AXIOM 11×11 50% 폭주 → algorithm 효과를 ₵+5/📡+3/🎙+2 (+전 적 주가-1)에서 ₵+3/📡+2/🎙+1 (자기 보상만)으로 축소.
+
+### v3.3.1 — simulator/v0.5에 핵심 너프 포팅
+simulator/v0.5/index.html에 v3.2+v3.3 너프 일부 이식 (마일스톤/어워드 전체 시스템은 v3.4로 분리):
+- BLOC_SETUP CARBON support: `['A4']` → `['A4', 'B4']` (v3.2 패리티)
+- BLOC_SETUP AXIOM support: `['D1']` → `['D1', 'E1']` (v3.3.0 패리티)
+- `effect.extort` 너프: rep×2 → rep×1 (BROKER 너프)
+- `effect.broker_fee` 너프: ★+repGain 제거 (credit만)
+- `effect.contact` 너프: credit×2 → ×1, rep 제거
+- `effect.sell_info` 너프: 3 → 2
+
+### 검증 (200판)
+
+**11×11 정식**:
+- AXIOM 활성화 (5×5 0%→40% / 11×11 정상화 20%)
+- 대부분 통과, RIGGER 11×11 0% 경고 (다음 사이클 과제)
+
+**5×5 튜토리얼**:
+- AXIOM 0% → 40% (대성공)
+- DRIFTER 5×5 75% 폭주 재발 (5×5 작은 보드 효과, v3.4 과제)
+
+### 산출물
+- `sim-harness/core.js` — AXIOM 폴백 추가, BLOC_SETUP AXIOM 강화
+- `simulator/v0.5/index.html` — v3.2+v3.3 너프 핵심 이식
+
+### 다음 사이클 (v3.4~)
+- DRIFTER 5×5 75% 폭주 재발 너프
+- RIGGER 11×11 활성화 (bot scoring)
+- simulator에 마일스톤/어워드 전체 시스템 이식 (큰 작업)
+- 공통 core 모듈 추출
+
+---
+
 ## [3.2] — BROKER 너프 + CARBON 활성화 (2026-05-18)
 
 ### v3.2.0 — BROKER 폴백 보상 너프
@@ -1894,46 +1936,4 @@ Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대�
 - **이중 카드 시스템** 설계 완료
   - Ghost: 2카드 TOP/BOTTOM형 2카드 TOP/BOTTOM 액션, [LOSS] 소각 카드
   - Bloc: 덱빌딩+사이드웨이형 덱빌딩, 사이드웨이 플레이, 콤보 조합
-  - 교차점: Ghost-Bloc 계약 시 카드 1라운드 임대 가능
-- **6속성 마나형 6속성 시스템**
-  - ◈M MESH (해킹·데이터)
-  - ◈I IRON (물리·전투)
-  - ◈V VOLT (전기·에너지)
-  - ◈S SHADE (은신·기만)
-  - ◈B BIO (생체·치유)
-  - ◈A ASH (파괴·초토화)
-  - ◇ GRID (무색 범용)
-- **공용 속성 풀(Attribute Pool)** — 모든 플레이어 공유 자원
-- **속성 강도 시스템** — Dim / Active / Surging 3단계
-- **속성 연쇄(Chain)** — 같은 속성 2연속 시 보너스
-- **속성 상성** — MESH→SHADE, IRON→ASH 등 6개 상성 관계
-- **시그널 다이(Signal Die)** — 매 라운드 메시 상태 결정
-  - MESH UP / MESH DOWN / SURGE / BLACKOUT
-- **전투 스탯 5종** — HP / ATK / DEF / SPD / HACK
-- **상처 카드(Wound)** — Ghost HP 50% 이하 시 덱 오염
-- **스캔들 카드(Scandal)** — Bloc 피해 시 덱 오염
-
-### Changed
-- Ghost 전투 시스템을 단순 d6에서 2카드 TOP/BOTTOM 방식식 이니셔티브로 변경
-- Bloc 카드 비용 체계를 크레딧 단일 → 속성 다중 체계로 전환
-- 주식 변동 요인에 속성 풀 상태 반영
-
-### Documentation
-- `docs/05-card-system.md` 신규 작성
-- `docs/06-attribute-system.md` 신규 작성
-- 속성 풀 시뮬레이션 인터랙티브 위젯 추가
-
----
-
-## [0.1.5] — 세력·캐릭터 상세화
-
-### Added
-- **5대 블록 상세 설정**
-  - VANTA (보안·정보) — 디렉터 VERA ASHTON
-  - IRONWALL (군사·무기) — 제너럴-디렉터 MARCUS CRANE
-  - HELIX (생체공학) — 박사 DR. ELIA VOSS
-  - AXIOM (AI·스마트 시스템) — KAI MORROW
-  - CARBON (에너지·인프라) — 엘더 HARLAN VOSS
-- **각 블록 정체성** — 실존 기업 모티브 + 픽션 설정 혼합
-- **블록 간 관계도** — 5 × 5 매트릭스 (동맹·적대·중립)
--
+  - 교차점: Ghost-Bloc �
