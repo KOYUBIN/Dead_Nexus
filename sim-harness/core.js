@@ -688,6 +688,13 @@ function buildPlayer(id, kind, role, specific) {
     defeated: false,
     plannedCards: [],  // for phase 3->4
     plannedHalves: [], // top/bot 또는 main/side — 각 카드의 어느 반쪽을 쓸지
+    // v4.0: 클래스 시그니처 메커닉 데이터
+    target: null,        // BLADE: { playerIdx, round } — 이번 R 표적
+    extraMove: 0,        // DRIFTER: 이번 R 미사용 추가 이동
+    tradeMemo: 0,        // BROKER: 거래/협상 누적 카운터 (5에서 마일스톤 할인)
+    hackNodes: 0,        // CIPHER: 활성 해킹 노드 수
+    disguiseBloc: null,  // MOLE: 위장 중인 Bloc 이름 (게임 시작 시 결정)
+    suppressionTokens: { combat: 0, info: 0, diplomacy: 0 }, // v4.0.3 받은 견제 토큰
   };
 }
 
@@ -1047,6 +1054,8 @@ function reducer(state, action) {
     }
 
     case 'NEXT_ROUND': {
+      // v4.0: 클래스 시그니처 메커닉 R 시작 처리
+      state = applyClassSignatures(state);
       // v3.1: 라운드 시작 전 마일스톤 자동 청구 + 어워드 자동 펀딩
       state = tryClaimMilestones(state);
       state = tryFundAwards(state);
@@ -2397,6 +2406,194 @@ function tryFundAwards(state) {
     s = { ...s, players: ps, meta: { ...s.meta, awardsFunded: newFunded } };
     s = logEntry(s, `🥇 P${candidate.pi} [${p.specific}] · 어워드 펀딩: ${award.name} (₵-${nextCost})`);
     return s;
+  }
+  return s;
+}
+
+// v4.0: 클래스 시그니처 메커닉 — 라운드 시작 시 자동 처리
+function applyClassSignatures(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated) continue;
+    const cls = p.specific;
+
+    // BLADE: 이전 R 표적 처치 확인 + 보상 (R 시작 시 새 표적 지정 전)
+    if (cls === 'BLADE' && p.target) {
+      const tgt = s.players[p.target.playerIdx];
+      if (tgt && tgt.defeated && p.target.round < s.meta.round) {
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: (ps[pi].resources.rep || 0) + 8 }, target: null };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🗡 P${pi} BLADE · 표적 처치 보상 → ★+8`);
+      } else if (p.target.round < s.meta.round - 1) {
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: Math.max(0, (ps[pi].resources.rep || 0) - 3) }, target: null };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🗡 P${pi} BLADE · 표적 만료 → ★-3 (계약 실패)`);
+      }
+    }
+
+    // BROKER: R 시작 시 메모 +1 (5 도달 시 1회 보너스)
+    if (cls === 'BROKER') {
+      let ps = [...s.players];
+      const newMemo = (ps[pi].tradeMemo || 0) + 1;
+      ps[pi] = { ...ps[pi], tradeMemo: newMemo };
+      s = { ...s, players: ps };
+      if (newMemo === 5) {
+        ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + 5, rep: (ps[pi].resources.rep || 0) + 3 } };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🤝 P${pi} BROKER · 메모 5 도달 → ₵+5, ★+3 (외교 능숙도)`);
+      }
+    }
+
+    // DRIFTER: 매 R 추가 이동 1회 부여
+    if (cls === 'DRIFTER') {
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], extraMove: (ps[pi].extraMove || 0) + 1 };
+      s = { ...s, players: ps };
+    }
+
+    // CIPHER: Bloc HQ 인접 시 자동 해킹 노드 보너스 (R 시작)
+    if (cls === 'CIPHER' && p.position) {
+      const adj = coordsAdj(p.position).concat([p.position]);
+      const hqAdj = adj.find(c => {
+        const cell = s.map[c];
+        if (!cell || cell.owner == null) return false;
+        const owner = s.players[cell.owner];
+        if (!owner || owner.role !== 'bloc') return false;
+        const setup = (s.meta.mapSize === '11x11' ? (typeof BLOC_SETUP_11x11 !== 'undefined' ? BLOC_SETUP_11x11 : BLOC_SETUP) : BLOC_SETUP)[owner.specific];
+        return setup && setup.hq === c;
+      });
+      if (hqAdj) {
+        const ownerIdx = s.map[hqAdj].owner;
+        const bloc = s.players[ownerIdx].specific;
+        const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 1) };
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, data: (ps[pi].resources.data || 0) + 2 }, hackNodes: (ps[pi].hackNodes || 0) + 1 };
+        s = { ...s, players: ps, stocks: newStocks };
+        s = logEntry(s, `💾 P${pi} CIPHER · 해킹 노드 활성 (${bloc} HQ 인접) → ${bloc} 주가-1, 자기 📡+2`);
+      }
+    }
+
+    // BLADE: R 시작 시 표적 자동 지정 (가장 높은 평판 적)
+    if (cls === 'BLADE') {
+      const enemies = s.players
+        .map((pp, ppi) => ({ pi: ppi, pp }))
+        .filter(x => x.pi !== pi && !x.pp.defeated);
+      if (enemies.length > 0) {
+        // 가장 평판 높은 적
+        enemies.sort((a, b) => (b.pp.resources.rep || 0) - (a.pp.resources.rep || 0));
+        const target = enemies[0];
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], target: { playerIdx: target.pi, round: s.meta.round } };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🗡 P${pi} BLADE · 표적 지정 → P${target.pi} ${target.pp.specific} (처치 시 ★+8)`);
+      }
+    }
+
+    // MOLE: 게임 시작 시 위장할 Bloc 1개 선택 (R1 진입 시 1회)
+    if (cls === 'MOLE' && !p.disguiseBloc && s.meta.round === 2) {
+      // R2 시작 (NEXT_ROUND 후 R2)에 위장 결정 — 가장 약한 Bloc (주가 최저) 선택
+      const blocs = Object.entries(s.stocks).sort((a, b) => a[1] - b[1]);
+      const disguise = blocs[0][0];
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], disguiseBloc: disguise };
+      s = { ...s, players: ps };
+      s = logEntry(s, `🕷 P${pi} MOLE · 위장 시작 → ${disguise} 블록으로 위장`);
+    }
+
+    // 견제 토큰 초기화 (받은 압박은 1R만 유효)
+    if (p.suppressionTokens && (p.suppressionTokens.combat || p.suppressionTokens.info || p.suppressionTokens.diplomacy)) {
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], suppressionTokens: { combat: 0, info: 0, diplomacy: 0 } };
+      s = { ...s, players: ps };
+    }
+
+    // === Bloc 시그니처 메커닉 ===
+
+    // VANTA: Veil 토큰 — 자사 구역에 정보 은폐 토큰 +1 (최대 3)
+    if (cls === 'VANTA' && p.role === 'bloc') {
+      const ownZones = Object.entries(s.map).filter(([c, cell]) => cell.owner === pi);
+      if (ownZones.length > 0) {
+        // veil 가장 적은 자사 구역에 +1
+        ownZones.sort((a, b) => (a[1].veil || 0) - (b[1].veil || 0));
+        const [coord, cell] = ownZones[0];
+        if ((cell.veil || 0) < 3) {
+          const newMap = { ...s.map, [coord]: { ...cell, veil: (cell.veil || 0) + 1 } };
+          s = { ...s, map: newMap };
+          s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 정찰 차단)`);
+        }
+      }
+    }
+
+    // IRONWALL: Garrison 유닛 — 자사 구역 자동 방어 +1 (3개 최대)
+    if (cls === 'IRONWALL' && p.role === 'bloc') {
+      const ownZones = Object.entries(s.map).filter(([c, cell]) => cell.owner === pi);
+      if (ownZones.length > 0) {
+        ownZones.sort((a, b) => (a[1].garrison || 0) - (b[1].garrison || 0));
+        const [coord, cell] = ownZones[0];
+        if ((cell.garrison || 0) < 3) {
+          const newMap = { ...s.map, [coord]: { ...cell, garrison: (cell.garrison || 0) + 1 } };
+          s = { ...s, map: newMap };
+          s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 배치 (Ghost raid 시 자동 반격)`);
+        }
+      }
+    }
+
+    // HELIX: 클론 뱅크 — R마다 클론 토큰 +1 (자기 자원에 저장)
+    if (cls === 'HELIX' && p.role === 'bloc') {
+      const ps = [...s.players];
+      const newClones = Math.min(5, (ps[pi].cloneBank || 0) + 1);
+      ps[pi] = { ...ps[pi], cloneBank: newClones };
+      s = { ...s, players: ps };
+      // 클론 3개 시 자동 보너스 (이전 R에 받은 피해 복구 효과: HP+2)
+      if (newClones === 3 && ps[pi].hp < ps[pi].maxHp) {
+        ps[pi] = { ...ps[pi], hp: Math.min(ps[pi].maxHp, ps[pi].hp + 2), cloneBank: 2 };
+        s = { ...s, players: ps };
+        s = logEntry(s, `🧬 P${pi} HELIX · 클론 3개 → 자동 회복 HP+2`);
+      }
+    }
+
+    // AXIOM: Market Tick — R 시작 시 자동 주식 매도/매수 (algorithm 자동화)
+    if (cls === 'AXIOM' && p.role === 'bloc') {
+      // 가장 비싼 비자사 주식 1주 매도 + 가장 싼 1주 매수 (algo trade)
+      const blocs = Object.keys(s.stocks).filter(b => b !== p.specific);
+      blocs.sort((a, b) => (s.stocks[a] || 0) - (s.stocks[b] || 0));
+      if (blocs.length >= 2) {
+        const cheapest = blocs[0];
+        const expensive = blocs[blocs.length - 1];
+        const myStocks = p.stocks || {};
+        const ps = [...s.players];
+        let newRes = { ...p.resources };
+        let newStocksOwned = { ...myStocks };
+        // 비싼거 1주 매도 (있으면)
+        if ((newStocksOwned[expensive] || 0) > 0) {
+          newStocksOwned[expensive] -= 1;
+          newRes.credit = (newRes.credit || 0) + (s.stocks[expensive] || 0);
+        }
+        // 싼거 1주 매수 (자원 있으면)
+        if (newRes.credit >= (s.stocks[cheapest] || 0)) {
+          newStocksOwned[cheapest] = (newStocksOwned[cheapest] || 0) + 1;
+          newRes.credit -= (s.stocks[cheapest] || 0);
+        }
+        ps[pi] = { ...ps[pi], resources: newRes, stocks: newStocksOwned };
+        s = { ...s, players: ps };
+        s = logEntry(s, `📈 P${pi} AXIOM · 마켓 틱 (${expensive} 매도 → ${cheapest} 매수)`);
+      }
+    }
+
+    // CARBON: 전력 그리드 — 자사 구역 3개 이상이면 R마다 ₵+2
+    if (cls === 'CARBON' && p.role === 'bloc') {
+      const ownCount = Object.values(s.map).filter(c => c.owner === pi).length;
+      if (ownCount >= 3) {
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + 2 } };
+        s = { ...s, players: ps };
+        s = logEntry(s, `⚡ P${pi} CARBON · 그리드 활성 (${ownCount}구역) → ₵+2`);
+      }
+    }
   }
   return s;
 }

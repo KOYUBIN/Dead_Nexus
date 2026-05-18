@@ -10,6 +10,51 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [4.0-alpha] — 클래스 시그니처 메커닉 11종 (2026-05-18)
+
+게임성 중심 메이저 사이클. v3.x는 밸런스 안정화였고, v4.0은 **클래스 정체성/결정 깊이/창발성/상대 압박**을 시스템 차원에서 강화.
+
+### v4.0.0 — Ghost 6종 시그니처 메커닉
+각 Ghost가 고유한 게임플레이 루프를 가짐. 효과 키 너프/버프가 아닌 **시스템 추가**:
+
+- **🗡 BLADE — 계약 표적**: 매 R 시작 시 자동 표적 지정 (가장 평판 높은 적). 처치 시 ★+8, 미처치 1R 이상 ★-3
+- **🌐 CIPHER — 해킹 노드**: Bloc HQ 인접 시 자동 활성. 해당 Bloc 주가-1 + 자기 데이터+2/R
+- **🤝 BROKER — 거래 메모**: R 시작 시 메모+1, 5 도달 시 ₵+5 ★+3 1회 보너스
+- **🛠 RIGGER — 함정 풀** (인프라 추가, 효과 처리 미완): suppressionTokens 데이터 필드만 추가
+- **🌃 DRIFTER — Action Point**: R 시작 시 extraMove +1 (이동 카드 없이 추가 이동)
+- **🕷 MOLE — 정체성 슬롯**: R2 진입 시 가장 약한 Bloc 자동 위장 (disguiseBloc 필드)
+
+### v4.0.1 — Bloc 5종 시그니처 메커닉
+
+- **🥷 VANTA — Veil 토큰**: 자사 구역에 정보 은폐 토큰 자동 적치 (최대 3, Ghost 정찰 차단)
+- **⚔️ IRONWALL — Garrison 유닛**: 자사 구역에 자동 주둔 유닛 (Ghost raid 시 자동 반격, 최대 3)
+- **🧬 HELIX — 클론 뱅크**: R마다 클론 토큰+1, 3 도달 시 자동 HP+2 회복
+- **📈 AXIOM — 마켓 틱**: R 시작 시 자동 주식 매도/매수 (algorithm 자동화, 비싼 매도 → 싼 매수)
+- **⚡ CARBON — 전력 그리드**: 자사 구역 3개 이상이면 R마다 ₵+2 자동
+
+### 데이터 구조 추가 (buildPlayer)
+- `target`, `extraMove`, `tradeMemo`, `hackNodes`, `disguiseBloc`, `suppressionTokens`, `cloneBank`
+
+### 200판 검증
+
+**11×11 정식**:
+- BLADE 41% (시그니처 표적 효과), DRIFTER 44% (AP 효과)
+- BROKER 35% (메모 카운터), RIGGER 29% (이전 0%→29% 회복), MOLE 31%
+- AXIOM/VANTA/CARBON 15-20%
+- CIPHER/IRONWALL/HELIX 0% 경고 (Bloc 시그니처 추가 강화 필요)
+
+**5×5 튜토리얼**:
+- AXIOM 35% (마켓 틱 효과), BROKER 29%, 모든 11개 클래스 활성
+- DRIFTER 68.8% 폭주 재발 (AP가 5×5에서 너무 강함, v4.1 너프 후보)
+
+### 다음 사이클 (v4.0.2~4)
+- 결정 깊이 — 마일스톤/어워드/협상 모달 (P0 명시적 결정)
+- 상대 압박 — 견제 토큰 시스템 (무력/정보/외교)
+- 창발성 — 하이라이트 12→30 확장
+- DRIFTER 5×5 AP 너프, Bloc 시그니처 강화 (IRONWALL/HELIX/CIPHER)
+
+---
+
 ## [3.3] — AXIOM 활성화 + simulator 부분 포팅 (2026-05-18)
 
 ### v3.3.0 — 5×5 AXIOM 활성화
@@ -1889,51 +1934,4 @@ Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대�
   - Bloc 6종 M&A 카드, Ghost 2종 내부자 카드
 - **레거시 챕터 3 "Martial Night"** — 공권력 트랙 10 해금
   - 병영 구역·지하 저항소 타일, 검문소 시스템
-  - 정부 계약 이벤트, 현상수배 영구화 옵션
-- **레거시 챕터 4 "Price of Splice"** — TL4 또는 스플라이스 3개 해금
-  - **사이버사이코시스 트랙** (0~10) 도입, Psychosis 시 NPC 전환
-  - 스플라이스 강화 카드 6종, HELIX 특수 이벤트
-  - "PURIST" 영구 스티커 (스플라이스 거부 엔딩 조건)
-- **레거시 챕터 5 "Mesh Ghost"** — CIPHER TL5 또는 메시 3침입 해금
-  - **메시 확장 맵 영구 공개**
-  - AI 의식체 NPC **SIGNAL** 등장
-  - ASCEND 카드 (Ghost 의식 업로드, 영구 육신 포기)
-- **레거시 챕터 6 "Bloc Acquisition"** — Bloc 1곳 완전 흡수 해금
-  - "ACQUIRED" 블록 NPC화 규칙, 전직 직원 Ghost 고용 풀
-  - VOSS 가문 혈연 공개 (HELIX–CARBON 연결)
-  - 남은 블록 수장별 특수 능력 자동 부여
-- **레거시 챕터 7 "Heart of the City"** — 넥서스 3라운드 장악 해금
-  - 블록 5수장 **보스 카드** (HP 20, 블록 고유 능력)
-  - 넥서스 타워 3구획 (로비/집행부/의장실) 전장화
-  - **기여 트랙 4종** (지배/혁명/평의회/공멸) — 엔딩 분기 축적
-- **레거시 챕터 8 "Zero Day"** — 최종 챕터, 챕터 7 완료 시 자동 해금
-  - 엔딩 4종 카드 (CORPORATE ETERNAL / STREET RISING / NEXUS REBORN / DEAD NEXUS)
-  - 플레이어 최후 선택 시트, SIGNAL 최종 메시지
-  - 박스 봉인 의례, 미개봉 엔딩 3장 영구 보관
-  - 후속 확장 해금 경로 (After Zero Day / 폐허 생존)
-
-### Documentation
-- `legacy/chapter-02-insider-game.md` 신규
-- `legacy/chapter-03-martial-night.md` 신규
-- `legacy/chapter-04-price-of-splice.md` 신규
-- `legacy/chapter-05-mesh-ghost.md` 신규
-- `legacy/chapter-06-bloc-acquisition.md` 신규
-- `legacy/chapter-07-heart-of-city.md` 신규
-- `legacy/chapter-08-zero-day.md` 신규
-- 각 챕터: 오프닝 내러티브 → 봉투 내용물 → 영구/임시 효과 → 플레이어 선택지 → 레거시 기록 → 다음 챕터 힌트 → 교차 참조
-
-### Changed
-- 엔딩 조건을 **기여 트랙 축적 모델**로 전환 (기존: 단일 수치 기준)
-  - 블록 지배 / 혁명 / 평의회 재건 / 공멸 4트랙 동시 추적
-- Bloc 수장 NPC가 챕터 7에서 직접 전투 가능한 보스로 승격
-- "사이버사이코시스"를 정식 시스템화 (기존: 단순 위험 태그)
-
----
-
-## [0.2.0] — 핵심 시스템 확정
-
-### Added
-- **이중 카드 시스템** 설계 완료
-  - Ghost: 2카드 TOP/BOTTOM형 2카드 TOP/BOTTOM 액션, [LOSS] 소각 카드
-  - Bloc: 덱빌딩+사이드웨이형 덱빌딩, 사이드웨이 플레이, 콤보 조합
-  - 교차점: Ghost-Bloc �
+  - 정부 계약 이벤트, 현상수배
