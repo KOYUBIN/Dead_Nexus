@@ -437,6 +437,9 @@ const PHASE_EN = ['MARKET', 'NEWS', 'PLAN', 'EXECUTE', 'INCOME', 'R&D', 'ROUND']
 // ============================================================================
 
 const d6 = () => Math.floor(Math.random() * 6) + 1;
+// v5.0.0: 유로식 결정론적 레이드 보너스 — 주사위 운 대신 무기 자원 투입
+// 무기 보유량 기반 (소모 없음). 자원 많을수록 확실한 성공 → 결정의 깊이
+const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3));
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
 
@@ -839,7 +842,8 @@ function reducer(state, action) {
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
       let s = { ...state };
-      const raidRoll = d6();
+      const me0 = s.players[0];
+      const raidRoll = raidBonus(me0);  // v5.0.0: 결정론적 (무기 자원 기반)
       const raidTotal = raidRoll + pr.atk;
       const me = s.players[0];
       const cell = s.map[pr.coord];
@@ -1722,7 +1726,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const blocIdx = cellThere.owner;
           const bloc = s.players[blocIdx].specific;
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
-          const threshold = 5;
+          // v5.0.0: 유로식 — 기본 5 + 방어도(요새/주둔/veil). 무기 자원 투입 필요
+          const threshold = 5 + (cellThere.fortified || 0) + (cellThere.garrison || 0) + (cellThere.veil || 0);
           if (playerIdx === 0) {
             // 결정 대기 상태 저장 — UI 모달이 떠서 확률·보상 보여주고 결정 받음
             s = {
@@ -1740,8 +1745,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
             };
             s.meta._didAutoRaid = true; // 보너스 드래프트 스킵 (레이드 결정 우선)
           } else {
-            // 봇: 기존 자동 로직
-            const raidRoll = d6();
+            // 봇: v5.0.0 결정론적 레이드 (무기 자원 기반)
+            const raidRoll = raidBonus(pAfterMove);
             const raidTotal = raidRoll + pAfterMove.stats.atk;
             if (raidTotal >= threshold) {
               const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
@@ -1865,9 +1870,9 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const blocIdx = atCell.owner;
     const bloc = s.players[blocIdx].specific;
     const zName = ZONE_TYPES[atCell.zone]?.name || '';
-    const raidRoll = d6();
+    const raidRoll = raidBonus(curP2);  // v5.0.0: 결정론적
     const raidTotal = raidRoll + curP2.stats.atk;
-    const threshold = 5;
+    const threshold = 5 + (atCell.fortified || 0) + (atCell.garrison || 0) + (atCell.veil || 0);
     if (raidTotal >= threshold) {
       // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
       const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
@@ -2492,7 +2497,8 @@ function applyClassSignatures(state) {
     }
 
     // DRIFTER: 매 R 추가 이동 1회 부여
-    if (cls === 'DRIFTER') {
+    if (cls === 'DRIFTER' && s.meta.round % 2 === 1) {
+      // v5.0.0a: 격R 제한 (결정론 레이드와 시너지로 폭주 → AP 빈도 절반)
       const ps = [...s.players];
       ps[pi] = { ...ps[pi], extraMove: (ps[pi].extraMove || 0) + 1 };
       s = { ...s, players: ps };
