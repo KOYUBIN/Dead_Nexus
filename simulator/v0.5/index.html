@@ -794,6 +794,8 @@ const PHASE_EN = ['MARKET', 'NEWS', 'PLAN', 'EXECUTE', 'INCOME', 'R&D', 'ROUND']
 // ============================================================================
 
 const d6 = () => Math.floor(Math.random() * 6) + 1;
+// v5.2.0: 결정론적 레이드 보너스 (sim-harness/core.js와 동일) — 무기 자원 기반, 운 0%
+const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3));
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
 
@@ -2044,8 +2046,8 @@ function reducer(state, action) {
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
       let s = { ...state };
-      const raidRoll = d6();
       const me = s.players[0];
+      const raidRoll = raidBonus(me);  // v5.2.0: 결정론적 (무기 자원 기반)
       // 상성 보너스: Ghost 클래스가 타겟 Bloc 카운터면 atk +1
       const counterBonus = countersBloc(me.specific, pr.bloc) ? 1 : 0;
       const raidTotal = raidRoll + pr.atk + counterBonus;
@@ -3389,8 +3391,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
             };
             s.meta._didAutoRaid = true;
           } else {
-            // 봇: 기존 자동 로직 + 상성 보너스 + 트랙 보너스(v0.6.3c)
-            const raidRoll = d6();
+            // 봇: v5.2.0 결정론적 (무기 자원 기반) + 상성 + 트랙
+            const raidRoll = raidBonus(pAfterMove);
             const counterBonus = countersBloc(pAfterMove.specific, bloc) ? 1 : 0;
             const tBonus = trackBonus(pAfterMove, 'atk');
             const raidTotal = raidRoll + pAfterMove.stats.atk + counterBonus + tBonus;
@@ -3535,8 +3537,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const blocIdx = atCell.owner;
     const bloc = s.players[blocIdx].specific;
     const zName = ZONE_TYPES[atCell.zone]?.name || '';
-    const raidRoll = d6();
-    const raidTotal = raidRoll + curP2.stats.atk + trackBonus(curP2, 'atk');  // v0.6.3c
+    const raidRoll = raidBonus(curP2);  // v5.2.0: 결정론적
+    const raidTotal = raidRoll + curP2.stats.atk + trackBonus(curP2, 'atk');
     const threshold = 5;
     if (raidTotal >= threshold) {
       // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
@@ -6620,4 +6622,4 @@ root.render(<App />);
 
 </body>
 </html>
-                                                                                                                                                                                   
+                                                                                                   
