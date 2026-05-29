@@ -1065,6 +1065,8 @@ function reducer(state, action) {
       // v3.1: 라운드 시작 전 마일스톤 자동 청구 + 어워드 자동 펀딩
       state = tryClaimMilestones(state);
       state = tryFundAwards(state);
+      // v5.0+: 유로 메커닉 hook (euro_mechanics.js, 없으면 무시)
+      if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
       // v3.1: 마일스톤 3개 모두 청구되어 final trigger 발동 시, 한 라운드 더 진행 후 종료
       if (state.meta.finalRoundTrigger && state.meta.round >= state.meta.finalRoundTrigger) {
         return computeFinalScore(state);
@@ -2663,6 +2665,35 @@ function applyClassSignatures(state) {
 }
 
 // v3.1: 점수 합산 후 승자 결정 (maxRounds 도달 또는 final round trigger 시)
+// v5.0.2: 네트워크 점수 — 플레이어가 소유한 구역의 인접 연결 컴포넌트 중 최대 크기
+// Ghost: 방문한 구역 연결 / Bloc: 소유 구역 연결 (브라스 링크 / 뉴클리엄 철도)
+function computeNetworkScore(state, pi) {
+  const owned = new Set(Object.entries(state.map).filter(([c, cell]) => cell.owner === pi).map(([c]) => c));
+  if (owned.size === 0) return 0;
+  // 연결 컴포넌트(BFS)로 최대 체인 크기 계산
+  const visited = new Set();
+  let maxChain = 0;
+  for (const start of owned) {
+    if (visited.has(start)) continue;
+    let size = 0;
+    const queue = [start];
+    visited.add(start);
+    while (queue.length) {
+      const cur = queue.shift();
+      size++;
+      for (const adj of coordsAdj(cur)) {
+        if (owned.has(adj) && !visited.has(adj)) {
+          visited.add(adj);
+          queue.push(adj);
+        }
+      }
+    }
+    if (size > maxChain) maxChain = size;
+  }
+  // v5.0.2b: 네트워크 점수 보류 — 비대칭(Ghost 구역 미소유)과 충돌. v5.1 재설계
+  return 0;
+}
+
 function computeFinalScore(state) {
   const scores = state.players.map((p, pi) => {
     let breakdown = {};
@@ -2694,7 +2725,10 @@ function computeFinalScore(state) {
       else if (ranked[1]?.pi === pi) awardBonus += AWARD_POINTS[1];
     }
     if (awardBonus > 0) breakdown.awards = `+${awardBonus}`;
-    const total = base + milestoneBonus + awardBonus;
+    // v5.0.2: 네트워크 점수 — 인접 연결된 자사 구역 최대 체인 (브라스 링크)
+    const networkBonus = computeNetworkScore(state, pi);
+    if (networkBonus > 0) breakdown.network = `+${networkBonus}`;
+    const total = base + milestoneBonus + awardBonus + networkBonus;
     return { pi, role: p.role, specific: p.specific, total, breakdown, defeated: p.defeated };
   });
   scores.forEach(sc => { if (sc.defeated) sc.total = Math.floor(sc.total / 2); });
@@ -2766,7 +2800,6 @@ function scoreGhostCard(state, pIdx, cid) {
     if (h.stat_boost) score += h.stat_boost * 2;
     if (h.ambush) score += 6;
     if (h.copy_bloc_card) score += 8;
-    if (h.reward) score += h.reward;
     if (h.draw_quest || h.quest_two) score += 5;
     if (h.cargo_haul || h.supply_drop || h.haul) score += 4;
     if (h.deploy_trap || h.trap) score += 3;
@@ -2812,8 +2845,5 @@ function scoreBlocCard(state, pIdx, cid) {
 
   // Reward aggressive cards for attackers
   if (c.main?.deploy_op || c.main?.heat) score += 10;
-
   return score + Math.random() * 2;
 }
-
-// ============================================================================

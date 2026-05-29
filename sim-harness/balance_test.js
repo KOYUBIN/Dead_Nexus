@@ -17,6 +17,10 @@ global.localStorage = {
 
 const fs = require('fs');
 const core = fs.readFileSync(__dirname + '/core.js', 'utf8');
+// v5.0+: 유로 메커닉 분리 모듈 (core.js 동결 + 작은 파일에서 새 기능 추가)
+const euro = fs.existsSync(__dirname + '/euro_mechanics.js')
+  ? fs.readFileSync(__dirname + '/euro_mechanics.js', 'utf8')
+  : '';
 const harness = fs.readFileSync(__dirname + '/harness_body.js', 'utf8');
 
 // 인자 파싱
@@ -48,7 +52,7 @@ const t = THRESHOLDS[MAP_SIZE] || THRESHOLDS['11x11'];
 
 // harness_body.js에서 batchRun을 활용하기 위해 maxRounds + mapSize 주입 필요
 // 하지만 batchRun은 직접 호출 가능하므로 그대로 사용
-const code = core + '\n\n' + harness.replace(
+const code = core + '\n\n' + euro + '\n\n' + harness.replace(
   /^const N = parseInt\(process\.argv\[2\]\) \|\| 50;[\s\S]*$/m,
   `// 테스트 모드 — 직접 호출\n`
 );
