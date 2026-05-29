@@ -439,7 +439,7 @@ const PHASE_EN = ['MARKET', 'NEWS', 'PLAN', 'EXECUTE', 'INCOME', 'R&D', 'ROUND']
 const d6 = () => Math.floor(Math.random() * 6) + 1;
 // v5.0.0: 유로식 결정론적 레이드 보너스 — 주사위 운 대신 무기 자원 투입
 // 무기 보유량 기반 (소모 없음). 자원 많을수록 확실한 성공 → 결정의 깊이
-const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3));
+const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3)) + (typeof euro_gearBonus === 'function' ? euro_gearBonus(p) : 0);
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
 
