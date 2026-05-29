@@ -1069,12 +1069,16 @@ function reducer(state, action) {
       if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
       // v3.1: 마일스톤 3개 모두 청구되어 final trigger 발동 시, 한 라운드 더 진행 후 종료
       if (state.meta.finalRoundTrigger && state.meta.round >= state.meta.finalRoundTrigger) {
-        return computeFinalScore(state);
+        let fs = computeFinalScore(state);
+        if (typeof euro_finalBonus_v51 === 'function') fs = euro_finalBonus_v51(fs);
+        return fs;
       }
       const newRound = state.meta.round + 1;
       const maxR = state.meta.mapSize === '11x11' ? 10 : 7;
       if (newRound > maxR) {
-        return computeFinalScore(state);
+        let fs = computeFinalScore(state);
+        if (typeof euro_finalBonus_v51 === 'function') fs = euro_finalBonus_v51(fs);
+        return fs;
       }
       const nd = rollSignalDie();
       // === 손패 리필 + 개인 풀 감쇠 ===

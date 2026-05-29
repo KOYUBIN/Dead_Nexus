@@ -136,12 +136,8 @@ function euro_networkIncome(state) {
   return s;
 }
 
-// v5.0+: 통합 유로 메커닉 hook — NEXT_ROUND마다 호출
-// core.js reducer NEXT_ROUND case에서 applySuppression 다음에 호출하도록 추가
-function euro_applyAll(state) {
-  let s = state;
-  s = euro_tryConvertResources(s);
-  s = euro_marketCycle(s);
-  s = euro_networkIncome(s);
-  return s;
-}
+// ============================================================================
+// v5.1: 자원 변환 점수 통합 + 하이라이트 30종 + DRIFTER 5×5 너프
+// ============================================================================
+
+// v5.1.0a: DRIFTER 5×5 너프 — 매 R 이동 시 평판 -1 (작�
