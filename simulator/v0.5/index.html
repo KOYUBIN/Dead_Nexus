@@ -424,6 +424,7 @@
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+<script src="euro_module.js"></script>
 
 <script type="text/babel" data-presets="react">
 'use strict';
@@ -795,7 +796,8 @@ const PHASE_EN = ['MARKET', 'NEWS', 'PLAN', 'EXECUTE', 'INCOME', 'R&D', 'ROUND']
 
 const d6 = () => Math.floor(Math.random() * 6) + 1;
 // v5.2.0: 결정론적 레이드 보너스 (sim-harness/core.js와 동일) — 무기 자원 기반, 운 0%
-const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3));
+// v5.2.1: euro_gearBonus 통합 (자원변환 장비가 raid 보너스로 작동)
+const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3)) + (typeof euro_gearBonus === 'function' ? euro_gearBonus(p) : 0);
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
 
@@ -2426,6 +2428,8 @@ function reducer(state, action) {
     }
 
     case 'NEXT_ROUND': {
+      // v5.2.1: 유로 메커닉 hook (euro_module.js, 없으면 무시)
+      if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
       const newRound = state.meta.round + 1;
       // v0.8.3: 맵별 maxRounds — 5×5: 8, 11×11: 12
       const maxR = state.meta.mapSize === '11x11' ? 12 : 8;
@@ -6607,7 +6611,6 @@ function App() {
     }
   }, [state?.meta?.gameOver]);
 
-  if (!state) {
     return <SetupScreen onStart={startGame} />;
   }
 
@@ -6622,4 +6625,3 @@ root.render(<App />);
 
 </body>
 </html>
-                                                                                                   
