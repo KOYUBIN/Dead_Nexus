@@ -10,6 +10,52 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
+## [6.0.0] — 시뮬레이터 전반 리팩토링 + RIGGER 시그니처 + 결정 모달 UI (2026-06-19)
+
+opus 4.8 세션. sim-harness 6대 항목 작업 + 측정. core.js 동결 유지(마운트 잘림 회피) — 신규 로직은 euro_mechanics.js/balance_test.js/harness_body.js 소형 모듈에서.
+
+### Item 1 — 11×11 / 5×5 모드 인터페이스 통합
+- `euro_mechanics.js`에 `MODE_CONFIG` 단일 소스 신규: maxRounds, safetyRounds, suppressionProb, 진영/클래스 허용폭을 한 곳에 정의 + `euro_mode(mapSize)` 헬퍼
+- 흩어져 있던 `mapSize === '5x5'` 분기(견제 확률, balance_test 임계값)를 MODE_CONFIG에서 파생하도록 통합
+
+### Item 2 — 견제 토큰 3종 가독성
+- `SUPPRESSION_SPEC` 단일 명세 도입: 무력(combat→★평판), 정보(info→📡데이터), 외교(diplomacy→🎙인플루언스). 부여(euro)·소비(core 2562~) 의미 공유
+- 로그를 영문 키 대신 한글(무력/정보/외교)로 표기. 발동 4단계(actor/target/type/impl) 함수 분리 유지
+
+### Item 3 — 200판 출력 포맷 개선
+- `balance_test.js` 전면 개편: 진영 그룹별(Ghost/Bloc) 클래스 표 + 승률 막대 + 시그니처 효율 + 잔여 이슈(위반/경고) + 다음 사이클 추천
+- `both` 모드 추가 (`node balance_test.js 200 both`): 11×11 + 5×5 연속 측정 + 종합
+
+### Item 4 — 시그니처/하이라이트 발동 트레이스 로그
+- `--trace [mapSize] [role] [class] [seed]`: 한 판 시드 고정 후 라운드별 발동 타임라인(시그니처/하이라이트/견제) 출력
+- `EURO_TRACE.timeline` + `EURO_TRACE_DETAIL` 플래그 (logEntry 오버라이드에서 기록)
+- `--seed=N` 결정론 옵션(Mulberry32): 행동 보존 리팩토링의 회귀 동일성 검증용
+
+### Item 5 — 밸런스 분석/수정
+- **분석 결과(N=600)**: 원 과제가 지목한 이슈는 이미 해소됨 — CARBON 11×11 0%→30%(v5.2.2 버프), CIPHER 5×5 0%→44%(v5.2.3), 5×5 견제 너프 완료(발동 1.1회/판). N=200에서 보이던 "DRIFTER 75%/MOLE 0% 폭주"는 표본 노이즈로 확인 (N=600에선 모두 임계 내)
+- **유일한 구조적 약점 수정**: RIGGER는 클래스 중 유일하게 시그니처 부재 + 양 모드 최저(11×11 20%/5×5 12%). `euro_riggerSignature` 신규 — 자동 함정망(매R ⚙+1, 함정 3개마다 ★+2). 측정: RIGGER 11×11 38%·5×5 34%로 정상화, 부수효과로 11×11 Ghost 진영 42%→51% 개선
+- EURO_SIG_PATTERNS에 RIGGER 추가 (트레이스 집계 반영)
+- 노이즈 과적합 회피: AXIOM/BROKER/DRIFTER는 N=600 기준 임계 내라 추가 너프 보류(관찰)
+
+### Item 6 — 결정 모달 골격
+- **harness**: `DECISION_TEMPLATES`(raid_reward/bloc_invest) + `euro_requestDecision/resolveDecision/autoResolveDecision` + `euro_addRes`. 기본 inert(라이브 트리거 없음, 밸런스 불변), 헤드리스 안전장치 훅(harness_body.js)로 대기 결정 자동 해소. `test_decisions.js` 자기검증 11/11 통과
+- **web simulator/v0.5**: euro_module.js의 기존 결정 큐(v4.0.2 마일스톤/어워드)에 React 모달 UI 연결 — `RESOLVE_DECISION` 리듀서 케이스 + pendingDecisions 모달 JSX (index.html). 노드 스모크테스트로 큐 populate→resolve 파이프라인 확인
+
+### 200판 측정 (최종)
+- **11×11**: Ghost 48.5% / Bloc 51.5% · 평균 10R · 클래스 대부분 임계 내(BROKER 64.7%는 17표본 노이즈, N=600서 54%)
+- **5×5**: Ghost 51.5% / Bloc 48.5% · 평균 7R · (AXIOM 60%는 20표본 노이즈, N=600서 43%)
+- 진영 균형 양 모드 모두 안정. N=600 반복 측정 시 전 클래스 임계 내
+
+### 도구/워크플로
+- `package.json` 6.0.0: test:both, test:seed, test:decisions, trace 스크립트 추가
+- 마운트 동기화 잘림 이슈 재확인 — 대형 파일은 Edit 대신 /tmp 빌드 후 cp + md5 검증 방식 사용
+
+### 미적용 (다음 사이클)
+- 결정 모달 라이브 트리거(harness raid_reward 등) 실연결 = "결정 깊이" 작업, 재측정 필요
+- web simulator에 클래스 시그니처/MODE_CONFIG 포팅 (현재 web는 별도 밸런스 레짐)
+
+---
+
 ## [5.2.1] — simulator/v0.5에 유로 메커닉 모듈 분할 (2026-05-28)
 
 sim-harness처럼 simulator도 외부 모듈로 분할 → 큰 HTML 파일 잘림 문제 해결.
@@ -2258,4 +2304,81 @@ Bloc 피드백 "할수있는 행동들이 너무적네? 이동도안되네" 대�
 - **독자 용어 체계** — 저작권 회피를 위한 완전 재구성
   - Bloc (기업)
   - Ghost (독립 플레이어)
-  - The Mesh (�
+  - The Mesh (메시 — 구 넷스페이스)
+  - Veil (베일 — 구 ICE)
+  - Splice (스플라이스 — 구 사이버웨어)
+  - Cortex Wire (코어텍스 와이어 — 구 신경 임플란트)
+  - Rep (렙 — 평판)
+
+### Changed
+- 모든 카드·규칙 텍스트를 신 용어로 일괄 교체
+- 파일·문서 전체에서 동명 라이선스 게임 용어 제거
+
+### Removed
+- 동명 외부 IP, Cyberware, Night City, ICE, MegaCorp 등 저작권 위험 용어
+
+---
+
+## [0.1.2] — 액션카드 & 퀘스트 시스템
+
+### Added
+- **공용 액션카드 3장** — 거점 구축, 자원 거래, 긴급 탈출
+- **클래스별 전용 카드 6장 × 6클래스 = 36장**
+- **맵 이벤트 토큰 시스템**
+  - 즉발 이벤트 40%
+  - 퀘스트 35%
+  - 발견 15%
+  - 공백 10%
+- **퀘스트 유형 8종** — 배달·암살·해킹·협상·탐사·레이드·생존·밀수
+- **전투 스탯 시스템 도입** — HP / ATK / DEF / SPD / HACK
+
+---
+
+## [0.1.1] — 역할·승리 조건 이원화
+
+### Added
+- **Bloc / Ghost 이원 선택 시스템**
+- **Bloc 승리 조건**: 주식 자산 60 OR 타 블록 2곳 인수
+- **Ghost 승리 조건**: 렙 30 + 블록 레이드 2회 성공
+- **레거시 캠페인 구조** — 8챕터 "ASH & SIGNAL"
+- **봉투 해금 시스템** — 조건 달성 시 봉투 개봉
+- **공권력 트랙** — 0~10 단계, 계엄 선포 조건
+
+---
+
+## [0.1.0] — 초기 프로토타입
+
+### Added
+- 게임 초기 컨셉 — 4인 전략 현대 범죄 보드게임
+- 자원 4종 (자금·조직원·정보·무기)
+- 도시 구역 타일 시스템 (6×6 = 36구역)
+- 기본 턴 구조 5단계 (사건·계획·실행·수익·유지)
+- 레거시 챕터 7개 봉투 시스템
+- 최초 규칙서 초안 작성
+
+### Context
+- 프로젝트 최초 발상
+- 4인 현대 범죄 조직 전쟁 컨셉으로 시작
+- 이후 사이버펑크 기업전쟁으로 방향 전환
+
+---
+
+## 버전 규칙
+
+| 형태 | 조건 |
+|---|---|
+| **MAJOR** (1.0.0) | 게임 전체 구조 변경, 하위 호환 깨짐 |
+| **MINOR** (0.X.0) | 핵심 시스템 추가, 기존 규칙 중대 변경 |
+| **PATCH** (0.0.X) | 카드 텍스트 수정, 밸런스 조정, 오타 |
+
+---
+
+## 변경 유형
+
+- `Added` — 새로 추가된 기능·규칙·카드
+- `Changed` — 기존 내용 변경
+- `Deprecated` — 곧 제거될 예정 (다음 MAJOR에서)
+- `Removed` — 삭제된 내용
+- `Fixed` — 오류·버그 수정
+- `Security` — 보안·저작권 관련 수정
+- `Documentation` — 문서 관련 변경만 (규칙 변경 없음)

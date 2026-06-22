@@ -65,3 +65,6 @@ prototypes/print-and-play/**/*.pdf
 .coverage
 coverage/
 *.lcov
+
+# Local credentials — never commit
+PAT/

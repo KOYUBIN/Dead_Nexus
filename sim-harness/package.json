@@ -1,12 +1,16 @@
 {
   "name": "deadnexus-sim-harness",
-  "version": "2.1.0",
+  "version": "6.0.0",
   "description": "DEAD NEXUS 헤드리스 시뮬 + 밸런스 회귀 테스트 + narrative 생성기",
   "scripts": {
     "test": "node balance_test.js 200 11x11",
     "test:strict": "node balance_test.js 200 11x11 --strict",
     "test:5x5": "node balance_test.js 200 5x5",
-    "test:full": "node balance_test.js 500 11x11",
+    "test:both": "node balance_test.js 200 both",
+    "test:full": "node balance_test.js 600 11x11",
+    "test:seed": "node balance_test.js 200 11x11 --seed=42",
+    "test:decisions": "node test_decisions.js",
+    "trace": "node balance_test.js --trace 11x11 bloc AXIOM 42",
     "sim": "node run.js 100",
     "narrative": "node narrative_trace.js ghost BLADE 11x11 42"
   },

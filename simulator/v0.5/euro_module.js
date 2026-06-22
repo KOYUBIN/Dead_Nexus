@@ -145,6 +145,269 @@ function euro_checkHighlights(state) {
   return s;
 }
 
+// ============================================================================
+// v4.0.2 (모듈 v5.3.2): 결정 모달 골격 — P0 결정 큐
+// state.meta.pendingDecisions[] 에 P0가 결정해야 할 사항 누적.
+// React 모달은 v5.3.3에서 이 배열을 읽어 표시 + euro_resolvePendingDecision 호출.
+// 봇(pi > 0)은 기존 휴리스틱으로 자동 결정 유지.
+// ============================================================================
+
+// 마일스톤 6종 (sim-harness/core.js MILESTONES_TM 포팅)
+const EURO_MILESTONES_TM = {
+  city_conqueror: {
+    name: '🏙 도시 정복자', desc: '5구역 동시 점유 (Bloc)',
+    check: (p, s, pIdx) => p.role === 'bloc' && Object.values(s.map).filter(c => c.owner === pIdx).length >= 5,
+  },
+  bounty_hunter: {
+    name: '🎯 현상금 사냥꾼', desc: 'Bloc 평판 ≥ 8',
+    check: (p, s) => p.role === 'bloc' && (p.resources.rep || 0) >= 8,
+  },
+  shadow_blade: {
+    name: '🗡 그림자 칼날', desc: 'Ghost 평판 12 + 레이드 2회',
+    check: (p, s, pIdx) => p.role === 'ghost' && (p.resources.rep || 0) >= 12 && (s.meta.raidsThisGame?.[pIdx] || 0) >= 2,
+  },
+  veteran: {
+    name: '🌐 베테랑', desc: 'TL 4 + 자원 풀 합 5+',
+    check: (p, s) => (p.tl || 1) >= 4 && ['M','I','V','S','B','A','GRID'].reduce((a, k) => a + (p.pool?.[k] || 0), 0) >= 5,
+  },
+  data_god: {
+    name: '💾 데이터 신', desc: 'TL 3 + data 8+',
+    check: (p, s) => (p.tl || 1) >= 3 && (p.resources.data || 0) >= 8,
+  },
+  diplomat: {
+    name: '🤝 외교가', desc: 'influence 5+ (Bloc) / ₵20+ (Ghost)',
+    check: (p, s) => p.role === 'bloc' ? (p.resources.influence || 0) >= 5 : (p.resources.credit || 0) >= 20,
+  },
+};
+const EURO_MILESTONE_COST = 5;
+const EURO_MILESTONE_POINTS = 5;
+const EURO_MAX_MILESTONES = 3;
+
+// 어워드 5종 (sim-harness/core.js AWARDS_TM 포팅)
+const EURO_AWARDS_TM = {
+  warrior: {
+    name: '🔥 전사', desc: '레이드 수 + 무기 자원',
+    measure: (p, s, pIdx) => (s.meta.raidsThisGame?.[pIdx] || 0) * 3 + (p.resources.weapons || 0),
+  },
+  asset_lord: {
+    name: '💰 자산가', desc: '총 자산 (₵+주식 가치)',
+    measure: (p, s) => {
+      if (p.role === 'bloc' && typeof assetValue === 'function') return assetValue(p, s.stocks, s);
+      return (p.resources.credit || 0) + Object.entries(p.stocks || {}).reduce((a, [b, n]) => a + n * (s.stocks[b] || 1), 0);
+    },
+  },
+  explorer: {
+    name: '🌃 탐험가', desc: '방문 구역 수 + 부품 자원',
+    measure: (p, s, pIdx) => (s.meta.zonesVisited?.[pIdx]?.size || 0) * 2 + (p.resources.parts || 0),
+  },
+  info_king: {
+    name: '📡 정보왕', desc: 'data + influence×2 + TL×2',
+    measure: (p, s) => (p.resources.data || 0) + (p.resources.influence || 0) * 2 + (p.tl || 1) * 2,
+  },
+  street_legend: {
+    name: '⭐ 거리 명성', desc: '평판 (Ghost) / 평판+influence×2 (Bloc)',
+    measure: (p, s) => p.role === 'ghost' ? (p.resources.rep || 0) : ((p.resources.rep || 0) + (p.resources.influence || 0) * 2),
+  },
+};
+const EURO_AWARD_COSTS = [8, 14, 20];
+const EURO_AWARD_COST_LABELS = ['8₵ 펀딩 (1순위)', '14₵ 펀딩 (2순위)', '20₵ 펀딩 (3순위)'];
+const EURO_MAX_AWARDS = 3;
+
+// 게임 시작 시 풀 시드 (마일스톤 6→3종, 어워드 5→3종 랜덤)
+function euro_initTMPools(state) {
+  if (state.meta.euroMilestonesPool && state.meta.euroAwardsPool) return state;
+  const pick3 = (keys) => [...keys].sort(() => Math.random() - 0.5).slice(0, 3);
+  return {
+    ...state,
+    meta: {
+      ...state.meta,
+      euroMilestonesPool: state.meta.euroMilestonesPool || pick3(Object.keys(EURO_MILESTONES_TM)),
+      euroAwardsPool: state.meta.euroAwardsPool || pick3(Object.keys(EURO_AWARDS_TM)),
+      euroMilestonesClaimed: state.meta.euroMilestonesClaimed || {},
+      euroMilestonesSkipped: state.meta.euroMilestonesSkipped || {},
+      euroAwardsFunded: state.meta.euroAwardsFunded || [],
+      pendingDecisions: state.meta.pendingDecisions || [],
+    },
+  };
+}
+
+// 결정 큐에 추가 — P0(playerIdx 0)만, 동일 id 중복 방지
+function euro_addPendingDecision(state, decision) {
+  if (!decision || decision.playerIdx !== 0) return state; // P0만 큐 대상
+  const pending = state.meta.pendingDecisions || [];
+  if (pending.some(d => d.id === decision.id)) return state;
+  return { ...state, meta: { ...state.meta, pendingDecisions: [...pending, decision] } };
+}
+
+// 사용자 응답 처리 — React 모달(v5.3.3)이 호출
+function euro_resolvePendingDecision(state, decisionId, choice) {
+  const pending = state.meta.pendingDecisions || [];
+  const decision = pending.find(d => d.id === decisionId);
+  if (!decision) return state;
+  let s = { ...state, meta: { ...state.meta, pendingDecisions: pending.filter(d => d.id !== decisionId) } };
+  if (decision.type === 'milestone') s = euro_applyMilestoneChoice(s, decision, choice);
+  else if (decision.type === 'award') s = euro_applyAwardChoice(s, decision, choice);
+  // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
+  return s;
+}
+
+function euro_applyMilestoneChoice(state, decision, choice) {
+  const key = decision.context.milestoneKey;
+  let s = state;
+  if (choice === 'claim') {
+    const p = s.players[0];
+    if ((p.resources.credit || 0) < EURO_MILESTONE_COST || s.meta.euroMilestonesClaimed[key] != null) return s;
+    const ps = [...s.players];
+    ps[0] = {
+      ...p,
+      resources: { ...p.resources, credit: (p.resources.credit || 0) - EURO_MILESTONE_COST },
+      highlightPoints: (p.highlightPoints || 0) + EURO_MILESTONE_POINTS,
+    };
+    s = { ...s, players: ps, meta: { ...s.meta, euroMilestonesClaimed: { ...s.meta.euroMilestonesClaimed, [key]: 0 } } };
+    if (typeof logEntry === 'function') s = logEntry(s, `🏆 P0 · 마일스톤 청구: ${EURO_MILESTONES_TM[key].name} (₵-${EURO_MILESTONE_COST}, +${EURO_MILESTONE_POINTS}pt)`);
+  } else if (choice === 'skip') {
+    s = { ...s, meta: { ...s.meta, euroMilestonesSkipped: { ...s.meta.euroMilestonesSkipped, [key]: true } } };
+    if (typeof logEntry === 'function') s = logEntry(s, `🏆 P0 · 마일스톤 포기: ${EURO_MILESTONES_TM[key].name}`);
+  }
+  // choice === 'defer': 아무것도 안 함 → 다음 라운드에 재생성됨
+  return s;
+}
+
+function euro_applyAwardChoice(state, decision, choice) {
+  if (choice === 'pass' || !choice || !choice.startsWith('fund')) return state;
+  let s = state;
+  const key = decision.context.awardKey;
+  const funded = s.meta.euroAwardsFunded || [];
+  if (funded.length >= EURO_MAX_AWARDS || funded.some(f => f.key === key)) return s;
+  const cost = EURO_AWARD_COSTS[funded.length]; // 펀딩 순서가 비용 결정
+  const p = s.players[0];
+  if ((p.resources.credit || 0) < cost) return s;
+  const ps = [...s.players];
+  ps[0] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) - cost } };
+  s = { ...s, players: ps, meta: { ...s.meta, euroAwardsFunded: [...funded, { key, playerIdx: 0, cost }] } };
+  if (typeof logEntry === 'function') s = logEntry(s, `🥇 P0 · 어워드 펀딩: ${EURO_AWARDS_TM[key].name} (₵-${cost})`);
+  return s;
+}
+
+// 마일스톤: P0 조건 달성 시 결정 큐 추가, 봇은 자동 청구
+function euro_checkMilestoneDecisions(state) {
+  let s = state;
+  for (const mKey of (s.meta.euroMilestonesPool || [])) {
+    if (s.meta.euroMilestonesClaimed?.[mKey] != null) continue;
+    if (Object.keys(s.meta.euroMilestonesClaimed || {}).length >= EURO_MAX_MILESTONES) break;
+    const ms = EURO_MILESTONES_TM[mKey];
+    if (!ms) continue;
+    const eligible = s.players
+      .map((p, pi) => ({ p, pi }))
+      .filter(x => !x.p.defeated && (x.p.resources.credit || 0) >= EURO_MILESTONE_COST && ms.check(x.p, s, x.pi));
+    const p0Eligible = eligible.some(x => x.pi === 0) && !s.meta.euroMilestonesSkipped?.[mKey];
+    if (p0Eligible) {
+      // P0 결정 대기 — 이번 R엔 봇 청구 보류 (모달 응답 기회), 경고로 경쟁 노출
+      const otherClaimers = eligible.filter(x => x.pi !== 0).map(x => `P${x.pi}`);
+      s = euro_addPendingDecision(s, {
+        id: `milestone_${mKey}_r${s.meta.round}`,
+        type: 'milestone',
+        playerIdx: 0,
+        prompt: `${ms.name} 청구하시겠습니까?${otherClaimers.length ? ` ⚠ 다른 봇도 조건 달성 (${otherClaimers.join(', ')})` : ''}`,
+        options: [
+          { id: 'claim', label: `지금 청구 (₵-${EURO_MILESTONE_COST}, +${EURO_MILESTONE_POINTS}pt)`, effect: 'apply_milestone' },
+          { id: 'defer', label: '보류 (다음 R에 재결정)', effect: 'next_round' },
+          { id: 'skip',  label: '포기 (이번 게임 청구 X)', effect: 'skip_forever' },
+        ],
+        context: { milestoneKey: mKey, round: s.meta.round, otherClaimers },
+      });
+    } else {
+      // 봇 자동 청구 (기존 휴리스틱: 첫 적격자)
+      const bot = eligible.find(x => x.pi !== 0);
+      if (bot) {
+        const ps = [...s.players];
+        ps[bot.pi] = {
+          ...bot.p,
+          resources: { ...bot.p.resources, credit: (bot.p.resources.credit || 0) - EURO_MILESTONE_COST },
+          highlightPoints: (bot.p.highlightPoints || 0) + EURO_MILESTONE_POINTS,
+        };
+        s = { ...s, players: ps, meta: { ...s.meta, euroMilestonesClaimed: { ...s.meta.euroMilestonesClaimed, [mKey]: bot.pi } } };
+        if (typeof logEntry === 'function') s = logEntry(s, `🏆 P${bot.pi} ${bot.p.specific} · 마일스톤 청구: ${ms.name} (₵-${EURO_MILESTONE_COST}, +${EURO_MILESTONE_POINTS}pt)`);
+      }
+    }
+  }
+  return s;
+}
+
+// 어워드: P0가 1~2위 예상 + 자원 충분 시 결정 큐 추가, 봇은 자동 펀딩 (R당 1건)
+function euro_checkAwardDecisions(state) {
+  let s = state;
+  const funded = s.meta.euroAwardsFunded || [];
+  if (funded.length >= EURO_MAX_AWARDS) return s;
+  const nextCost = EURO_AWARD_COSTS[funded.length];
+
+  for (const aKey of (s.meta.euroAwardsPool || [])) {
+    if ((s.meta.euroAwardsFunded || []).some(f => f.key === aKey)) continue;
+    const award = EURO_AWARDS_TM[aKey];
+    if (!award) continue;
+    const scores = s.players
+      .map((p, pi) => ({ pi, score: award.measure(p, s, pi), credit: p.resources.credit || 0, defeated: p.defeated }))
+      .filter(x => !x.defeated)
+      .sort((a, b) => b.score - a.score);
+    const top2 = scores.slice(0, 2);
+    const p0Top = top2.find(x => x.pi === 0 && x.credit >= nextCost);
+    if (p0Top) {
+      // 3개 어워드 풀 + 현재 1~2위 예측을 context로 노출 (모달이 표시)
+      const poolPreview = (s.meta.euroAwardsPool || []).map(k => {
+        const a = EURO_AWARDS_TM[k];
+        const ranked = s.players.map((p, pi) => ({ pi, score: a.measure(p, s, pi) })).sort((x, y) => y.score - x.score);
+        return { awardKey: k, name: a.name, top2: ranked.slice(0, 2).map(r => `P${r.pi}(${r.score})`) };
+      });
+      s = euro_addPendingDecision(s, {
+        id: `award_${aKey}_r${s.meta.round}`,
+        type: 'award',
+        playerIdx: 0,
+        prompt: `${award.name} 어워드를 펀딩하시겠습니까? (현재 ${funded.length + 1}순위 — ₵${nextCost})`,
+        options: [
+          ...EURO_AWARD_COSTS.map((c, i) => ({
+            id: `fund_${i}`,
+            label: EURO_AWARD_COST_LABELS[i],
+            effect: 'fund_award',
+            enabled: i === funded.length, // 펀딩 순서상 현재 슬롯만 활성
+          })),
+          { id: 'pass', label: '패스', effect: 'pass' },
+        ],
+        context: { awardKey: aKey, round: s.meta.round, nextCost, poolPreview },
+      });
+      break; // R당 1건만 질문
+    }
+    // 봇 자동 펀딩 (기존 휴리스틱: 1~2위 중 자원 충분한 봇)
+    const bot = top2.find(x => x.pi !== 0 && x.credit >= nextCost);
+    if (bot) {
+      const p = s.players[bot.pi];
+      const ps = [...s.players];
+      ps[bot.pi] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) - nextCost } };
+      s = { ...s, players: ps, meta: { ...s.meta, euroAwardsFunded: [...(s.meta.euroAwardsFunded || []), { key: aKey, playerIdx: bot.pi, cost: nextCost }] } };
+      if (typeof logEntry === 'function') s = logEntry(s, `🥇 P${bot.pi} ${p.specific} · 어워드 펀딩: ${award.name} (₵-${nextCost})`);
+      break; // R당 1건만
+    }
+  }
+  return s;
+}
+
+// 라운드 전환 시 만료된 결정 제거 (defer 의미론: 다음 R에 조건 충족 시 재생성)
+function euro_expireStaleDecisions(state) {
+  const pending = state.meta.pendingDecisions || [];
+  if (!pending.length) return state;
+  const fresh = pending.filter(d => d.type === 'negotiation' || (d.context?.round ?? 0) >= state.meta.round);
+  if (fresh.length === pending.length) return state;
+  return { ...state, meta: { ...state.meta, pendingDecisions: fresh } };
+}
+
+// 결정 시스템 통합 hook
+function euro_checkTMDecisions(state) {
+  let s = euro_initTMPools(state);
+  s = euro_expireStaleDecisions(s);
+  s = euro_checkMilestoneDecisions(s);
+  s = euro_checkAwardDecisions(s);
+  return s;
+}
+
 // 통합 hook — NEXT_ROUND마다 호출
 function euro_applyAll(state) {
   let s = state;
@@ -153,6 +416,7 @@ function euro_applyAll(state) {
   s = euro_networkIncome(s);
   s = euro_drifterNerf5x5(s);
   s = euro_checkHighlights(s);
+  s = euro_checkTMDecisions(s);  // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
 }
 
@@ -161,4 +425,10 @@ if (typeof window !== 'undefined') {
   window.euro_applyAll = euro_applyAll;
   window.euro_gearBonus = euro_gearBonus;
   window.EURO_HIGHLIGHTS = EURO_HIGHLIGHTS;
+  // v4.0.2: 결정 모달 골격
+  window.EURO_MILESTONES_TM = EURO_MILESTONES_TM;
+  window.EURO_AWARDS_TM = EURO_AWARDS_TM;
+  window.euro_addPendingDecision = euro_addPendingDecision;
+  window.euro_resolvePendingDecision = euro_resolvePendingDecision;
+  window.euro_checkTMDecisions = euro_checkTMDecisions;
 }

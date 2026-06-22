@@ -6,6 +6,9 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
   let state = initGame(humanRole, humanSpecific, mapSize);
   state = reducer(state, { type: 'DRAW_INITIAL' });
 
+  // v5.2: 트레이스 카운터 리셋 (euro_mechanics.js의 logEntry 오버라이드가 누적)
+  if (typeof euro_resetTrace === 'function') euro_resetTrace();
+
   let safety = 0;
   while (!state.meta.gameOver && state.meta.round <= maxRounds && safety < 500) {
     safety++;
@@ -41,6 +44,10 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
       const opt = state.meta.zoneBonusPending.options[0];
       state = reducer(state, { type: 'APPLY_ZONE_BONUS', opt });
     }
+    // v6.0: 결정 모달 골격 — 대기 결정 자동 해소 (헤드리스 안전장치; inert면 no-op)
+    if (state.meta.pendingDecision && typeof euro_autoResolveDecision === 'function') {
+      state = euro_autoResolveDecision(state);
+    }
 
     state = reducer(state, { type: 'COMPUTE_TURN_DIFF' });
 
@@ -62,6 +69,9 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
 
     if (trace) {
       console.log(`R${state.meta.round}: ${state.players.map((p, i) => `P${i}${p.role==='ghost'?'👻':'🏢'}${p.specific} ${p.role==='ghost'?'렙'+p.resources.rep:'자산'+assetValue(p, state.stocks, state)}`).join(' | ')}`);
+      if (typeof EURO_TRACE !== 'undefined') {
+        console.log(`  trace: sig=${JSON.stringify(EURO_TRACE.signatureTriggers)} hl=${EURO_TRACE.highlightTriggers} sup=${EURO_TRACE.suppressionCount}`);
+      }
     }
 
     state = reducer(state, { type: 'NEXT_ROUND' });
@@ -85,6 +95,10 @@ function runOneGame({ humanRole = 'ghost', humanSpecific = 'BLADE', maxRounds = 
     p0Defeated: state.players[0].defeated,
     p0Role: state.players[0].role,
     p0Specific: state.players[0].specific,
+    // v5.2: 트레이스 카운터 (게임 전체 누적, P0 한정 아님)
+    signatureTriggers: typeof EURO_TRACE !== 'undefined' ? { ...EURO_TRACE.signatureTriggers } : {},
+    highlightTriggers: typeof EURO_TRACE !== 'undefined' ? EURO_TRACE.highlightTriggers : 0,
+    suppressionCount: typeof EURO_TRACE !== 'undefined' ? EURO_TRACE.suppressionCount : 0,
     finalState: state,
   };
 }
@@ -130,6 +144,9 @@ function analyze(results) {
   const reasons = {};
   const rounds = [];
   const defeats = [];
+  // v5.2: 트레이스 카운터 누적
+  const sigSum = {};
+  let hlSum = 0, supSum = 0;
 
   for (const r of results) {
     const rk = r.p0Role;
@@ -149,6 +166,10 @@ function analyze(results) {
     reasons[reasonKey] = (reasons[reasonKey] || 0) + 1;
     rounds.push(r.round);
     if (r.p0Defeated) defeats.push(r.p0Specific);
+    // v5.2: 트레이스 카운터
+    for (const [k, v] of Object.entries(r.signatureTriggers || {})) sigSum[k] = (sigSum[k] || 0) + v;
+    hlSum += r.highlightTriggers || 0;
+    supSum += r.suppressionCount || 0;
   }
 
   const out = { N: results.length, winnerRoles, byRole: {}, bySpecific: {}, rounds: { avg: (rounds.reduce((a,b)=>a+b,0)/rounds.length).toFixed(2), min: Math.min(...rounds), max: Math.max(...rounds) }, topReasons: Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,10), defeatCount: defeats.length };
@@ -167,6 +188,13 @@ function analyze(results) {
   for (const k of Object.keys(bySpecific)) {
     out.bySpecific[k] = { ...bySpecific[k], winRate: (bySpecific[k].wins / bySpecific[k].total * 100).toFixed(1) + '%' };
   }
+  // v5.2: 게임당 평균 트레이스 카운트
+  const n = results.length || 1;
+  out.trace = {
+    avgSignaturePerGame: Object.fromEntries(Object.entries(sigSum).map(([k, v]) => [k, (v / n).toFixed(2)])),
+    avgHighlightsPerGame: (hlSum / n).toFixed(2),
+    avgSuppressionPerGame: (supSum / n).toFixed(2),
+  };
   return out;
 }
 
@@ -190,13 +218,15 @@ console.log('  Ghost:', JSON.stringify(a.byRole.ghost));
 console.log('  Bloc :', JSON.stringify(a.byRole.bloc));
 console.log('');
 console.log('클래스/블록별 P0 승률 (승률 순):');
-Object.entries(a.bySpecific).sort((a, b) => parseFloat(b[1].winRate) - parseFloat(a[1].winRate)).forEach(([k, v]) => {
+Object.entries(a.bySpecific).sort((x, y) => parseFloat(y[1].winRate) - parseFloat(x[1].winRate)).forEach(([k, v]) => {
   console.log(`  ${k.padEnd(8)} ${v.winRate.padStart(6)}  (${v.wins}/${v.total})`);
 });
+console.log('');
+console.log('트레이스 (게임당 평균):');
+console.log(`  시그니처: ${JSON.stringify(a.trace.avgSignaturePerGame)}`);
+console.log(`  하이라이트: ${a.trace.avgHighlightsPerGame} · 견제: ${a.trace.avgSuppressionPerGame}`);
 console.log('');
 console.log('주요 승리 사유 Top 10:');
 a.topReasons.forEach(([r, c]) => console.log(`  [${String(c).padStart(3)}] ${r}`));
 console.log('');
 console.log(`P0 패배(사망): ${a.defeatCount}판`);
-}`));
-console.log('');
