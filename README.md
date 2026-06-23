@@ -2,14 +2,14 @@
 
 > *"Ashgrid 2091 — 연결이 끊어진 그곳에서, 새로운 연결이 시작된다."*
 
-**DEAD NEXUS**는 5인 전략 레거시 게임 프로젝트입니다.
+**DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v3.3 (2026-05-18) — AXIOM 활성화 + simulator 부분 포팅
+**현재 버전**: v6.1 (2026-06) — HELIX 시그니처 복원 + 시뮬레이터 v1.0.5-fix
 
-- **5×5 AXIOM** 0% → 40% (대성공, 모든 11개 클래스 활성)
-- **11×11 정식**: 거의 완벽, RIGGER 0% 경고만 잔여
-- **simulator/v0.5**에 v3.2/v3.3 너프 핵심 포팅 (마일스톤/어워드 전체는 v3.4 예정)
+- **헤드리스 하네스 (N=600)**: 11×11 / 5×5 양 모드 위반 0 · 경고 0, 진영 균형 안정
+- **HELIX 시그니처 死문 수정**: 6클래스 중 유일하게 발동률 0이던 클론 뱅크를 `euro_helixSignature`로 복원 (양 맵 최저 → 중위권)
+- **웹 시뮬레이터 v1.0.5-fix**: 11×11 정식 + 5×5 튜토리얼 통합, 솔로/핫시트/봇 모드, EASY/NORMAL/HARD 난이도
 
 ---
 
@@ -63,8 +63,8 @@ dead-nexus/
 │
 ├── README.md                          # 이 문서
 ├── CHANGELOG.md                       # 버전 변경 기록
-├── CONTRIBUTING.md                    # 기여 가이드
-├── LICENSE                            # 라이선스 (TBD)
+├── contributing.md                    # 기여 가이드
+├── git_guide.md                       # Git 워크플로 가이드
 │
 ├── docs/                              # 핵심 설계 문서
 │   ├── 00-overview.md                 # 프로젝트 전체 개요
@@ -73,67 +73,70 @@ dead-nexus/
 │   ├── 03-factions-blocs.md           # 5대 블록 상세
 │   ├── 04-characters-ghosts.md        # 6인 고스트 캐릭터
 │   ├── 05-card-system.md              # 이중 카드 시스템 (Ghost/Bloc)
-│   ├── 06-attribute-system.md         # MTG식 6속성 시스템
+│   ├── 06-attribute-system.md         # 6속성 시스템
 │   ├── 07-combat-stats.md             # 전투 스탯 & 해결 규칙
 │   ├── 08-stock-mna.md                # 주식·지분·M&A 시스템
 │   ├── 09-tech-tree.md                # 테크 레벨 1~5
-│   ├── 10-map-zones.md                # 애시그리드 맵 & 36 구역
+│   ├── 10-map-zones.md                # 11×11 동심원 + 5×5 튜토리얼
 │   ├── 11-events-quests.md            # 이벤트 토큰 & 퀘스트
 │   ├── 12-legacy-campaign.md          # 레거시 8챕터 "ASH & SIGNAL"
-│   └── 13-glossary.md                 # 용어 사전
+│   ├── 13-glossary.md                 # 용어 사전
+│   ├── 14-scenarios.md                # 시나리오 시스템
+│   ├── 15-hidden-objectives.md        # 숨은 목표 시스템
+│   ├── 16-achievements.md             # 업적 시스템
+│   ├── 17-v1.0-systems.md             # v1.0 신규 시스템 통합
+│   ├── 18-playtest-guide.md           # 첫 플레이 가이드
+│   ├── 19-sample-game-narrative.md    # 표본 게임 narrative (BLADE 11×11)
+│   ├── 20-balance-audit-v2.x.md       # 밸런스 감사 리포트
+│   ├── narratives/                    # MOLE/BROKER/CIPHER/HELIX 표본
+│   └── v6.0-progress-log.md           # v6.0 작업 로그
 │
-├── cards/                             # 카드 데이터 (마크다운 + JSON)
-│   ├── ghost/                         # 고스트 클래스별 덱
-│   │   ├── cipher.md
-│   │   ├── blade.md
-│   │   ├── rigger.md
-│   │   ├── broker.md
-│   │   ├── drifter.md
-│   │   └── mole.md
-│   ├── bloc/                          # 블록별 덱
-│   │   ├── vanta.md
-│   │   ├── ironwall.md
-│   │   ├── helix.md
-│   │   ├── axiom.md
-│   │   └── carbon.md
-│   ├── events/                        # 뉴스 이벤트 카드 50장
-│   │   └── news-events.md
-│   ├── quests/                        # 퀘스트 카드
+├── cards/                             # 카드 데이터
+│   ├── ghost/                         # 고스트 클래스별 덱 (6종)
+│   │   ├── cipher.md · blade.md · rigger.md
+│   │   └── broker.md · drifter.md · mole.md
+│   ├── bloc/                          # 블록별 덱 (5종)
+│   │   ├── vanta.md · ironwall.md · helix.md
+│   │   └── axiom.md · carbon.md
+│   ├── events/                        # 뉴스·블랙마켓·퀘스트
+│   │   ├── news-events.md
+│   │   ├── black-market.md
 │   │   └── quest-deck.md
-│   ├── black-market/                  # 블랙마켓 덱 30장
-│   │   └── black-market.md
-│   └── data/                          # JSON 원본 데이터
-│       ├── ghost-cards.json
-│       ├── bloc-cards.json
-│       └── events.json
+│   ├── legacy/                        # 레거시 8챕터 스토리
+│   │   └── chapter-01 ~ chapter-08-*.md
+│   ├── objectives/                    # 숨은 목표
+│   │   ├── ghost.md
+│   │   └── bloc.md
+│   └── achievements/                  # 업적
+│       ├── in-game.md
+│       └── meta.md
 │
-├── legacy/                            # 레거시 캠페인 스토리
-│   ├── chapter-01-first-blood.md
-│   ├── chapter-02-insider-game.md
-│   ├── chapter-03-martial-night.md
-│   ├── chapter-04-price-of-splice.md
-│   ├── chapter-05-mesh-ghost.md
-│   ├── chapter-06-bloc-acquisition.md
-│   ├── chapter-07-heart-of-city.md
-│   └── chapter-08-zero-day.md
+├── simulator/                         # 웹 시뮬레이터
+│   ├── index.html                     # (스캐폴드)
+│   └── v0.5/                          # 메인 시뮬레이터 (단일 HTML, v1.0.5-fix)
+│       ├── index.html                 # React 18 + Babel · 11×11 + 5×5
+│       ├── euro_module.js             # 유로 메커닉 (web 빌드)
+│       └── README.md
 │
-├── assets/                            # 시각 자료
-│   ├── maps/                          # 맵 이미지·SVG
-│   ├── icons/                         # 속성·자원 아이콘
-│   ├── card-templates/                # 카드 디자인 템플릿
-│   └── logos/                         # 블록 로고·심볼
+├── sim-harness/                       # 헤드리스 시뮬 + 밸런스 회귀
+│   ├── core.js                        # index.html에서 추출한 게임 로직
+│   ├── euro_mechanics.js              # 유로 메커닉 + 시그니처 11종
+│   ├── balance_test.js                # N판 배치 + 임계 검증
+│   ├── narrative_trace.js             # 결정론 시드 narrative 생성
+│   └── README.md
 │
-├── prototypes/                        # 프로토타입 & 시뮬레이터
-│   ├── web-simulator/                 # React 웹 시뮬레이터
-│   │   ├── src/
-│   │   └── README.md
-│   └── print-and-play/                # PnP PDF 세트
-│       └── v0.1/
+├── print-kit/                         # 인쇄 플레이 세트
+│   ├── 01-map.html · 01b-map-11x11.html
+│   ├── 02-cards-ghost.html · 03-cards-bloc.html
+│   ├── 04-news-15.html · 05-tokens.html
+│   ├── 06-character-sheets.html · 07-reference.html
+│   ├── 08-feedback-form.html · 09-scenarios.html
+│   ├── 10-objectives.html · 11-achievements.html
+│   ├── 12-quick-reference.html        # A4 1매 player aid (v1.8)
+│   └── index.html
 │
 └── playtesting/                       # 플레이테스트 기록
-    ├── session-00-guide.md            # 첫 세션 가이드
-    ├── reports/                       # 세션별 리포트
-    └── feedback/                      # 피드백·밸런스 이슈
+    └── session-00-guide.md            # 첫 세션 가이드
 ```
 
 ---
@@ -156,6 +159,19 @@ dead-nexus/
 - **[07-combat-stats.md](docs/07-combat-stats.md)** — HP / ATK / DEF / SPD / HACK
 - **[08-stock-mna.md](docs/08-stock-mna.md)** — 주식 트랙, 지분 권한, 적대적 인수
 - **[09-tech-tree.md](docs/09-tech-tree.md)** — TL 1~5 업그레이드 트리
+- **[10-map-zones.md](docs/10-map-zones.md)** — 11×11 동심원 + 5×5 튜토리얼
+- **[11-events-quests.md](docs/11-events-quests.md)** — 이벤트 토큰·뉴스·퀘스트
+- **[14-scenarios.md](docs/14-scenarios.md)** — 시나리오 S01~S08
+- **[15-hidden-objectives.md](docs/15-hidden-objectives.md)** — 숨은 목표
+- **[16-achievements.md](docs/16-achievements.md)** — 업적 (in-game / meta)
+- **[17-v1.0-systems.md](docs/17-v1.0-systems.md)** — v0.6~v1.0 통합 시스템
+
+### 플레이·검증
+- **[18-playtest-guide.md](docs/18-playtest-guide.md)** — 첫 플레이 가이드
+- **[19-sample-game-narrative.md](docs/19-sample-game-narrative.md)** — BLADE 11×11 표본 게임
+- **[docs/narratives/](docs/narratives/)** — MOLE / BROKER / CIPHER / HELIX 추가 표본
+- **[20-balance-audit-v2.x.md](docs/)** — 밸런스 감사 리포트 (v2.1 / v2.2)
+- **[sim-harness/README.md](sim-harness/README.md)** — 헤드리스 N판 회귀 도구
 
 ---
 
@@ -222,8 +238,28 @@ dead-nexus/
 - `docs/19-sample-game-narrative.md` + `docs/narratives/` 5종 표본
 - `print-kit/12-quick-reference.html`: A4 1매 player aid
 
+### ✅ v3.x–v5.x — 클래스 시그니처 + 유로 메커닉 (완료)
+- 클래스 시그니처 11종 도입 (BLADE 표적·CIPHER 해킹 노드·VANTA veil 등)
+- 견제 토큰 3종(무력/정보/외교) — 평판·데이터·인플루언스 직접 압박
+- 결정론 레이드 (raidBonus) + 자원 변환 체인(부품→장비, 데이터→인텔)
+- 하이라이트 모먼트 30종 확장 + 최종 점수 통합
+
+### ✅ v6.0 — 시뮬레이터 전반 리팩토링 (완료)
+- 11×11 / 5×5 모드 인터페이스 통합 (`MODE_CONFIG`)
+- 견제 토큰 한글 표기·트레이스 4단계 분리
+- 200판 출력 포맷 개편 + 진영/클래스 표 + 시드 결정론 옵션
+- RIGGER 시그니처 신규 (양 모드 양 진영 정상화)
+- 결정 모달 골격 (raid_reward / bloc_invest) — 헤드리스/UI 양쪽 자기검증
+
+### ✅ v6.1 — HELIX 시그니처 복원 (이번 사이클)
+- HELIX 클론 뱅크가 `hp<maxHp` 게이트라 Bloc에선 死문이던 문제 — `euro_helixSignature`로 점수 직결 보상 부활 (매R 클론+1·🎙+1, 3개마다 타사 최저가 주식 매집)
+- 측정 N=600: 11×11 25%→38~43% · 5×5 16.7%→31.7% · 시그니처 발동 0→4.2/2.7
+- 양 맵 위반 0 · 경고 0, 진영 균형·전 클래스 임계 내 유지
+
 ### 🔄 v2.0+ — 다음 마일스톤
 - 대면 플레이테스트 1~3회 (실 데이터 수집)
+- 결정 모달 라이브 트리거(harness raid_reward 실연결) — 결정 깊이 확장
+- 웹 시뮬레이터에 시그니처/`MODE_CONFIG` 포팅 (현재 웹은 별도 밸런스 레짐)
 - TTS(Tabletop Simulator) 익스포트
 - 캠페인 시나리오 S02~S08 시뮬 통합
 - 일러스트 + 공식 룰북 PDF + 카드 아트
