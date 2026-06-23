@@ -1,0 +1,24 @@
+# Vercel 배포에서 제외 — 정적 웹에는 불필요한 파일
+
+# 헤드리스 시뮬 도구 (node 전용)
+sim-harness/
+
+# 설계 문서·카드 데이터 (GitHub로 충분)
+docs/
+cards/
+playtesting/
+
+# 루트 설계·CI 파일
+CHANGELOG.md
+README.md
+contributing.md
+git_guide.md
+PUSH_GUIDE.md
+PUSH_v3.0_GUIDE.md
+push_v1.0.sh
+push_v3.0.sh
+v3.0-v2.4.patch
+
+# 개발 부산물
+node_modules/
+.gitignore

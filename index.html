@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DEAD NEXUS — Ashgrid 2091</title>
+  <meta name="description" content="DEAD NEXUS — 1~5인 사이버펑크 전략 레거시 보드게임. 5대 블록 vs 6 고스트 클래스, 11×11 동심원 맵 + 5×5 튜토리얼." />
+  <meta property="og:title" content="DEAD NEXUS — Ashgrid 2091" />
+  <meta property="og:description" content="연결이 끊어진 그곳에서, 새로운 연결이 시작된다." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #06060e; color: #e0e0e0; font-family: 'Rajdhani', system-ui, sans-serif; }
+    body {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 20px; position: relative; overflow-x: hidden;
+    }
+    .bg-glow {
+      position: absolute; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 50% 25%, #0d1b2a 0%, #06060e 70%);
+    }
+    .bg-grid {
+      position: absolute; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(#1a1a2e22 1px, transparent 1px),
+        linear-gradient(90deg, #1a1a2e22 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, transparent 75%);
+    }
+    .container { position: relative; z-index: 1; max-width: 920px; width: 100%; text-align: center; }
+    .label {
+      font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 8px;
+      color: #00e5ff; margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(48px, 8vw, 78px); font-weight: 700; letter-spacing: 6px;
+      line-height: 1; margin-bottom: 8px;
+      text-shadow: 0 0 40px #ff003c55, 0 0 80px #ff003c22;
+    }
+    h1 .accent { color: #ff003c; }
+    .tagline {
+      font-family: 'Share Tech Mono', monospace; font-size: 13px; color: #999;
+      letter-spacing: 3px; margin-bottom: 8px;
+    }
+    .subline {
+      font-size: 14px; color: #777; letter-spacing: 1px; margin-bottom: 40px;
+    }
+    .primary-cta {
+      display: inline-block; background: transparent; border: 1px solid #ff003c;
+      color: #ff003c; padding: 16px 56px; font-size: 18px; letter-spacing: 5px;
+      font-weight: 700; text-decoration: none; cursor: pointer;
+      transition: all .25s ease; margin-bottom: 14px;
+    }
+    .primary-cta:hover {
+      background: #ff003c; color: #06060e;
+      box-shadow: 0 0 32px #ff003c66, 0 0 64px #ff003c22;
+    }
+    .hint {
+      font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #555;
+      letter-spacing: 2px; margin-bottom: 48px;
+    }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px; margin-bottom: 40px; text-align: left;
+    }
+    .card {
+      background: #0c0c18; border: 1px solid #1a1a2e; padding: 18px 18px 16px;
+      text-decoration: none; color: inherit; display: flex; flex-direction: column;
+      transition: all .2s ease;
+    }
+    .card:hover { border-color: #00e5ff66; box-shadow: 0 0 16px #00e5ff22; transform: translateY(-2px); }
+    .card .icon { font-size: 26px; margin-bottom: 8px; }
+    .card .ttl { font-size: 16px; font-weight: 700; letter-spacing: 1px; color: #e0e0e0; margin-bottom: 4px; }
+    .card .desc { font-size: 12px; color: #888; line-height: 1.5; }
+    .card .meta {
+      margin-top: 10px; font-family: 'Share Tech Mono', monospace;
+      font-size: 9px; color: #555; letter-spacing: 1.5px;
+    }
+    .stats {
+      display: flex; gap: 22px; justify-content: center; flex-wrap: wrap;
+      font-family: 'Share Tech Mono', monospace; font-size: 10px;
+      color: #555; letter-spacing: 2px; margin-bottom: 18px;
+    }
+    .stats span b { color: #888; font-weight: 700; }
+    footer {
+      font-family: 'Share Tech Mono', monospace; font-size: 10px;
+      color: #444; letter-spacing: 2px;
+    }
+    footer a { color: #555; text-decoration: none; }
+    footer a:hover { color: #00e5ff; }
+    @media (max-width: 480px) {
+      .primary-cta { padding: 14px 36px; letter-spacing: 3px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="bg-grid"></div>
+
+  <main class="container">
+    <div class="label">ASHGRID SECTOR 7 · SIMULATION v1.0</div>
+    <h1>DEAD<span class="accent">_</span>NEXUS</h1>
+    <p class="tagline">CONNECTION SEVERED · NEW SIGNAL DETECTED</p>
+    <p class="subline">애시그리드 2091 — 5대 블록 vs 6 고스트의 권력·자원·정보 전쟁</p>
+
+    <a class="primary-cta" href="/simulator/v0.5/">▶ START SIMULATION</a>
+    <div class="hint">SOLO · HOT-SEAT · BOT-ONLY · 5×5 / 11×11</div>
+
+    <div class="stats">
+      <span><b>1~5</b> 플레이어</span>
+      <span><b>60~180</b> 분</span>
+      <span><b>11</b> 클래스</span>
+      <span><b>6+1</b> 속성</span>
+      <span><b>8</b> 레거시 챕터</span>
+    </div>
+
+    <div class="cards">
+      <a class="card" href="/simulator/v0.5/">
+        <div class="icon">🎮</div>
+        <div class="ttl">웹 시뮬레이터</div>
+        <div class="desc">단일 HTML · React 18. 솔로/핫시트/봇 전용 모드, EASY/NORMAL/HARD 난이도, 11×11 정식 + 5×5 튜토리얼.</div>
+        <div class="meta">simulator/v0.5/ · v1.0.5-fix</div>
+      </a>
+      <a class="card" href="/print-kit/">
+        <div class="icon">🖨</div>
+        <div class="ttl">인쇄 플레이 키트</div>
+        <div class="desc">A3 맵 + A4 카드 + 캐릭터 시트 + Quick Reference 1매. 오프라인 테이블탑용 PnP 세트.</div>
+        <div class="meta">print-kit/ · 12종 HTML</div>
+      </a>
+      <a class="card" href="https://github.com/KOYUBIN/Dead_Nexus" target="_blank" rel="noopener">
+        <div class="icon">📖</div>
+        <div class="ttl">설계 문서 · 소스</div>
+        <div class="desc">docs/ 20+ 설계 문서 · cards/ Ghost·Bloc·이벤트·레거시 카드 데이터 · sim-harness/ 헤드리스 회귀.</div>
+        <div class="meta">github.com/KOYUBIN/Dead_Nexus</div>
+      </a>
+    </div>
+
+    <footer>
+      <a href="https://github.com/KOYUBIN/Dead_Nexus/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/KOYUBIN/Dead_Nexus/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      &nbsp;·&nbsp;
+      <span>v6.1 · 2026</span>
+    </footer>
+  </main>
+</body>
+</html>
