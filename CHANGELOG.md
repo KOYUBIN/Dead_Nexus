@@ -8,6 +8,14 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 웹 시뮬레이터 시그니처 2차 포팅 (CARBON11×11 / CIPHER5×5 / GhostHustle)
+- `euro_carbonGrid11x11` — 11×11에서 CARBON Bloc 보유 구역 수에 따라 ₵+1/+2/+3 (2/3/4+ 구역)
+- `euro_cipher5x5` — 5×5에서 매R 📡(data)+1 자동 (해킹 노드 발동률 부족 보정)
+- `euro_ghostHustle` — 매R Ghost 평판+1로 marketCycle Bloc 자기주가+1과 대칭 진영 균형 보정. 5×5 매R / 11×11 격R / 11×11 BROKER 제외
+- `euro_applyAll`에 3개 hook 연결
+- 검증: 11×11 CARBON 4구역 3R → ₵+9, 11×11 DRIFTER 격R → ★+2 (R1·R3), 5×5 CIPHER 자원변환 후 data1+intel1, 5×5 BROKER 3R → ★+3
+- **잔여**: BLADE/MOLE/AXIOM/VANTA/IRONWALL/BROKER 시그니처(core.js 내부 추출), 견제 토큰 3종(SUPPRESSION_SPEC), `euro_finalBonus`/`_v51` 점수 통합
+
 ### 웹 시뮬레이터에 sim-harness 시그니처/MODE_CONFIG 1차 포팅
 - v6.0/v6.1 sim-harness에서 신규 추가된 항목을 `simulator/v0.5/euro_module.js`에 동일 공식으로 이식 (web/headless 밸런스 레짐 통합 시작점):
   - **MODE_CONFIG** + `euro_mode(mapSize)` — 11×11/5×5 파라미터 단일 소스 (maxRounds·suppressionProb·진영/클래스 허용폭). core.js maxRounds(10/7)와 일치

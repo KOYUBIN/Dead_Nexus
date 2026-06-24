@@ -185,6 +185,59 @@ function euro_helixSignature(state) {
   return s;
 }
 
+// v6.2 (web 포팅): CARBON 11×11 그리드 확장
+// 11×11에서 CARBON Bloc 보유 구역 수에 따라 ₵ +1/+2/+3 (2/3/4+ 구역)
+function euro_carbonGrid11x11(state) {
+  if (state.meta.mapSize !== '11x11') return state;
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'CARBON' || p.role !== 'bloc') continue;
+    const ownCount = Object.values(s.map).filter(c => c.owner === pi).length;
+    const bonus = ownCount >= 4 ? 3 : ownCount >= 3 ? 2 : ownCount >= 2 ? 1 : 0;
+    if (bonus > 0) {
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + bonus } };
+      s = { ...s, players: ps };
+      if (typeof logEntry === 'function') s = logEntry(s, `⚡ P${pi} CARBON · 그리드 확장 (11×11, ${ownCount}구역) → ₵+${bonus}`);
+    }
+  }
+  return s;
+}
+
+// v6.2 (web 포팅): CIPHER 5×5 백그라운드 크롤러
+// 5×5에서 해킹 노드 발동률 부족 보정 — 매R 📡(data) +1 자동
+function euro_cipher5x5(state) {
+  if (state.meta.mapSize !== '5x5') return state;
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'CIPHER') continue;
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, data: (ps[pi].resources.data || 0) + 1 } };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `💾 P${pi} CIPHER · 백그라운드 크롤러 (5×5) → 📡+1`);
+  }
+  return s;
+}
+
+// v6.2 (web 포팅): Ghost 허슬 — 진영 균형 보정
+// euro_marketCycle의 Bloc 자기주가+1과 대칭. 매 R Ghost 평판 +1.
+// 11×11에선 격R (BROKER 제외 — 자체 메모 시스템으로 평판 누적)
+function euro_ghostHustle(state) {
+  let s = state;
+  if (state.meta.mapSize === '11x11' && state.meta.round % 2 === 0) return state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.role !== 'ghost') continue;
+    if (s.meta.mapSize === '11x11' && p.specific === 'BROKER') continue;
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: (ps[pi].resources.rep || 0) + 1 } };
+    s = { ...s, players: ps };
+  }
+  return s;
+}
+
 // v5.1.0c: 하이라이트 11종 (simulator HIGHLIGHT_DEFS와 별개)
 const EURO_HIGHLIGHTS = {
   hp_one_raid:     { name: '🤕 역전 한 수',   pts: 5, check: (p, s, pi) => p.role === 'ghost' && p.hp === 1 },
@@ -489,10 +542,13 @@ function euro_applyAll(state) {
   s = euro_marketCycle(s);
   s = euro_networkIncome(s);
   s = euro_drifterNerf5x5(s);
-  s = euro_riggerSignature(s);   // v6.0 (web 포팅) — 함정망
-  s = euro_helixSignature(s);    // v6.1 (web 포팅) — 클론 뱅크
+  s = euro_riggerSignature(s);     // v6.0 (web 포팅) — 함정망
+  s = euro_helixSignature(s);      // v6.1 (web 포팅) — 클론 뱅크
+  s = euro_carbonGrid11x11(s);     // v6.2 (web 포팅) — 11×11 그리드
+  s = euro_cipher5x5(s);           // v6.2 (web 포팅) — 5×5 크롤러
+  s = euro_ghostHustle(s);         // v6.2 (web 포팅) — 진영 균형
   s = euro_checkHighlights(s);
-  s = euro_checkTMDecisions(s);  // v4.0.2: 마일스톤/어워드 결정 큐
+  s = euro_checkTMDecisions(s);    // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
 }
 
