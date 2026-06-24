@@ -259,7 +259,7 @@ dead-nexus/
 ### 🔄 v2.0+ — 다음 마일스톤
 - 대면 플레이테스트 1~3회 (실 데이터 수집)
 - 결정 모달 라이브 트리거(harness raid_reward 실연결) — 결정 깊이 확장
-- 웹 시뮬레이터에 시그니처/`MODE_CONFIG` 포팅 (현재 웹은 별도 밸런스 레짐)
+- 웹 시뮬레이터에 시그니처/`MODE_CONFIG` 포팅 — 1차 완료(MODE_CONFIG + RIGGER/HELIX 시그니처). 나머지 9개 시그니처·견제 토큰·점수 통합 잔여
 - TTS(Tabletop Simulator) 익스포트
 - 캠페인 시나리오 S02~S08 시뮬 통합
 - 일러스트 + 공식 룰북 PDF + 카드 아트

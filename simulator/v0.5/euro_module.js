@@ -5,6 +5,32 @@
 // simulator의 coordsAdj, logEntry, assetValue, raiseTrack 함수에 의존
 // ============================================================================
 
+// v6.2 (web 포팅): sim-harness의 MODE_CONFIG 단일 소스 (mapSize별 파라미터)
+// core.js의 maxRounds(10/7)와 일치해야 함 — 변경 시 양쪽 동시 수정
+const MODE_CONFIG = {
+  '11x11': {
+    label: '11×11 (정식)',
+    maxRounds: 10,
+    safetyRounds: 12,
+    suppressionProb: 0.30,
+    faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
+    avgRound: { min: 8.0, max: 11.0, target: 10 },
+    classWinRate: { min: 5, max: 60 },
+  },
+  '5x5': {
+    label: '5×5 (튜토리얼)',
+    maxRounds: 7,
+    safetyRounds: 8,
+    suppressionProb: 0.15,
+    faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
+    avgRound: { min: 5.0, max: 8.0, target: 7 },
+    classWinRate: { min: 5, max: 55 },
+  },
+};
+function euro_mode(mapSize) {
+  return MODE_CONFIG[mapSize] || MODE_CONFIG['11x11'];
+}
+
 // v5.0.3: 동적 시장 가격 헬퍼
 function euro_marketTradePrice(state, blocName, delta) {
   const newStocks = { ...state.stocks };
@@ -107,6 +133,54 @@ function euro_drifterNerf5x5(state) {
     ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: newRep } };
     s = { ...s, players: ps };
     if (typeof logEntry === 'function') s = logEntry(s, `🌃 P${pi} DRIFTER · 5×5 이동 페널티 ★-1`);
+  }
+  return s;
+}
+
+// v6.0 (web 포팅): RIGGER 시그니처 — 함정망 전개
+// 매R 부품 +1, 함정 3개마다 평판 +2. sim-harness/euro_mechanics.js와 동일 공식
+function euro_riggerSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'RIGGER') continue;
+    const ps = [...s.players];
+    const traps = (ps[pi].rigTraps || 0) + 1;
+    let newRes = { ...ps[pi].resources, parts: (ps[pi].resources.parts || 0) + 1 };
+    let bonus = '';
+    if (traps % 3 === 0) { newRes.rep = (newRes.rep || 0) + 2; bonus = ' · 함정 발동 ★+2'; }
+    ps[pi] = { ...ps[pi], resources: newRes, rigTraps: traps };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🪤 P${pi} RIGGER · 함정망 전개 (⚙+1${bonus})`);
+  }
+  return s;
+}
+
+// v6.1 (web 포팅): HELIX 시그니처 — 클론 뱅크 복원
+// core.js의 hp<maxHp 게이트는 Bloc에서 死문이라 점수 직결 보상으로 대체:
+// 매R 클론+1·🎙+1, 3개마다 타사 최저가 주식 1주 자동 매집 (저속 누적형, AXIOM 차익거래와 구분)
+function euro_helixSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'HELIX' || p.role !== 'bloc') continue;
+    const ps = [...s.players];
+    const clones = (ps[pi].helixClones || 0) + 1;
+    const newRes = { ...ps[pi].resources, influence: (ps[pi].resources.influence || 0) + 1 };
+    const newStocks = { ...(ps[pi].stocks || {}) };
+    let bonus = '';
+    if (clones % 3 === 0) {
+      const others = Object.keys(s.stocks).filter(b => b !== p.specific);
+      others.sort((a, b) => (s.stocks[a] || 0) - (s.stocks[b] || 0));
+      if (others.length) {
+        const cheapest = others[0];
+        newStocks[cheapest] = (newStocks[cheapest] || 0) + 1;
+        bonus = ` · 클론 3개 → ${cheapest} 주식 매집`;
+      }
+    }
+    ps[pi] = { ...ps[pi], resources: newRes, stocks: newStocks, helixClones: clones };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🧬 P${pi} HELIX · 클론 뱅크 (🎙+1${bonus})`);
   }
   return s;
 }
@@ -415,6 +489,8 @@ function euro_applyAll(state) {
   s = euro_marketCycle(s);
   s = euro_networkIncome(s);
   s = euro_drifterNerf5x5(s);
+  s = euro_riggerSignature(s);   // v6.0 (web 포팅) — 함정망
+  s = euro_helixSignature(s);    // v6.1 (web 포팅) — 클론 뱅크
   s = euro_checkHighlights(s);
   s = euro_checkTMDecisions(s);  // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
@@ -425,6 +501,8 @@ if (typeof window !== 'undefined') {
   window.euro_applyAll = euro_applyAll;
   window.euro_gearBonus = euro_gearBonus;
   window.EURO_HIGHLIGHTS = EURO_HIGHLIGHTS;
+  window.MODE_CONFIG = MODE_CONFIG;          // v6.2 (web 포팅)
+  window.euro_mode = euro_mode;
   // v4.0.2: 결정 모달 골격
   window.EURO_MILESTONES_TM = EURO_MILESTONES_TM;
   window.EURO_AWARDS_TM = EURO_AWARDS_TM;

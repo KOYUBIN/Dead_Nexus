@@ -8,6 +8,15 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 웹 시뮬레이터에 sim-harness 시그니처/MODE_CONFIG 1차 포팅
+- v6.0/v6.1 sim-harness에서 신규 추가된 항목을 `simulator/v0.5/euro_module.js`에 동일 공식으로 이식 (web/headless 밸런스 레짐 통합 시작점):
+  - **MODE_CONFIG** + `euro_mode(mapSize)` — 11×11/5×5 파라미터 단일 소스 (maxRounds·suppressionProb·진영/클래스 허용폭). core.js maxRounds(10/7)와 일치
+  - **`euro_riggerSignature`** (v6.0) — 매R ⚙+1, 함정 3개마다 ★+2
+  - **`euro_helixSignature`** (v6.1) — 매R 클론+1·🎙+1, 클론 3개마다 타사 최저가 주식 1주 자동 매집 (저속 누적형, AXIOM 차익거래와 구분)
+- `euro_applyAll`에 두 시그니처 호출 추가, `window` 글로벌에 MODE_CONFIG/euro_mode 노출
+- 기능 검증: HELIX R1~R4 시뮬에서 R3에 VANTA(최저가) 매집 정상 동작, RIGGER R3에 함정 ★+2 정상 발동, 로그 형식 sim-harness와 동일
+- **다음 사이클**: 나머지 9개 시그니처(BLADE/MOLE/AXIOM/CIPHER/CARBON/VANTA/IRONWALL/BROKER/CARBON 11x11/CIPHER 5x5), 견제 토큰 3종, `euro_finalBonus_v51` 점수 통합 포팅 + 헤드리스 web 회귀 테스트 구축
+
 ### Vercel 정적 배포 설정
 - `index.html` 신규: 루트 랜딩 페이지 (사이버펑크 톤, 시뮬레이터/인쇄킷/문서 3카드 + START SIMULATION CTA)
 - `vercel.json` 신규: cleanUrls + HTML 짧은 캐시(5분) · 정적 자원 캐시(24시간) · 보안 헤더 · `/simulator` `/sim` `/play` → `/simulator/v0.5/` 리다이렉트
