@@ -8,6 +8,18 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### Vercel 정적 배포 설정
+- `index.html` 신규: 루트 랜딩 페이지 (사이버펑크 톤, 시뮬레이터/인쇄킷/문서 3카드 + START SIMULATION CTA)
+- `vercel.json` 신규: cleanUrls + HTML 짧은 캐시(5분) · 정적 자원 캐시(24시간) · 보안 헤더 · `/simulator` `/sim` `/play` → `/simulator/v0.5/` 리다이렉트
+- `.vercelignore`: sim-harness/·docs/·cards/·playtesting/·CHANGELOG·README 등 web 불필요 파일 배포 제외 (~670KB로 경량화)
+- 빌드 단계 없음 (순수 정적). GitHub 연동 시 main push 자동 배포
+
+### HELIX 시그니처 死문 수정 (sim-harness)
+- **문제**: HELIX는 6클래스 중 유일하게 시그니처 발동률 0 (양 맵 sig 0.00). core.js 클론 뱅크 블록이 `newClones === 3 && hp < maxHp` 게이트라, HP가 거의 안 깎이는 Bloc에선 보너스가 사실상 영구 미발동 → HELIX 양 맵 최저 승률 (11×11 25.0% / 5×5 16.7%, N=600)
+- **수정**: v6.0 RIGGER 선례(core.js 동결 · euro_mechanics.js 신규 함수)를 따라 `euro_helixSignature` 추가. 매R 클론+1·🎙인플루언스+1, 클론 3개마다 타사 최저가 주식 1주 자동 매집(클론 노동력→시장 포지션 = Bloc 자산 직결). AXIOM 차익거래와 구분: 저속 누적형. `euro_applyAll`에 연결, 기존 EURO_SIG_PATTERNS `/HELIX · 클론/`로 트레이스 집계
+- **측정(N=600)**: HELIX 11×11 25.0%→38~43% · 5×5 16.7%→31.7%, 시그니처 발동 0→4.2/2.7. 양 맵 위반 0·경고 0, 진영 균형 유지(Ghost 47%/Bloc 53%). test_decisions 11/11 통과
+- **관찰**: AXIOM 11×11은 런별 31~62% 진폭(55표본/클래스 노이즈) — 베이스라인부터 최강이라 v6.0 "관찰" 유지, 노이즈 과적합 회피로 추가 너프 보류
+
 ---
 
 ## [6.0.0] — 시뮬레이터 전반 리팩토링 + RIGGER 시그니처 + 결정 모달 UI (2026-06-19)

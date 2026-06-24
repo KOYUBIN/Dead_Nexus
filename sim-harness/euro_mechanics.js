@@ -484,6 +484,36 @@ function euro_riggerSignature(state) {
   return s;
 }
 
+// v6.1: HELIX 시그니처 — 클론 뱅크 복원
+// core.js HELIX 블록은 `hp < maxHp` 게이트라 Bloc(HP 거의 불변)에선 死문(발동률 0).
+// RIGGER 선례를 따라 점수 직결 보상으로 부활 — 매R 클론+1·🎙+1, 3개마다 타사 최저가 주식
+// 1주 자동 매집(클론 노동력 → 시장 포지션 = Bloc 자산 직결). AXIOM(매R 차익거래)과 구분: 저속 누적형.
+function euro_helixSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'HELIX' || p.role !== 'bloc') continue;
+    const ps = [...s.players];
+    const clones = (ps[pi].helixClones || 0) + 1;            // 매 R 클론 +1
+    const newRes = { ...ps[pi].resources, influence: (ps[pi].resources.influence || 0) + 1 };
+    const newStocks = { ...(ps[pi].stocks || {}) };
+    let bonus = '';
+    if (clones % 3 === 0) {                                  // 3개마다 타사 최저가 주식 1주 매집
+      const others = Object.keys(s.stocks).filter(b => b !== p.specific);
+      others.sort((a, b) => (s.stocks[a] || 0) - (s.stocks[b] || 0));
+      if (others.length) {
+        const cheapest = others[0];
+        newStocks[cheapest] = (newStocks[cheapest] || 0) + 1;
+        bonus = ` · 클론 3개 → ${cheapest} 주식 매집`;
+      }
+    }
+    ps[pi] = { ...ps[pi], resources: newRes, stocks: newStocks, helixClones: clones };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🧬 P${pi} HELIX · 클론 뱅크 (🎙+1${bonus})`);
+  }
+  return s;
+}
+
 // ============================================================================
 // v6.0 — 결정(Decision) 모달 골격 (Item 6 / v4.0.2)
 // 의미 있는 선택 지점을 구조화. UI는 pendingDecision을 모달로 띄우고, 헤드리스/봇은
@@ -585,6 +615,7 @@ function euro_applyAll(state) {
   s = euro_cipher5x5(s);
   s = euro_ghostHustle(s);
   s = euro_riggerSignature(s);
+  s = euro_helixSignature(s);
   s = euro_checkHighlights(s);
   return s;
 }
