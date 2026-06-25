@@ -8,6 +8,24 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 웹 시뮬레이터 시그니처 3차 포팅 (6 시그니처 + 견제 토큰 적용)
+- **core.js `applyClassSignatures` 6개 클래스 시그니처 추출 → euro_module.js**:
+  - `euro_bladeSignature` — 표적 시스템 (R 시작 시 가장 ★ 높은 적 지정, 처치 시 ★+8, 만료 시 ★-3)
+  - `euro_brokerSignature` — 매R 메모+1, 5도달 시 ₵+5·★+3 1회 (simulator highlight `diplomat_master`와 연동)
+  - `euro_cipherSignature` (11×11) — Bloc HQ 인접 시 해킹 노드 자동 발동 → 적 주가-1, 자기 📡+2, hackNodes+1 (simulator highlight `hack_god`과 연동). 5×5는 별도 `euro_cipher5x5`
+  - `euro_moleSignature` — R2 시작 시 가장 약한 Bloc(주가 최저)으로 위장 (1회)
+  - `euro_vantaSignature` — 자사 구역 veil 토큰 +1 (최대 3, 가장 적은 곳)
+  - `euro_ironwallSignature` — 자사 구역 garrison +1 (최대 3, 가장 적은 곳)
+  - `euro_axiomSignature` — 매R 자동 매도(가장 비싼 비자사)/매수(가장 싼 비자사) algo trade
+- **견제 토큰 시스템 (`SUPPRESSION_SPEC` + `euro_applySuppression`)**:
+  - 3종 명세: combat(🔥, ★-차감), info(📡, data-차감), diplomacy(🤝, influence-차감)
+  - R 시작 시 토큰별 자원 페널티 적용 후 토큰 소진 (부여 로직은 봇 AI 측 별도 사이클)
+- `euro_applyAll`에 8개 hook 연결 (견제 적용을 +자원 효과 전에 배치)
+- `SUPPRESSION_SPEC` window 글로벌 노출
+- **검증 (3R 통합 시뮬, P0~P6 7명)**: BLADE R1 표적 지정→R3 만료, BROKER 메모 누적, CIPHER VANTA HQ 인접 → R3 hackNodes 3 → 하이라이트 `해킹 신` 발동, MOLE R2 VANTA 위장, VANTA F5 veil 1→3, IRONWALL F7 garrison 1→3, AXIOM 매R algo → R3 AXIOM 주가 15 → 하이라이트 `상장` 발동, 견제 토큰 P0 BLADE ★-2 적용 후 소진 ✓
+- **결정 보류**: `euro_finalBonus_v51` 점수 통합은 simulator가 `finalScores` 배열 대신 R&D/`highlightPoints` 누적 방식이라 포팅 불필요 (현재 `euro_checkHighlights`가 이미 `highlightPoints`를 갱신 중)
+- **잔여 (다음 사이클)**: 견제 토큰 봇 AI 부여 로직 (현재는 적용만 — 외부에서 토큰 주입해야 발동)
+
 ### 웹 시뮬레이터 시그니처 2차 포팅 (CARBON11×11 / CIPHER5×5 / GhostHustle)
 - `euro_carbonGrid11x11` — 11×11에서 CARBON Bloc 보유 구역 수에 따라 ₵+1/+2/+3 (2/3/4+ 구역)
 - `euro_cipher5x5` — 5×5에서 매R 📡(data)+1 자동 (해킹 노드 발동률 부족 보정)
