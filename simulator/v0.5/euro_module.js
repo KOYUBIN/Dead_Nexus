@@ -5,6 +5,32 @@
 // simulator의 coordsAdj, logEntry, assetValue, raiseTrack 함수에 의존
 // ============================================================================
 
+// v6.2 (web 포팅): sim-harness의 MODE_CONFIG 단일 소스 (mapSize별 파라미터)
+// core.js의 maxRounds(10/7)와 일치해야 함 — 변경 시 양쪽 동시 수정
+const MODE_CONFIG = {
+  '11x11': {
+    label: '11×11 (정식)',
+    maxRounds: 10,
+    safetyRounds: 12,
+    suppressionProb: 0.30,
+    faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
+    avgRound: { min: 8.0, max: 11.0, target: 10 },
+    classWinRate: { min: 5, max: 60 },
+  },
+  '5x5': {
+    label: '5×5 (튜토리얼)',
+    maxRounds: 7,
+    safetyRounds: 8,
+    suppressionProb: 0.15,
+    faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
+    avgRound: { min: 5.0, max: 8.0, target: 7 },
+    classWinRate: { min: 5, max: 55 },
+  },
+};
+function euro_mode(mapSize) {
+  return MODE_CONFIG[mapSize] || MODE_CONFIG['11x11'];
+}
+
 // v5.0.3: 동적 시장 가격 헬퍼
 function euro_marketTradePrice(state, blocName, delta) {
   const newStocks = { ...state.stocks };
@@ -107,6 +133,328 @@ function euro_drifterNerf5x5(state) {
     ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: newRep } };
     s = { ...s, players: ps };
     if (typeof logEntry === 'function') s = logEntry(s, `🌃 P${pi} DRIFTER · 5×5 이동 페널티 ★-1`);
+  }
+  return s;
+}
+
+// v6.0 (web 포팅): RIGGER 시그니처 — 함정망 전개
+// 매R 부품 +1, 함정 3개마다 평판 +2. sim-harness/euro_mechanics.js와 동일 공식
+function euro_riggerSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'RIGGER') continue;
+    const ps = [...s.players];
+    const traps = (ps[pi].rigTraps || 0) + 1;
+    let newRes = { ...ps[pi].resources, parts: (ps[pi].resources.parts || 0) + 1 };
+    let bonus = '';
+    if (traps % 3 === 0) { newRes.rep = (newRes.rep || 0) + 2; bonus = ' · 함정 발동 ★+2'; }
+    ps[pi] = { ...ps[pi], resources: newRes, rigTraps: traps };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🪤 P${pi} RIGGER · 함정망 전개 (⚙+1${bonus})`);
+  }
+  return s;
+}
+
+// v6.1 (web 포팅): HELIX 시그니처 — 클론 뱅크 복원
+// core.js의 hp<maxHp 게이트는 Bloc에서 死문이라 점수 직결 보상으로 대체:
+// 매R 클론+1·🎙+1, 3개마다 타사 최저가 주식 1주 자동 매집 (저속 누적형, AXIOM 차익거래와 구분)
+function euro_helixSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'HELIX' || p.role !== 'bloc') continue;
+    const ps = [...s.players];
+    const clones = (ps[pi].helixClones || 0) + 1;
+    const newRes = { ...ps[pi].resources, influence: (ps[pi].resources.influence || 0) + 1 };
+    const newStocks = { ...(ps[pi].stocks || {}) };
+    let bonus = '';
+    if (clones % 3 === 0) {
+      const others = Object.keys(s.stocks).filter(b => b !== p.specific);
+      others.sort((a, b) => (s.stocks[a] || 0) - (s.stocks[b] || 0));
+      if (others.length) {
+        const cheapest = others[0];
+        newStocks[cheapest] = (newStocks[cheapest] || 0) + 1;
+        bonus = ` · 클론 3개 → ${cheapest} 주식 매집`;
+      }
+    }
+    ps[pi] = { ...ps[pi], resources: newRes, stocks: newStocks, helixClones: clones };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🧬 P${pi} HELIX · 클론 뱅크 (🎙+1${bonus})`);
+  }
+  return s;
+}
+
+// v6.2 (web 포팅): CARBON 11×11 그리드 확장
+// 11×11에서 CARBON Bloc 보유 구역 수에 따라 ₵ +1/+2/+3 (2/3/4+ 구역)
+function euro_carbonGrid11x11(state) {
+  if (state.meta.mapSize !== '11x11') return state;
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'CARBON' || p.role !== 'bloc') continue;
+    const ownCount = Object.values(s.map).filter(c => c.owner === pi).length;
+    const bonus = ownCount >= 4 ? 3 : ownCount >= 3 ? 2 : ownCount >= 2 ? 1 : 0;
+    if (bonus > 0) {
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + bonus } };
+      s = { ...s, players: ps };
+      if (typeof logEntry === 'function') s = logEntry(s, `⚡ P${pi} CARBON · 그리드 확장 (11×11, ${ownCount}구역) → ₵+${bonus}`);
+    }
+  }
+  return s;
+}
+
+// v6.2 (web 포팅): CIPHER 5×5 백그라운드 크롤러
+// 5×5에서 해킹 노드 발동률 부족 보정 — 매R 📡(data) +1 자동
+function euro_cipher5x5(state) {
+  if (state.meta.mapSize !== '5x5') return state;
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'CIPHER') continue;
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, data: (ps[pi].resources.data || 0) + 1 } };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `💾 P${pi} CIPHER · 백그라운드 크롤러 (5×5) → 📡+1`);
+  }
+  return s;
+}
+
+// v6.2 (web 포팅): Ghost 허슬 — 진영 균형 보정
+// euro_marketCycle의 Bloc 자기주가+1과 대칭. 매 R Ghost 평판 +1.
+// 11×11에선 격R (BROKER 제외 — 자체 메모 시스템으로 평판 누적)
+function euro_ghostHustle(state) {
+  let s = state;
+  if (state.meta.mapSize === '11x11' && state.meta.round % 2 === 0) return state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.role !== 'ghost') continue;
+    if (s.meta.mapSize === '11x11' && p.specific === 'BROKER') continue;
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: (ps[pi].resources.rep || 0) + 1 } };
+    s = { ...s, players: ps };
+  }
+  return s;
+}
+
+// ============================================================================
+// v6.3 (web 포팅, 3차): core.js applyClassSignatures의 6개 클래스 시그니처
+// sim-harness 측은 core.js 동결이라 그 안에 살아있음. web 시뮬레이터는 자체
+// 구현 부재(grep 확인) — 클래스별 특징을 sim-harness 공식 그대로 이식.
+// 매R 효과로 euro_applyAll에 연결. simulator의 highlight(hackNodes/tradeMemo)
+// 트리거와 호환.
+// ============================================================================
+
+// BLADE 시그니처 — 표적 시스템
+// 1) 이전 R 표적이 처치됐으면 ★+8, 만료(2R 경과)면 ★-3
+// 2) R 시작 시 가장 평판 높은 적을 새 표적으로 지정
+function euro_bladeSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'BLADE') continue;
+    // 표적 결산
+    if (p.target) {
+      const tgt = s.players[p.target.playerIdx];
+      if (tgt && tgt.defeated && p.target.round < s.meta.round) {
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: (ps[pi].resources.rep || 0) + 8 }, target: null };
+        s = { ...s, players: ps };
+        if (typeof logEntry === 'function') s = logEntry(s, `🗡 P${pi} BLADE · 표적 처치 보상 → ★+8`);
+      } else if (p.target.round < s.meta.round - 1) {
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, rep: Math.max(0, (ps[pi].resources.rep || 0) - 3) }, target: null };
+        s = { ...s, players: ps };
+        if (typeof logEntry === 'function') s = logEntry(s, `🗡 P${pi} BLADE · 표적 만료 → ★-3 (계약 실패)`);
+      }
+    }
+    // 새 표적 지정
+    const cur = s.players[pi];
+    if (!cur.target) {
+      const enemies = s.players.map((pp, ppi) => ({ pi: ppi, pp }))
+        .filter(x => x.pi !== pi && !x.pp.defeated);
+      if (enemies.length > 0) {
+        enemies.sort((a, b) => (b.pp.resources.rep || 0) - (a.pp.resources.rep || 0));
+        const target = enemies[0];
+        const ps = [...s.players];
+        ps[pi] = { ...ps[pi], target: { playerIdx: target.pi, round: s.meta.round } };
+        s = { ...s, players: ps };
+        if (typeof logEntry === 'function') s = logEntry(s, `🗡 P${pi} BLADE · 표적 지정 → P${target.pi} ${target.pp.specific} (처치 시 ★+8)`);
+      }
+    }
+  }
+  return s;
+}
+
+// BROKER 시그니처 — 메모 누적
+// 매R 메모 +1. 5 도달 시 ₵+5·★+3 1회 보너스. simulator highlight diplomat_master(≥5)와 연동
+function euro_brokerSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'BROKER') continue;
+    let ps = [...s.players];
+    const newMemo = (ps[pi].tradeMemo || 0) + 1;
+    ps[pi] = { ...ps[pi], tradeMemo: newMemo };
+    s = { ...s, players: ps };
+    if (newMemo === 5) {
+      ps = [...s.players];
+      ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) + 5, rep: (ps[pi].resources.rep || 0) + 3 } };
+      s = { ...s, players: ps };
+      if (typeof logEntry === 'function') s = logEntry(s, `🤝 P${pi} BROKER · 메모 5 도달 → ₵+5, ★+3 (외교 능숙도)`);
+    }
+  }
+  return s;
+}
+
+// CIPHER 시그니처 (11×11 — 해킹 노드) — Bloc HQ 인접 시 자동 발동
+// simulator highlight hack_god(hackNodes ≥ 3)와 연동. 5×5는 별도 euro_cipher5x5 사용
+function euro_cipherSignature(state) {
+  if (state.meta.mapSize !== '11x11') return state;
+  if (typeof coordsAdj !== 'function') return state;
+  let s = state;
+  // simulator는 window.BLOC_SETUP_11x11 / BLOC_SETUP 글로벌. 둘 다 미정의면 미발동.
+  const setup11 = (typeof BLOC_SETUP_11x11 !== 'undefined') ? BLOC_SETUP_11x11 : (typeof window !== 'undefined' && window.BLOC_SETUP_11x11) || null;
+  if (!setup11) return state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'CIPHER' || !p.position) continue;
+    const adj = coordsAdj(p.position).concat([p.position]);
+    const hqAdj = adj.find(c => {
+      const cell = s.map[c];
+      if (!cell || cell.owner == null) return false;
+      const owner = s.players[cell.owner];
+      if (!owner || owner.role !== 'bloc') return false;
+      return setup11[owner.specific] && setup11[owner.specific].hq === c;
+    });
+    if (hqAdj) {
+      const ownerIdx = s.map[hqAdj].owner;
+      const bloc = s.players[ownerIdx].specific;
+      const newStocks = { ...s.stocks, [bloc]: Math.max(1, (s.stocks[bloc] || 5) - 1) };
+      const ps = [...s.players];
+      ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, data: (ps[pi].resources.data || 0) + 2 }, hackNodes: (ps[pi].hackNodes || 0) + 1 };
+      s = { ...s, players: ps, stocks: newStocks };
+      if (typeof logEntry === 'function') s = logEntry(s, `💾 P${pi} CIPHER · 해킹 노드 활성 (${bloc} HQ 인접) → ${bloc} 주가-1, 자기 📡+2`);
+    }
+  }
+  return s;
+}
+
+// MOLE 시그니처 — R2에 가장 약한 Bloc(주가 최저)으로 위장 (1회)
+function euro_moleSignature(state) {
+  if (state.meta.round !== 2) return state;
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'MOLE' || p.disguiseBloc) continue;
+    const blocs = Object.entries(s.stocks).sort((a, b) => a[1] - b[1]);
+    if (!blocs.length) continue;
+    const disguise = blocs[0][0];
+    const ps = [...s.players];
+    ps[pi] = { ...ps[pi], disguiseBloc: disguise };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🕷 P${pi} MOLE · 위장 시작 → ${disguise} 블록으로 위장`);
+  }
+  return s;
+}
+
+// VANTA 시그니처 — 자사 구역 veil 토큰 +1 (최대 3, 가장 적은 곳)
+function euro_vantaSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'VANTA' || p.role !== 'bloc') continue;
+    const ownZones = Object.entries(s.map).filter(([c, cell]) => cell.owner === pi);
+    if (!ownZones.length) continue;
+    ownZones.sort((a, b) => (a[1].veil || 0) - (b[1].veil || 0));
+    const [coord, cell] = ownZones[0];
+    if ((cell.veil || 0) >= 3) continue;
+    const newMap = { ...s.map, [coord]: { ...cell, veil: (cell.veil || 0) + 1 } };
+    s = { ...s, map: newMap };
+    if (typeof logEntry === 'function') s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 정찰 차단)`);
+  }
+  return s;
+}
+
+// IRONWALL 시그니처 — 자사 구역 garrison +1 (최대 3, 가장 적은 곳)
+function euro_ironwallSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'IRONWALL' || p.role !== 'bloc') continue;
+    const ownZones = Object.entries(s.map).filter(([c, cell]) => cell.owner === pi);
+    if (!ownZones.length) continue;
+    ownZones.sort((a, b) => (a[1].garrison || 0) - (b[1].garrison || 0));
+    const [coord, cell] = ownZones[0];
+    if ((cell.garrison || 0) >= 3) continue;
+    const newMap = { ...s.map, [coord]: { ...cell, garrison: (cell.garrison || 0) + 1 } };
+    s = { ...s, map: newMap };
+    if (typeof logEntry === 'function') s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 배치 (Ghost raid 시 자동 반격)`);
+  }
+  return s;
+}
+
+// AXIOM 시그니처 — 마켓 틱 (자동 매도/매수)
+// 가장 비싼 비자사 주식 1주 매도 + 가장 싼 1주 매수 (algo trade)
+function euro_axiomSignature(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated || p.specific !== 'AXIOM' || p.role !== 'bloc') continue;
+    const blocs = Object.keys(s.stocks).filter(b => b !== p.specific);
+    if (blocs.length < 2) continue;
+    blocs.sort((a, b) => (s.stocks[a] || 0) - (s.stocks[b] || 0));
+    const cheapest = blocs[0];
+    const expensive = blocs[blocs.length - 1];
+    const myStocks = p.stocks || {};
+    const ps = [...s.players];
+    let newRes = { ...p.resources };
+    let newStocksOwned = { ...myStocks };
+    if ((newStocksOwned[expensive] || 0) > 0) {
+      newStocksOwned[expensive] -= 1;
+      newRes.credit = (newRes.credit || 0) + (s.stocks[expensive] || 0);
+    }
+    if (newRes.credit >= (s.stocks[cheapest] || 0)) {
+      newStocksOwned[cheapest] = (newStocksOwned[cheapest] || 0) + 1;
+      newRes.credit -= (s.stocks[cheapest] || 0);
+    }
+    ps[pi] = { ...ps[pi], resources: newRes, stocks: newStocksOwned };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `📈 P${pi} AXIOM · 마켓 틱 (${expensive} 매도 → ${cheapest} 매수)`);
+  }
+  return s;
+}
+
+// 견제 토큰 단일 명세 — sim-harness/euro_mechanics.js와 동일
+const SUPPRESSION_SPEC = {
+  combat:     { icon: '🔥', label: '무력',   resource: 'rep',       resIcon: '★'  },
+  info:       { icon: '📡', label: '정보',   resource: 'data',      resIcon: '📡' },
+  diplomacy:  { icon: '🤝', label: '외교',   resource: 'influence', resIcon: '🎙' },
+};
+
+// 견제 토큰 효과 적용 — R 시작 시 토큰 수만큼 해당 자원 깎고 토큰 소진
+// (부여 로직은 봇 AI 측 별도 작업. 적용만 web에 추가 — 외부에서 토큰을 심으면 발동)
+function euro_applySuppression(state) {
+  let s = state;
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const p = s.players[pi];
+    if (p.defeated) continue;
+    const tok = p.suppressionTokens;
+    if (!tok || !(tok.combat || tok.info || tok.diplomacy)) continue;
+    const ps = [...s.players];
+    let newRes = { ...ps[pi].resources };
+    let penalties = [];
+    for (const [type, spec] of Object.entries(SUPPRESSION_SPEC)) {
+      const cnt = tok[type] || 0;
+      if (cnt > 0) {
+        newRes[spec.resource] = Math.max(0, (newRes[spec.resource] || 0) - cnt);
+        penalties.push(`${spec.resIcon}-${cnt}`);
+      }
+    }
+    ps[pi] = { ...ps[pi], resources: newRes, suppressionTokens: { combat: 0, info: 0, diplomacy: 0 } };
+    s = { ...s, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🚧 P${pi} ${p.specific} · 견제 효과 적용 ${penalties.join(' ')}`);
   }
   return s;
 }
@@ -411,12 +759,25 @@ function euro_checkTMDecisions(state) {
 // 통합 hook — NEXT_ROUND마다 호출
 function euro_applyAll(state) {
   let s = state;
+  s = euro_applySuppression(s);    // v6.3 (web 포팅) — 견제 토큰 페널티 (자원 +효과보다 먼저)
   s = euro_tryConvertResources(s);
   s = euro_marketCycle(s);
   s = euro_networkIncome(s);
   s = euro_drifterNerf5x5(s);
+  s = euro_riggerSignature(s);     // v6.0 (web 포팅) — 함정망
+  s = euro_helixSignature(s);      // v6.1 (web 포팅) — 클론 뱅크
+  s = euro_carbonGrid11x11(s);     // v6.2 (web 포팅) — 11×11 그리드
+  s = euro_cipher5x5(s);           // v6.2 (web 포팅) — 5×5 크롤러
+  s = euro_ghostHustle(s);         // v6.2 (web 포팅) — 진영 균형
+  s = euro_bladeSignature(s);      // v6.3 (web 포팅) — BLADE 표적
+  s = euro_brokerSignature(s);     // v6.3 (web 포팅) — BROKER 메모
+  s = euro_cipherSignature(s);     // v6.3 (web 포팅) — CIPHER 11×11 해킹 노드
+  s = euro_moleSignature(s);       // v6.3 (web 포팅) — MOLE R2 위장
+  s = euro_vantaSignature(s);      // v6.3 (web 포팅) — VANTA veil
+  s = euro_ironwallSignature(s);   // v6.3 (web 포팅) — IRONWALL garrison
+  s = euro_axiomSignature(s);      // v6.3 (web 포팅) — AXIOM 마켓 틱
   s = euro_checkHighlights(s);
-  s = euro_checkTMDecisions(s);  // v4.0.2: 마일스톤/어워드 결정 큐
+  s = euro_checkTMDecisions(s);    // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
 }
 
@@ -425,6 +786,9 @@ if (typeof window !== 'undefined') {
   window.euro_applyAll = euro_applyAll;
   window.euro_gearBonus = euro_gearBonus;
   window.EURO_HIGHLIGHTS = EURO_HIGHLIGHTS;
+  window.MODE_CONFIG = MODE_CONFIG;          // v6.2 (web 포팅)
+  window.euro_mode = euro_mode;
+  window.SUPPRESSION_SPEC = SUPPRESSION_SPEC; // v6.3 (web 포팅)
   // v4.0.2: 결정 모달 골격
   window.EURO_MILESTONES_TM = EURO_MILESTONES_TM;
   window.EURO_AWARDS_TM = EURO_AWARDS_TM;

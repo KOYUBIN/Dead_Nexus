@@ -8,6 +8,41 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 웹 시뮬레이터 시그니처 3차 포팅 (6 시그니처 + 견제 토큰 적용)
+- **core.js `applyClassSignatures` 6개 클래스 시그니처 추출 → euro_module.js**:
+  - `euro_bladeSignature` — 표적 시스템 (R 시작 시 가장 ★ 높은 적 지정, 처치 시 ★+8, 만료 시 ★-3)
+  - `euro_brokerSignature` — 매R 메모+1, 5도달 시 ₵+5·★+3 1회 (simulator highlight `diplomat_master`와 연동)
+  - `euro_cipherSignature` (11×11) — Bloc HQ 인접 시 해킹 노드 자동 발동 → 적 주가-1, 자기 📡+2, hackNodes+1 (simulator highlight `hack_god`과 연동). 5×5는 별도 `euro_cipher5x5`
+  - `euro_moleSignature` — R2 시작 시 가장 약한 Bloc(주가 최저)으로 위장 (1회)
+  - `euro_vantaSignature` — 자사 구역 veil 토큰 +1 (최대 3, 가장 적은 곳)
+  - `euro_ironwallSignature` — 자사 구역 garrison +1 (최대 3, 가장 적은 곳)
+  - `euro_axiomSignature` — 매R 자동 매도(가장 비싼 비자사)/매수(가장 싼 비자사) algo trade
+- **견제 토큰 시스템 (`SUPPRESSION_SPEC` + `euro_applySuppression`)**:
+  - 3종 명세: combat(🔥, ★-차감), info(📡, data-차감), diplomacy(🤝, influence-차감)
+  - R 시작 시 토큰별 자원 페널티 적용 후 토큰 소진 (부여 로직은 봇 AI 측 별도 사이클)
+- `euro_applyAll`에 8개 hook 연결 (견제 적용을 +자원 효과 전에 배치)
+- `SUPPRESSION_SPEC` window 글로벌 노출
+- **검증 (3R 통합 시뮬, P0~P6 7명)**: BLADE R1 표적 지정→R3 만료, BROKER 메모 누적, CIPHER VANTA HQ 인접 → R3 hackNodes 3 → 하이라이트 `해킹 신` 발동, MOLE R2 VANTA 위장, VANTA F5 veil 1→3, IRONWALL F7 garrison 1→3, AXIOM 매R algo → R3 AXIOM 주가 15 → 하이라이트 `상장` 발동, 견제 토큰 P0 BLADE ★-2 적용 후 소진 ✓
+- **결정 보류**: `euro_finalBonus_v51` 점수 통합은 simulator가 `finalScores` 배열 대신 R&D/`highlightPoints` 누적 방식이라 포팅 불필요 (현재 `euro_checkHighlights`가 이미 `highlightPoints`를 갱신 중)
+- **잔여 (다음 사이클)**: 견제 토큰 봇 AI 부여 로직 (현재는 적용만 — 외부에서 토큰 주입해야 발동)
+
+### 웹 시뮬레이터 시그니처 2차 포팅 (CARBON11×11 / CIPHER5×5 / GhostHustle)
+- `euro_carbonGrid11x11` — 11×11에서 CARBON Bloc 보유 구역 수에 따라 ₵+1/+2/+3 (2/3/4+ 구역)
+- `euro_cipher5x5` — 5×5에서 매R 📡(data)+1 자동 (해킹 노드 발동률 부족 보정)
+- `euro_ghostHustle` — 매R Ghost 평판+1로 marketCycle Bloc 자기주가+1과 대칭 진영 균형 보정. 5×5 매R / 11×11 격R / 11×11 BROKER 제외
+- `euro_applyAll`에 3개 hook 연결
+- 검증: 11×11 CARBON 4구역 3R → ₵+9, 11×11 DRIFTER 격R → ★+2 (R1·R3), 5×5 CIPHER 자원변환 후 data1+intel1, 5×5 BROKER 3R → ★+3
+- **잔여**: BLADE/MOLE/AXIOM/VANTA/IRONWALL/BROKER 시그니처(core.js 내부 추출), 견제 토큰 3종(SUPPRESSION_SPEC), `euro_finalBonus`/`_v51` 점수 통합
+
+### 웹 시뮬레이터에 sim-harness 시그니처/MODE_CONFIG 1차 포팅
+- v6.0/v6.1 sim-harness에서 신규 추가된 항목을 `simulator/v0.5/euro_module.js`에 동일 공식으로 이식 (web/headless 밸런스 레짐 통합 시작점):
+  - **MODE_CONFIG** + `euro_mode(mapSize)` — 11×11/5×5 파라미터 단일 소스 (maxRounds·suppressionProb·진영/클래스 허용폭). core.js maxRounds(10/7)와 일치
+  - **`euro_riggerSignature`** (v6.0) — 매R ⚙+1, 함정 3개마다 ★+2
+  - **`euro_helixSignature`** (v6.1) — 매R 클론+1·🎙+1, 클론 3개마다 타사 최저가 주식 1주 자동 매집 (저속 누적형, AXIOM 차익거래와 구분)
+- `euro_applyAll`에 두 시그니처 호출 추가, `window` 글로벌에 MODE_CONFIG/euro_mode 노출
+- 기능 검증: HELIX R1~R4 시뮬에서 R3에 VANTA(최저가) 매집 정상 동작, RIGGER R3에 함정 ★+2 정상 발동, 로그 형식 sim-harness와 동일
+- **다음 사이클**: 나머지 9개 시그니처(BLADE/MOLE/AXIOM/CIPHER/CARBON/VANTA/IRONWALL/BROKER/CARBON 11x11/CIPHER 5x5), 견제 토큰 3종, `euro_finalBonus_v51` 점수 통합 포팅 + 헤드리스 web 회귀 테스트 구축
+
 ### Vercel 정적 배포 설정
 - `index.html` 신규: 루트 랜딩 페이지 (사이버펑크 톤, 시뮬레이터/인쇄킷/문서 3카드 + START SIMULATION CTA)
 - `vercel.json` 신규: cleanUrls + HTML 짧은 캐시(5분) · 정적 자원 캐시(24시간) · 보안 헤더 · `/simulator` `/sim` `/play` → `/simulator/v0.5/` 리다이렉트
