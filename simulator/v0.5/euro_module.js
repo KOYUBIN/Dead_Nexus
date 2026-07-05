@@ -459,6 +459,53 @@ function euro_applySuppression(state) {
   return s;
 }
 
+// v6.4 (web 포팅): 견제 토큰 봇 AI 부여 로직
+// core.js applySuppression 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인
+// 상대(인간 포함)에게 견제 토큰 1개 부여 (₵-5). 부여 직후 euro_applySuppression이
+// 같은 R에 페널티 적용 (harness 즉시 효과 시맨틱과 동일).
+// 웹 특화: (1) 부여 주체를 봇으로 제한 — 인간 ₵ 자동 소비 방지
+//          (2) 확률은 MODE_CONFIG.suppressionProb 단일 소스 (11×11 0.30 / 5×5 0.15)
+//          (3) 인간(P0) 타겟 시 lastTargetedBy 알림 배너
+function euro_grantSuppression(state) {
+  const mode = (typeof euro_mode === 'function') ? euro_mode(state.meta.mapSize) : null;
+  const prob = (mode && mode.suppressionProb != null) ? mode.suppressionProb : 0.3;
+  if (Math.random() >= prob) return state;
+  let s = state;
+  // 부여 주체: 봇 · 미탈락 · ₵≥5 중 가장 부유한 1명
+  const actors = s.players
+    .map((p, pi) => ({ pi, p, credit: p.resources.credit || 0 }))
+    .filter(x => x.p.kind === 'bot' && !x.p.defeated && x.credit >= 5);
+  if (!actors.length) return s;
+  actors.sort((a, b) => b.credit - a.credit);
+  const pi = actors[0].pi;
+  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10)
+  const threat = (pp, ppi) => (pp.resources.rep || 0)
+    + (((s.meta.raidsThisGame || {})[ppi]) || 0) * 2
+    + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10);
+  const enemies = s.players
+    .map((pp, ppi) => ({ pi: ppi, pp }))
+    .filter(x => x.pi !== pi && !x.pp.defeated);
+  if (!enemies.length) return s;
+  enemies.sort((a, b) => threat(b.pp, b.pi) - threat(a.pp, a.pi));
+  const target = enemies[0];
+  // 토큰 종류: 기본 무력, Bloc 상대+자기 레이드<2면 정보, 20% 외교
+  let tokenType = 'combat';
+  if (target.pp.role === 'bloc' && (((s.meta.raidsThisGame || {})[pi]) || 0) < 2) tokenType = 'info';
+  else if (Math.random() < 0.2) tokenType = 'diplomacy';
+  const spec = SUPPRESSION_SPEC[tokenType];
+  const ps = [...s.players];
+  ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) - 5 } };
+  const curTok = target.pp.suppressionTokens || { combat: 0, info: 0, diplomacy: 0 };
+  ps[target.pi] = { ...ps[target.pi], suppressionTokens: { ...curTok, [tokenType]: (curTok[tokenType] || 0) + 1 } };
+  s = { ...s, players: ps };
+  // 인간(P0) 타겟 시 알림 배너
+  if (target.pi === 0) {
+    s = { ...s, meta: { ...s.meta, lastTargetedBy: { attacker: pi, effectKey: 'suppression', detail: `${spec.label} 견제 (${spec.resIcon}-1)` } } };
+  }
+  if (typeof logEntry === 'function') s = logEntry(s, `${spec.icon} P${pi} → P${target.pi} ${target.pp.specific} ${spec.label} 견제 (₵-5)`);
+  return s;
+}
+
 // v5.1.0c: 하이라이트 11종 (simulator HIGHLIGHT_DEFS와 별개)
 const EURO_HIGHLIGHTS = {
   hp_one_raid:     { name: '🤕 역전 한 수',   pts: 5, check: (p, s, pi) => p.role === 'ghost' && p.hp === 1 },
@@ -759,6 +806,7 @@ function euro_checkTMDecisions(state) {
 // 통합 hook — NEXT_ROUND마다 호출
 function euro_applyAll(state) {
   let s = state;
+  s = euro_grantSuppression(s);    // v6.4 (web 포팅) — 봇 AI 견제 토큰 부여 (적용보다 먼저 = 즉시 효과)
   s = euro_applySuppression(s);    // v6.3 (web 포팅) — 견제 토큰 페널티 (자원 +효과보다 먼저)
   s = euro_tryConvertResources(s);
   s = euro_marketCycle(s);
@@ -789,6 +837,7 @@ if (typeof window !== 'undefined') {
   window.MODE_CONFIG = MODE_CONFIG;          // v6.2 (web 포팅)
   window.euro_mode = euro_mode;
   window.SUPPRESSION_SPEC = SUPPRESSION_SPEC; // v6.3 (web 포팅)
+  window.euro_grantSuppression = euro_grantSuppression; // v6.4 (web 포팅)
   // v4.0.2: 결정 모달 골격
   window.EURO_MILESTONES_TM = EURO_MILESTONES_TM;
   window.EURO_AWARDS_TM = EURO_AWARDS_TM;
