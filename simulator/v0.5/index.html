@@ -1931,7 +1931,8 @@ function reducer(state, action) {
 
       // 보상/페널티 적용
       if (outcome === 'success') {
-        updatedP.resources.rep = (updatedP.resources.rep || 0) + (rewards.rep || 0);
+        // v6.5: 기본 평판 보상(rewards.rep)은 결정 모달로 대체 — 평판 루트 vs 등가 약탈 루트.
+        // 여기서 즉시 더하지 않고 아래에서 pendingDecisions 큐에 등록 (euro_module 미로드 시 폴백 지급).
         if (rewards.data) updatedP.resources.data = (updatedP.resources.data || 0) + rewards.data;
         if (rewards.parts) updatedP.resources.parts = Math.max(0, (updatedP.resources.parts || 0) + rewards.parts);
         if (rewards.influence) updatedP.resources.influence = (updatedP.resources.influence || 0) + rewards.influence;
@@ -2040,12 +2041,35 @@ function reducer(state, action) {
       if (outcome === 'success') {
         const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
         const buildStr = destroyedBuilding ? ` · 🏚 ${BUILDINGS[destroyedBuilding].name} 파괴 (★+2 ₵+3)` : '';
-        s = logEntry(s, `  ✅ 성공 · 렙+${rewards.rep} · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}${buildStr}`);
+        s = logEntry(s, `  ✅ 성공 · 보상 선택 대기(★+${rewards.rep} 또는 약탈) · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}${buildStr}`);
       } else {
         s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
       }
 
       s.meta = { ...s.meta, pendingRaid: null };
+
+      // v6.5: 레이드 성공 기본 평판 보상을 선택 결정으로 큐잉 (밸런스 중립: ★+rep vs 등가 약탈)
+      if (outcome === 'success' && (rewards.rep || 0) > 0) {
+        if (typeof euro_addPendingDecision === 'function' && typeof euro_raidLootBundle === 'function') {
+          const _lb = euro_raidLootBundle(rewards.rep);
+          s = euro_addPendingDecision(s, {
+            id: `raid_reward_r${s.meta.round}_${pr.coord}`,
+            type: 'raid_reward',
+            playerIdx: 0,
+            prompt: '레이드 성공 — 보상 선택',
+            options: [
+              { id: 'rep',  label: `★ 평판 +${rewards.rep} (평판 루트)` },
+              { id: 'loot', label: `₵+${_lb.credit}, ⚙+${_lb.parts} (약탈 루트)` },
+            ],
+            context: { round: s.meta.round, rep: rewards.rep, coord: pr.coord },
+          });
+        } else {
+          // 폴백: euro_module 미로드 시 기존 동작 유지 (평판 즉시 지급)
+          const ps2 = [...s.players];
+          ps2[0] = { ...ps2[0], resources: { ...ps2[0].resources, rep: (ps2[0].resources.rep || 0) + rewards.rep } };
+          s = { ...s, players: ps2 };
+        }
+      }
       return s;
     }
 
@@ -2063,16 +2087,35 @@ function reducer(state, action) {
       if (raidTotal >= pr.threshold) {
         const newStocks = { ...s.stocks, [pr.bloc]: Math.max(1, s.stocks[pr.bloc] - 3) };
         const ps = [...s.players];
+        // v6.5: 기본 평판 보상(+3)은 결정 모달로 대체 — 평판 루트 vs 등가 약탈 루트 (아래 큐잉)
         ps[0] = {
           ...me,
-          resources: { ...me.resources, rep: (me.resources.rep || 0) + 3 },
           wanted: (me.wanted || 0) + 1,
         };
         const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
         s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
         s.meta = { ...s.meta, pendingRaid: null, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+        // v6.5: 레이드 성공 기본 평판 보상을 선택 결정으로 큐잉 (밸런스 중립: ★+3 vs 등가 약탈)
+        if (typeof euro_addPendingDecision === 'function' && typeof euro_raidLootBundle === 'function') {
+          const _lb = euro_raidLootBundle(3);
+          s = euro_addPendingDecision(s, {
+            id: `raid_reward_r${s.meta.round}_${pr.coord}`,
+            type: 'raid_reward',
+            playerIdx: 0,
+            prompt: '레이드 성공 — 보상 선택',
+            options: [
+              { id: 'rep',  label: '★ 평판 +3 (평판 루트)' },
+              { id: 'loot', label: `₵+${_lb.credit}, ⚙+${_lb.parts} (약탈 루트)` },
+            ],
+            context: { round: s.meta.round, rep: 3, coord: pr.coord },
+          });
+        } else {
+          const ps2 = [...s.players];
+          ps2[0] = { ...ps2[0], resources: { ...ps2[0].resources, rep: (ps2[0].resources.rep || 0) + 3 } };
+          s = { ...s, players: ps2 };
+        }
         const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}${cbStr}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 렙+3 (누적 ${ps[0].resources.rep})`);
+        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}${cbStr}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 보상 선택 대기(★+3 또는 약탈)`);
       } else {
         const ps = [...s.players];
         ps[0] = {
@@ -5693,7 +5736,7 @@ function GameScreen({ state, dispatch }) {
       {/* v6.0: 결정 모달 골격 — pendingDecisions 큐 표시 (마일스톤/어워드/결정) */}
       {state.meta.pendingDecisions && state.meta.pendingDecisions.length > 0 && (() => {
         const dec = state.meta.pendingDecisions[0];
-        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : '결정';
+        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : dec.type === 'raid_reward' ? '레이드 보상' : '결정';
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ background: 'var(--bg2)', border: '2px solid var(--cyan)', borderRadius: 6, padding: 24, maxWidth: 600, width: '90%', boxShadow: '0 0 30px rgba(60,235,255,0.3)' }}>
