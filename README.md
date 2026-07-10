@@ -5,10 +5,10 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.1 (2026-06) — HELIX 시그니처 복원 + 시뮬레이터 v1.0.5-fix
+**현재 버전**: v6.4 (2026-07) — 견제 토큰 시스템 완전 라이브화 + 시뮬레이터 v1.0.5-fix
 
-- **헤드리스 하네스 (N=600)**: 11×11 / 5×5 양 모드 위반 0 · 경고 0, 진영 균형 안정
-- **HELIX 시그니처 死문 수정**: 6클래스 중 유일하게 발동률 0이던 클론 뱅크를 `euro_helixSignature`로 복원 (양 맵 최저 → 중위권)
+- **웹 시뮬레이터 시그니처/`MODE_CONFIG` 전체 포팅 완료**: sim-harness의 클래스 시그니처 13종 + `SUPPRESSION_SPEC`/`euro_applySuppression`(견제 적용)을 `simulator/v0.5/euro_module.js`에 동일 공식으로 이식 — web/headless 밸런스 레짐 수렴
+- **견제 토큰 봇 AI 부여(`euro_grantSuppression`) web 포팅**: 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 봇이 최다위협 상대에 무력★/정보📡/외교🎙 토큰 부여(₵-5) — 견제 시스템 완전 라이브화
 - **웹 시뮬레이터 v1.0.5-fix**: 11×11 정식 + 5×5 튜토리얼 통합, 솔로/핫시트/봇 모드, EASY/NORMAL/HARD 난이도
 
 ---
@@ -251,15 +251,20 @@ dead-nexus/
 - RIGGER 시그니처 신규 (양 모드 양 진영 정상화)
 - 결정 모달 골격 (raid_reward / bloc_invest) — 헤드리스/UI 양쪽 자기검증
 
-### ✅ v6.1 — HELIX 시그니처 복원 (이번 사이클)
+### ✅ v6.1 — HELIX 시그니처 복원
 - HELIX 클론 뱅크가 `hp<maxHp` 게이트라 Bloc에선 死문이던 문제 — `euro_helixSignature`로 점수 직결 보상 부활 (매R 클론+1·🎙+1, 3개마다 타사 최저가 주식 매집)
 - 측정 N=600: 11×11 25%→38~43% · 5×5 16.7%→31.7% · 시그니처 발동 0→4.2/2.7
 - 양 맵 위반 0 · 경고 0, 진영 균형·전 클래스 임계 내 유지
 
+### ✅ v6.2–v6.4 — 웹 시뮬레이터 시그니처 전체 포팅 + 견제 토큰 라이브화 (이번 사이클)
+- `MODE_CONFIG`+`euro_mode` 및 나머지 클래스 시그니처(CARBON 11×11 · CIPHER 5×5 · GhostHustle · BLADE · BROKER · CIPHER 11×11 해킹노드 · MOLE · VANTA · IRONWALL · AXIOM)를 `simulator/v0.5/euro_module.js`에 sim-harness와 동일 공식으로 이식 — 시그니처 13종 전체 web/headless 밸런스 레짐 수렴 (v6.3)
+- `SUPPRESSION_SPEC` + `euro_applySuppression`(견제 적용, 무력★/정보📡/외교🎙) web 이식 (v6.3)
+- `euro_grantSuppression` — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 견제 토큰 자동 부여(₵-5), 인간 타겟 시 알림 배너. 견제 시스템 완전 라이브화 (v6.4)
+
 ### 🔄 v2.0+ — 다음 마일스톤
 - 대면 플레이테스트 1~3회 (실 데이터 수집)
 - 결정 모달 라이브 트리거(harness raid_reward 실연결) — 결정 깊이 확장
-- 웹 시뮬레이터에 시그니처/`MODE_CONFIG` 포팅 — 1차 완료(MODE_CONFIG + RIGGER/HELIX 시그니처). 나머지 9개 시그니처·견제 토큰·점수 통합 잔여
+- 인간 능동 견제 UI — 현재 봇→인간 방향만 라이브(`euro_grantSuppression`), 인간이 직접 견제 토큰을 부여하는 UI는 미구현
 - TTS(Tabletop Simulator) 익스포트
 - 캠페인 시나리오 S02~S08 시뮬 통합
 - 일러스트 + 공식 룰북 PDF + 카드 아트

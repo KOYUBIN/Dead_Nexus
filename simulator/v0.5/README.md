@@ -29,13 +29,15 @@ React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
   - TL 1~2 카드 해금 (R&D 페이즈)
   - 승리 진척 패널 + 위협 대시보드 + 타겟 알림 배너
   - LocalStorage 플레이 히스토리 (최근 50판)
+  - **`MODE_CONFIG`+`euro_mode` 단일 소스** + **클래스 시그니처 13종** (RIGGER · HELIX · CARBON 11×11 · CIPHER 5×5 · GhostHustle · BLADE · BROKER · CIPHER 11×11 해킹노드 · MOLE · VANTA · IRONWALL · AXIOM) — sim-harness와 web 밸런스 레짐 통일 (v6.3)
+  - **견제 토큰 3종** (무력★/정보📡/외교🎙, `SUPPRESSION_SPEC`) — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 자동 부여(`euro_grantSuppression`, ₵-5) + R 시작 시 자동 페널티 적용. **완전 라이브** (v6.4). 인간 플레이어의 능동 견제(UI 버튼)는 미구현 — 봇→인간 방향만 라이브
 
 ### 다음 사이클 (v0.6+ 예정)
 - 시나리오 S02~S06 시뮬 통합
 - M&A 시스템 전체 (적대적 인수·방어 라운드·백기사 동맹)
 - 뉴스 카드 50+ (현재 35)
 - Tech Level 3~5 전용 카드 해금
-- **클래스 시그니처/`MODE_CONFIG` 포팅** — 현재 웹 시뮬레이터는 sim-harness와 별도 밸런스 레짐. v6.x sim-harness 측 메커닉을 web에 통일 (CHANGELOG v6.0 인계 사항)
+- 인간 플레이어 능동 견제 UI (현재 봇→인간 방향만 라이브)
 
 ### v0.7+
 - 레거시 캠페인 연동
@@ -194,4 +196,6 @@ Phase 6 결산     → 승리 체크 → 다음 라운드
 | v1.0.5-fix | 11×11 맵 손패 가림 방지, 카드 flavor text Ghost 60+ / Bloc 30+ |
 | v3.x~v5.x | 클래스 시그니처 11종 + 견제 토큰 3종 + 결정론 레이드 + 자원 변환 점수 (주로 sim-harness 측, web 측 v5.2.1로 부분 포팅) |
 | v6.0   | 시뮬레이터 전반 리팩토링 + RIGGER 시그니처 + 결정 모달 골격 (web/headless) |
-| v6.1   | (sim-harness) HELIX 시그니처 死문 수정 — 클론 뱅크 자동 매집으로 자산 직결화. 양 맵 위반 0·경고 0 유지. **web 측 포팅은 다음 사이클 대기** |
+| v6.1   | (sim-harness) HELIX 시그니처 死문 수정 — 클론 뱅크 자동 매집으로 자산 직결화. 양 맵 위반 0·경고 0 유지 |
+| v6.3   | 웹 시뮬레이터에 sim-harness 시그니처/`MODE_CONFIG` 전체 포팅 — `MODE_CONFIG`+`euro_mode`, 클래스 시그니처 13종(RIGGER/HELIX/CARBON11×11/CIPHER5×5/GhostHustle/BLADE/BROKER/CIPHER11×11/MOLE/VANTA/IRONWALL/AXIOM), `SUPPRESSION_SPEC`+`euro_applySuppression`(견제 적용) |
+| v6.4   | 견제 토큰 봇 AI 부여 로직(`euro_grantSuppression`) web 포팅 — 매R 확률적으로(`MODE_CONFIG.suppressionProb`) 봇이 최다위협 상대에게 견제 부여(₵-5), 인간 타겟 시 알림 배너. 견제 시스템 완전 라이브화 |
