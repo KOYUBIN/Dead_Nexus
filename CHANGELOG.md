@@ -8,6 +8,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 인간 능동 견제 UI (5차) + index.html 렌더 불능 핫픽스
+- **핫픽스 (중대)**: 커밋본 `simulator/v0.5/index.html`의 `App()`에 `if (!state) {` 가드 줄이 누락돼 브레이스 불균형 → **babel transform 전체 실패 = 시뮬레이터가 브라우저에서 렌더되지 않는 상태**였음 (v6.0에 기록된 "대형 파일 Edit 마운트 잘림" 증상과 일치). 1줄 복원. git HEAD 재현 + 수정본 통과를 독립 검증으로 확인
+- **`HUMAN_SUPPRESS` 리듀서** — 인간 플레이어 능동 견제. 가드: kind human·미탈락·₵≥5·라운드당 1회(`meta.humanSuppressedThisRound`, NEXT_ROUND 리셋)·자기/탈락 타겟 거부. 효과: ₵-5, 타겟 `suppressionTokens[type]+=1`, 봇 부여와 동일 로그 포맷. 토큰 소비는 기존 `euro_applySuppression`가 다음 R에 자동 처리
+- **시장 페이즈 견제 패널** — 공용 상점 아래 "🚧 능동 견제": 대상 선택 → 무력🔥/정보📡/외교🤝 택1 → 견제(₵5). 비활성 사유 표시(₵ 부족/이미 견제/대상 미선택). 핫시트 대응: P0 하드코딩 대신 현재 인간 인덱스(`meIdx`) 사용
+- **검증**: 라이브와 동일한 babel-standalone 7.25.6 변환 0 에러, 리듀서 스모크 16/16 통과(3종 토큰·전 가드·리셋 후 재견제), 봇 grant 산출물과 토큰 형태 동일성 확인
+- 이로써 견제가 **양방향 라이브** (봇→인간 v6.4, 인간→봇/인간 v6.5)
+
 ### 견제 토큰 봇 AI 부여 로직 web 포팅 (4차) — 견제 시스템 라이브화
 - **`euro_grantSuppression`** — core.js `applySuppression` 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인 상대(인간 포함)에게 견제 토큰 1개 부여 (₵-5)
   - `euro_applyAll`에서 `euro_applySuppression`(적용) **앞에** 배치 → harness와 동일한 즉시 효과 시맨틱 (부여 → 같은 R 페널티)
