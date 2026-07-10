@@ -2185,6 +2185,34 @@ function reducer(state, action) {
       };
     }
 
+    case 'HUMAN_SUPPRESS': {
+      // v6.4: 인간 플레이어 능동 견제 — payload: { playerIdx(부여자), targetIdx, tokenType }
+      // 봇 부여(euro_grantSuppression)의 인간 방향 대칭. 토큰 소비는 다음 NEXT_ROUND의
+      // euro_applySuppression이 자동 처리 (여기선 부여만).
+      const SPEC = (typeof window !== 'undefined' && window.SUPPRESSION_SPEC) || (typeof SUPPRESSION_SPEC !== 'undefined' ? SUPPRESSION_SPEC : null);
+      const spec = SPEC && SPEC[action.tokenType];
+      if (!spec) return state;
+      const attacker = state.players[action.playerIdx];
+      const target = state.players[action.targetIdx];
+      if (!attacker || !target) return state;
+      // 가드: 부여자 human · 미탈락, 타겟 미탈락 · 자기 아님, ₵≥5, 라운드당 1회
+      if (attacker.kind !== 'human' || attacker.defeated) return state;
+      if (target.defeated || action.targetIdx === action.playerIdx) return state;
+      if ((attacker.resources.credit || 0) < 5) return state;
+      const suppressed = state.meta.humanSuppressedThisRound || {};
+      if (suppressed[action.playerIdx]) return state;
+      const ps = [...state.players];
+      ps[action.playerIdx] = { ...attacker, resources: { ...attacker.resources, credit: (attacker.resources.credit || 0) - 5 } };
+      const curTok = target.suppressionTokens || { combat: 0, info: 0, diplomacy: 0 };
+      ps[action.targetIdx] = { ...target, suppressionTokens: { ...curTok, [action.tokenType]: (curTok[action.tokenType] || 0) + 1 } };
+      return {
+        ...state,
+        players: ps,
+        meta: { ...state.meta, humanSuppressedThisRound: { ...suppressed, [action.playerIdx]: true } },
+        log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `${spec.icon} P${action.playerIdx} → P${action.targetIdx} ${target.specific} ${spec.label} 견제 (₵-5)` }].slice(-150),
+      };
+    }
+
     case 'SHOP_BUY': {
       // 공용 상점 — 누구나 Phase 1에 구매 가능
       // action.playerIdx, action.item
@@ -2545,6 +2573,8 @@ function reducer(state, action) {
         meta: { ...state.meta, round: newRound, phase: 0, extraDrawNext: 0,
           // v0.9.2: 만료된 truce 약속 정리 (지킴 → 양측 ★+1, broken은 그대로 두고 만료)
           promises: (state.meta.promises || []).filter(pm => pm.expiresR >= newRound),
+          // v6.4: 인간 능동 견제 라운드별 트래킹 리셋
+          humanSuppressedThisRound: {},
         },
         signalDie: nd,
         currentNews: null,
@@ -5185,6 +5215,8 @@ function GameScreen({ state, dispatch }) {
   const [passDeviceShown, setPassDeviceShown] = useState(false);  // v1.0.2: pass-device 가림막
   const [selectedCards, setSelectedCards] = useState([]);
   const [selectedHalves, setSelectedHalves] = useState([]);  // 각 선택 카드의 'top'|'bot' (Ghost) / 'main'|'side' (Bloc)
+  const [suppressTarget, setSuppressTarget] = useState(null);  // v6.4: 능동 견제 대상 인덱스
+  const [suppressType, setSuppressType] = useState('combat');  // v6.4: 견제 토큰 종류
 
   // v1.0.2: 핫시트 — activePlayer 변경되면 카드 선택 리셋 + pass-device 모달 자동 표시
   useEffect(() => {
@@ -6260,6 +6292,52 @@ function GameScreen({ state, dispatch }) {
                   })}
                 </div>
               </div>
+              {/* v6.4: 능동 견제 패널 — 살아있는 상대 1명에게 견제 토큰 부여 (₵5, R당 1회) */}
+              <div style={{ background: 'rgba(255, 45, 120, 0.08)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 8, marginTop: 8 }}>
+                <div style={{ color: 'var(--magenta)', fontWeight: 700, fontSize: 11, letterSpacing: 1, marginBottom: 6 }}>🚧 능동 견제 <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: 9, letterSpacing: 0 }}>— 상대 자원 억제 (₵5 · 라운드 1회)</span></div>
+                {(() => {
+                  const SUP = (typeof window !== 'undefined' && window.SUPPRESSION_SPEC) || {};
+                  const already = !!(state.meta.humanSuppressedThisRound || {})[meIdx];
+                  const canAfford = (me.resources.credit || 0) >= 5;
+                  const targets = state.players.map((p, i) => ({ p, i })).filter(x => x.i !== meIdx && !x.p.defeated);
+                  const valid = suppressTarget != null && targets.some(t => t.i === suppressTarget);
+                  const disabled = already || !canAfford || !valid;
+                  const reason = already ? '이번 라운드 이미 견제함' : (!canAfford ? '₵ 부족 (5 필요)' : (!valid ? '대상을 선택하세요' : null));
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'Share Tech Mono, monospace' }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 9, color: 'var(--text-dim)', minWidth: 28 }}>대상</span>
+                        {targets.length === 0 && <span style={{ fontSize: 9, color: 'var(--text-dim)' }}>가능한 상대 없음</span>}
+                        {targets.map(({ p, i }) => (
+                          <button key={i} onClick={() => setSuppressTarget(i)}
+                            style={{ fontSize: 9, padding: '3px 6px', background: suppressTarget === i ? 'var(--magenta)' : 'var(--bg3)', color: suppressTarget === i ? 'var(--bg1)' : 'var(--text)', border: `1px solid ${suppressTarget === i ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: 'pointer' }}>
+                            {p.kind === 'human' ? '👤' : (p.isNpc ? '👁' : '🤖')} P{i} {p.isNpc && (p.signal?.revealed || 0) === 0 ? '???' : p.specific}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 9, color: 'var(--text-dim)', minWidth: 28 }}>수단</span>
+                        {Object.entries(SUP).map(([key, s]) => (
+                          <button key={key} onClick={() => setSuppressType(key)}
+                            style={{ fontSize: 9, padding: '3px 6px', background: suppressType === key ? 'var(--cyan)' : 'var(--bg3)', color: suppressType === key ? 'var(--bg1)' : 'var(--text)', border: `1px solid ${suppressType === key ? 'var(--cyan)' : 'var(--border)'}`, borderRadius: 2, cursor: 'pointer' }}>
+                            {s.icon} {s.label} ({s.resIcon}-1)
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button disabled={disabled}
+                          onClick={() => { dispatch({ type: 'HUMAN_SUPPRESS', playerIdx: meIdx, targetIdx: suppressTarget, tokenType: suppressType }); setSuppressTarget(null); }}
+                          style={{ fontSize: 10, padding: '5px 12px', background: disabled ? 'var(--bg1)' : 'var(--magenta)', color: disabled ? 'var(--text-dim)' : 'var(--bg1)', border: `1px solid ${disabled ? 'var(--border)' : 'var(--magenta)'}`, borderRadius: 2, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                          🚧 견제 (₵5)
+                        </button>
+                        <span style={{ fontSize: 9, color: 'var(--text-dim)' }}>
+                          {reason || `다음 라운드 시작 시 대상 ${SUP[suppressType] ? SUP[suppressType].resIcon : ''} 자원 -1`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
           {state.meta.phase === 2 && !canPlan && !state.meta.awaitingMoveTarget && (
@@ -6644,6 +6722,7 @@ function App() {
     }
   }, [state?.meta?.gameOver]);
 
+  if (!state) {
     return <SetupScreen onStart={startGame} />;
   }
 
