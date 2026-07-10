@@ -8,6 +8,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 레이드 보상 결정 모달 라이브 트리거 (6차) — v6.0 골격 실연결
+- **인간 레이드 성공 시 보상 선택 모달**: 기존 pendingDecisions 큐+모달 재사용, `type:'raid_reward'` 신규 — "★ 평판 루트" vs "₵+⚙ 약탈 루트"
+- **EV-중립 설계**: 레이드 타입별 가변 rep(폭력/잠입/협상 4·드론 3·은밀/해킹 2)의 기본 평판 보상만 선택으로 대체. harness 템플릿 `3★ ≡ ₵4+⚙2` 앵커(★=2u, ₵/⚙=1u), `euro_raidLootBundle(rep)`이 units 완전보존으로 환산 → 총 기대값 불변. 주가-3·레이드 카운트·zoneLoot 등 나머지 효과는 그대로
+- **경로**: 라이브 `RAID_EXECUTE` + 레거시 `RESOLVE_RAID_YES`(사문화, 일관성 위해 동일 변환). 봇 레이드는 무변경 (봇 밸런스 불변). euro_module 미로드 시 기존 rep 즉시지급 폴백
+- **만료 증발 방지**: `euro_expireStaleDecisions`가 raid_reward 만료 시 기본 옵션(평판 루트) 자동 적용
+- **검증**: babel transform 0에러(424,550자), 에이전트 스모크 13/13 + 오케스트레이터 독립 재검증(EV rep2~5 등가·harness 템플릿 일치·큐/resolve 왕복·봇 큐잉 차단·만료 기본적용) 전부 통과
+
 ### 인간 능동 견제 UI (5차) + index.html 렌더 불능 핫픽스
 - **핫픽스 (중대)**: 커밋본 `simulator/v0.5/index.html`의 `App()`에 `if (!state) {` 가드 줄이 누락돼 브레이스 불균형 → **babel transform 전체 실패 = 시뮬레이터가 브라우저에서 렌더되지 않는 상태**였음 (v6.0에 기록된 "대형 파일 Edit 마운트 잘림" 증상과 일치). 1줄 복원. git HEAD 재현 + 수정본 통과를 독립 검증으로 확인
 - **`HUMAN_SUPPRESS` 리듀서** — 인간 플레이어 능동 견제. 가드: kind human·미탈락·₵≥5·라운드당 1회(`meta.humanSuppressedThisRound`, NEXT_ROUND 리셋)·자기/탈락 타겟 거부. 효과: ₵-5, 타겟 `suppressionTokens[type]+=1`, 봇 부여와 동일 로그 포맷. 토큰 소비는 기존 `euro_applySuppression`가 다음 R에 자동 처리

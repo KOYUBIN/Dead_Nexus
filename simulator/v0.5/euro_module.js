@@ -642,7 +642,39 @@ function euro_resolvePendingDecision(state, decisionId, choice) {
   let s = { ...state, meta: { ...state.meta, pendingDecisions: pending.filter(d => d.id !== decisionId) } };
   if (decision.type === 'milestone') s = euro_applyMilestoneChoice(s, decision, choice);
   else if (decision.type === 'award') s = euro_applyAwardChoice(s, decision, choice);
+  else if (decision.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, decision, choice);
   // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
+  return s;
+}
+
+// v6.5: 레이드 성공 보상 — 평판 루트(★+rep) vs 약탈 루트(등가 자원)
+// 밸런스 중립: rep 1개 = 2 units, credit·parts 각 1 unit (sim-harness 템플릿 3rep=4₵+2⚙ 기준).
+// 약탈 번들은 rep의 총 가치를 그대로 자원으로 환산 → 총 기대값 불변.
+function euro_raidLootBundle(rep) {
+  const units = 2 * (rep || 0);           // rep 1개 = 2 units
+  const parts = Math.round(units / 3);    // ⚙ 비율 ≈ credit 절반 (템플릿 4:2)
+  const credit = units - parts;           // units 보존 → EV 중립
+  return { credit, parts };
+}
+
+function euro_applyRaidRewardChoice(state, decision, choice) {
+  const rep = (decision.context && decision.context.rep) || 0;
+  const pi = decision.playerIdx || 0;
+  const p = state.players[pi];
+  if (!p) return state;
+  const ps = [...state.players];
+  let s = state;
+  if (choice === 'loot') {
+    const { credit, parts } = euro_raidLootBundle(rep);
+    ps[pi] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) + credit, parts: (p.resources.parts || 0) + parts } };
+    s = { ...state, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🧭 P${pi} · 레이드 보상: 약탈 루트 (₵+${credit}, ⚙+${parts})`);
+  } else {
+    // 'rep' 및 기본값(만료 자동해소 포함) — 평판 루트
+    ps[pi] = { ...p, resources: { ...p.resources, rep: (p.resources.rep || 0) + rep } };
+    s = { ...state, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🧭 P${pi} · 레이드 보상: 평판 루트 (★+${rep})`);
+  }
   return s;
 }
 
@@ -789,9 +821,15 @@ function euro_checkAwardDecisions(state) {
 function euro_expireStaleDecisions(state) {
   const pending = state.meta.pendingDecisions || [];
   if (!pending.length) return state;
-  const fresh = pending.filter(d => d.type === 'negotiation' || (d.context?.round ?? 0) >= state.meta.round);
+  const keep = (d) => d.type === 'negotiation' || (d.context?.round ?? 0) >= state.meta.round;
+  const fresh = pending.filter(keep);
   if (fresh.length === pending.length) return state;
-  return { ...state, meta: { ...state.meta, pendingDecisions: fresh } };
+  let s = { ...state, meta: { ...state.meta, pendingDecisions: fresh } };
+  // v6.5: 만료되는 raid_reward 결정은 증발 방지 — 기본 옵션(평판 루트) 자동 적용
+  for (const d of pending) {
+    if (!keep(d) && d.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, d, 'rep');
+  }
+  return s;
 }
 
 // 결정 시스템 통합 hook
@@ -844,4 +882,5 @@ if (typeof window !== 'undefined') {
   window.euro_addPendingDecision = euro_addPendingDecision;
   window.euro_resolvePendingDecision = euro_resolvePendingDecision;
   window.euro_checkTMDecisions = euro_checkTMDecisions;
+  window.euro_raidLootBundle = euro_raidLootBundle;   // v6.5: 레이드 보상 약탈 번들 계산
 }
