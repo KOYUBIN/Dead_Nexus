@@ -459,6 +459,19 @@ function euro_applySuppression(state) {
   return s;
 }
 
+// v6.6: 견제 보복 메모리 (grudge) 튜닝 상수
+// EURO_GRUDGE_BONUS — "나를 최근 견제한 자"에게 부여하는 위협도 가산치.
+//   위협도 기본항(rep + raids×2 + asset/10)의 전형적 분산과 같은 스케일로 골랐다.
+//   봇 평판은 초중반 3~10, 레이드 0~3(×2=0~6), 자산 항 0~5 정도라 위협도 차이가
+//   보통 4~8 안에서 갈린다. +6은 "동급 위협이면 보복이 우선하지만, 명백히 더 위험한
+//   제3자(예: rep 18 전설급)가 있으면 그쪽이 이긴다"는 확률적 우선을 만든다.
+//   결정적(무한대)이 아니라 편향 — 요구사항 2와 일치.
+// EURO_GRUDGE_WINDOW — 견제 기억 유효 라운드 수. 부여 라운드 R 기준 R..R+2까지 활성,
+//   R+3(3라운드 경과)부터 소멸. 유로 게임 총 라운드가 7/10으로 짧아 3R 이상 끌면
+//   보복이 게임 후반 전략을 왜곡하므로 2R로 단기 억제 루프에 한정.
+const EURO_GRUDGE_BONUS = 6;
+const EURO_GRUDGE_WINDOW = 2;
+
 // v6.4 (web 포팅): 견제 토큰 봇 AI 부여 로직
 // core.js applySuppression 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인
 // 상대(인간 포함)에게 견제 토큰 1개 부여 (₵-5). 부여 직후 euro_applySuppression이
@@ -466,6 +479,8 @@ function euro_applySuppression(state) {
 // 웹 특화: (1) 부여 주체를 봇으로 제한 — 인간 ₵ 자동 소비 방지
 //          (2) 확률은 MODE_CONFIG.suppressionProb 단일 소스 (11×11 0.30 / 5×5 0.15)
 //          (3) 인간(P0) 타겟 시 lastTargetedBy 알림 배너
+// v6.6: (4) 보복 편향 — 최근 EURO_GRUDGE_WINDOW라운드 내 나(부여 봇)를 견제한 상대는
+//           위협도 +EURO_GRUDGE_BONUS. 발동 확률·비용·토큰 수는 불변, "타겟 선정"만 변화.
 function euro_grantSuppression(state) {
   const mode = (typeof euro_mode === 'function') ? euro_mode(state.meta.mapSize) : null;
   const prob = (mode && mode.suppressionProb != null) ? mode.suppressionProb : 0.3;
@@ -478,10 +493,19 @@ function euro_grantSuppression(state) {
   if (!actors.length) return s;
   actors.sort((a, b) => b.credit - a.credit);
   const pi = actors[0].pi;
-  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10)
+  // v6.6: 보복 판정 — 이 봇(pi)이 최근 EURO_GRUDGE_WINDOW라운드 내에 견제당했고,
+  // 그 가해자가 후보 적 ppi이면 grudge 활성. 기억은 피견제자(=현 부여 봇)에 저장된
+  // lastSuppressedBy에서 읽는다.
+  const round = (s.meta && s.meta.round) || 0;
+  const myGrudge = s.players[pi].lastSuppressedBy;
+  const isGrudgeTarget = (ppi) => !!myGrudge && myGrudge.by === ppi
+    && (round - (myGrudge.round || 0)) >= 0
+    && (round - (myGrudge.round || 0)) <= EURO_GRUDGE_WINDOW;
+  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향)
   const threat = (pp, ppi) => (pp.resources.rep || 0)
     + (((s.meta.raidsThisGame || {})[ppi]) || 0) * 2
-    + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10);
+    + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10)
+    + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0);
   const enemies = s.players
     .map((pp, ppi) => ({ pi: ppi, pp }))
     .filter(x => x.pi !== pi && !x.pp.defeated);
@@ -496,13 +520,20 @@ function euro_grantSuppression(state) {
   const ps = [...s.players];
   ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: (ps[pi].resources.credit || 0) - 5 } };
   const curTok = target.pp.suppressionTokens || { combat: 0, info: 0, diplomacy: 0 };
-  ps[target.pi] = { ...ps[target.pi], suppressionTokens: { ...curTok, [tokenType]: (curTok[tokenType] || 0) + 1 } };
+  // v6.6: 타겟에 보복 메모리 기록 (JSON 직렬화 가능 — LocalStorage 히스토리 호환)
+  ps[target.pi] = {
+    ...ps[target.pi],
+    suppressionTokens: { ...curTok, [tokenType]: (curTok[tokenType] || 0) + 1 },
+    lastSuppressedBy: { by: pi, round: round },
+  };
   s = { ...s, players: ps };
+  // v6.6: 이 타겟이 보복 편향으로 선택됐는지 (grudge 활성 상대)
+  const isRetaliation = isGrudgeTarget(target.pi);
   // 인간(P0) 타겟 시 알림 배너
   if (target.pi === 0) {
-    s = { ...s, meta: { ...s.meta, lastTargetedBy: { attacker: pi, effectKey: 'suppression', detail: `${spec.label} 견제 (${spec.resIcon}-1)` } } };
+    s = { ...s, meta: { ...s.meta, lastTargetedBy: { attacker: pi, effectKey: 'suppression', detail: `${spec.label} 견제 (${spec.resIcon}-1)${isRetaliation ? ' (보복)' : ''}` } } };
   }
-  if (typeof logEntry === 'function') s = logEntry(s, `${spec.icon} P${pi} → P${target.pi} ${target.pp.specific} ${spec.label} 견제 (₵-5)`);
+  if (typeof logEntry === 'function') s = logEntry(s, `${spec.icon} P${pi} → P${target.pi} ${target.pp.specific} ${spec.label} 견제 (₵-5)${isRetaliation ? ' (보복)' : ''}`);
   return s;
 }
 
