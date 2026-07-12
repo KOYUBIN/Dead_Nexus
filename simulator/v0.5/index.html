@@ -5738,7 +5738,7 @@ function GameScreen({ state, dispatch }) {
       {/* v6.0: 결정 모달 골격 — pendingDecisions 큐 표시 (마일스톤/어워드/결정) */}
       {state.meta.pendingDecisions && state.meta.pendingDecisions.length > 0 && (() => {
         const dec = state.meta.pendingDecisions[0];
-        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : dec.type === 'raid_reward' ? '레이드 보상' : '결정';
+        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : dec.type === 'raid_reward' ? '레이드 보상' : dec.type === 'bloc_invest' ? 'Bloc 투자' : '결정';
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ background: 'var(--bg2)', border: '2px solid var(--cyan)', borderRadius: 6, padding: 24, maxWidth: 600, width: '90%', boxShadow: '0 0 30px rgba(60,235,255,0.3)' }}>

@@ -69,16 +69,52 @@ function euro_gearBonus(p) {
 }
 
 // v5.0.3: 시장 사이클
+// v6.7: 인간(P0) Bloc이 "잉여 자본" 조건이면 매R 자동 자사주가+1을 선택 결정(bloc_invest)으로 전환.
+//       봇·NPC Bloc, 비잉여 인간, 모듈 미로드 시엔 기존 자동 자사주가+1 그대로 (봇 무변경).
 function euro_marketCycle(state) {
   let s = state;
   for (let pi = 0; pi < s.players.length; pi++) {
     const p = s.players[pi];
     if (p.defeated) continue;
     if (p.role === 'bloc' && s.stocks[p.specific] != null) {
-      s = euro_marketTradePrice(s, p.specific, 1);
+      if (pi === 0 && euro_shouldOfferBlocInvest(s, pi)) {
+        // 인간 Bloc 잉여 자본 → 자동 혜택 유보, 결정 큐에 등록 (기본/만료 시 'stock'으로 원상 복구)
+        s = euro_addPendingDecision(s, euro_makeBlocInvestDecision(s, pi));
+      } else {
+        s = euro_marketTradePrice(s, p.specific, 1);
+      }
     }
   }
   return s;
+}
+
+// v6.7: Bloc 잉여 자본 투자 결정 트리거 게이트
+// 잉여 조건 = ₵ ≥ EURO_BLOC_INVEST_SURPLUS. 라운드당 1회(euro_marketCycle이 R당 1회) +
+// 큐에 bloc_invest 대기 중이면 스킵 → 모달 피로 방지.
+const EURO_BLOC_INVEST_SURPLUS = 12;
+function euro_shouldOfferBlocInvest(state, pi) {
+  const p = state.players[pi];
+  if (!p || p.defeated || p.role !== 'bloc') return false;
+  if (typeof euro_addPendingDecision !== 'function') return false;
+  if ((p.resources.credit || 0) < EURO_BLOC_INVEST_SURPLUS) return false; // 잉여 자본 조건
+  const pending = state.meta.pendingDecisions || [];
+  if (pending.some(d => d.type === 'bloc_invest')) return false;           // 같은 타입 대기 중이면 스킵
+  return true;
+}
+
+function euro_makeBlocInvestDecision(state, pi) {
+  const bloc = state.players[pi].specific;
+  return {
+    id: `bloc_invest_r${state.meta.round}`,
+    type: 'bloc_invest',
+    playerIdx: pi,
+    prompt: '잉여 자본 투자처',
+    options: [
+      { id: 'stock',  label: `자사 주가 부양 (${bloc} +1)` },
+      { id: 'credit', label: '운영비 비축 (₵+1)' },
+    ],
+    context: { round: state.meta.round, bloc },
+  };
 }
 
 // v5.0.2: 네트워크 수익 보너스 (Bloc 전용, 점수 직결 X)
@@ -674,7 +710,33 @@ function euro_resolvePendingDecision(state, decisionId, choice) {
   if (decision.type === 'milestone') s = euro_applyMilestoneChoice(s, decision, choice);
   else if (decision.type === 'award') s = euro_applyAwardChoice(s, decision, choice);
   else if (decision.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, decision, choice);
+  else if (decision.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, decision, choice);
   // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
+  return s;
+}
+
+// v6.7: Bloc 잉여 자본 투자 — 자사 주가 부양(status quo) vs 운영비 비축(₵)
+// [웹 경제 조사] 자사 주가는 승리 지표 assetValue에서 제외(isOwn continue)되고, 자사주 매도 불가·
+// 주가 연동 배당 없음 → 자사주가+1의 점수 EV = 0. 크레딧 역시 assetValue 미포함(타 블록 주식+구역+건물만).
+// ∴ 두 옵션 모두 assetValue Δ=0 → 승리 기대값 불변. 기본/만료 = 'stock'(euro_marketCycle의 기존 자동 혜택 그대로).
+function euro_applyBlocInvestChoice(state, decision, choice) {
+  const pi = decision.playerIdx || 0;
+  const p = state.players[pi];
+  if (!p) return state;
+  let s = state;
+  if (choice === 'credit') {
+    const ps = [...state.players];
+    ps[pi] = { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) + 1 } };
+    s = { ...state, players: ps };
+    if (typeof logEntry === 'function') s = logEntry(s, `🏦 P${pi} · 잉여 자본: 운영비 비축 (₵+1)`);
+  } else {
+    // 'stock' 및 기본값(만료 자동해소 포함) — 자사 주가 부양 (기존 자동 혜택과 동일 → 봇 대비 손해 없음)
+    const bloc = (decision.context && decision.context.bloc) || p.specific;
+    if (typeof euro_marketTradePrice === 'function' && s.stocks[bloc] != null) {
+      s = euro_marketTradePrice(s, bloc, 1);
+    }
+    if (typeof logEntry === 'function') s = logEntry(s, `🏦 P${pi} · 잉여 자본: 자사 주가 부양 (${bloc} +1)`);
+  }
   return s;
 }
 
@@ -859,6 +921,9 @@ function euro_expireStaleDecisions(state) {
   // v6.5: 만료되는 raid_reward 결정은 증발 방지 — 기본 옵션(평판 루트) 자동 적용
   for (const d of pending) {
     if (!keep(d) && d.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, d, 'rep');
+    // v6.7: 만료된 bloc_invest → 기본 옵션('stock') 자동 적용 = 기존 자동 자사주가+1 원상 복구.
+    // (순수 소멸 시 인간 Bloc이 봇보다 손해 — 봇은 매R 자동 +1 수령 → 봇 파리티 유지 위해 기본 적용)
+    if (!keep(d) && d.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, d, 'stock');
   }
   return s;
 }
