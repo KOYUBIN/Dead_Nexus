@@ -2247,7 +2247,9 @@ function reducer(state, action) {
       const ps = [...state.players];
       ps[action.playerIdx] = { ...attacker, resources: { ...attacker.resources, credit: (attacker.resources.credit || 0) - 5 } };
       const curTok = target.suppressionTokens || { combat: 0, info: 0, diplomacy: 0 };
-      ps[action.targetIdx] = { ...target, suppressionTokens: { ...curTok, [action.tokenType]: (curTok[action.tokenType] || 0) + 1 } };
+      // v6.6: 타겟에 보복 메모리 기록 — 봇의 euro_grantSuppression이 다음 R에 이 기억을
+      // 읽어 부여자(인간 포함)에게 보복 편향 위협도 +EURO_GRUDGE_BONUS 적용.
+      ps[action.targetIdx] = { ...target, suppressionTokens: { ...curTok, [action.tokenType]: (curTok[action.tokenType] || 0) + 1 }, lastSuppressedBy: { by: action.playerIdx, round: state.meta.round } };
       return {
         ...state,
         players: ps,

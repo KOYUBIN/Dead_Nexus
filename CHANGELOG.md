@@ -8,6 +8,12 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 봇 견제 보복(grudge) AI (7차) — 견제 상호작용 심화
+- **보복 메모리**: 견제 토큰 부여 시 타겟에 `lastSuppressedBy: { by, round }` 기록 (봇 `euro_grantSuppression`·인간 `HUMAN_SUPPRESS` 양 경로 대칭)
+- **보복 편향**: `euro_grantSuppression` 위협도에 `EURO_GRUDGE_BONUS = 6` 가산 — 최근 `EURO_GRUDGE_WINDOW = 2`라운드 내 나를 견제한 자를 확률적으로 우선 타겟 (결정적 아님 — 압도적 제3자 위협이 있으면 그쪽 우선). 로그에 `(보복)` 태그로 인과 가시화
+- **밸런스 가드**: 발동 확률·비용·토큰 수 완전 불변 — "누굴 노리는가"만 변경. 이제 인간의 견제엔 보복 리스크가 따름 (전략적 대가)
+- **검증** (에이전트 + 오케스트레이터 독립 재검증 일치): 타겟률 grudge OFF 0% → ON 100% → 윈도 소멸 후 0%, 발동률 Δ0.5pp 이내 불변, `(보복)` 태그 발동, 압도적 위협(rep30) 시 보복 무시 100%, babel 0에러, HUMAN_SUPPRESS 기록 JSON 직렬화 무해
+
 ### 레이드 보상 결정 모달 라이브 트리거 (6차) — v6.0 골격 실연결
 - **인간 레이드 성공 시 보상 선택 모달**: 기존 pendingDecisions 큐+모달 재사용, `type:'raid_reward'` 신규 — "★ 평판 루트" vs "₵+⚙ 약탈 루트"
 - **EV-중립 설계**: 레이드 타입별 가변 rep(폭력/잠입/협상 4·드론 3·은밀/해킹 2)의 기본 평판 보상만 선택으로 대체. harness 템플릿 `3★ ≡ ₵4+⚙2` 앵커(★=2u, ₵/⚙=1u), `euro_raidLootBundle(rep)`이 units 완전보존으로 환산 → 총 기대값 불변. 주가-3·레이드 카운트·zoneLoot 등 나머지 효과는 그대로
