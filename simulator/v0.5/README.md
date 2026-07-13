@@ -30,14 +30,14 @@ React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
   - 승리 진척 패널 + 위협 대시보드 + 타겟 알림 배너
   - LocalStorage 플레이 히스토리 (최근 50판)
   - **`MODE_CONFIG`+`euro_mode` 단일 소스** + **클래스 시그니처 13종** (RIGGER · HELIX · CARBON 11×11 · CIPHER 5×5 · GhostHustle · BLADE · BROKER · CIPHER 11×11 해킹노드 · MOLE · VANTA · IRONWALL · AXIOM) — sim-harness와 web 밸런스 레짐 통일 (v6.3)
-  - **견제 토큰 3종** (무력★/정보📡/외교🎙, `SUPPRESSION_SPEC`) — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 자동 부여(`euro_grantSuppression`, ₵-5) + R 시작 시 자동 페널티 적용. **완전 라이브** (v6.4). 인간 플레이어의 능동 견제(UI 버튼)는 미구현 — 봇→인간 방향만 라이브
+  - **견제 토큰 3종** (무력★/정보📡/외교🎙, `SUPPRESSION_SPEC`) — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 자동 부여(`euro_grantSuppression`, ₵-5) + R 시작 시 자동 페널티 적용. **양방향 라이브**: 인간도 시장 페이즈 "능동 견제" 패널에서 대상·유형 선택 후 ₵5로 직접 부여 가능(`HUMAN_SUPPRESS`, v6.5). 봇 견제엔 보복(grudge) AI 편향 적용 — 최근 2R 내 나를 견제한 상대를 확률적으로 우선 타겟(`EURO_GRUDGE_BONUS`, v6.7)
+  - **결정 모달 2종 라이브**: 레이드 성공 시 ★평판 루트 vs ₵+⚙약탈 루트 선택(EV-중립, v6.6), 인간 Bloc 잉여 자본(₵≥12) 시 주가 부양 vs ₵비축 선택(점수-중립, v6.8) — v6.0 결정 골격의 두 템플릿 모두 실연결 완료
 
 ### 다음 사이클 (v0.6+ 예정)
 - 시나리오 S02~S06 시뮬 통합
 - M&A 시스템 전체 (적대적 인수·방어 라운드·백기사 동맹)
 - 뉴스 카드 50+ (현재 35)
 - Tech Level 3~5 전용 카드 해금
-- 인간 플레이어 능동 견제 UI (현재 봇→인간 방향만 라이브)
 
 ### v0.7+
 - 레거시 캠페인 연동
@@ -103,6 +103,9 @@ simulator/v0.5/
 | 이동 도착 | 레이드 결정 | d6+ATK ≥ 5 확률 바 + 즉시 승리 배지 |
 | 이동 도착 | 구역 첫 방문 | 3중 1 보너스 드래프트 (구역별 옵션 풀) |
 | 시장 페이즈 | 주식 매수/매도 | 블록별 큰 카드 + 보유 수 + 매수/매도 버튼 |
+| 레이드 성공 | 레이드 보상 선택 | ★ 평판 루트 vs ₵+⚙ 약탈 루트 (EV-중립, v6.6) |
+| 시장 페이즈 (인간 Bloc, 잉여 ₵≥12) | Bloc 투자 결정 | 주가 부양 +1 vs 운영비 비축 ₵+1 (점수-중립, v6.8) |
+| 시장 페이즈 | 능동 견제 패널 | 대상 선택 → 무력🔥/정보📡/외교🤝 택1 → 견제(₵5, v6.5) |
 
 ### AI 평가 함수
 
@@ -199,3 +202,7 @@ Phase 6 결산     → 승리 체크 → 다음 라운드
 | v6.1   | (sim-harness) HELIX 시그니처 死문 수정 — 클론 뱅크 자동 매집으로 자산 직결화. 양 맵 위반 0·경고 0 유지 |
 | v6.3   | 웹 시뮬레이터에 sim-harness 시그니처/`MODE_CONFIG` 전체 포팅 — `MODE_CONFIG`+`euro_mode`, 클래스 시그니처 13종(RIGGER/HELIX/CARBON11×11/CIPHER5×5/GhostHustle/BLADE/BROKER/CIPHER11×11/MOLE/VANTA/IRONWALL/AXIOM), `SUPPRESSION_SPEC`+`euro_applySuppression`(견제 적용) |
 | v6.4   | 견제 토큰 봇 AI 부여 로직(`euro_grantSuppression`) web 포팅 — 매R 확률적으로(`MODE_CONFIG.suppressionProb`) 봇이 최다위협 상대에게 견제 부여(₵-5), 인간 타겟 시 알림 배너. 견제 시스템 완전 라이브화 |
+| v6.5   | 인간 능동 견제 UI (`HUMAN_SUPPRESS` 리듀서 + 시장 페이즈 견제 패널, ₵5) + `index.html` 렌더 불능 핫픽스(`App()` 브레이스 불균형 1줄 복원) — 견제 양방향 라이브화 |
+| v6.6   | 레이드 보상 결정 모달 라이브 트리거(`type:'raid_reward'`) — ★ 평판 루트 vs ₵+⚙ 약탈 루트, `euro_raidLootBundle` units 완전보존 환산으로 EV-중립 |
+| v6.7   | 봇 견제 보복(grudge) AI — `lastSuppressedBy` 기억, 최근 2R(`EURO_GRUDGE_WINDOW`) 내 나를 견제한 상대를 확률적으로 우선 타겟(`EURO_GRUDGE_BONUS`), 발동률/비용/토큰 수 불변 |
+| v6.8   | `bloc_invest` 결정 라이브 연결 — 인간 Bloc 잉여 자본(₵≥12) 시 주가 부양 vs ₵비축 선택(점수-중립). v6.0 결정 골격 두 템플릿(raid_reward·bloc_invest) 모두 라이브 완주 |
