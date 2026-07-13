@@ -16,6 +16,7 @@ const MODE_CONFIG = {
     faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
     avgRound: { min: 8.0, max: 11.0, target: 10 },
     classWinRate: { min: 5, max: 60 },
+    mnaEnabled: true, // v6.9 (web 포팅): M&A Stage 1 — 11×11만 지분 인수 게이트 활성
   },
   '5x5': {
     label: '5×5 (튜토리얼)',
@@ -25,10 +26,42 @@ const MODE_CONFIG = {
     faction: { ghost: { min: 40, max: 65, target: 50 }, bloc: { min: 35, max: 60, target: 50 } },
     avgRound: { min: 5.0, max: 8.0, target: 7 },
     classWinRate: { min: 5, max: 55 },
+    mnaEnabled: false, // v6.9 (web 포팅): 5×5 튜토리얼은 M&A 비활성
   },
 };
 function euro_mode(mapSize) {
   return MODE_CONFIG[mapSize] || MODE_CONFIG['11x11'];
+}
+
+// v6.9 (web 포팅): M&A Stage 1 — 지분 모델 + 11×11 게이트 (읽기 전용 표면화)
+const NPC_MNA_FLOAT = 10; // 공개 미거래 float — 지분 분모 안정화 (Stage 2의 51% 임계와 직결)
+
+// 블록 총 발행주식 = 비패배 플레이어 보유 합 + NPC float
+function euro_totalShares(state, bloc) {
+  const players = (state && state.players) || [];
+  let sum = 0;
+  for (const p of players) {
+    if (!p || p.defeated) continue;
+    sum += (p.stocks && p.stocks[bloc]) || 0;
+  }
+  return sum + NPC_MNA_FLOAT;
+}
+
+// 특정 플레이어의 블록 지분율(%, 내림)
+function euro_equityPct(state, playerIdx, bloc) {
+  const p = state && state.players && state.players[playerIdx];
+  if (!p) return 0;
+  const total = euro_totalShares(state, bloc);
+  if (!total) return 0;
+  return Math.floor(((p.stocks && p.stocks[bloc]) || 0) / total * 100);
+}
+
+// M&A 인수 게이트가 이 맵 사이즈에서 활성인지 (11×11만 true)
+function euro_mnaEnabled(state) {
+  const mapSize = state && state.meta && state.meta.mapSize;
+  const mode = euro_mode(mapSize);
+  if (mode && typeof mode.mnaEnabled === 'boolean') return mode.mnaEnabled;
+  return mapSize === '11x11';
 }
 
 // v5.0.3: 동적 시장 가격 헬퍼
@@ -979,4 +1012,8 @@ if (typeof window !== 'undefined') {
   window.euro_resolvePendingDecision = euro_resolvePendingDecision;
   window.euro_checkTMDecisions = euro_checkTMDecisions;
   window.euro_raidLootBundle = euro_raidLootBundle;   // v6.5: 레이드 보상 약탈 번들 계산
+  // v6.9 (web 포팅): M&A Stage 1 — 지분 모델 + 11×11 게이트
+  window.euro_equityPct = euro_equityPct;
+  window.euro_mnaEnabled = euro_mnaEnabled;
+  window.euro_totalShares = euro_totalShares;
 }

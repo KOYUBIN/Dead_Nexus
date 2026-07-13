@@ -6288,6 +6288,15 @@ function GameScreen({ state, dispatch }) {
                         <span style={{ color, fontSize: 14, fontWeight: 700 }}>₵{v}</span>
                       </div>
                       <div style={{ color: 'var(--text-dim)', fontSize: 9, marginBottom: 4 }}>보유 {myQty}주</div>
+                      {typeof euro_equityPct === 'function' && (() => {
+                        const eq = euro_equityPct(state, meIdx, bl);
+                        const canMna = eq >= 51 && typeof euro_mnaEnabled === 'function' && euro_mnaEnabled(state);
+                        return (
+                          <div style={{ color: eq >= 51 ? 'var(--magenta)' : 'var(--text-dim)', fontSize: 9, marginBottom: 4 }}>
+                            지분 {eq}%{canMna && ' 🎯 인수 가능'}
+                          </div>
+                        );
+                      })()}
                       {!isOwnBloc && (
                         <div style={{ display: 'flex', gap: 3 }}>
                           <button
@@ -6534,6 +6543,15 @@ function GameScreen({ state, dispatch }) {
                   <span style={{ color: 'var(--text-dim)', width: 60 }}>{bl}{isOwnBloc ? '★' : ''}:</span>
                   <span style={{ color: v > 10 ? 'var(--green)' : (v < 10 ? 'var(--magenta)' : 'var(--text)'), width: 24, textAlign: 'right' }}>{v}</span>
                   <span style={{ color: 'var(--text-dim)', width: 36 }}>보유 {myQty}</span>
+                  {typeof euro_equityPct === 'function' && (() => {
+                    const eq = euro_equityPct(state, meIdx, bl);
+                    const canMna = eq >= 51 && typeof euro_mnaEnabled === 'function' && euro_mnaEnabled(state);
+                    return (
+                      <span style={{ color: eq >= 51 ? 'var(--magenta)' : 'var(--text-dim)' }}>
+                        지분 {eq}%{canMna && ' 🎯 인수 가능'}
+                      </span>
+                    );
+                  })()}
                   {canBuy && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매수 ₵{v}</button>}
                   {canSell && <button style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', color: 'var(--magenta)', border: '1px solid var(--magenta)', borderRadius: 2, cursor: 'pointer' }} onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>매도 ₵{v}</button>}
                 </div>
