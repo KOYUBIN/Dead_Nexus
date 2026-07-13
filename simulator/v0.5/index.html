@@ -387,6 +387,52 @@
     padding: 8px 12px; margin: 6px 0; font-size: 12px;
   }
 
+  /* ---- BGA 스타일 튜토리얼 코치마크 (tutorial_module.js) ---- */
+  .tut-backdrop {
+    position: fixed; inset: 0; z-index: 300;   /* 게임 모달(≤210)보다 위 */
+    background: rgba(0,0,0,0.35);
+    pointer-events: none;            /* 게임 조작을 막지 않음 — 클릭 통과 */
+  }
+  .tut-bubble {
+    position: fixed; z-index: 301;
+    pointer-events: auto;            /* 말풍선만 클릭 수용 */
+    width: min(360px, 90vw);
+    background: var(--bg2);
+    border: 2px solid var(--magenta);
+    border-radius: 6px;
+    padding: 16px 18px;
+    box-shadow: 0 0 24px rgba(255,0,60,0.35);
+    font-size: 13px; color: var(--text); line-height: 1.55;
+  }
+  .tut-bubble.a-center { left: 50%; top: 50%; transform: translate(-50%, -50%); border-color: var(--cyan); box-shadow: 0 0 24px rgba(0,229,255,0.35); }
+  .tut-bubble.a-bottom { left: 50%; bottom: 24px; transform: translateX(-50%); }
+  .tut-bubble.a-map    { left: 50%; top: 120px; transform: translateX(-50%); }
+  .tut-bubble.a-left   { left: 16px; top: 70px; }
+  .tut-bubble.a-right  { right: 16px; top: 70px; }
+  @media (max-width: 720px) {
+    .tut-bubble.a-left, .tut-bubble.a-right { left: 50%; right: auto; top: auto; bottom: 24px; transform: translateX(-50%); }
+    .tut-bubble.a-map { top: 80px; }
+  }
+  .tut-bubble .tut-title {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--magenta); letter-spacing: 1px; font-weight: 700;
+    font-size: 13px; margin-bottom: 8px;
+  }
+  .tut-bubble.a-center .tut-title { color: var(--cyan); }
+  .tut-bubble .tut-body { color: var(--text-dim); white-space: pre-line; margin-bottom: 14px; }
+  .tut-bubble .tut-actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+  .tut-bubble .tut-next {
+    background: var(--cyan); color: #000; border: none; border-radius: 3px;
+    padding: 6px 16px; font-weight: 700; font-size: 12px; cursor: pointer;
+    font-family: 'Share Tech Mono', monospace; letter-spacing: 1px;
+  }
+  .tut-bubble .tut-next:hover { filter: brightness(1.15); }
+  .tut-bubble .tut-skip {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--border);
+    border-radius: 3px; padding: 6px 10px; font-size: 11px; cursor: pointer;
+  }
+  .tut-bubble .tut-skip:hover { color: var(--magenta); border-color: var(--magenta); }
+
   /* Game over */
   .gameover {
     text-align: center; padding: 60px 24px;
@@ -425,6 +471,7 @@
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 <script src="euro_module.js"></script>
+<script src="tutorial_module.js"></script>
 
 <script type="text/babel" data-presets="react">
 'use strict';
@@ -5057,6 +5104,7 @@ function SetupScreen({ onStart }) {
   // multi 모드: 인간 플레이어들의 (role, specific) 배열
   const [humans, setHumans] = useState([{ role: 'ghost', specific: 'CIPHER' }, { role: 'bloc', specific: 'VANTA' }]);
   const [history, setHistory] = useState(() => loadHistory());
+  const [tutorial, setTutorial] = useState(true);  // 🎓 가이드 튜토리얼 (5×5 솔로 전용, 기본 ON)
 
   const options = role === 'ghost'
     ? [['CIPHER','정보전·해킹'],['BLADE','전투·집행'],['BROKER','협상·중개'],['RIGGER','기술·제작'],['DRIFTER','이동·보급'],['MOLE','내부 침투']]
@@ -5207,11 +5255,20 @@ function SetupScreen({ onStart }) {
         시나리오 S01 표준 · {mapSize === '11x11' ? '최대 12라운드' : '최대 8라운드'} · 최소 5R 보장.
       </div>
 
+      {mode === 'solo' && mapSize === '5x5' && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0', padding: '10px 12px', background: 'var(--bg2)', border: '1px solid var(--cyan)', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}>
+          <input type="checkbox" checked={tutorial} onChange={e => setTutorial(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--cyan)' }} />
+          <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>🎓 가이드 튜토리얼</span>
+          <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>첫 판을 단계별 말풍선으로 안내 (완료 시 다시 표시 안 함)</span>
+        </label>
+      )}
+
       <button className="start-btn" onClick={() => onStart({
         mode, mapSize, difficulty,
         role: mode === 'solo' ? role : humans[0].role,
         specific: mode === 'solo' ? specific : humans[0].specific,
         humans: mode === 'multi' ? humans : null,
+        tutorial: mode === 'solo' && mapSize === '5x5' ? tutorial : false,
       })}>
         🎮 START · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : `${humans.length}P HOT-SEAT`} · {mapSize.toUpperCase()}
       </button>
@@ -5269,7 +5326,7 @@ function SetupScreen({ onStart }) {
   );
 }
 
-function GameScreen({ state, dispatch }) {
+function GameScreen({ state, dispatch, tutorialEnabled }) {
   // v1.0.2: 핫시트 모드면 activePlayer 인간 기준으로 'me' 결정
   const isMulti = state.meta.mode === 'multi';
   const meIdx = isMulti ? (state.meta.activePlayer ?? 0) : 0;
@@ -5517,6 +5574,8 @@ function GameScreen({ state, dispatch }) {
 
   return (
     <div className="game">
+      {/* 🎓 BGA 스타일 가이드 튜토리얼 오버레이 (tutorial_module.js 미로드 시 무해) */}
+      <TutorialOverlay state={state} enabled={tutorialEnabled} />
       {/* === v0.5.22: 레이드 풀세트 모달 (타입 선택 → 자원 투자 → 실행) === */}
       {state.meta.pendingRaid && (() => {
         const pr = state.meta.pendingRaid;
@@ -6803,19 +6862,72 @@ function buildInitial(opts) {
   return initial;
 }
 
+// 🎓 BGA 스타일 코치마크 오버레이 — tutorial_module.js 의 데이터를 "렌더만" 한다.
+//   모듈 미로드 시 typeof 가드로 아무것도 렌더하지 않음(완전 무해).
+//   backdrop 은 pointer-events:none 이라 게임 조작을 막지 않고, 말풍선만 클릭 수용.
+function TutorialOverlay({ state, enabled }) {
+  const seenRef = useRef(null);
+  if (seenRef.current === null) seenRef.current = new Set();
+  const doneRef = useRef(false);
+  // active: 현재 표시 중인 스텝을 "래치". 한 번 뜨면 유저가 [다음]/[건너뛰기]로
+  //   닫을 때까지 유지 — 수익처럼 자동 진행되는 페이즈에서도 말풍선이 사라지지 않음.
+  const [active, setActive] = useState(null);
+  const modOk = typeof tutorial_pickStep === 'function';
+
+  useEffect(() => {
+    if (!modOk || !enabled || doneRef.current || active) return;
+    const next = tutorial_pickStep(state, seenRef.current);
+    if (next) setActive(next);
+  }, [state, enabled, active, modOk]);
+
+  if (!modOk || !enabled || doneRef.current || !active) return null;  // 모듈 미로드 → 무해
+
+  const step = active;
+  const text = (typeof tutorial_resolveText === 'function') ? tutorial_resolveText(step, state) : (step.body || '');
+  const dismiss = (finalize) => {
+    seenRef.current.add(step.id);
+    if (finalize || step.final) {
+      doneRef.current = true;
+      if (typeof tutorial_markDone === 'function') tutorial_markDone();
+    }
+    setActive(null);  // 닫으면 useEffect 가 다음 스텝을 다시 픽
+  };
+
+  return (
+    <>
+      <div className="tut-backdrop" />
+      <div className={`tut-bubble a-${step.anchor || 'center'}`}>
+        <div className="tut-title">{step.title}</div>
+        <div className="tut-body">{text}</div>
+        <div className="tut-actions">
+          <button className="tut-skip" onClick={() => dismiss(true)}>튜토리얼 건너뛰기</button>
+          <button className="tut-next" onClick={() => dismiss(false)}>{step.final ? '완료 ✓' : '다음 ▶'}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function App() {
   const [state, setState] = useState(null);
   const savedRef = useRef(false);
+  // 🎓 튜토리얼: 이번 게임에서 가이드가 켜졌는지 (5×5 솔로 + 토글 ON + 미완료)
+  const tutEnabledRef = useRef(false);
+  const evalTut = (opts) => {
+    tutEnabledRef.current = (typeof tutorial_shouldAutoStart === 'function') ? tutorial_shouldAutoStart(opts) : false;
+  };
 
   const startGame = useCallback((opts) => {
     console.log('[SIM] Start game:', opts);
     savedRef.current = false;
+    evalTut(opts);
     setState(buildInitial(opts));
   }, []);
 
   const dispatch = useCallback((action) => {
     if (action.type === 'RESET') {
       savedRef.current = false;
+      evalTut(action.opts);
       setState(buildInitial(action.opts));
       return;
     }
@@ -6847,7 +6959,7 @@ function App() {
     return <SetupScreen onStart={startGame} />;
   }
 
-  return <GameScreen state={state} dispatch={dispatch} />;
+  return <GameScreen state={state} dispatch={dispatch} tutorialEnabled={tutEnabledRef.current} />;
 }
 
 // Mount
