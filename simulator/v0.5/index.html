@@ -1583,6 +1583,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       mnaCount: {},              // { attackerIdx: 선언 횟수 } (게임당 3회 상한)
       mnaLastRound: {},          // { attackerIdx: 마지막 선언 라운드 } (선언 간 2R 간격)
       acquisitions: {},          // { attackerIdx: [인수한 bloc명...] } (2곳 = 즉시 승리)
+      whiteKnight: {},           // v6.11 Stage 3: { bloc: 추가 float 수 } — 백기사 방어 분모 가산
       newsSinceStart: 0,
       raidsThisGame: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
       zonesVisited: Object.fromEntries([...Array(5).keys()].map(k => [k, new Set()])),
@@ -5755,21 +5756,25 @@ function GameScreen({ state, dispatch }) {
       {/* v6.0: 결정 모달 골격 — pendingDecisions 큐 표시 (마일스톤/어워드/결정) */}
       {state.meta.pendingDecisions && state.meta.pendingDecisions.length > 0 && (() => {
         const dec = state.meta.pendingDecisions[0];
-        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : dec.type === 'raid_reward' ? '레이드 보상' : dec.type === 'bloc_invest' ? 'Bloc 투자' : '결정';
+        const kindLabel = dec.type === 'milestone' ? '마일스톤' : dec.type === 'award' ? '어워드' : dec.type === 'raid_reward' ? '레이드 보상' : dec.type === 'bloc_invest' ? 'Bloc 투자' : dec.type === 'mna_defense' ? '🏴 M&A 방어' : '결정';
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ background: 'var(--bg2)', border: '2px solid var(--cyan)', borderRadius: 6, padding: 24, maxWidth: 600, width: '90%', boxShadow: '0 0 30px rgba(60,235,255,0.3)' }}>
               <div style={{ color: 'var(--cyan)', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>🧭 DECISION · {kindLabel}</div>
               <h2 style={{ margin: 0, color: 'var(--text)', fontFamily: 'Rajdhani, sans-serif', letterSpacing: 1, fontSize: 18 }}>{dec.prompt}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-                {dec.options.filter(o => o.enabled !== false).map((opt, i) => (
+                {dec.options.filter(o => o.enabled !== false || o.keepDisabled).map((opt, i) => {
+                  const isDisabled = opt.enabled === false; // keepDisabled 옵션은 표시하되 비활성
+                  return (
                   <button key={opt.id || i}
                     className="pa-btn"
-                    style={{ padding: '14px 12px', fontSize: 13, textAlign: 'left', borderColor: 'var(--cyan)', color: 'var(--text)', lineHeight: 1.4, whiteSpace: 'normal' }}
-                    onClick={() => dispatch({ type: 'RESOLVE_DECISION', decisionId: dec.id, choice: opt.id })}>
-                    {opt.label}
+                    disabled={isDisabled}
+                    style={{ padding: '14px 12px', fontSize: 13, textAlign: 'left', borderColor: isDisabled ? 'var(--border)' : 'var(--cyan)', color: isDisabled ? 'var(--text-dim)' : 'var(--text)', lineHeight: 1.4, whiteSpace: 'normal', opacity: isDisabled ? 0.45 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                    onClick={isDisabled ? undefined : () => dispatch({ type: 'RESOLVE_DECISION', decisionId: dec.id, choice: opt.id })}>
+                    {opt.label}{isDisabled ? ' (자원 부족)' : ''}
                   </button>
-                ))}
+                  );
+                })}
               </div>
               {dec.context && dec.context.otherClaimers && dec.context.otherClaimers.length > 0 && (
                 <div style={{ fontSize: 11, color: 'var(--yellow)', marginTop: 12 }}>⚠ 경쟁자도 조건 달성: {dec.context.otherClaimers.join(', ')}</div>
