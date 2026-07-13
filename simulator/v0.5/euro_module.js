@@ -975,6 +975,8 @@ function euro_applyAll(state) {
   let s = state;
   s = euro_grantSuppression(s);    // v6.4 (web 포팅) — 봇 AI 견제 토큰 부여 (적용보다 먼저 = 즉시 효과)
   s = euro_applySuppression(s);    // v6.3 (web 포팅) — 견제 토큰 페널티 (자원 +효과보다 먼저)
+  s = euro_resolveMna(s);          // v6.10 (web 포팅) — M&A 방어(자동)+판정 (라운드 시작 시 1회)
+  if (s.meta && s.meta.gameOver) return s; // M&A 즉시 승리면 이후 R 효과 스킵
   s = euro_tryConvertResources(s);
   s = euro_marketCycle(s);
   s = euro_networkIncome(s);
@@ -994,6 +996,220 @@ function euro_applyAll(state) {
   s = euro_checkHighlights(s);
   s = euro_checkTMDecisions(s);    // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
+}
+
+// ============================================================================
+// v6.10 (web 포팅): M&A Stage 2 — 인간(P0) 적대적 인수 루프
+// 선언(Phase1) → 방어(봇/NPC 자동) → 판정 → 자산 30% 흡수 · NPC 관리 전환 → 2블록 즉시 승리.
+// 절차·수치는 docs/08-stock-mna.md §6·§9·§10 기준. 판정 타이밍 = "방어 직후"(§6 STEP3 허용):
+//   선언 다음 NEXT_ROUND의 euro_applyAll 1회 pass 안에서 방어(자동)+판정을 함께 처리한다.
+//   근거: 방어 주체가 전부 봇/NPC 자동이라 플레이어 개입용 라운드 간격이 불필요하고,
+//   유로 게임(7~10R)에서 pendingMna를 여러 R 끌면 선언 2R 간격 규칙과 얽혀 상태가 취약해진다.
+//   ∴ pendingMna 수명 = 정확히 1회 라운드 전환. 로직은 전부 이 모듈에, index.html은 리듀서+UI만.
+// ============================================================================
+const EURO_MNA_MAX_DECLARES = 3;      // docs §10: 게임당 선언 최대 3회/플레이어
+const EURO_MNA_MIN_GAP = 2;           // docs §10: 선언 간 최소 2라운드 간격
+const EURO_MNA_THRESHOLD = 51;        // docs §3: 51% 과반 = 적대적 인수 가능
+const EURO_MNA_ABSORB = 0.30;         // docs §6: 인수 완료 시 자산 30% 흡수
+const EURO_MNA_REBUY_PCT = 0.05;      // docs §6 STEP2: 재매입 방어 = 공격자 지분 5% 강제 매도
+const EURO_MNA_SUCCESS_SELLOFF = 0.10;// docs §6 STEP3: 방어 성공 시 공격자 지분 5~10% 강제 매도(상한 채택)
+const EURO_MNA_WIN_COUNT = 2;         // docs §9: 타 블록 2곳 완전 인수 = 즉시 승리
+
+function euro_mnaCountFor(state, idx) {
+  const m = (state.meta && state.meta.mnaCount) || {};
+  return m[idx] || 0;
+}
+function euro_mnaLastRoundFor(state, idx) {
+  const m = (state.meta && state.meta.mnaLastRound) || {};
+  return (m[idx] == null) ? -Infinity : m[idx];
+}
+function euro_acquisitionsFor(state, idx) {
+  const a = (state.meta && state.meta.acquisitions) || {};
+  return a[idx] || [];
+}
+
+// 선언 게이트 — { ok, reason }. UI 버튼 활성/비활성 + 사유 표기에 그대로 사용.
+function euro_declareMnaCheck(state, attackerIdx, bloc) {
+  if (typeof euro_mnaEnabled !== 'function' || !euro_mnaEnabled(state))
+    return { ok: false, reason: '이 맵에선 M&A 비활성' };
+  const attacker = state.players && state.players[attackerIdx];
+  if (!attacker || attacker.defeated) return { ok: false, reason: '공격자 없음' };
+  if (attacker.role === 'bloc' && attacker.specific === bloc)
+    return { ok: false, reason: '자기 블록은 인수 불가' };
+  if (state.meta && state.meta.pendingMna)
+    return { ok: false, reason: '진행 중인 M&A 있음' };
+  if (euro_acquisitionsFor(state, attackerIdx).includes(bloc))
+    return { ok: false, reason: '이미 인수한 블록' };
+  if (euro_mnaCountFor(state, attackerIdx) >= EURO_MNA_MAX_DECLARES)
+    return { ok: false, reason: `선언 횟수 소진 (${EURO_MNA_MAX_DECLARES}/${EURO_MNA_MAX_DECLARES})` };
+  const round = (state.meta && state.meta.round) || 0;
+  const last = euro_mnaLastRoundFor(state, attackerIdx);
+  if (last !== -Infinity && (round - last) < EURO_MNA_MIN_GAP)
+    return { ok: false, reason: `선언 간 ${EURO_MNA_MIN_GAP}R 대기 (${EURO_MNA_MIN_GAP - (round - last)}R 남음)` };
+  const eq = (typeof euro_equityPct === 'function') ? euro_equityPct(state, attackerIdx, bloc) : 0;
+  if (eq < EURO_MNA_THRESHOLD)
+    return { ok: false, reason: `지분 ${eq}% < ${EURO_MNA_THRESHOLD}%` };
+  return { ok: true, reason: '' };
+}
+
+// 선언 적용 — 리듀서 DECLARE_MNA가 호출. 게이트 통과 시 pendingMna 설정 + 카운트/간격 트래킹.
+function euro_declareMna(state, attackerIdx, bloc) {
+  const chk = euro_declareMnaCheck(state, attackerIdx, bloc);
+  if (!chk.ok) {
+    if (typeof logEntry === 'function') return logEntry(state, `🚫 M&A 선언 거부: ${chk.reason}`);
+    return state;
+  }
+  const round = (state.meta && state.meta.round) || 0;
+  const cnt = { ...((state.meta && state.meta.mnaCount) || {}) };
+  const lr  = { ...((state.meta && state.meta.mnaLastRound) || {}) };
+  cnt[attackerIdx] = (cnt[attackerIdx] || 0) + 1;
+  lr[attackerIdx] = round;
+  let s = {
+    ...state,
+    meta: {
+      ...state.meta,
+      pendingMna: { attacker: attackerIdx, target: bloc, declaredRound: round, defense: null },
+      mnaCount: cnt,
+      mnaLastRound: lr,
+    },
+  };
+  const eq = (typeof euro_equityPct === 'function') ? euro_equityPct(s, attackerIdx, bloc) : 0;
+  if (typeof logEntry === 'function')
+    s = logEntry(s, `🎯 P${attackerIdx} · ${bloc} 적대적 인수 선언! (지분 ${eq}% · 선언 ${cnt[attackerIdx]}/${EURO_MNA_MAX_DECLARES}) — 다음 라운드 방어`);
+  return s;
+}
+
+// 2블록 인수 즉시 승리 스캔 — gameOver/winner/winReason(기존 승리 처리 패턴)로 세팅.
+function euro_checkMnaVictory(state) {
+  if (state.meta && state.meta.gameOver) return state;
+  const acqs = (state.meta && state.meta.acquisitions) || {};
+  for (const k of Object.keys(acqs)) {
+    const idx = Number(k);
+    const list = acqs[k] || [];
+    if (list.length >= EURO_MNA_WIN_COUNT) {
+      const p = state.players[idx];
+      const sp = p ? p.specific : `P${idx}`;
+      let s = { ...state, meta: { ...state.meta, gameOver: true, winner: idx, winReason: `M&A 승리: ${list.join(' + ')} 2블록 완전 인수 (${sp})` } };
+      if (typeof logEntry === 'function') s = logEntry(s, `👑 P${idx} ${sp} · M&A 승리! (${list.join(', ')} 인수 완료)`);
+      return s;
+    }
+  }
+  return state;
+}
+
+// 인수 완료(방어 실패) 효과 — 자산 30% 흡수 + acquisitions 기록 + 즉시 승리 체크.
+function euro_completeMnaAcquisition(state, attackerIdx, targetIdx, bloc) {
+  let s = state;
+  const target = targetIdx >= 0 ? s.players[targetIdx] : null;
+  if (target) {
+    // 봇 블록: 크레딧 30%(내림) + 보유 구역 30%(내림) 이전. defeated/isNpc 미설정 —
+    // 봇 루프(signal 등) 파손 방지 위해 acquiredBy 마커만 부착(= NPC 관리 전환의 안전 구현).
+    const tcredit = target.resources.credit || 0;
+    const grab = Math.floor(tcredit * EURO_MNA_ABSORB);
+    const ownedZones = Object.keys(s.map).filter(c => s.map[c].owner === targetIdx);
+    const takeN = Math.floor(ownedZones.length * EURO_MNA_ABSORB);
+    const takeZones = ownedZones.slice(0, takeN);
+    const newMap = { ...s.map };
+    for (const c of takeZones) newMap[c] = { ...newMap[c], owner: attackerIdx };
+    const ps = [...s.players];
+    ps[targetIdx] = {
+      ...ps[targetIdx],
+      resources: { ...ps[targetIdx].resources, credit: tcredit - grab },
+      acquiredBy: attackerIdx,
+    };
+    ps[attackerIdx] = {
+      ...ps[attackerIdx],
+      resources: { ...ps[attackerIdx].resources, credit: (ps[attackerIdx].resources.credit || 0) + grab },
+    };
+    s = { ...s, players: ps, map: newMap };
+    if (typeof logEntry === 'function') s = logEntry(s, `🏴 M&A 완료! P${attackerIdx} → ${bloc} 인수 — 자산 30% 흡수 (₵+${grab}, 구역 ${takeN}곳 이전) · ${bloc} NPC 관리 전환`);
+  } else {
+    // NPC 블록(플레이어 없음): 상징 보상 ₵+10 + 해당 블록 주가 폭락 -5 (껍데기 흡수)
+    const ps = [...s.players];
+    ps[attackerIdx] = { ...ps[attackerIdx], resources: { ...ps[attackerIdx].resources, credit: (ps[attackerIdx].resources.credit || 0) + 10 } };
+    s = { ...s, players: ps };
+    if (typeof euro_marketTradePrice === 'function') s = euro_marketTradePrice(s, bloc, -5);
+    if (typeof logEntry === 'function') s = logEntry(s, `🏴 M&A 완료! P${attackerIdx} → 무주공 ${bloc} 흡수 — 상징 보상 ₵+10, ${bloc} 주가 -5`);
+  }
+  const acq = { ...((s.meta && s.meta.acquisitions) || {}) };
+  acq[attackerIdx] = [...(acq[attackerIdx] || []), bloc];
+  s = { ...s, meta: { ...s.meta, acquisitions: acq, pendingMna: null } };
+  s = euro_checkMnaVictory(s);
+  return s;
+}
+
+// 방어(자동) + 판정 — euro_applyAll에서 매 NEXT_ROUND 전환 시 1회 호출.
+function euro_resolveMna(state) {
+  const pm = state.meta && state.meta.pendingMna;
+  if (!pm) return state;
+  let s = state;
+  const attackerIdx = pm.attacker;
+  const bloc = pm.target;
+  const attacker = s.players[attackerIdx];
+  if (!attacker || attacker.defeated) {
+    if (typeof logEntry === 'function') s = logEntry(s, `⚖ M&A 무산: 공격자 부재 (${bloc})`);
+    return { ...s, meta: { ...s.meta, pendingMna: null } };
+  }
+  // 대상 = 해당 블록을 소유한 미인수·미탈락 봇 Bloc 플레이어. 없으면 NPC 블록(무방어).
+  const targetIdx = s.players.findIndex(p => p && !p.defeated && !p.acquiredBy && p.role === 'bloc' && p.specific === bloc);
+  const target = targetIdx >= 0 ? s.players[targetIdx] : null;
+
+  // === STEP2: 방어 라운드 (봇/NPC 자동) ===
+  let defense = 'none';
+  if (target && target.kind === 'bot') {
+    const credit = target.resources.credit || 0;
+    if (credit >= 10) {
+      // 주식 재매입: 대상 ₵-10, 공격자 총발행주 5%(내림,최소1) 강제 매도 → 시장가 환급
+      const total = euro_totalShares(s, bloc);
+      let qty = Math.floor(total * EURO_MNA_REBUY_PCT);
+      if (qty < 1) qty = 1;
+      const held = (attacker.stocks && attacker.stocks[bloc]) || 0;
+      qty = Math.min(qty, held);
+      const price = s.stocks[bloc] || 5;
+      const ps = [...s.players];
+      ps[targetIdx] = { ...ps[targetIdx], resources: { ...ps[targetIdx].resources, credit: credit - 10 } };
+      ps[attackerIdx] = {
+        ...ps[attackerIdx],
+        resources: { ...ps[attackerIdx].resources, credit: (ps[attackerIdx].resources.credit || 0) + price * qty },
+        stocks: { ...ps[attackerIdx].stocks, [bloc]: held - qty },
+      };
+      s = { ...s, players: ps };
+      defense = 'rebuy';
+      if (typeof logEntry === 'function') s = logEntry(s, `🛡 P${targetIdx} ${bloc} · 주식 재매입 방어 (₵-10) → 공격자 ${qty}주 강제 매도 (₵+${price * qty} 환급)`);
+    } else {
+      // 상호 파괴: 자사 주가 -3 (min1). 지분율(주 수 기준)엔 영향 없으나 지분 가치 급락.
+      if (typeof euro_marketTradePrice === 'function') s = euro_marketTradePrice(s, bloc, -3);
+      defense = 'scorched';
+      if (typeof logEntry === 'function') s = logEntry(s, `💥 P${targetIdx} ${bloc} · 상호 파괴 방어 → ${bloc} 주가 -3 (지분 가치 급락)`);
+    }
+  } else {
+    defense = 'none';
+    if (typeof logEntry === 'function') s = logEntry(s, `🏳 ${bloc} · 무방어 (${target ? '방어 자원 없음' : 'NPC 블록'})`);
+  }
+  s = { ...s, meta: { ...s.meta, pendingMna: { ...pm, defense } } };
+
+  // === STEP3: 판정 — 공격자 지분 재확인 (재매입으로 51% 미만이면 방어 성공) ===
+  const eqNow = (typeof euro_equityPct === 'function') ? euro_equityPct(s, attackerIdx, bloc) : 0;
+  if (eqNow < EURO_MNA_THRESHOLD) {
+    const held = (s.players[attackerIdx].stocks && s.players[attackerIdx].stocks[bloc]) || 0;
+    let qty = Math.floor(euro_totalShares(s, bloc) * EURO_MNA_SUCCESS_SELLOFF);
+    if (qty < 1) qty = 1;
+    qty = Math.min(qty, held);
+    const price = s.stocks[bloc] || 5;
+    const ps = [...s.players];
+    ps[attackerIdx] = {
+      ...ps[attackerIdx],
+      resources: { ...ps[attackerIdx].resources, credit: (ps[attackerIdx].resources.credit || 0) + price * qty },
+      stocks: { ...ps[attackerIdx].stocks, [bloc]: held - qty },
+    };
+    s = { ...s, players: ps };
+    if (typeof euro_marketTradePrice === 'function') s = euro_marketTradePrice(s, bloc, 2); // 방어 성공 보너스 +2
+    s = { ...s, meta: { ...s.meta, pendingMna: null } };
+    if (typeof logEntry === 'function') s = logEntry(s, `⚖ M&A 방어 성공! ${bloc} 인수 무산 — 공격자 지분 ${eqNow}%(<51), ${qty}주 강제 매도(₵+${price * qty}), ${bloc} 주가 +2`);
+    return s;
+  }
+  // 방어 실패 → 인수 완료
+  return euro_completeMnaAcquisition(s, attackerIdx, targetIdx, bloc);
 }
 
 // HTML 글로벌 노출
@@ -1016,4 +1232,9 @@ if (typeof window !== 'undefined') {
   window.euro_equityPct = euro_equityPct;
   window.euro_mnaEnabled = euro_mnaEnabled;
   window.euro_totalShares = euro_totalShares;
+  // v6.10 (web 포팅): M&A Stage 2 — 인간 공격자 인수 루프
+  window.euro_declareMnaCheck = euro_declareMnaCheck;
+  window.euro_declareMna = euro_declareMna;
+  window.euro_resolveMna = euro_resolveMna;
+  window.euro_checkMnaVictory = euro_checkMnaVictory;
 }
