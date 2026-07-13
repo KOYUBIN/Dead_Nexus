@@ -36,7 +36,10 @@ function euro_mode(mapSize) {
 // v6.9 (web 포팅): M&A Stage 1 — 지분 모델 + 11×11 게이트 (읽기 전용 표면화)
 const NPC_MNA_FLOAT = 10; // 공개 미거래 float — 지분 분모 안정화 (Stage 2의 51% 임계와 직결)
 
-// 블록 총 발행주식 = 비패배 플레이어 보유 합 + NPC float
+// 블록 총 발행주식 = 비패배 플레이어 보유 합 + NPC float + 백기사 추가 float(Stage 3)
+// v6.11 (Stage 3): meta.whiteKnight[bloc] = 백기사 방어로 제3자가 인수한 추가 발행주.
+//   분모에 가산 → 공격자 지분율 희석. 홀딩 기반이 아니라 총발행 분모만 늘려
+//   assetValue(가격×보유 기반)엔 영향 없고 M&A 지분 게이트에만 작용.
 function euro_totalShares(state, bloc) {
   const players = (state && state.players) || [];
   let sum = 0;
@@ -44,7 +47,8 @@ function euro_totalShares(state, bloc) {
     if (!p || p.defeated) continue;
     sum += (p.stocks && p.stocks[bloc]) || 0;
   }
-  return sum + NPC_MNA_FLOAT;
+  const wk = (state && state.meta && state.meta.whiteKnight && state.meta.whiteKnight[bloc]) || 0;
+  return sum + NPC_MNA_FLOAT + wk;
 }
 
 // 특정 플레이어의 블록 지분율(%, 내림)
@@ -744,6 +748,7 @@ function euro_resolvePendingDecision(state, decisionId, choice) {
   else if (decision.type === 'award') s = euro_applyAwardChoice(s, decision, choice);
   else if (decision.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, decision, choice);
   else if (decision.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, decision, choice);
+  else if (decision.type === 'mna_defense') s = euro_applyMnaDefenseChoice(s, decision, choice); // v6.11 Stage 3
   // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
   return s;
 }
@@ -957,6 +962,8 @@ function euro_expireStaleDecisions(state) {
     // v6.7: 만료된 bloc_invest → 기본 옵션('stock') 자동 적용 = 기존 자동 자사주가+1 원상 복구.
     // (순수 소멸 시 인간 Bloc이 봇보다 손해 — 봇은 매R 자동 +1 수령 → 봇 파리티 유지 위해 기본 적용)
     if (!keep(d) && d.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, d, 'stock');
+    // v6.11 Stage 3: 만료된 mna_defense → 기본 방어(재매입 가능→재매입, 아니면 상호 파괴) 자동 적용.
+    if (!keep(d) && d.type === 'mna_defense') s = euro_applyMnaDefenseDefault(s, d);
   }
   return s;
 }
@@ -993,6 +1000,7 @@ function euro_applyAll(state) {
   s = euro_vantaSignature(s);      // v6.3 (web 포팅) — VANTA veil
   s = euro_ironwallSignature(s);   // v6.3 (web 포팅) — IRONWALL garrison
   s = euro_axiomSignature(s);      // v6.3 (web 포팅) — AXIOM 마켓 틱
+  s = euro_declareMnaBots(s);      // v6.11 (web 포팅) — 봇 능동 M&A 선언 (Stage 3)
   s = euro_checkHighlights(s);
   s = euro_checkTMDecisions(s);    // v4.0.2: 마일스톤/어워드 결정 큐
   return s;
@@ -1154,6 +1162,23 @@ function euro_resolveMna(state) {
   const targetIdx = s.players.findIndex(p => p && !p.defeated && !p.acquiredBy && p.role === 'bloc' && p.specific === bloc);
   const target = targetIdx >= 0 ? s.players[targetIdx] : null;
 
+  // === Stage 3: 법적 대응(지연) 판정 — 지연 만료 라운드 도달 시 재방어 없이 판정 ===
+  if (pm.defense === 'legal') {
+    if ((s.meta.round || 0) >= (pm.delayedUntil || 0)) {
+      // 지연 소진 — 그 사이 인간이 매집했으면 지분<51로 방어 성공 가능
+      return euro_mnaJudge(s, attackerIdx, targetIdx, bloc);
+    }
+    return s; // 아직 지연 중 — pendingMna 유지, 이번 R은 대기
+  }
+
+  // === Stage 3: 인간(P0) 타겟 — 자동 방어 금지. 방어 결정 모달 대기 ===
+  // 선언 시점(euro_declareMnaBots)에 mna_defense 결정 큐 등록 + awaitingHuman 마킹 완료.
+  // 응답이 오면 euro_applyMnaDefenseChoice가 즉시 판정, 무응답이면 euro_expireStaleDecisions가
+  // 기본 방어(재매입 가능→재매입, 아니면 상호 파괴)를 적용한다. 여기선 대기만.
+  if (target && target.kind === 'human') {
+    return s;
+  }
+
   // === STEP2: 방어 라운드 (봇/NPC 자동) ===
   let defense = 'none';
   if (target && target.kind === 'bot') {
@@ -1188,7 +1213,14 @@ function euro_resolveMna(state) {
   }
   s = { ...s, meta: { ...s.meta, pendingMna: { ...pm, defense } } };
 
-  // === STEP3: 판정 — 공격자 지분 재확인 (재매입으로 51% 미만이면 방어 성공) ===
+  // === STEP3: 판정 (공유 헬퍼) ===
+  return euro_mnaJudge(s, attackerIdx, targetIdx, bloc);
+}
+
+// STEP3 판정 — 공격자 지분 재확인 후 방어 성공(<51%) 또는 인수 완료.
+// Stage 2(봇/NPC 자동)·Stage 3(인간 방어/지연/만료 기본) 전 경로 공유. pendingMna는 이 함수가 소거.
+function euro_mnaJudge(state, attackerIdx, targetIdx, bloc) {
+  let s = state;
   const eqNow = (typeof euro_equityPct === 'function') ? euro_equityPct(s, attackerIdx, bloc) : 0;
   if (eqNow < EURO_MNA_THRESHOLD) {
     const held = (s.players[attackerIdx].stocks && s.players[attackerIdx].stocks[bloc]) || 0;
@@ -1210,6 +1242,170 @@ function euro_resolveMna(state) {
   }
   // 방어 실패 → 인수 완료
   return euro_completeMnaAcquisition(s, attackerIdx, targetIdx, bloc);
+}
+
+// ============================================================================
+// v6.11 (web 포팅): M&A Stage 3 — 봇 능동 인수 + 인간 방어 결정 모달 + 백기사
+// 봇 Bloc이 51%+ 타 블록 보유 && 게이트 통과 시 매R 확률적 M&A 선언(보수적 heuristic).
+// 봇→봇은 Stage 2 자동 방어·판정(euro_resolveMna) 그대로 재사용. 봇→인간(P0)이면
+// mna_defense 결정 큐(4옵션) + lastTargetedBy 배너. 방어 선택 반영 후 euro_mnaJudge 판정.
+// ============================================================================
+const EURO_MNA_BOT_THRESHOLD = 55;    // 봇 선언 heuristic 1차 임계 — 55%+면 조건 무관 선언 후보
+const EURO_MNA_BOT_PROB = 0.5;        // 적격 시 R당 선언 확률 (보수적 cadence — 2R 간격·3회 상한과 중첩)
+const EURO_MNA_WK_HOLD_PCT = 0.20;    // 백기사: 제3자가 새 총발행의 20% 인수 → 분모 가산 wk = ceil(total/4)
+
+// 자산 단독 선두 봇 Bloc 인덱스 (동률·부재 시 -1). 51~54% 선언 보조 조건.
+function euro_botAssetLeader(state) {
+  let best = -1, bestVal = -Infinity, tie = false;
+  for (let pi = 0; pi < state.players.length; pi++) {
+    const p = state.players[pi];
+    if (!p || p.defeated || p.role !== 'bloc') continue;
+    const v = (typeof assetValue === 'function') ? assetValue(p, state.stocks, state) : 0;
+    if (v > bestVal) { bestVal = v; best = pi; tie = false; }
+    else if (v === bestVal) { tie = true; }
+  }
+  return tie ? -1 : best;
+}
+
+// 봇 능동 M&A 선언 — euro_applyAll 후반에 1회. pendingMna 있으면 스킵(동시 1건).
+// heuristic: 게이트 통과(≥51%) + (지분 ≥55% OR (≥51% && 자산 단독 선두)). 적격 중 최고 지분 선택,
+// 확률 EURO_MNA_BOT_PROB로 실제 선언. 봇→인간이면 방어 결정 큐 + 배너.
+function euro_declareMnaBots(state) {
+  if (typeof euro_mnaEnabled !== 'function' || !euro_mnaEnabled(state)) return state;
+  if (state.meta && state.meta.pendingMna) return state;
+  let s = state;
+  const leader = euro_botAssetLeader(s);
+  const cands = [];
+  for (let pi = 0; pi < s.players.length; pi++) {
+    const atk = s.players[pi];
+    if (!atk || atk.kind !== 'bot' || atk.defeated || atk.role !== 'bloc') continue;
+    for (const bloc of Object.keys(s.stocks || {})) {
+      if (bloc === atk.specific) continue;
+      const chk = (typeof euro_declareMnaCheck === 'function') ? euro_declareMnaCheck(s, pi, bloc) : { ok: false };
+      if (!chk.ok) continue; // 게이트: ≥51%, 간격, 횟수, 중복, 진행중 등 전부 포함
+      const eq = (typeof euro_equityPct === 'function') ? euro_equityPct(s, pi, bloc) : 0;
+      const heuristicOk = eq >= EURO_MNA_BOT_THRESHOLD || (eq >= EURO_MNA_THRESHOLD && pi === leader);
+      if (!heuristicOk) continue;
+      cands.push({ pi, bloc, eq });
+    }
+  }
+  if (!cands.length) return s;
+  cands.sort((a, b) => b.eq - a.eq);
+  if (Math.random() >= EURO_MNA_BOT_PROB) return s; // 보수적 cadence
+  const pick = cands[0];
+  s = euro_declareMna(s, pick.pi, pick.bloc);
+  if (!(s.meta && s.meta.pendingMna)) return s; // 방어적: 선언 거부됐으면 종료
+  // 봇→인간(P0) 타겟이면 방어 결정 큐 + 피격 배너
+  const tIdx = s.players.findIndex(p => p && !p.defeated && p.role === 'bloc' && p.specific === pick.bloc);
+  if (tIdx === 0 && s.players[0] && s.players[0].kind === 'human') {
+    s = euro_queueMnaDefense(s, pick.pi, pick.bloc);
+  }
+  return s;
+}
+
+// 봇→인간 방어 결정 큐 등록 + lastTargetedBy 배너 + pendingMna.awaitingHuman 마킹.
+function euro_queueMnaDefense(state, attackerIdx, bloc) {
+  let s = state;
+  const p0 = s.players[0];
+  const credit = (p0.resources && p0.resources.credit) || 0;
+  const infl = (p0.resources && p0.resources.influence) || 0;
+  const decision = {
+    id: `mna_defense_${bloc}_r${s.meta.round}`,
+    type: 'mna_defense',
+    playerIdx: 0,
+    prompt: `P${attackerIdx}가 ${bloc} 적대적 인수 선언! 방어 수단을 선택하라 (미응답 시 자동 방어)`,
+    options: [
+      { id: 'rebuy',       label: `주식 재매입 (₵10) — 공격자 지분 5% 강제 매도`, enabled: credit >= 10, keepDisabled: true },
+      { id: 'whiteknight', label: `백기사 동맹 (🎙3) — 제3자 20% 인수로 공격자 지분 희석`, enabled: infl >= 3, keepDisabled: true },
+      { id: 'legal',       label: `법적 대응 (🎙5) — 인수 1R 지연 (그 사이 주식 매집 방어)`, enabled: infl >= 5, keepDisabled: true },
+      { id: 'scorched',    label: `상호 파괴 (자사 주가 -3) — 인수 진행되나 흡수 가치 하락` },
+    ],
+    context: { round: s.meta.round, bloc, attacker: attackerIdx },
+  };
+  s = euro_addPendingDecision(s, decision);
+  s = { ...s, meta: { ...s.meta,
+    pendingMna: { ...s.meta.pendingMna, awaitingHuman: true },
+    lastTargetedBy: { attacker: attackerIdx, effectKey: 'mna', detail: `${bloc} 적대적 인수 — 방어 결정 필요` },
+  } };
+  if (typeof logEntry === 'function') s = logEntry(s, `🎯 P${attackerIdx} → 당신(${bloc}) 적대적 인수 선언! 방어 수단 선택 대기`);
+  return s;
+}
+
+// 인간 방어 선택 적용 — euro_resolvePendingDecision(mna_defense) + 만료 기본이 호출.
+// 재매입/백기사/상호파괴는 즉시 판정, 법적 대응은 1R 지연(판정 보류).
+function euro_applyMnaDefenseChoice(state, decision, choice) {
+  const pm = state.meta && state.meta.pendingMna;
+  const bloc = (decision.context && decision.context.bloc);
+  const attackerIdx = (decision.context && decision.context.attacker);
+  if (!pm || pm.target !== bloc || pm.attacker !== attackerIdx) return state; // 정합 가드
+  let s = state;
+  const attacker = s.players[attackerIdx];
+  const targetIdx = s.players.findIndex(p => p && !p.defeated && p.role === 'bloc' && p.specific === bloc);
+  if (!attacker || attacker.defeated) {
+    if (typeof logEntry === 'function') s = logEntry(s, `⚖ M&A 무산: 공격자 부재 (${bloc})`);
+    return { ...s, meta: { ...s.meta, pendingMna: null } };
+  }
+  const p0 = s.players[0];
+  const credit = (p0.resources && p0.resources.credit) || 0;
+  const infl = (p0.resources && p0.resources.influence) || 0;
+
+  // 주식 재매입 (₵10 → 공격자 총발행 5%(최소1) 강제 매도, 시장가 환급)
+  if (choice === 'rebuy' && credit >= 10) {
+    const total = euro_totalShares(s, bloc);
+    let qty = Math.floor(total * EURO_MNA_REBUY_PCT);
+    if (qty < 1) qty = 1;
+    const held = (attacker.stocks && attacker.stocks[bloc]) || 0;
+    qty = Math.min(qty, held);
+    const price = s.stocks[bloc] || 5;
+    const ps = [...s.players];
+    ps[0] = { ...ps[0], resources: { ...ps[0].resources, credit: credit - 10 } };
+    ps[attackerIdx] = { ...ps[attackerIdx],
+      resources: { ...ps[attackerIdx].resources, credit: (ps[attackerIdx].resources.credit || 0) + price * qty },
+      stocks: { ...ps[attackerIdx].stocks, [bloc]: held - qty } };
+    s = { ...s, players: ps, meta: { ...s.meta, pendingMna: { ...pm, defense: 'rebuy', awaitingHuman: false } } };
+    if (typeof logEntry === 'function') s = logEntry(s, `🛡 당신(${bloc}) · 주식 재매입 방어 (₵-10) → 공격자 ${qty}주 강제 매도`);
+    return euro_mnaJudge(s, attackerIdx, targetIdx, bloc);
+  }
+
+  // 백기사 동맹 (🎙3 → 제3자가 새 총발행의 20% 인수 = 분모 +ceil(total/4), 공격자 지분 희석)
+  if (choice === 'whiteknight' && infl >= 3) {
+    const total = euro_totalShares(s, bloc);
+    // wk/(total+wk) = 0.20 → wk = total/4 (올림)
+    const wk = Math.max(1, Math.ceil(total * EURO_MNA_WK_HOLD_PCT / (1 - EURO_MNA_WK_HOLD_PCT)));
+    const cur = { ...((s.meta && s.meta.whiteKnight) || {}) };
+    cur[bloc] = (cur[bloc] || 0) + wk;
+    const ps = [...s.players];
+    ps[0] = { ...ps[0], resources: { ...ps[0].resources, influence: infl - 3 } };
+    s = { ...s, players: ps, meta: { ...s.meta, whiteKnight: cur, pendingMna: { ...pm, defense: 'whiteknight', awaitingHuman: false } } };
+    if (typeof logEntry === 'function') s = logEntry(s, `🎙 당신(${bloc}) · 백기사 동맹 (🎙-3) → 제3자 ${wk}주 인수, 공격자 지분 희석`);
+    return euro_mnaJudge(s, attackerIdx, targetIdx, bloc);
+  }
+
+  // 법적 대응 (🎙5 → 판정 1R 지연. 그 사이 인간이 매집해 스스로 방어 가능)
+  if (choice === 'legal' && infl >= 5) {
+    const ps = [...s.players];
+    ps[0] = { ...ps[0], resources: { ...ps[0].resources, influence: infl - 5 } };
+    s = { ...s, players: ps, meta: { ...s.meta, pendingMna: { ...pm, defense: 'legal', awaitingHuman: false, delayedUntil: (s.meta.round || 0) + 1 } } };
+    if (typeof logEntry === 'function') s = logEntry(s, `⚖ 당신(${bloc}) · 법적 대응 (🎙-5) → 인수 1R 지연 (다음 R 판정, 그 전에 매집 방어 가능)`);
+    return s; // 판정 보류 — euro_resolveMna가 지연 만료 시 판정
+  }
+
+  // 상호 파괴 (자사 주가 -3. 지분 불변, 인수 진행되나 흡수 가치 하락) — 기본/폴백
+  s = (typeof euro_marketTradePrice === 'function') ? euro_marketTradePrice(s, bloc, -3) : s;
+  s = { ...s, meta: { ...s.meta, pendingMna: { ...pm, defense: 'scorched', awaitingHuman: false } } };
+  if (typeof logEntry === 'function') s = logEntry(s, `💥 당신(${bloc}) · 상호 파괴 방어 → ${bloc} 주가 -3 (지분 가치 급락)`);
+  return euro_mnaJudge(s, attackerIdx, targetIdx, bloc);
+}
+
+// 만료 기본 방어 — 재매입 가능하면 재매입, 아니면 상호 파괴. euro_expireStaleDecisions가 호출.
+function euro_applyMnaDefenseDefault(state, decision) {
+  const p0 = state.players[0];
+  const credit = (p0 && p0.resources && p0.resources.credit) || 0;
+  const choice = credit >= 10 ? 'rebuy' : 'scorched';
+  if (typeof logEntry === 'function' && typeof euro_applyMnaDefenseChoice === 'function') {
+    // 로그는 euro_applyMnaDefenseChoice 내부에서 남음
+  }
+  return euro_applyMnaDefenseChoice(state, decision, choice);
 }
 
 // HTML 글로벌 노출
@@ -1237,4 +1433,9 @@ if (typeof window !== 'undefined') {
   window.euro_declareMna = euro_declareMna;
   window.euro_resolveMna = euro_resolveMna;
   window.euro_checkMnaVictory = euro_checkMnaVictory;
+  // v6.11 (web 포팅): M&A Stage 3 — 봇 능동 인수 + 인간 방어 + 백기사
+  window.euro_declareMnaBots = euro_declareMnaBots;
+  window.euro_queueMnaDefense = euro_queueMnaDefense;
+  window.euro_applyMnaDefenseChoice = euro_applyMnaDefenseChoice;
+  window.euro_mnaJudge = euro_mnaJudge;
 }
