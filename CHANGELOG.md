@@ -8,6 +8,11 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 배포 핫픽스 — Vercel에서 euro_module.js 전체 미로드 (trailingSlash)
+- **증상**: 라이브 사이트에서 시뮬레이터는 렌더되지만 v6.3~v6.10 유로 기능 전부(시그니처 13종·견제·결정 모달·M&A) 조용히 비활성 — typeof 가드라 에러도 없음
+- **원인**: `vercel.json`의 `trailingSlash: false`가 `/simulator/v0.5/` → `/simulator/v0.5`(308) 리다이렉트 → 상대경로 `<script src="euro_module.js">`가 `/simulator/euro_module.js`(404)로 해석. 라이브 curl로 308/404 재현 확정
+- **수정**: `trailingSlash: true` — 디렉토리 URL 슬래시 유지로 상대경로 정상 해석. file:// 로컬 실행 호환 유지 (스크립트 src는 상대경로 그대로)
+
 ### M&A Stage 3 — 봇 능동 인수 + 인간 방어 4종 모달 + 백기사 (11차, M&A 완주)
 - **봇 능동 인수** (`euro_declareMnaBots`): 매R 게이트 통과 봇 중 `지분≥55% OR (≥51% && 자산 단독 선두)` 후보의 최고 지분 1명이 확률 0.5로 선언 — 측정 선언율 0.479~0.492. 봇→봇 M&A는 Stage 2 자동 방어·판정 재사용
 - **인간 방어 결정 모달** (`mna_defense`, 4옵션): 재매입 rebuy(₵10, 공격자 5% 강제매도) / 백기사 whiteknight(🎙3, `meta.whiteKnight[bloc]` float 가산으로 지분 희석 — 56%→40%, assetValue 무영향) / 법적 legal(🎙5, 판정 1R 지연 — 그 사이 시장 매집으로 자력 방어 가능) / 상호파괴 scorched(자사 주가 -3). 자원 부족 옵션은 비활성 표기(keepDisabled), 만료 시 지불 가능한 최선 자동(재매입→상호파괴)
