@@ -546,6 +546,10 @@ function euro_applySuppression(state) {
 //   보복이 게임 후반 전략을 왜곡하므로 2R로 단기 억제 루프에 한정.
 const EURO_GRUDGE_BONUS = 6;
 const EURO_GRUDGE_WINDOW = 2;
+// v6.12 P0-3: 리더 브레이크 — 자산 단독 1위(선두) 견제 위협도 가산.
+//   grudge(+6) 미만의 온건 상수라 "명백한 보복" 은 여전히 선두보다 우선하되,
+//   동급 위협이면 선두가 눌린다. 결정론이 아닌 확률적 편향(발동은 suppressionProb 게이트).
+const EURO_LEADER_BONUS = 4;
 
 // v6.4 (web 포팅): 견제 토큰 봇 AI 부여 로직
 // core.js applySuppression 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인
@@ -576,11 +580,22 @@ function euro_grantSuppression(state) {
   const isGrudgeTarget = (ppi) => !!myGrudge && myGrudge.by === ppi
     && (round - (myGrudge.round || 0)) >= 0
     && (round - (myGrudge.round || 0)) <= EURO_GRUDGE_WINDOW;
-  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향)
+  // v6.12 P0-3: 자산 단독 1위(선두) 인덱스 — 동률·부재 시 -1 (편향 미적용)
+  let leaderIdx = -1, leaderVal = -Infinity, leaderTie = false;
+  for (let li = 0; li < s.players.length; li++) {
+    const lp = s.players[li];
+    if (!lp || lp.defeated) continue;
+    const lv = (typeof assetValue === 'function') ? assetValue(lp, s.stocks, s) : 0;
+    if (lv > leaderVal) { leaderVal = lv; leaderIdx = li; leaderTie = false; }
+    else if (lv === leaderVal) leaderTie = true;
+  }
+  if (leaderTie) leaderIdx = -1;
+  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향 + 선두 편향)
   const threat = (pp, ppi) => (pp.resources.rep || 0)
     + (((s.meta.raidsThisGame || {})[ppi]) || 0) * 2
     + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10)
-    + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0);
+    + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0)
+    + (ppi === leaderIdx ? EURO_LEADER_BONUS : 0);
   const enemies = s.players
     .map((pp, ppi) => ({ pi: ppi, pp }))
     .filter(x => x.pi !== pi && !x.pp.defeated);
