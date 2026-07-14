@@ -1,0 +1,180 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-14T08:06:45.522Z",
+    "games": 5,
+    "mapSize": "5x5",
+    "elapsedMs": 273,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.11.2"
+  },
+  "outcomes": {
+    "completed": 5,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 2,
+      "bloc": 3,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0.4,
+      "bloc": 0.6
+    },
+    "classWins": {
+      "DRIFTER": 1,
+      "CARBON": 2,
+      "AXIOM": 1,
+      "RIGGER": 1
+    },
+    "avgRound": 6.8,
+    "mnaDeclaresTotal": 0,
+    "mnaDeclaresPerGame": 0,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 7,
+    "suppressGrantsPerGame": 1.4,
+    "suppressRetaliations": 0
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 51/42 + 레이드 5 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 3,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 50,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 85 (≥70, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 111 (≥70, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 4,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "CARBON",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (전투): 렙 46/42 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 3,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 29,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 5,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 123 (≥70, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 19,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

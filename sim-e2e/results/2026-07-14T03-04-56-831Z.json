@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-14T03:04:56.831Z",
+    "games": 3,
+    "mapSize": "11x11",
+    "elapsedMs": 209,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.11.2"
+  },
+  "outcomes": {
+    "completed": 3,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 1,
+      "bloc": 2,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0.333,
+      "bloc": 0.667
+    },
+    "classWins": {
+      "DRIFTER": 1,
+      "HELIX": 2
+    },
+    "avgRound": 7.33,
+    "mnaDeclaresTotal": 0,
+    "mnaDeclaresPerGame": 0,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 8,
+    "suppressGrantsPerGame": 2.67,
+    "suppressRetaliations": 3
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 11,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 45/45 + 레이드 2",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 6,
+      "suppressRetaliations": 3,
+      "guardHit": false,
+      "ms": 47,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 5,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 137 (≥95, 4인)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BROKER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 106 (≥95, 4인)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

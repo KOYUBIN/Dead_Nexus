@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-14T02:38:18.173Z",
+    "games": 3,
+    "mapSize": "5x5",
+    "elapsedMs": 196,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.11.2"
+  },
+  "outcomes": {
+    "completed": 3,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 1,
+      "bloc": 2,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0.333,
+      "bloc": 0.667
+    },
+    "classWins": {
+      "AXIOM": 1,
+      "CARBON": 1,
+      "CIPHER": 1
+    },
+    "avgRound": 5.33,
+    "mnaDeclaresTotal": 0,
+    "mnaDeclaresPerGame": 0,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 3,
+    "suppressGrantsPerGame": 1,
+    "suppressRetaliations": 0
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "MOLE",
+      "ok": true,
+      "gameOver": true,
+      "round": 5,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 85 (≥70, 4인)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 31,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 5,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 82 (≥70, 4인)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (전투): 렙 42/42 + 레이드 2",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

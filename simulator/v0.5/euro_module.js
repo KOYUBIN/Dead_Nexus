@@ -296,10 +296,9 @@ function euro_cipher5x5(state) {
 
 // v6.2 (web 포팅): Ghost 허슬 — 진영 균형 보정
 // euro_marketCycle의 Bloc 자기주가+1과 대칭. 매 R Ghost 평판 +1.
-// 11×11에선 격R (BROKER 제외 — 자체 메모 시스템으로 평판 누적)
+// v6.12: 11×11도 매R로 상향 (진영 균형 튜닝 — 격R 시 Ghost 과너프). BROKER 제외(자체 메모 시스템으로 평판 누적).
 function euro_ghostHustle(state) {
   let s = state;
-  if (state.meta.mapSize === '11x11' && state.meta.round % 2 === 0) return state;
   for (let pi = 0; pi < s.players.length; pi++) {
     const p = s.players[pi];
     if (p.defeated || p.role !== 'ghost') continue;
@@ -445,7 +444,8 @@ function euro_vantaSignature(state) {
     if ((cell.veil || 0) >= 3) continue;
     const newMap = { ...s.map, [coord]: { ...cell, veil: (cell.veil || 0) + 1 } };
     s = { ...s, map: newMap };
-    if (typeof logEntry === 'function') s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 정찰 차단)`);
+    // v6.11.3 (P0-3): veil이 레이드 threshold에도 가산됨을 로그에 반영
+    if (typeof logEntry === 'function') s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 레이드 방어 +${(cell.veil || 0) + 1})`);
   }
   return s;
 }
@@ -463,7 +463,8 @@ function euro_ironwallSignature(state) {
     if ((cell.garrison || 0) >= 3) continue;
     const newMap = { ...s.map, [coord]: { ...cell, garrison: (cell.garrison || 0) + 1 } };
     s = { ...s, map: newMap };
-    if (typeof logEntry === 'function') s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 배치 (Ghost raid 시 자동 반격)`);
+    // v6.11.3 (P0-3): garrison이 실제로 레이드 threshold에 가산되므로 허위 "자동 반격" → "방어 +N"로 정정
+    if (typeof logEntry === 'function') s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 +1 (Ghost 레이드 방어 +${(cell.garrison || 0) + 1})`);
   }
   return s;
 }
@@ -544,6 +545,15 @@ function euro_applySuppression(state) {
 //   보복이 게임 후반 전략을 왜곡하므로 2R로 단기 억제 루프에 한정.
 const EURO_GRUDGE_BONUS = 6;
 const EURO_GRUDGE_WINDOW = 2;
+// v6.12 P0-3: 리더 브레이크 — 자산 단독 1위(선두) 견제 위협도 가산.
+//   grudge(+6) 미만의 온건 상수라 "명백한 보복" 은 여전히 선두보다 우선하되,
+//   동급 위협이면 선두가 눌린다. 결정론이 아닌 확률적 편향(발동은 suppressionProb 게이트).
+const EURO_LEADER_BONUS = 4;
+
+// v6.12 P0-1: 종료 선언자 = 봇 견제 최우선 타겟. grudge(+6)·leader(+4)보다 큰 상수라
+//   유예 라운드 동안 선언자를 확실히 끌어내리려는 압력이 형성된다 (킹메이킹 방지엔
+//   선언이 명시적 신호이므로 과대 편향 허용). 발동 확률·비용·토큰 수는 불변, "타겟 선정"만.
+const EURO_DECLARER_BONUS = 10;
 
 // v6.4 (web 포팅): 견제 토큰 봇 AI 부여 로직
 // core.js applySuppression 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인
@@ -574,11 +584,25 @@ function euro_grantSuppression(state) {
   const isGrudgeTarget = (ppi) => !!myGrudge && myGrudge.by === ppi
     && (round - (myGrudge.round || 0)) >= 0
     && (round - (myGrudge.round || 0)) <= EURO_GRUDGE_WINDOW;
-  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향)
+  // v6.12 P0-3: 자산 단독 1위(선두) 인덱스 — 동률·부재 시 -1 (편향 미적용)
+  let leaderIdx = -1, leaderVal = -Infinity, leaderTie = false;
+  for (let li = 0; li < s.players.length; li++) {
+    const lp = s.players[li];
+    if (!lp || lp.defeated) continue;
+    const lv = (typeof assetValue === 'function') ? assetValue(lp, s.stocks, s) : 0;
+    if (lv > leaderVal) { leaderVal = lv; leaderIdx = li; leaderTie = false; }
+    else if (lv === leaderVal) leaderTie = true;
+  }
+  if (leaderTie) leaderIdx = -1;
+  // v6.12 P0-1: 종료 선언자 인덱스 (활성 선언 있으면 최우선 견제)
+  const declarerIdx = (s.meta && s.meta.victoryDeclaration) ? s.meta.victoryDeclaration.idx : -1;
+  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향 + 선두 편향 + 선언자 편향)
   const threat = (pp, ppi) => (pp.resources.rep || 0)
     + (((s.meta.raidsThisGame || {})[ppi]) || 0) * 2
     + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10)
-    + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0);
+    + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0)
+    + (ppi === leaderIdx ? EURO_LEADER_BONUS : 0)
+    + (ppi === declarerIdx ? EURO_DECLARER_BONUS : 0);
   const enemies = s.players
     .map((pp, ppi) => ({ pi: ppi, pp }))
     .filter(x => x.pi !== pi && !x.pp.defeated);

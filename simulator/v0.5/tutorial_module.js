@@ -60,15 +60,21 @@ function tut_hasModal(s) {
 }
 function tut_awaitingMove(s) { return !!(s && s.meta && s.meta.awaitingMoveTarget); }
 
-// 내 역할별 승리 조건 문구 (5×5 기준 UI 표기값 — 렙 16 / 레이드 2 / 자산 55)
+// 내 역할별 승리 조건 문구 — v6.12 P0-1: 임계값 단일 소스(VICTORY_GOALS/getVictoryGoals)만 참조.
+//   판정 코드가 정본이므로 하드코딩(55/16) 폐기, 실게이트 값을 그대로 노출한다.
 function tutorial_roleWinText(state) {
   var me = tut_me(state);
   var role = me && me.role;
+  var g = (typeof window !== 'undefined' && typeof window.getVictoryGoals === 'function') ? window.getVictoryGoals(state) : null;
   if (role === 'bloc') {
-    return '당신은 🏢 BLOC — 메가기업입니다. 자산(📊)을 키워 55에 먼저 도달하면 승리해요. 자산 = 보유 현금 + 구역 가치 + 타 블록 주식 평가액.';
+    var ag = g ? g.blocAsset : 70;
+    return '당신은 🏢 BLOC — 메가기업입니다. 자산(📊)을 키워 ' + ag + '에 먼저 도달하면 «종료 선언»되고, 다음 라운드 종료까지 유지하면 승리해요. 자산 = 보유 현금 + 구역 가치 + 타 블록 주식 평가액.';
   }
   // ghost 기본
-  return '당신은 👻 GHOST — 독립 용병입니다. 평판(★) 16 + 레이드 2회 성공을 모두 채우면 승리해요.';
+  var rb = g ? g.ghostRepBattle : 42;
+  var rd = g ? g.ghostRaids : 2;
+  var ro = g ? g.ghostRepOnly : 60;
+  return '당신은 👻 GHOST — 독립 용병입니다. 평판(★) ' + rb + ' + 레이드 ' + rd + '회 (또는 평판 단독 ' + ro + ')를 채우면 «종료 선언»되고, 다음 라운드 종료까지 유지하면 승리해요.';
 }
 
 // ============================================================================
@@ -132,7 +138,11 @@ var TUTORIAL_STEPS = [
     // R2 시작 시점(round>=2)까지 열어두어 놓쳐도 wrap 직전에 반드시 1회 노출.
     trigger: function (s) { return (tut_round(s) === 1 && tut_phase(s) >= 4) || tut_round(s) >= 2; },
     title: '🏁 승리 진척',
-    body: '왼쪽 P0(=나) 카드의 진척 바에서 남은 목표를 항상 확인할 수 있어요.\n\nGhost는 "렙 x/16 · 레이드 x/2", Bloc은 "자산 x/55"로 표시됩니다. 매 라운드 이 수치를 보며 무엇에 집중할지 정하세요.',
+    body: function (s) {
+      var g = (typeof window !== 'undefined' && typeof window.getVictoryGoals === 'function') ? window.getVictoryGoals(s) : null;
+      var rb = g ? g.ghostRepBattle : 42, rd = g ? g.ghostRaids : 2, ag = g ? g.blocAsset : 70;
+      return '왼쪽 P0(=나) 카드의 진척 바에서 남은 목표를 항상 확인할 수 있어요.\n\nGhost는 "렙 x/' + rb + ' · 레이드 x/' + rd + '", Bloc은 "자산 x/' + ag + '"로 표시됩니다. 목표에 도달하면 즉시 이기는 게 아니라 «종료 선언»되고, 다음 라운드 종료까지 유지해야 승리해요 — 그 사이 상대가 견제할 수 있습니다.';
+    },
   },
   {
     id: 'wrap',
@@ -142,9 +152,10 @@ var TUTORIAL_STEPS = [
     title: '🎉 기본은 다 배웠어요',
     body: function (s) {
       var me = tut_me(s);
+      var g = (typeof window !== 'undefined' && typeof window.getVictoryGoals === 'function') ? window.getVictoryGoals(s) : null;
       var goal = (me && me.role === 'bloc')
-        ? '남은 라운드 동안 자산 55 도달을 노리세요.'
-        : '남은 라운드 동안 평판 16 + 레이드 2회를 완성하세요.';
+        ? ('남은 라운드 동안 자산 ' + (g ? g.blocAsset : 70) + ' 도달을 노리세요.')
+        : ('남은 라운드 동안 평판 ' + (g ? g.ghostRepBattle : 42) + ' + 레이드 ' + (g ? g.ghostRaids : 2) + '회를 완성하세요.');
       return '시장 → 계획 → 이동 → 판정 → 수익의 한 라운드를 마쳤어요. 이제 흐름은 반복됩니다.\n\n' + goal + '\n\n행운을 빌어요! (이 가이드는 다시 표시되지 않습니다.)';
     },
   },
