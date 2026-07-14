@@ -866,6 +866,11 @@ const d6 = () => Math.floor(Math.random() * 6) + 1;
 // v5.2.0: 결정론적 레이드 보너스 (sim-harness/core.js와 동일) — 무기 자원 기반, 운 0%
 // v5.2.1: euro_gearBonus 통합 (자원변환 장비가 raid 보너스로 작동)
 const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3)) + (typeof euro_gearBonus === 'function' ? euro_gearBonus(p) : 0);
+// v6.11.3 (P0-1): 레이드 방어 토큰 합 — fortified(요새) + garrison(주둔) + veil(베일).
+// 봇/카드/인간 모달 레이드 threshold가 이 한 소스를 공유 (sim-harness/core.js:1736 정합).
+const raidDefenseBonus = (cell) => (cell?.fortified || 0) + (cell?.garrison || 0) + (cell?.veil || 0);
+// 봇/카드 레이드 기본 threshold = 5 + 방어 토큰 (인간 모달은 RAID_TYPES.threshold가 5를 대체하고 방어 토큰을 가산).
+const raidThreshold = (cell) => 5 + raidDefenseBonus(cell);
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[r[i], r[j]] = [r[j], r[i]]; } return r; };
 
@@ -1956,7 +1961,11 @@ function reducer(state, action) {
       if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseLogs.push(`${bloc} 방어 +${defense.threshold_plus} threshold`); }
       if (defense.detect) { approachMod -= 2; defenseLogs.push(`${bloc} 센서 감지 (접근 -2)`); }
       if (defense.all_plus) { approachMod += 0 - defense.all_plus; executeMod -= defense.all_plus; escapeMod -= defense.all_plus; defenseLogs.push(`${bloc} AI 보조 (전 판정 ${-defense.all_plus})`); }
-      if (pr.fortified > 0 && !rtype.bypass_defense) { thresholdMod += pr.fortified; defenseLogs.push(`요새화 +${pr.fortified}`); }
+      // v6.11.3 (P0-1): 요새 + 주둔(garrison) + 베일(veil) 토큰을 모두 threshold에 가산 (잠입형은 bypass)
+      if (!rtype.bypass_defense) {
+        const tokBonus = (pr.fortified || 0) + (pr.garrison || 0) + (pr.veil || 0);
+        if (tokBonus > 0) { thresholdMod += tokBonus; defenseLogs.push(`방어 토큰 +${tokBonus} (요새${pr.fortified||0}/주둔${pr.garrison||0}/베일${pr.veil||0})`); }
+      }
 
       const finalThreshold = rtype.threshold + thresholdMod;
 
@@ -1979,7 +1988,13 @@ function reducer(state, action) {
       const execRoll = d6();
       const statVal = me.stats[rtype.useStat] || 0;
       const trackVal = trackBonus(me, rtype.useStat);
-      const execTotal = execRoll + statVal + trackVal + execBonus + poolBonus + (approachOK ? 0 : -2);
+      // v6.11.3 (P0-3): attackBonusOnce("다음 판정 +N") 실적용 — 기록만 되고 소비처 0이던 허위 로그 해소
+      const atkOnce = s.meta.attackBonusOnce || 0;
+      if (atkOnce > 0) {
+        s = { ...s, meta: { ...s.meta, attackBonusOnce: 0 } };
+        s = logEntry(s, `💪 일회 판정 보너스 +${atkOnce} 소비 (레이드 실행)`);
+      }
+      const execTotal = execRoll + statVal + trackVal + execBonus + poolBonus + atkOnce + (approachOK ? 0 : -2);
       const critFail = execRoll === 1;
       // v0.6.3c: combat LV4+ 또는 onceAbilities.critFailImmunity → 크리티컬 실패 면역
       const critImmune = (me.tracks?.combat || 0) >= 4 || me.onceAbilities?.critFailImmunity;
@@ -2073,8 +2088,9 @@ function reducer(state, action) {
         const tk = raidTrackMap[rtype.useStat] || 'combat';
         s = raiseTrack(s, 0, tk, 1, '레이드 성공');
         // 잠입형/협상형 보너스: security/party
-        if (rtype.useStat === 'inf' || rtype.id === 'infiltrate') s = raiseTrack(s, 0, 'security', 1, '잠입');
-        if (rtype.id === 'negotiate') s = raiseTrack(s, 0, 'party', 1, '협상');
+        // v6.11.3 (P0-2): rtype.id 미정의 버그 → pr.selectedType(RAID_TYPES 키) 비교로 교체
+        if (pr.selectedType === 'infiltrate') s = raiseTrack(s, 0, 'security', 1, '잠입');
+        if (pr.selectedType === 'negotiate') s = raiseTrack(s, 0, 'party', 1, '협상');
         // v0.9.1: 하이라이트 — 첫 raid 성공 / 첫 잠입형 / 첫 건물 파괴 / 첫 NEXUS 점령
         s = recordHighlight(s, 'first_raid_success', 0);
         if (pr.selectedType === 'infiltrate') s = recordHighlight(s, 'first_infiltrate', 0);
@@ -2084,7 +2100,7 @@ function reducer(state, action) {
         const blocOwner = state.players.findIndex(pp => pp.specific === bloc && pp.role === 'bloc');
         const ownerP = state.players[blocOwner];
         if (ownerP?.isNpc) {
-          const sigGain = (rtype.id === 'infiltrate' || rtype.bypass_defense) ? 2 : 1;
+          const sigGain = (pr.selectedType === 'infiltrate' || rtype.bypass_defense) ? 2 : 1;  // v6.11.3 (P0-2)
           s = revealSignal(s, blocOwner, 0, sigGain);
           // 시그널 LV3 보너스 약탈
           if (s.players[blocOwner].signal?.revealed >= 3) {
@@ -3531,7 +3547,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const blocIdx = cellThere.owner;
           const bloc = s.players[blocIdx].specific;
           const zoneNm = ZONE_TYPES[cellThere.zone]?.name || '';
-          const threshold = 5;
+          // v6.11.3 (P0-1): 고정 5 → 5 + fortified + garrison + veil (harness core.js:1736 정합)
+          const threshold = raidThreshold(cellThere);
           if (playerIdx === 0) {
             // v0.5.22: 확장된 레이드 상태 — 타입 선택 + 자원 투자 + 3단계 판정
             const zoneType = cellThere.zone;
@@ -3547,6 +3564,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                   blocIdx,
                   stats: { atk: pAfterMove.stats.atk, spd: pAfterMove.stats.spd, hack: pAfterMove.stats.hack },
                   fortified: cellThere.fortified || 0,
+                  garrison: cellThere.garrison || 0,  // v6.11.3 (P0-1): IRONWALL 주둔 토큰
+                  veil: cellThere.veil || 0,          // v6.11.3 (P0-1): VANTA 베일 토큰
                   // 사용자가 단계적으로 채움
                   selectedType: null,
                   invested: { weapons: 0, data: 0, poolAttr: null },
@@ -3705,7 +3724,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const zName = ZONE_TYPES[atCell.zone]?.name || '';
     const raidRoll = raidBonus(curP2);  // v5.2.0: 결정론적
     const raidTotal = raidRoll + curP2.stats.atk + trackBonus(curP2, 'atk');
-    const threshold = 5;
+    // v6.11.3 (P0-1): 고정 5 → 5 + fortified + garrison + veil. 모달 흡수(C2)는 리스크로 P0 보류, threshold만 정합.
+    const threshold = raidThreshold(atCell);
     if (raidTotal >= threshold) {
       // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
       const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
@@ -3879,6 +3899,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     // v0.8.5: 일회성 판정 보너스 + 다음 R 시작 시 카드 1장 추가 드로우
     s = { ...s, meta: { ...s.meta, attackBonusOnce: (s.meta.attackBonusOnce || 0) + effect.stat_boost, extraDrawNext: (s.meta.extraDrawNext || 0) + 1 } };
     s = logEntry(s, `💪 P${playerIdx} · 다음 판정 +${effect.stat_boost}, 다음 R 카드+1`);
+  }
+  if (effect.spd) {
+    // v6.11.3 (P0-3): effect.spd 핸들러 부재로 QUICK_DRAW bot·AMBUSH top이 no-op(비용만 소모)였음 → 최소 기동 보상
+    const ps = [...s.players];
+    ps[playerIdx] = { ...ps[playerIdx], wanted: Math.max(0, (ps[playerIdx].wanted || 0) - 1), resources: { ...ps[playerIdx].resources, rep: (ps[playerIdx].resources.rep || 0) + 1 } };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🏃 P${playerIdx} · 민첩 기동 (수배-1, ★+1)`);
   }
   // v0.8.5: 신규 distinct 효과들
   if (effect.always_first) {
@@ -5605,8 +5632,9 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
         const zoneType = pr.zoneType;
         const zoneAttr = ZONE_TYPES[zoneType]?.attr;
         const zoneLoot = ZONE_LOOT[zoneType] || {};
-        const defense = BLOC_DEFENSE[pr.bloc] || {};
         const rt = pr.selectedType ? RAID_TYPES[pr.selectedType] : null;
+        // v6.11.3 (P0-3): 잠입형(bypass_defense)은 방어 무시 — 표시를 실판정과 일치시킴
+        const defense = rt?.bypass_defense ? {} : (BLOC_DEFENSE[pr.bloc] || {});
 
         // 방어 효과 요약
         let thresholdMod = 0;
@@ -5614,7 +5642,11 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
         if (defense.threshold_plus) { thresholdMod += defense.threshold_plus; defenseDesc.push(`${pr.bloc} 방어 +${defense.threshold_plus}`); }
         if (defense.detect) defenseDesc.push(`${pr.bloc} 센서 감지 (접근 -2)`);
         if (defense.all_plus) defenseDesc.push(`${pr.bloc} AI 보조 (전 판정 -${defense.all_plus})`);
-        if (pr.fortified > 0) { thresholdMod += pr.fortified; defenseDesc.push(`요새화 +${pr.fortified}`); }
+        // v6.11.3 (P0-1/P0-3): 요새 + 주둔 + 베일 토큰을 threshold에 가산 (실판정과 동일 소스)
+        if (!rt?.bypass_defense) {
+          const tokBonus = (pr.fortified || 0) + (pr.garrison || 0) + (pr.veil || 0);
+          if (tokBonus > 0) { thresholdMod += tokBonus; defenseDesc.push(`방어 토큰 +${tokBonus} (요새${pr.fortified||0}/주둔${pr.garrison||0}/베일${pr.veil||0})`); }
+        }
 
         // 현재 예상 성공률 (크리티컬 실패 5/6만 반영)
         let estPct = 50;
@@ -6215,8 +6247,9 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                     const visitedByMe = state.meta.visitedBonusZones?.[0] || {};
                     const ownerP = owner;
                     if (ownerP && ownerP.role === 'bloc' && me.role === 'ghost') {
-                      // 레이드 가능
-                      const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
+                      // 레이드 가능 — v6.11.3 (P0-3): 고정 5 → raidThreshold(cell) 기반(방어 토큰 반영),
+                      // 크리티컬 실패(d6=1) 반영해 성공면 최대 5/6
+                      const succRolls = Math.max(0, Math.min(5, 7 - raidThreshold(cell) + me.stats.atk));
                       const pct = Math.round(succRolls / 6 * 100);
                       previewTag = `🗡️ ${pct}%`;
                       previewColor = pct >= 66 ? 'var(--green)' : (pct >= 33 ? 'var(--yellow)' : 'var(--magenta)');

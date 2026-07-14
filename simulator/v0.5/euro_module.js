@@ -445,7 +445,8 @@ function euro_vantaSignature(state) {
     if ((cell.veil || 0) >= 3) continue;
     const newMap = { ...s.map, [coord]: { ...cell, veil: (cell.veil || 0) + 1 } };
     s = { ...s, map: newMap };
-    if (typeof logEntry === 'function') s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 정찰 차단)`);
+    // v6.11.3 (P0-3): veil이 레이드 threshold에도 가산됨을 로그에 반영
+    if (typeof logEntry === 'function') s = logEntry(s, `🥷 P${pi} VANTA · ${coord} veil 토큰 +1 (Ghost 레이드 방어 +${(cell.veil || 0) + 1})`);
   }
   return s;
 }
@@ -463,7 +464,8 @@ function euro_ironwallSignature(state) {
     if ((cell.garrison || 0) >= 3) continue;
     const newMap = { ...s.map, [coord]: { ...cell, garrison: (cell.garrison || 0) + 1 } };
     s = { ...s, map: newMap };
-    if (typeof logEntry === 'function') s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 배치 (Ghost raid 시 자동 반격)`);
+    // v6.11.3 (P0-3): garrison이 실제로 레이드 threshold에 가산되므로 허위 "자동 반격" → "방어 +N"로 정정
+    if (typeof logEntry === 'function') s = logEntry(s, `⚔️ P${pi} IRONWALL · ${coord} 주둔 유닛 +1 (Ghost 레이드 방어 +${(cell.garrison || 0) + 1})`);
   }
   return s;
 }
