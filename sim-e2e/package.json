@@ -1,0 +1,13 @@
+{
+  "name": "dead-nexus-sim-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DEAD NEXUS web simulator E2E balance measurement runner (bots-only)",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node run.js"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
