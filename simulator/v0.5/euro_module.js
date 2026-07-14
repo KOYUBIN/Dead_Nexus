@@ -551,6 +551,11 @@ const EURO_GRUDGE_WINDOW = 2;
 //   동급 위협이면 선두가 눌린다. 결정론이 아닌 확률적 편향(발동은 suppressionProb 게이트).
 const EURO_LEADER_BONUS = 4;
 
+// v6.12 P0-1: 종료 선언자 = 봇 견제 최우선 타겟. grudge(+6)·leader(+4)보다 큰 상수라
+//   유예 라운드 동안 선언자를 확실히 끌어내리려는 압력이 형성된다 (킹메이킹 방지엔
+//   선언이 명시적 신호이므로 과대 편향 허용). 발동 확률·비용·토큰 수는 불변, "타겟 선정"만.
+const EURO_DECLARER_BONUS = 10;
+
 // v6.4 (web 포팅): 견제 토큰 봇 AI 부여 로직
 // core.js applySuppression 이식. 매R 확률적으로 가장 부유한 봇 1명이 가장 위협적인
 // 상대(인간 포함)에게 견제 토큰 1개 부여 (₵-5). 부여 직후 euro_applySuppression이
@@ -590,12 +595,15 @@ function euro_grantSuppression(state) {
     else if (lv === leaderVal) leaderTie = true;
   }
   if (leaderTie) leaderIdx = -1;
-  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향 + 선두 편향)
+  // v6.12 P0-1: 종료 선언자 인덱스 (활성 선언 있으면 최우선 견제)
+  const declarerIdx = (s.meta && s.meta.victoryDeclaration) ? s.meta.victoryDeclaration.idx : -1;
+  // 타겟: 가장 위협적인 상대 (평판 + 레이드×2 + 자산/10 + 보복 편향 + 선두 편향 + 선언자 편향)
   const threat = (pp, ppi) => (pp.resources.rep || 0)
     + (((s.meta.raidsThisGame || {})[ppi]) || 0) * 2
     + Math.floor((typeof assetValue === 'function' ? assetValue(pp, s.stocks, s) : 0) / 10)
     + (isGrudgeTarget(ppi) ? EURO_GRUDGE_BONUS : 0)
-    + (ppi === leaderIdx ? EURO_LEADER_BONUS : 0);
+    + (ppi === leaderIdx ? EURO_LEADER_BONUS : 0)
+    + (ppi === declarerIdx ? EURO_DECLARER_BONUS : 0);
   const enemies = s.players
     .map((pp, ppi) => ({ pi: ppi, pp }))
     .filter(x => x.pi !== pi && !x.pp.defeated);

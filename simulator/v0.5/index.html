@@ -1389,21 +1389,56 @@ const MAP_RULES = {
     moveMultiplier: 1.0,      // 이동 카드 기본 효율
     driftAtkOverride: 2,       // DRIFTER atk (튜토리얼)
     driftHpOverride: 8,
-    assetGoal: 50,
-    repGoal: { battle: 14, repOnly: 20 },
-    raidGoal: 2,
+    // v6.12 P0-1: 승리 임계는 VICTORY_GOALS 단일 소스로 이전 (기존 assetGoal/repGoal/raidGoal 폐기 — 소비처 0)
   },
   '11x11': {
     roundLimit: 12,
     moveMultiplier: 1.0,
     driftAtkOverride: 4,       // DRIFTER 원래 스탯 (넓은 맵에서 이동 가치 정상)
     driftHpOverride: 9,
-    assetGoal: 60,
-    repGoal: { battle: 30, repOnly: 40 },
-    raidGoal: 2,
   },
 };
 const getMapRules = (mapSize) => MAP_RULES[mapSize] || MAP_RULES['5x5'];
+
+// ============================================================================
+// v6.12 P0-1: 승리 임계 단일 소스 (VICTORY_GOALS)
+//   정본 = 실제 판정 코드(checkInstantVictory) 기준값. 진척 바·승리 예측 배지·
+//   튜토리얼 문구(tutorial_module.js)는 전부 getVictoryGoals()만 참조한다.
+//   (기존 3중 불일치: MAP_RULES 50/60·14/30·20/40, tutorial 55/16, 배지 55/16 폐기)
+//   nonNpcCount 보정: 2인 -2, 3인 -1 (평판전투는 그 절반 내림) — 기존 checkInstantVictory 로직 이식.
+// ============================================================================
+const VICTORY_GOALS = {
+  '5x5':   { blocAsset: 70, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
+  '11x11': { blocAsset: 95, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
+};
+function getVictoryGoals(state) {
+  const isLarge = !!(state && state.meta && state.meta.mapSize === '11x11');
+  const base = isLarge ? VICTORY_GOALS['11x11'] : VICTORY_GOALS['5x5'];
+  const nonNpcCount = state && state.players ? state.players.filter(p => !p.isNpc).length : 4;
+  const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;
+  return {
+    blocAsset:      base.blocAsset + adj,
+    ghostRepBattle: base.ghostRepBattle + Math.floor(adj / 2),
+    ghostRepOnly:   base.ghostRepOnly + adj,
+    ghostRaids:     base.ghostRaids,
+    nonNpcCount,
+  };
+}
+// 플레이어가 현재 승리 조건을 충족하면 { route, reason } 반환, 아니면 null (단일 판정 소스).
+function evalPlayerVictory(p, idx, state, goals) {
+  if (!p || p.defeated || p.isNpc) return null;
+  goals = goals || getVictoryGoals(state);
+  if (p.role === 'bloc') {
+    const av = assetValue(p, state.stocks, state);
+    if (av >= goals.blocAsset) return { route: 'asset', reason: `Bloc 승리: 자산 ${av} (≥${goals.blocAsset}, ${goals.nonNpcCount}인)` };
+  } else {
+    const rep = p.resources.rep || 0;
+    const raids = (state.meta.raidsThisGame || {})[idx] || 0;
+    if (rep >= goals.ghostRepBattle && raids >= goals.ghostRaids) return { route: 'repBattle', reason: `Ghost 승리 (전투): 렙 ${rep}/${goals.ghostRepBattle} + 레이드 ${raids}` };
+    if (rep >= goals.ghostRepOnly) return { route: 'repOnly', reason: `Ghost 승리 (평판): 렙 ${rep} (≥${goals.ghostRepOnly})` };
+  }
+  return null;
+}
 
 // TL 승급 비용: v0.5.21 — 전 레벨 5pt 균일 (1칸=1pt 직관 보장)
 const tlCostFor = (curTl) => {
@@ -1666,6 +1701,9 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       lostCardsUsed: Object.fromEntries([...Array(5).keys()].map(k => [k, 0])),
       nexusHolder: null,
       nexusStreak: 0,
+      // v6.12 P0-1: 종료 선언 라운드
+      victoryDeclaration: null,  // { idx, route, reason, round } — 활성 종료 선언 (없으면 null)
+      declarationCounts: {},     // { playerIdx: 선언 횟수 } (게임당 같은 플레이어 2회 캡)
       claimedAchievements: {},  // id => playerIdx
       milestonesAwarded: Object.fromEntries([...Array(5).keys()].map(k => [k, []])),  // v0.6.3b: 거리명성 마일스톤 기록
       highlights: [],            // v0.9.1: 하이라이트 모먼트 기록 (게임 중 기억할 한 수)
@@ -2766,6 +2804,8 @@ function reducer(state, action) {
       if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
       // v6.10: M&A 2블록 인수 즉시 승리면 라운드 진행 중단 (gameOver 세팅됨)
       if (state.meta.gameOver) return state;
+      // v6.12 P0-1: 종료 선언 갱신 (도달 선언 / 조건 이탈 해제) — 방금 끝난 라운드 기준
+      state = applyVictoryDeclaration(state);
       const newRound = state.meta.round + 1;
       // v0.8.3: 맵별 maxRounds — 5×5: 8, 11×11: 12
       const maxR = state.meta.mapSize === '11x11' ? 12 : 8;
@@ -2842,17 +2882,18 @@ function reducer(state, action) {
       });
       // === 이전 라운드 요약 ===
       const summaryLines = [];
+      const sumGoals = getVictoryGoals(state);
       summaryLines.push({ round: state.meta.round, phase: 6, message: `━━━━━━━━━━━ R${state.meta.round} 요약 ━━━━━━━━━━━` });
       state.players.forEach((p, i) => {
         if (p.defeated) { summaryLines.push({ round: state.meta.round, phase: 6, message: `  P${i} [${p.specific}] · 💀 쓰러짐` }); return; }
         const marker = i === 0 ? '⭐ 당신 ' : '   ';
         if (p.role === 'ghost') {
           const raidsTotal = state.meta.raidsThisGame[i] || 0;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 👻 · HP ${p.hp}/${p.maxHp} · 렙 ${p.resources.rep} · 누적 레이드 ${raidsTotal}회 · ${p.position || '?'} 위치` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 👻 · HP ${p.hp}/${p.maxHp} · 렙 ${p.resources.rep}/${sumGoals.ghostRepBattle} · 누적 레이드 ${raidsTotal}/${sumGoals.ghostRaids} · ${p.position || '?'} 위치` });
         } else {
           const av = assetValue(p, state.stocks, state);
           const ownZones = Object.values(state.map).filter(c => c.owner === i).length;
-          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/55 · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
+          summaryLines.push({ round: state.meta.round, phase: 6, message: `  ${marker}P${i} [${p.specific}] 🏢 · 자산 ${av}/${sumGoals.blocAsset} · 구역 ${ownZones}곳 · ₵${p.resources.credit}` });
         }
       });
       // 개인 풀 요약
@@ -3554,20 +3595,27 @@ function findNearestBlocZone(state, fromCoord, excludeOwnBloc = null) {
 const LEADER_BREAK_PROB = 0.6;    // 편향 적용 확률 (나머지 40%는 순수 최근접)
 const LEADER_BREAK_BONUS1 = 3;    // 자산 1위 소유 구역 거리 보정
 const LEADER_BREAK_BONUS2 = 1;    // 자산 2위 소유 구역 거리 보정
+const LEADER_BREAK_DECLARER = 6;  // v6.12 P0-1: 종료 선언자 소유 구역 거리 보정 (최우선)
 const LEADER_BREAK_SCANCAP = 12;  // BFS 탐색 상한 (성능·과도한 원정 방지)
 function findRaidTargetZone(state, fromCoord) {
   const nearest = findNearestBlocZone(state, fromCoord);
   if (!nearest) return null;
-  if (Math.random() >= LEADER_BREAK_PROB) return nearest;  // 확률적 게이트
+  // v6.12 P0-1: 활성 종료 선언(Bloc)이 있으면 확률 게이트 우회 — 유예 라운드 동안
+  //   봇 Ghost가 선언한 Bloc 구역을 확실히 노리도록. 선언 없으면 기존 60% 게이트 유지.
+  const declMeta = state.meta.victoryDeclaration;
+  const declIdx = (declMeta && state.players[declMeta.idx] && state.players[declMeta.idx].role === 'bloc' && !state.players[declMeta.idx].defeated) ? declMeta.idx : -1;
+  if (declIdx < 0 && Math.random() >= LEADER_BREAK_PROB) return nearest;  // 확률적 게이트
   // 자산 순위 (레이드 대상은 Bloc 구역 → Bloc 소유주만 순위화)
   const rank = state.players
     .map((p, i) => ({ i, v: (p && !p.defeated && p.role === 'bloc') ? assetValue(p, state.stocks, state) : -Infinity }))
     .filter(x => x.v > -Infinity)
     .sort((a, b) => b.v - a.v);
   const bonusOf = (owner) => {
-    if (rank[0] && owner === rank[0].i) return LEADER_BREAK_BONUS1;
-    if (rank[1] && owner === rank[1].i) return LEADER_BREAK_BONUS2;
-    return 0;
+    let b = 0;
+    if (owner === declIdx) b += LEADER_BREAK_DECLARER;  // 선언자 최우선
+    if (rank[0] && owner === rank[0].i) b += LEADER_BREAK_BONUS1;
+    else if (rank[1] && owner === rank[1].i) b += LEADER_BREAK_BONUS2;
+    return b;
   };
   // BFS 전수 — 도달 가능한 Bloc 구역별 거리 수집 후 (거리 - 순위보정) 최소 선택
   const visited = new Set([fromCoord]);
@@ -5139,44 +5187,74 @@ function checkVictoryByPoints(state) {
 }
 
 function checkInstantVictory(state) {
-  // v6.10: M&A 2블록 인수 승리는 5R 가드 이전에 체크 (인수 루프 특성상 조기 성립 가능)
+  // v6.10: M&A 2블록 인수 승리는 5R 가드 이전에 체크 (인수 루프 특성상 조기 성립 가능).
+  //  M&A(2블록)·NEXUS 연속 점유 같은 "이벤트형 즉시 승리"는 서사적 정당성이 있어
+  //  종료 선언 유예를 우회하고 즉시 확정한다 (v6.12 P0-1 설계 판단).
   if (typeof euro_checkMnaVictory === 'function') {
     const mv = euro_checkMnaVictory(state);
     if (mv.meta.gameOver) return mv;
   }
-  // v0.7.5: 최소 5R 가드 — 5R 종료 전엔 즉시 승리 X (조기 승리 방지)
+  // v0.7.5: 최소 5R 가드 — 5R 종료 전엔 승리 판정 X (조기 승리 방지)
   if (state.meta.round < 5) return state;
-  // v0.9.3-fix: 5×5 평판 임계 +5 (Ghost 폭주 방지)
-  // 5x5 (튜토리얼): 70/37/55
-  // 11x11 (정식): 95/45/70
-  const isLarge = state.meta.mapSize === '11x11';
-  const nonNpcCount = state.players.filter(p => !p.isNpc).length;
-  const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;
-  // v1.1.1: 5×5 평판 임계 +5 (BLADE/MOLE 폭주 추가 보정)
-  const blocGoal       = (isLarge ? 95 : 70) + adj;
-  const repBattleGoal  = (isLarge ? 45 : 42) + Math.floor(adj / 2);
-  const repOnlyGoal    = (isLarge ? 70 : 60) + adj;
-
-  for (let i = 0; i < state.players.length; i++) {
-    const p = state.players[i];
-    if (p.defeated || p.isNpc) continue;
-    if (p.role === 'bloc') {
-      const av = assetValue(p, state.stocks, state);
-      if (av >= blocGoal) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Bloc 승리: 자산 ${av} (≥${blocGoal}, ${nonNpcCount}인)` } };
-      }
-    } else {
-      const rep = p.resources.rep || 0;
-      const raids = state.meta.raidsThisGame[i] || 0;
-      if (rep >= repBattleGoal && raids >= 2) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (전투): 렙 ${rep}/${repBattleGoal} + 레이드 ${raids}` } };
-      }
-      if (rep >= repOnlyGoal) {
-        return { ...state, meta: { ...state.meta, gameOver: true, winner: i, winReason: `Ghost 승리 (평판): 렙 ${rep} (≥${repOnlyGoal})` } };
-      }
+  const goals = getVictoryGoals(state);
+  // v6.12 P0-1: 종료 선언 확정 —
+  //   자산·평판 경로는 "즉시 승리"가 아니라 "선언(NEXT_ROUND) → 유예 1R → 확정".
+  //   선언 라운드(decl.round)보다 뒤 라운드에서 여전히 조건을 유지하면 여기서 확정한다.
+  //   신규 도달(첫 임계 돌파)은 즉시 승리하지 않고 NEXT_ROUND의 applyVictoryDeclaration이
+  //   공개 선언만 남긴다 — 그 사이 다른 플레이어가 견제·레이드·M&A로 끌어내릴 기회를 갖는다.
+  const decl = state.meta.victoryDeclaration;
+  if (decl && decl.round < state.meta.round) {
+    const dp = state.players[decl.idx];
+    const still = evalPlayerVictory(dp, decl.idx, state, goals);
+    if (still) {
+      return { ...state, meta: { ...state.meta, gameOver: true, winner: decl.idx,
+        winReason: `${still.reason} — 종료 선언 확정 (R${decl.round} 선언 → R${state.meta.round} 유지)` } };
     }
+    // 유지 실패 시 여기선 확정하지 않는다 — NEXT_ROUND applyVictoryDeclaration이 선언 해제 처리.
   }
   return state;
+}
+
+// v6.12 P0-1: 종료 선언 라운드 — 임계 도달 시 즉시 승리 대신 전원에게 공개 선언 후 유예 1R.
+//   NEXT_ROUND(euro_applyAll·M&A 체크 직후)에서 호출 → state.meta.round 는 방금 끝난 라운드 R.
+//   ① 현 선언자가 조건을 이탈했으면 선언 해제(재도달 시 재선언 가능)
+//   ② 활성 선언이 없고 신규 도달자가 있으면 선언 (같은 플레이어 게임당 2회 캡 — 무한 반복 방지)
+//   확정은 다음 라운드 phase6 checkInstantVictory 가 담당.
+function applyVictoryDeclaration(state) {
+  if (state.meta.gameOver) return state;
+  if (state.meta.round < 5) return state;  // 5R 가드 이전엔 선언 없음
+  const goals = getVictoryGoals(state);
+  let decl = state.meta.victoryDeclaration || null;
+  const counts = { ...(state.meta.declarationCounts || {}) };
+  const logMsgs = [];
+  // ① 현 선언자 조건 이탈 → 선언 해제
+  if (decl) {
+    const dp = state.players[decl.idx];
+    if (!evalPlayerVictory(dp, decl.idx, state, goals)) {
+      logMsgs.push(`⚖ P${decl.idx} [${dp ? dp.specific : '?'}] 승리 조건 이탈 — 종료 선언 해제 (견제 성공)`);
+      decl = null;
+    }
+  }
+  // ② 활성 선언 없음 & 신규 도달자 → 선언 (2회 캡)
+  if (!decl) {
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      if (!p || p.defeated || p.isNpc) continue;
+      const v = evalPlayerVictory(p, i, state, goals);
+      if (!v) continue;
+      if ((counts[i] || 0) >= 2) continue;  // 무한 반복 방지 캡
+      counts[i] = (counts[i] || 0) + 1;
+      decl = { idx: i, route: v.route, reason: v.reason, round: state.meta.round };
+      logMsgs.push(`📢 P${i} [${p.specific}] 승리 조건 도달 (${v.reason}) — 이번 라운드가 마지막 기회. 다음 라운드 종료까지 유지하면 승리!`);
+      break;
+    }
+  }
+  if (logMsgs.length === 0 && (state.meta.victoryDeclaration || null) === decl) return state;
+  return {
+    ...state,
+    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts },
+    log: [...state.log, ...logMsgs.map(m => ({ round: state.meta.round, phase: 6, message: m }))].slice(-150),
+  };
 }
 
 // ============================================================================
@@ -6211,32 +6289,52 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
         })()}
       </div>
 
+      {/* v6.12 P0-1: 종료 선언 배너 (전 좌석 공개) */}
+      {state.meta.victoryDeclaration && (() => {
+        const d = state.meta.victoryDeclaration;
+        const dp = state.players[d.idx];
+        const isMe = d.idx === meIdx;
+        return (
+          <div style={{ position: 'fixed', top: 50, left: 0, right: 0, zIndex: 400, padding: '6px 14px', background: isMe ? 'linear-gradient(90deg, rgba(20,40,28,0.97), rgba(20,40,28,0.92))' : 'linear-gradient(90deg, rgba(45,15,30,0.97), rgba(45,15,30,0.92))', borderBottom: `2px solid ${isMe ? 'var(--green)' : 'var(--magenta)'}`, fontFamily: 'Share Tech Mono, monospace', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: isMe ? 'var(--green)' : 'var(--magenta)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15 }}>📢</span>
+            <span>종료 선언 · P{d.idx} {dp ? dp.specific : ''} — {d.reason}</span>
+            <span style={{ marginLeft: 'auto', color: 'var(--text)', fontWeight: 400 }}>
+              {isMe ? '이번 라운드 종료까지 조건을 유지하면 승리!' : '다음 라운드 종료 전에 끌어내려야 함 (견제·레이드·M&A·시장 공격)'}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* LEFT — Players */}
       <div className="left-panel">
         <h4 style={{ margin: '4px 0 8px', fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2 }}>PLAYERS</h4>
-        {state.players.map((p, i) => {
-          // 위협도 계산: 승리 조건 대비 남은 수치
+        {(() => { const vGoals = getVictoryGoals(state); const declIdx = state.meta.victoryDeclaration ? state.meta.victoryDeclaration.idx : -1; return state.players.map((p, i) => {
+          // 위협도 계산: 승리 조건 대비 남은 수치 (단일 소스 VICTORY_GOALS 참조)
           let progressPct = 0, needLabel = '', threatLevel = 'safe', threatBadge = null;
+          const isWinning = !!evalPlayerVictory(p, i, state, vGoals);
           if (p.role === 'ghost') {
             const rep = p.resources.rep || 0;
             const raids = state.meta.raidsThisGame?.[i] || 0;
-            const repDone = rep >= 16;
-            const raidDone = raids >= 2;
-            progressPct = Math.min(100, Math.round(rep / 16 * 100));
-            const repLeft = Math.max(0, 16 - rep);
-            if (repDone && raidDone) { threatLevel = 'won'; threatBadge = '🏆'; }
+            const repGoalV = vGoals.ghostRepBattle;
+            const raidDone = raids >= vGoals.ghostRaids;
+            progressPct = Math.min(100, Math.round(rep / repGoalV * 100));
+            const repLeft = Math.max(0, repGoalV - rep);
+            if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (repLeft <= 6) { threatLevel = 'warn'; }
-            needLabel = `렙 ${rep}/16 · 레이드 ${raids}/2`;
+            needLabel = `렙 ${rep}/${repGoalV} · 레이드 ${raids}/${vGoals.ghostRaids}`;
           } else {
             const asset = assetValue(p, state.stocks, state);
-            progressPct = Math.min(100, Math.round(asset / 55 * 100));
-            const assetLeft = Math.max(0, 55 - asset);
-            if (asset >= 55) { threatLevel = 'won'; threatBadge = '🏆'; }
+            const assetGoalV = vGoals.blocAsset;
+            progressPct = Math.min(100, Math.round(asset / assetGoalV * 100));
+            const assetLeft = Math.max(0, assetGoalV - asset);
+            if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (assetLeft <= 15) { threatLevel = 'warn'; }
-            needLabel = `자산 ${asset}/55`;
+            needLabel = `자산 ${asset}/${assetGoalV}`;
           }
+          const isDeclared = declIdx === i;
+          if (isDeclared) threatBadge = '📢 종료 선언';
           const borderColor = threatLevel === 'danger' ? 'var(--magenta)' : threatLevel === 'won' ? 'var(--green)' : threatLevel === 'warn' ? 'var(--yellow)' : undefined;
           const extraStyle = borderColor ? { borderColor, boxShadow: threatLevel === 'danger' ? '0 0 8px rgba(255,60,140,0.4)' : undefined } : {};
           // "내가 타겟됨" 하이라이트 (P0 아닌데 최근에 나를 공격한 경우)
@@ -6250,9 +6348,9 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                 </div>
                 <div className="php">HP {p.hp}/{p.maxHp}</div>
               </div>
-              {/* 위협 배지 + 진척 바 */}
-              {i !== 0 && threatBadge && (
-                <div style={{ fontSize: 10, color: threatLevel === 'danger' ? 'var(--magenta)' : 'var(--yellow)', fontWeight: 700, marginTop: 2, letterSpacing: 1 }}>{threatBadge}</div>
+              {/* 위협 배지 + 진척 바 (종료 선언 배지는 본인 좌석에도 표시) */}
+              {(i !== 0 || isDeclared) && threatBadge && (
+                <div style={{ fontSize: 10, color: isDeclared ? 'var(--magenta)' : (threatLevel === 'danger' ? 'var(--magenta)' : 'var(--yellow)'), fontWeight: 700, marginTop: 2, letterSpacing: 1 }}>{threatBadge}</div>
               )}
               <div style={{ marginTop: 3, marginBottom: 3 }}>
                 <div style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'Share Tech Mono, monospace' }}>{needLabel}</div>
@@ -6421,7 +6519,7 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
               )}
             </div>
           );
-        })}
+        }); })()}
       </div>
 
       {/* CENTER — Map + Hand */}
@@ -6774,9 +6872,10 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
       <div className="right-panel">
         {/* === 승리 진척 (상시 표시) === */}
         {(() => {
+          const vGoals = getVictoryGoals(state);
           if (me.role === 'ghost') {
-            const repGoal = 16;
-            const raidGoal = 2;
+            const repGoal = vGoals.ghostRepBattle;
+            const raidGoal = vGoals.ghostRaids;
             const rep = me.resources.rep || 0;
             const raids = state.meta.raidsThisGame?.[0] || 0;
             const repPct = Math.min(100, Math.round(rep / repGoal * 100));
@@ -6792,9 +6891,9 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
             const raidsNeeded = Math.max(0, raidGoal - raids);
             const oneRaidWins = !repDone && repNeeded <= 3 && raidsNeeded <= 1;
             const nextTip = repDone && raidDone
-              ? '✅ 승리 조건 충족! 라운드 끝까지 생존'
+              ? '✅ 승리 조건 충족 — 종료 선언! 다음 라운드 종료까지 유지하면 승리'
               : oneRaidWins && nearest
-                ? `🎯 ${nearest} 레이드 성공 시 즉시 승리 (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`
+                ? `🎯 ${nearest} 레이드 성공 시 종료 선언 (다음 R 유지 시 승리 · 성공률 ${raidPct}%, 거리 ${nearestDist}칸)`
                 : !nearest
                   ? 'Bloc 구역이 맵에 없음 — 다음 Bloc 확장 기다리기'
                   : `${nearest} 레이드 시 렙+3 → ${rep + 3}/${repGoal} (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`;
@@ -6820,7 +6919,7 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
               </div>
             );
           } else {
-            const assetGoal = 55;
+            const assetGoal = vGoals.blocAsset;
             const asset = assetValue(me, state.stocks, state);
             const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
             const assetDone = asset >= assetGoal;
@@ -6828,7 +6927,7 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
             const gap = Math.max(0, assetGoal - asset);
             const myZones = Object.values(state.map).filter(c => c.owner === 0).length;
             const tip = assetDone
-              ? '✅ 승리 조건 충족! 라운드 끝까지 버티기'
+              ? '✅ 승리 조건 충족 — 종료 선언! 다음 라운드 종료까지 유지하면 승리'
               : gap <= 10
                 ? `자산 ${gap} 남음 — 구역 확장 2곳 또는 타 블록 주식 매수로 마무리 가능`
                 : `구역 ${Math.ceil(gap / 5)}곳 확장 or 타 블록 주식 모으기 (현재 ${myZones}구역)`;
