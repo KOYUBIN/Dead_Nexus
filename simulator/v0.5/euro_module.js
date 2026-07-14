@@ -296,10 +296,9 @@ function euro_cipher5x5(state) {
 
 // v6.2 (web 포팅): Ghost 허슬 — 진영 균형 보정
 // euro_marketCycle의 Bloc 자기주가+1과 대칭. 매 R Ghost 평판 +1.
-// 11×11에선 격R (BROKER 제외 — 자체 메모 시스템으로 평판 누적)
+// v6.12: 11×11도 매R로 상향 (진영 균형 튜닝 — 격R 시 Ghost 과너프). BROKER 제외(자체 메모 시스템으로 평판 누적).
 function euro_ghostHustle(state) {
   let s = state;
-  if (state.meta.mapSize === '11x11' && state.meta.round % 2 === 0) return state;
   for (let pi = 0; pi < s.players.length; pi++) {
     const p = s.players[pi];
     if (p.defeated || p.role !== 'ghost') continue;

@@ -991,7 +991,7 @@ const ZONE_LOOT = {
 // Bloc별 자동 반격 (구역 방어 시 자동 소비)
 const BLOC_DEFENSE = {
   VANTA:    { detect: 1 },        // 감지 → 접근 판정에 -2
-  IRONWALL: { threshold_plus: 1 }, // 무장 → 실행 threshold +1 (완화 v0.5.22)
+  IRONWALL: { threshold_plus: 0 }, // v6.12(X3): garrison 주둔 토큰 실효화(P0-1) → 정적 +1 중복 제거(이중 방어 스택 해소)
   HELIX:    { threshold_plus: 0 }, // 거의 없음
   AXIOM:    { all_plus: 1 },       // AI 보조 → 판정 -1 (약간)
   CARBON:   { threshold_plus: 0 }, // 방어 없음
@@ -1408,8 +1408,8 @@ const getMapRules = (mapSize) => MAP_RULES[mapSize] || MAP_RULES['5x5'];
 //   nonNpcCount 보정: 2인 -2, 3인 -1 (평판전투는 그 절반 내림) — 기존 checkInstantVictory 로직 이식.
 // ============================================================================
 const VICTORY_GOALS = {
-  '5x5':   { blocAsset: 70, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
-  '11x11': { blocAsset: 95, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
+  '5x5':   { blocAsset: 73, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
+  '11x11': { blocAsset: 100, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
 };
 function getVictoryGoals(state) {
   const isLarge = !!(state && state.meta && state.meta.mapSize === '11x11');
@@ -3857,13 +3857,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               const ps = [...s.players];
               ps[playerIdx] = {
                 ...ps[playerIdx],
-                resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
+                resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 4 },  // v6.12: 봇 레이드 보상 3→4 (진영 균형 — RAID_TYPES.violent 보상과 정합)
                 wanted: ps[playerIdx].wanted + 1,
               };
               const newMap = { ...s.map, [effectiveCoord]: { ...cellThere, owner: null } };
               s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
-              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+3`);
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+4`);
               s = raiseTrack(s, playerIdx, 'combat', 1, '봇 레이드 성공');  // v0.6.3b
               s.meta._didAutoRaid = true;
               if (blocIdx === 0 && playerIdx !== 0) {
