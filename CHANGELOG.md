@@ -8,6 +8,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+### 웹 레짐 E2E 밸런스 측정 러너 (13차, sim-e2e/ 신규) + Player Aid v6.x (14차)
+- **sim-e2e/run.js**: Playwright+Chromium으로 실배포 페이지(React·Babel·euro_module 전부 실행)를 로드해 전 좌석 봇으로 N판 자동 구동 — M&A·견제·시그니처가 포함된 웹 레짐의 첫 대량 측정 도구. CDN 차단 환경 대응(vendor/ 오프라인 주입), 판당 타임아웃, 결과 JSON 저장
+- **첫 실측 (20판 11×11)**: ghost 45% / bloc 55% (대체로 균형) · 평균 7.05R · 견제 1.8회/판 · **콘솔 에러/pageerror 0** (실페이지 무결성 확인)
+- **핵심 발견 ①**: **M&A가 봇 자율 플레이에서 완전 휴면** — 32판 전체 선언 0회. `euro_declareMnaBots`는 정상 호출되나 봇 시장 AI가 라이벌 지분을 최대 29%까지만 매집해 51% 게이트가 한 번도 안 열림. 인간 개입 없이는 죽은 메커닉 → 봇 지분 매집 AI가 차기 최우선 과제
+- **핵심 발견 ②**: "봇 전용" UI 모드는 v6.11.2에 실존하지 않음 (주석만) — 러너는 page.evaluate로 엔진 직접 구동
+- **Player Aid (print-kit)**: quick-reference v1.1 — 견제 3종·결정 모달 2종·M&A 규칙 반영 (수치 전량 CHANGELOG 대조)
+
 ### 배포 핫픽스 최종 — 모듈 자가복구 로더 (v6.11.2)
 - v6.10.1(trailingSlash)·v6.11.1(cleanUrls) 두 차례 설정 수정에도 프로덕션 리다이렉트가 `/simulator/v0.5/` → 슬래시 없는 URL로 유지됨 (배포본 v6.11.1 확인 후에도 재현 — Vercel 측 동작이 설정과 불일치)
 - **설정 싸움 종료**: index.html에 자가복구 로더 추가 — 모듈 전역(euro_applyAll/tutorial_pickStep) 부재 시 `location.pathname`에서 디렉토리를 계산해 재주입. 어떤 URL 형태(슬래시 유무·index.html·index)로 서빙돼도 동작, file:// 로컬 no-op
