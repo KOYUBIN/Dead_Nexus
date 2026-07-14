@@ -472,6 +472,27 @@
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 <script src="euro_module.js"></script>
 <script src="tutorial_module.js"></script>
+<script>
+// v6.11.2: 모듈 자가복구 로더 — 호스팅이 /simulator/v0.5 (슬래시 없음)로 서빙하면
+// 위 상대경로 src가 상위 디렉토리로 풀려 404가 된다 (Vercel 리다이렉트 이슈).
+// 모듈 전역이 없으면 디렉토리 경로를 보정해 재주입. file://·정상 URL에선 no-op.
+(function () {
+  function heal(file, marker) {
+    if (typeof window[marker] !== 'undefined') return;
+    // 이 페이지는 index.html이므로 pathname은 .../v0.5 | .../v0.5/ | .../index(.html) 중 하나.
+    // 주의: 디렉토리명 v0.5에 점이 있어 확장자 휴리스틱은 오판 — index 접미사 제거 방식 사용.
+    var dir = location.pathname.replace(/index(\.html?)?$/, '');
+    if (dir.charAt(dir.length - 1) !== '/') dir += '/';
+    var s = document.createElement('script');
+    s.src = dir + file;
+    document.head.appendChild(s);
+  }
+  window.addEventListener('DOMContentLoaded', function () {
+    heal('euro_module.js', 'euro_applyAll');
+    heal('tutorial_module.js', 'tutorial_pickStep');
+  });
+})();
+</script>
 
 <script type="text/babel" data-presets="react">
 'use strict';
