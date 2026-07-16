@@ -1546,6 +1546,82 @@ function evalPlayerVictory(p, idx, state, goals) {
   return null;
 }
 
+// ============================================================================
+// 시나리오 시스템 (docs/14) — 시작 조건 변주 프레임워크 (v6.18)
+//   docs/14 원칙: 룰은 그대로, "시작 지점"만 이동. 두 종류 모디파이어를 제공한다.
+//   (1) 룰 오버라이드 — SCENARIOS[id][key] 를 사용처에서 조회(MODE_CONFIG/VICTORY_GOALS 스타일).
+//        예) startHeat(시작 공권력) · mnaNoCooldown(M&A 쿨다운 제거).
+//   (2) initGame 훅 — applyScenarioInit(...)/initGame 인라인이 시작 players·map 을 변형.
+//        예) allBloc(전원 Bloc) · npcFillTo(NPC Bloc 충원) · startCredit · extraSupport(추가 구역).
+//   S01(현행 기본)·S02(코프 대전) 등록. S03~S06 은 locked 자리(UI 표시·미구현 보고용).
+// ============================================================================
+const SCENARIOS = {
+  S01: {
+    id: 'S01', name: '표준 애시그리드', tagline: '정상적인 저녁 — 이라는 것이 존재한다면.',
+    desc: 'v0.4 정규 룰. 입문·밸런스 기준선.',
+    locked: false, maps: ['5x5', '11x11'],
+    startHeat: 5,
+  },
+  S02: {
+    id: 'S02', name: '코프 대전', tagline: '두 명만 남으면, 둘 중 하나만 살아남는다.',
+    desc: '2~3 Bloc 전용. Ghost 없음. M&A 고밀도 · 블록 vs 블록 전면전.',
+    // M&A 는 11×11 에서만 활성(euro_mnaEnabled) → 정체성상 11×11 전용.
+    locked: false, maps: ['11x11'],
+    startHeat: 3,            // docs/14: Ghost 없어 공권력 낮게 시작
+    allBloc: true,          // 전원 Bloc 강제 (Ghost 배제)
+    maxParticipants: 3,     // 인원 2~3
+    npcFillTo: 5,           // 5 − 참가 수만큼 NPC Bloc 충원 (자동 등락·방어)
+    startCredit: 5,         // 표준 + 크레딧 +5 (조기 M&A 자금)
+    extraSupport: 1,        // 표준 3구역 + Ring 확장 1구역 (총 4)
+    mnaNoCooldown: true,    // M&A 쿨다운(선언 간 2R 간격) 제거 — 연속 M&A 허용
+  },
+  // --- S03~S06: 자리표(잠금). 미구현 — 설계는 docs/14, 구현은 후속 확장 ---
+  S03: { id: 'S03', name: '스트리트 라이징', tagline: '거리의 분노가 먼저 도착했다.', desc: 'Ghost 주도 · 하층 혁명. NPC Bloc 다수. (미구현)', locked: true, maps: ['11x11'] },
+  S04: { id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.', desc: '공권력 7 시작 · 경찰 NPC 상시 이동. (미구현)', locked: true, maps: ['11x11'] },
+  S05: { id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다.', desc: '경제 ×1.5 · 8R 단축 · 주가 과열. (미구현)', locked: true, maps: ['11x11'] },
+  S06: { id: 'S06', name: '마켓 크래시', tagline: '어제까지 부자였다.', desc: '전 주가 5 시작 · 공매도 전성기. (미구현)', locked: true, maps: ['11x11'] },
+};
+const getScenario = (id) => SCENARIOS[id] || SCENARIOS.S01;
+// 룰 오버라이드 조회 — 사용처에서 state.meta.scenario 기준 값 획득 (없으면 fallback).
+function scenarioRule(state, key, fallback) {
+  const sc = getScenario(state && state.meta && state.meta.scenario);
+  return (sc && sc[key] != null) ? sc[key] : fallback;
+}
+// 시작 구역 확장용: origin 좌표에서 가장 가까운 미소유 일반(비-NEXUS) 구역 1칸을 찾는다.
+//   좌표 = 열문자(A..)+행숫자(1..). 맵에 존재·owner null·zone!=='nex' 조건.
+function nearestUnownedZone(map, origin) {
+  const parse = (c) => ({ col: c.charCodeAt(0) - 65, row: parseInt(c.slice(1), 10) });
+  const o = parse(origin);
+  let best = null, bestD = Infinity;
+  for (const c of Object.keys(map)) {
+    const cell = map[c];
+    if (!cell || cell.owner != null || cell.zone === 'nex') continue;
+    const p = parse(c);
+    const d = Math.abs(p.col - o.col) + Math.abs(p.row - o.row);
+    if (d > 0 && d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
+// initGame 훅 — 시작 players/map 변형 (전원 Bloc 이미 배치·구역 소유 확정 후 호출).
+//   startCredit(전원 Bloc 크레딧 보강) · extraSupport(HQ 인근 미소유 구역 추가 소유).
+function applyScenarioInit(scen, players, map) {
+  if (!scen) return;
+  if (scen.startCredit) {
+    players.forEach(p => {
+      if (p.role === 'bloc') p.resources = { ...p.resources, credit: (p.resources.credit || 0) + scen.startCredit };
+    });
+  }
+  if (scen.extraSupport) {
+    players.forEach(p => {
+      if (p.role !== 'bloc' || p.position == null) return;
+      for (let n = 0; n < scen.extraSupport; n++) {
+        const coord = nearestUnownedZone(map, p.position);
+        if (coord) map[coord] = { ...map[coord], owner: p.id };
+      }
+    });
+  }
+}
+
 // TL 승급 비용: TL3~5 해금 — docs/09 §1 "TL이 오를수록 비쌈" 곡선.
 //   e2e 축적 분포(중앙 47pt·p75 61·p90 80/게임, 평균 8R)에 맞춰 누적 임계 5/25/55/90 캘리브레이션:
 //   TL2 거의 전원 · TL3 중반 다수(~87% 시트) · TL4 후반 강자(~34%) · TL5 희소 정점(~5%, 게임당 0~1명).
@@ -1673,7 +1749,10 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   const blocSetupSrc = useSize === '11x11' ? BLOC_SETUP_11x11 : BLOC_SETUP;
   const mode = extraOpts?.mode || 'solo';
   const difficulty = extraOpts?.difficulty || 'normal';
-  const humansList = extraOpts?.humans || null;
+  // v6.18: 시나리오 프레임워크 — 시작 조건 변형 (docs/14). 기본 S01.
+  const scenarioId = extraOpts?.scenario || 'S01';
+  const scen = getScenario(scenarioId);
+  let humansList = extraOpts?.humans || null;
   const map = {};
   mapSrc.forEach(([c, z]) => {
     map[c] = { zone: z, owner: null, token: Math.random() < 0.6 ? 'quest' : (Math.random() < 0.5 ? 'instant' : 'discovery'), tokenRevealed: false };
@@ -1681,14 +1760,22 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
 
   // v1.0.2: 멀티 모드면 humansList 길이만큼 인간, 나머지는 봇으로
   // 솔로/봇만 모드: 1 human + (playerCount-1) bots
-  const totalPlayers = Math.max(2, Math.min(5, playerCount || 4));
+  // v6.18: 시나리오가 참가 인원을 제한하면 캡 적용 (S02: 최대 3 — 나머지는 NPC 충원).
+  let totalPlayers = Math.max(2, Math.min(5, playerCount || 4));
+  if (scen.maxParticipants) totalPlayers = Math.min(totalPlayers, scen.maxParticipants);
   const players = [];
   const allBlocs = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
   const allGhosts = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
   const usedBlocs = [];
   const usedGhosts = [];
-  const pickBloc = () => { const avail = allBlocs.filter(b => !usedBlocs.includes(b)); const p = rand(avail); usedBlocs.push(p); return p; };
-  const pickGhost = () => { const avail = allGhosts.filter(g => !usedGhosts.includes(g)); const p = rand(avail); usedGhosts.push(p); return p; };
+  const pickBloc = () => { const avail = allBlocs.filter(b => !usedBlocs.includes(b)); const p = rand(avail); if (p) usedBlocs.push(p); return p; };
+  const pickGhost = () => { const avail = allGhosts.filter(g => !usedGhosts.includes(g)); const p = rand(avail); if (p) usedGhosts.push(p); return p; };
+  // v6.18: 전원 Bloc 시나리오(S02) — 인간 역할/멀티 humansList 를 Bloc 으로 정규화.
+  const effHumanRole = scen.allBloc ? 'bloc' : humanRole;
+  const effHumanSpecific = (scen.allBloc && !allBlocs.includes(humanSpecific)) ? allBlocs[0] : humanSpecific;
+  if (scen.allBloc && humansList) {
+    humansList = humansList.map(h => h.role === 'bloc' ? h : { role: 'bloc', specific: allBlocs.includes(h.specific) ? h.specific : 'VANTA' });
+  }
 
   if (mode === 'multi' && humansList && humansList.length >= 2) {
     // 멀티 핫시트: humansList 그대로 인간 P0~P(N-1)
@@ -1704,23 +1791,24 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     const humanBlocN  = humansList.filter(h => h.role === 'bloc').length;
     for (let i = 0; i < botCount; i++) {
       const needGhost = humanGhostN + (botCount > 0 ? Math.floor(i / 2) : 0) <= humanBlocN;
-      const r = needGhost ? 'ghost' : 'bloc';
+      const r = scen.allBloc ? 'bloc' : (needGhost ? 'ghost' : 'bloc');
       const sp = r === 'bloc' ? pickBloc() : pickGhost();
       players.push(buildPlayer(humansList.length + i, 'bot', r, sp));
     }
   } else {
-    // 솔로/단일 인간 모드
-    if (humanRole === 'bloc') usedBlocs.push(humanSpecific);
-    else usedGhosts.push(humanSpecific);
-    players.push(buildPlayer(0, 'human', humanRole, humanSpecific));
+    // 솔로/단일 인간 모드 (v6.18: allBloc 시나리오는 effHumanRole/effHumanSpecific 사용)
+    if (effHumanRole === 'bloc') usedBlocs.push(effHumanSpecific);
+    else usedGhosts.push(effHumanSpecific);
+    players.push(buildPlayer(0, 'human', effHumanRole, effHumanSpecific));
     const botCount = totalPlayers - 1;
     const botSpecs = [];
-    const oppositeRole = humanRole === 'bloc' ? 'ghost' : 'bloc';
+    const oppositeRole = effHumanRole === 'bloc' ? 'ghost' : 'bloc';
     const botRoles = [];
     for (let i = 0; i < botCount; i++) {
-      if (i === 0) botRoles.push(oppositeRole);
+      if (scen.allBloc) botRoles.push('bloc');
+      else if (i === 0) botRoles.push(oppositeRole);
       else if (i === 1 && botCount >= 2) botRoles.push(oppositeRole);
-      else botRoles.push(i % 2 === 0 ? oppositeRole : humanRole);
+      else botRoles.push(i % 2 === 0 ? oppositeRole : effHumanRole);
     }
     botRoles.forEach(r => botSpecs.push({ role: r, sp: r === 'bloc' ? pickBloc() : pickGhost() }));
     botSpecs.forEach((bs, i) => players.push(buildPlayer(i + 1, 'bot', bs.role, bs.sp)));
@@ -1728,7 +1816,8 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
 
   // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
   // v0.6.3d: NPC는 시그널 점진 공개(정보)을 점진 공개하는 표적 역할
-  if (totalPlayers === 2) {
+  // v6.18: allBloc 시나리오(S02)는 아래 npcFillTo 로직으로 대체 — 중복 방지.
+  if (totalPlayers === 2 && !scen.allBloc) {
     const npc1 = pickBloc();
     const npc2 = pickBloc();
     const npcP1 = buildPlayer(players.length, 'npc', 'bloc', npc1);
@@ -1740,6 +1829,18 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     npcP2.signal = { revealed: 0, max: 3 };
     players.push(npcP1);
     players.push(npcP2);
+  }
+
+  // v6.18: 시나리오 NPC Bloc 충원 (docs/14 S02: 5 − 참가 수 = NPC). 자동 등락·방어만.
+  if (scen.npcFillTo) {
+    while (players.length < scen.npcFillTo && usedBlocs.length < allBlocs.length) {
+      const nb = pickBloc();
+      if (!nb) break;
+      const npcP = buildPlayer(players.length, 'npc', 'bloc', nb);
+      npcP.isNpc = true;
+      npcP.signal = { revealed: 0, max: 3 };
+      players.push(npcP);
+    }
   }
 
   // v1.0.1: 솔로 모드 난이도 보정 — easy: 인간 시작 자원 +5 / hard: 봇 시작 자원 +5
@@ -1779,6 +1880,10 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     p.startZone = p.position;
   });
 
+  // v6.18: 시나리오 initGame 훅 — 시작 크레딧 보강 + 추가 구역(Ring 확장) 배정.
+  //   구역 소유가 확정된 후 호출 (extraSupport 가 미소유 구역을 탐색).
+  applyScenarioInit(scen, players, map);
+
   // Deal objectives
   const objBloc = shuffle(OBJECTIVES.filter(o => o.role === 'bloc'));
   const objGhost = shuffle(OBJECTIVES.filter(o => o.role === 'ghost'));
@@ -1793,7 +1898,8 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
 
   return {
     meta: {
-      scenario: 'S01',
+      scenario: scenarioId,
+      mnaNoCooldown: !!scen.mnaNoCooldown,  // v6.18: S02 — M&A 선언 간 2R 간격 게이트 무시 (euro_declareMnaCheck 조회)
       mapSize: useSize,
       round: 1,
       phase: 0,
@@ -1851,10 +1957,10 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     map,
     pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
     stocks: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
-    heat: 5,
+    heat: (scen.startHeat != null ? scen.startHeat : 5),  // v6.18: 시나리오 시작 공권력 (S02=3)
     signalDie: rollSignalDie(),
     currentNews: null,
-    log: [{ round: 0, phase: 0, message: '🎮 게임 시작. 튜토리얼 5×5 · 시나리오 S01' }],
+    log: [{ round: 0, phase: 0, message: `🎮 게임 시작. ${useSize} · 시나리오 ${scenarioId} ${scen.name}` }],
   };
 }
 
@@ -5788,6 +5894,8 @@ function SetupScreen({ onStart }) {
   const [role, setRole] = useState('ghost');
   const [specific, setSpecific] = useState('CIPHER');
   const [mapSize, setMapSize] = useState('11x11');
+  const [scenario, setScenario] = useState('S01');  // v6.18: 시나리오 선택 (docs/14)
+  const scen = getScenario(scenario);
   // v1.0.1: 모드 — solo (1H+3봇), multi (2~5H 핫시트), bots-only (전부 봇 시뮬)
   const [mode, setMode] = useState('solo');
   const [humanCount, setHumanCount] = useState(2);  // multi 모드용
@@ -5854,15 +5962,44 @@ function SetupScreen({ onStart }) {
         </div>
       </div>
 
-      <h2>1. 맵 크기</h2>
+      <h2>1. 시나리오</h2>
+      <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        {Object.values(SCENARIOS).map(sc => (
+          <div
+            key={sc.id}
+            className={`role-card ${scenario === sc.id ? 'selected' : ''}`}
+            style={sc.locked ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+            onClick={() => {
+              if (sc.locked) return;
+              setScenario(sc.id);
+              // S02 등 M&A 정체성 시나리오는 11×11 전용
+              if (sc.maps && !sc.maps.includes(mapSize)) setMapSize(sc.maps[0]);
+            }}
+          >
+            <h3>{sc.locked ? '🔒 ' : ''}{sc.id} {sc.name}</h3>
+            <p>{sc.desc}</p>
+          </div>
+        ))}
+      </div>
+      {scen.allBloc && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚠ {scen.id} {scen.name}: 전원 Bloc · 11×11 전용 · 시작 공권력 {scen.startHeat} · 크레딧 +{scen.startCredit} · 4구역 시작 · M&A 쿨다운 없음. (역할 자동 Bloc, Ghost 선택 무시)
+        </div>
+      )}
+
+      <h2>2. 맵 크기</h2>
       <div className="role-grid">
         <div className={`role-card ${mapSize === '11x11' ? 'selected' : ''}`} onClick={() => setMapSize('11x11')}>
           <h3>🏙 11×11 정식</h3>
           <p>121 셀 Ashgrid 도시 전체. NEXUS 중앙. 5 Bloc 외곽 분산. 추천 5~12R.</p>
         </div>
-        <div className={`role-card ${mapSize === '5x5' ? 'selected' : ''}`} onClick={() => setMapSize('5x5')}>
+        <div
+          className={`role-card ${mapSize === '5x5' ? 'selected' : ''}`}
+          style={scen.maps && !scen.maps.includes('5x5') ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+          onClick={() => { if (scen.maps && !scen.maps.includes('5x5')) return; setMapSize('5x5'); }}
+        >
           <h3>🎓 5×5 튜토리얼</h3>
-          <p>25 셀 축약형. 시스템 학습용. 빠른 5~9R.</p>
+          <p>25 셀 축약형. 시스템 학습용. 빠른 5~9R.{scen.maps && !scen.maps.includes('5x5') ? ' (이 시나리오 불가)' : ''}</p>
         </div>
       </div>
 
@@ -5954,14 +6091,20 @@ function SetupScreen({ onStart }) {
         </label>
       )}
 
-      <button className="start-btn" onClick={() => onStart({
-        mode, mapSize, difficulty,
-        role: mode === 'solo' ? role : humans[0].role,
-        specific: mode === 'solo' ? specific : humans[0].specific,
-        humans: mode === 'multi' ? humans : null,
-        tutorial: mode === 'solo' && mapSize === '5x5' ? tutorial : false,
-      })}>
-        🎮 START · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : `${humans.length}P HOT-SEAT`} · {mapSize.toUpperCase()}
+      <button className="start-btn" onClick={() => {
+        // v6.18: allBloc 시나리오는 맵을 강제(11×11) + 인간 역할을 Bloc 로 정규화.
+        const effMap = (scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize;
+        const soloRole = scen.allBloc ? 'bloc' : role;
+        const soloSpec = scen.allBloc && !['VANTA','IRONWALL','HELIX','AXIOM','CARBON'].includes(specific) ? 'VANTA' : specific;
+        onStart({
+          mode, mapSize: effMap, difficulty, scenario,
+          role: mode === 'solo' ? soloRole : humans[0].role,
+          specific: mode === 'solo' ? soloSpec : humans[0].specific,
+          humans: mode === 'multi' ? humans : null,
+          tutorial: mode === 'solo' && effMap === '5x5' && !scen.allBloc ? tutorial : false,
+        });
+      }}>
+        🎮 START · {scenario} · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : `${humans.length}P HOT-SEAT`} · {((scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize).toUpperCase()}
       </button>
 
       {/* === 플레이 히스토리 === */}
@@ -7684,9 +7827,9 @@ function effectSummary(eff) {
 
 function buildInitial(opts) {
   // v1.0: opts = { mode, mapSize, difficulty, role, specific, humans }
-  const { mode = 'solo', mapSize = '11x11', difficulty = 'normal', role = 'ghost', specific = 'CIPHER', humans = null } = opts || {};
+  const { mode = 'solo', mapSize = '11x11', difficulty = 'normal', role = 'ghost', specific = 'CIPHER', humans = null, scenario = 'S01' } = opts || {};
   const playerCount = mode === 'multi' && humans ? Math.max(2, humans.length) : 4;
-  const initial = initGame(role, specific, playerCount, mapSize, { mode, difficulty, humans });
+  const initial = initGame(role, specific, playerCount, mapSize, { mode, difficulty, humans, scenario });
   initial.players = initial.players.map(p => {
     const handSize = 6;
     return { ...p, hand: p.deck.slice(0, handSize), deck: p.deck.slice(handSize) };
