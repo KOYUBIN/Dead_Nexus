@@ -624,8 +624,8 @@ const GHOST_CARDS = {
   ICE_BREAK:      { name: 'ICE BREAK',      cls: 'CIPHER', init: 18, attr: ['M'],      top: { gen: 'M', break_veil: 1 },                         bot: { cost: ['M','M'], break_veil: 99 } },
   PROXY_RELAY:    { name: 'PROXY RELAY',    cls: 'CIPHER', init: 25, attr: ['S'],      top: { gen: 'S', redirect: 3 },                           bot: { cost: ['S','M'], transfer_attack: 1 } },
   STOCK_CRASH:    { name: 'STOCK CRASH',    cls: 'CIPHER', init: 35, attr: ['M'],      top: { gen: 'M', stock_op: 1 },                           bot: { cost: ['M','M','M'], crash_stock: 3 } },
-  NEURAL_OVRD:    { name: 'NEURAL OVERRIDE',cls: 'CIPHER', init: 45, attr: ['M','S'], loss: true, top: { gen: 'M:S', slow_target: 20 },          bot: { cost: ['M','M','S','S'], mimic: 1 } },
-  ZERO_TRACE:     { name: 'ZERO TRACE',     cls: 'CIPHER', init: 50, attr: ['S'], loss: true, top: { gen: 'S', wipe_log: 1 },                    bot: { cost: ['S','S','S'], clear_wanted: true, permanent: true } },
+  NEURAL_OVRD:    { name: 'NEURAL OVERRIDE',cls: 'CIPHER', tl: 2, init: 45, attr: ['M','S'], loss: true, top: { gen: 'M:S', slow_target: 20 },          bot: { cost: ['M','M','S','S'], mimic: 1 } },
+  ZERO_TRACE:     { name: 'ZERO TRACE',     cls: 'CIPHER', tl: 3, init: 50, attr: ['S'], loss: true, top: { gen: 'S', wipe_log: 1 },                    bot: { cost: ['S','S','S'], clear_wanted: true, permanent: true } },
   BASIC_MOVE_C:   { name: 'BASIC MOVE',     cls: 'CIPHER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // BLADE
@@ -636,8 +636,8 @@ const GHOST_CARDS = {
   HUMAN_SHIELD:   { name: 'HUMAN SHIELD',   cls: 'BLADE',  init: 24, attr: ['I'],      top: { gen: 'I', def: 2, protect_ally: 1 },               bot: { def: 4, absorb: 1 } },
   DOUBLE_TAP:     { name: 'DOUBLE TAP',     cls: 'BLADE',  init: 20, attr: ['I'],      top: { gen: 'I', atk_reroll: 1 },                         bot: { cost: ['I','I'], atk_twice: 1 } },
   POINT_BLANK:    { name: 'POINT BLANK',    cls: 'BLADE',  init: 10, attr: ['I'],      top: { gen: 'I', same_zone_atk: 4 },                      bot: { cost: ['I'], def_ignore: 1 } },
-  BERSERKER:      { name: 'BERSERKER',      cls: 'BLADE',  init: 32, attr: ['A'], loss: true, top: { gen: 'A', atk: 3, def_penalty: 2 },         bot: { cost: ['A','A'], atk_x2: 1, def_zero: 1 } },
-  LAST_STAND:     { name: 'LAST STAND',     cls: 'BLADE',  init: 40, attr: ['I','A'], loss: true, top: { def_infinite_to_1: 1 },                 bot: { cost: ['I','I','A'], atk_x3_retort: 1 } },
+  BERSERKER:      { name: 'BERSERKER',      cls: 'BLADE', tl: 2,  init: 32, attr: ['A'], loss: true, top: { gen: 'A', atk: 3, def_penalty: 2 },         bot: { cost: ['A','A'], atk_x2: 1, def_zero: 1 } },
+  LAST_STAND:     { name: 'LAST STAND',     cls: 'BLADE', tl: 3,  init: 40, attr: ['I','A'], loss: true, top: { def_infinite_to_1: 1 },                 bot: { cost: ['I','I','A'], atk_x3_retort: 1 } },
   BASIC_MOVE_B:   { name: 'BASIC MOVE',     cls: 'BLADE',  init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // BROKER
@@ -647,9 +647,9 @@ const GHOST_CARDS = {
   MIDDLE_DEAL:    { name: 'MIDDLE DEAL',    cls: 'BROKER', init: 25, attr: ['GRID'],   top: { gen: 'GRID', broker_fee: 10 },                     bot: { passive_ma_fee: 5 } },
   INFO_BROKER:    { name: 'INFO BROKER',    cls: 'BROKER', init: 30, attr: ['S'],      top: { gen: 'S', peek_objective: 1 },                     bot: { cost: ['S','S'], sell_info: 5, lock: 1 } },
   CRISIS_TALK:    { name: 'CRISIS TALK',    cls: 'BROKER', init: 28, attr: ['GRID'],   top: { gen: 'GRID', stop_combat: 1 },                     bot: { reward: 2, cooldown: 1 } },
-  DBL_CONTRACT:   { name: 'DBL CONTRACT',   cls: 'BROKER', init: 35, attr: ['S','GRID'], top: { gen: 'S', slot_plus: 1 },                         bot: { cost: ['S','GRID'], quest_two: 1 } },
+  DBL_CONTRACT:   { name: 'DBL CONTRACT',   cls: 'BROKER', tl: 2, init: 35, attr: ['S','GRID'], top: { gen: 'S', slot_plus: 1 },                         bot: { cost: ['S','GRID'], quest_two: 1 } },
   POKER_FACE:     { name: 'POKER FACE',     cls: 'BROKER', init: 20, attr: ['S'],      top: { gen: 'S', hide_actions: 1 },                       bot: { cost: ['S'], negate_scout: 1 } },
-  BURN_BRIDGE:    { name: 'BURN BRIDGE',    cls: 'BROKER', init: 45, attr: ['S'], loss: true, top: { gen: 'S', break_contract: 1 },              bot: { cost: ['S','S'], all_contracts: 1 } },
+  BURN_BRIDGE:    { name: 'BURN BRIDGE',    cls: 'BROKER', tl: 3, init: 45, attr: ['S'], loss: true, top: { gen: 'S', break_contract: 1 },              bot: { cost: ['S','S'], all_contracts: 1 } },
   BASIC_MOVE_R:   { name: 'BASIC MOVE',     cls: 'BROKER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // RIGGER
@@ -659,9 +659,9 @@ const GHOST_CARDS = {
   OVERCLOCK:      { name: 'OVERCLOCK',      cls: 'RIGGER', init: 22, attr: ['V'],      top: { gen: 'V', temp_tl: 1 },                            bot: { cost: ['V','V'], stat_boost: 2 } },
   FIELD_CRAFT:    { name: 'FIELD CRAFT',    cls: 'RIGGER', init: 26, attr: ['V','I'],  top: { gen: 'V', parts: 2 },                              bot: { cost: ['V','I'], craft_item: 1 } },
   SHIELD_GEN:     { name: 'SHIELD GEN',     cls: 'RIGGER', init: 24, attr: ['V'],      top: { gen: 'V', def: 3 },                                bot: { cost: ['V','V'], zone_shield: 1 } },
-  DRONE_SWARM:    { name: 'DRONE SWARM',    cls: 'RIGGER', init: 38, attr: ['V','I'],  top: { gen: 'V', atk_range: 2 },                          bot: { cost: ['V','I','I'], multi_target: 3 } },
+  DRONE_SWARM:    { name: 'DRONE SWARM',    cls: 'RIGGER', tl: 2, init: 38, attr: ['V','I'],  top: { gen: 'V', atk_range: 2 },                          bot: { cost: ['V','I','I'], multi_target: 3 } },
   JURY_RIG:       { name: 'JURY RIG',       cls: 'RIGGER', init: 20, attr: ['V'],      top: { gen: 'V', repair: 3 },                             bot: { cost: ['V'], salvage: 2 } },
-  TECH_BREACH:    { name: 'TECH BREACH',    cls: 'RIGGER', init: 42, attr: ['V'], loss: true, top: { gen: 'V', disable_tl: 1 },                  bot: { cost: ['V','V','V'], force_tl_down: 1 } },
+  TECH_BREACH:    { name: 'TECH BREACH',    cls: 'RIGGER', tl: 3, init: 42, attr: ['V'], loss: true, top: { gen: 'V', disable_tl: 1 },                  bot: { cost: ['V','V','V'], force_tl_down: 1 } },
   BASIC_MOVE_RG:  { name: 'BASIC MOVE',     cls: 'RIGGER', init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // DRIFTER
@@ -670,10 +670,10 @@ const GHOST_CARDS = {
   AMBUSH:         { name: 'AMBUSH',         cls: 'DRIFTER',init: 14, attr: ['A'],      top: { gen: 'A', spd: 5, atk: 2 },                        bot: { cost: ['A'], surprise: 1 } },
   STORM_RUSH:     { name: 'STORM RUSH',     cls: 'DRIFTER',init: 18, attr: ['A'], loss: true, top: { move: 2, ignore_obstacles: 1, atk: 2 },       bot: { cost: ['A','A'], move_3_nowalls: 1 } },
   BACKROADS:      { name: 'BACKROADS',      cls: 'DRIFTER',init: 28, attr: ['GRID'],   top: { gen: 'GRID', untrack: 1 },                         bot: { shortcut: 2 } },
-  SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
+  SCORCH_PATH:    { name: 'SCORCH PATH',    cls: 'DRIFTER',tl: 2, init: 34, attr: ['A'],      top: { gen: 'A', leave_fire: 1 },                         bot: { cost: ['A','A'], burn_behind: 1 } },
   CARGO_HAUL:     { name: 'CARGO HAUL',     cls: 'DRIFTER',init: 22, attr: ['A','GRID'], top: { gen: 'A', credit: 3 },                            bot: { smuggle: 1 } },
   IRON_WHEELS:    { name: 'IRON WHEELS',    cls: 'DRIFTER',init: 26, attr: ['A'],      top: { gen: 'A', def: 2, move: 1 },                       bot: { cost: ['A','A'], ram_atk: 3 } },
-  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',init: 36, attr: ['A','GRID'], loss: true, top: { move: 2, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
+  GHOST_RUN:      { name: 'GHOST RUN',      cls: 'DRIFTER',tl: 3, init: 36, attr: ['A','GRID'], loss: true, top: { move: 2, ignore_all: 1 },           bot: { cost: ['A','A','GRID'], teleport: 1 } },
   BASIC_MOVE_D:   { name: 'BASIC MOVE',     cls: 'DRIFTER',init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // MOLE
@@ -682,10 +682,10 @@ const GHOST_CARDS = {
   CLEAN_SLATE:    { name: 'CLEAN SLATE',    cls: 'MOLE',   init: 18, attr: ['S'],      top: { gen: 'S', clear_track: 1 },                        bot: { cost: ['S'], permanent_clear: 1 } },
   FALSE_FLAG:     { name: 'FALSE FLAG',     cls: 'MOLE',   init: 26, attr: ['S','M'],  top: { gen: 'S', frame: 1 },                              bot: { cost: ['S','M'], swap_blame: 1 } },
   DISGUISE:       { name: 'DISGUISE',       cls: 'MOLE',   init: 16, attr: ['S'],      top: { gen: 'S', infiltrate: 1 },                         bot: { cost: ['S'], bypass_veil: 1 } },
-  BOARD_MANIP:    { name: 'BOARD MANIP',    cls: 'MOLE',   init: 38, attr: ['M','S'],  top: { gen: 'M', influence: 3 },                          bot: { cost: ['M','S','S'], vote_flip: 1 } },
+  BOARD_MANIP:    { name: 'BOARD MANIP',    cls: 'MOLE', tl: 2,   init: 38, attr: ['M','S'],  top: { gen: 'M', influence: 3 },                          bot: { cost: ['M','S','S'], vote_flip: 1 } },
   LEAK:           { name: 'LEAK',           cls: 'MOLE',   init: 28, attr: ['S','M'],  top: { gen: 'S', scandal: 1 },                            bot: { cost: ['S','M'], stock_dmg: 2 } },
   DEEP_COVER:     { name: 'DEEP COVER',     cls: 'MOLE',   init: 32, attr: ['S'],      top: { gen: 'S', invisible: 1 },                          bot: { cost: ['S','S'], invisible_2r: 1 } },
-  ID_COLLAPSE:    { name: 'ID COLLAPSE',    cls: 'MOLE',   init: 45, attr: ['S','M'], loss: true, top: { gen: 'S', burn_identity: 1 },            bot: { cost: ['S','S','M'], copy_bloc_card: 1 } },
+  ID_COLLAPSE:    { name: 'ID COLLAPSE',    cls: 'MOLE', tl: 3,   init: 45, attr: ['S','M'], loss: true, top: { gen: 'S', burn_identity: 1 },            bot: { cost: ['S','S','M'], copy_bloc_card: 1 } },
   BASIC_MOVE_M:   { name: 'BASIC MOVE',     cls: 'MOLE',   init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
 
   // v6.13.1 (P1-1 / docs/05 §1.7): 상처 — 런타임 삽입 전용(GHOST_DECKS 미포함). HP가 maxHp 50% 이하로
@@ -713,6 +713,8 @@ const BLOC_CARDS = {
   GHOST_PROTOCOL:  { name: 'GHOST PROTOCOL',  bloc: 'VANTA',   tl: 3, main: { cost:['M','S','S'], hide_actions_1r: 1 }, side: { gen: 'M' }, combo: {} },
   DATA_WIPE:       { name: 'DATA WIPE',       bloc: 'VANTA',   tl: 3, main: { cost:['M','M'], clear_ghost_wanted: 1 }, side: { gen: 'M' }, combo: {} },
   ZERO_RECORD:     { name: 'ZERO RECORD',     bloc: 'VANTA',   tl: 4, main: { cost:['M','M','S'], remove_scandals: 99 }, side: { gen: 'S' }, combo: {} },
+  // TL5 (docs/09 §3.1): 제로 프로토콜 — 타 블록 주식 강제 매도 (최강 주가 폭락, 기존 crash_target 핸들러 재사용)
+  ZERO_PROTOCOL:   { name: 'ZERO PROTOCOL',   bloc: 'VANTA',   tl: 5, main: { cost:['M','S','S'], crash_target: 6 }, side: { gen: 'S' }, combo: {} },
   // IRONWALL
   FORWARD_STRIKE:  { name: 'FORWARD STRIKE',  bloc: 'IRONWALL',tl: 1, main: { cost:['I'], deploy_op: 1 }, side: { gen: 'I' }, combo: { with: 'A', destroy_res: 50 } },
   ARMS_SUPPLY:     { name: 'ARMS SUPPLY',     bloc: 'IRONWALL',tl: 1, main: { cost:['I'], weapons: 3 }, side: { gen: 'I' }, combo: {} },
@@ -720,6 +722,8 @@ const BLOC_CARDS = {
   MARTIAL_LAW:     { name: 'MARTIAL LAW',     bloc: 'IRONWALL',tl: 3, main: { cost:['I','A','A'], heat: 3, ghost_move: -1 }, side: { gen: 'I' }, combo: {} },
   MERCENARY_SURGE: { name: 'MERC SURGE',      bloc: 'IRONWALL',tl: 3, main: { cost:['I','I'], deploy_op: 3 }, side: { gen: 'I' }, combo: {} },
   SCORCHED_EARTH:  { name: 'SCORCHED EARTH',  bloc: 'IRONWALL',tl: 4, main: { cost:['I','A','A'], destroy_zone: 1 }, side: { gen: 'A' }, combo: {} },
+  // TL5 (docs/09 §3.2): 궤도 타격 — 구역 초토화 + 계엄 (destroy_zone + heat 재사용)
+  ORBITAL_STRIKE:  { name: 'ORBITAL STRIKE',  bloc: 'IRONWALL',tl: 5, main: { cost:['I','I','A'], destroy_zone: 1, heat: 2 }, side: { gen: 'I' }, combo: {} },
   // HELIX (minimal, 3 for now)
   FIELD_SPLICE:    { name: 'FIELD SPLICE',    bloc: 'HELIX',   tl: 2, main: { cost:['B'], heal_all: 50 }, side: { gen: 'B' }, combo: {} },
   NEURAL_IFACE:    { name: 'NEURAL IFACE',    bloc: 'HELIX',   tl: 2, main: { cost:['B','V'], ghost_extra_card: 1 }, side: { gen: 'B' }, combo: {} },
@@ -727,6 +731,8 @@ const BLOC_CARDS = {
   QUARANTINE:      { name: 'QUARANTINE',      bloc: 'HELIX',   tl: 3, main: { cost:['B','B'], lock_zone: 1 }, side: { gen: 'B' }, combo: {} },
   HARVEST:         { name: 'HARVEST',         bloc: 'HELIX',   tl: 3, main: { cost:['B','V','V'], steal_op: 2 }, side: { gen: 'V' }, combo: {} },
   CLONE_DECOY:     { name: 'CLONE DECOY',     bloc: 'HELIX',   tl: 4, main: { cost:['B','B','V'], revive: 1 }, side: { gen: 'B' }, combo: {} },
+  // TL5 (docs/09 §3.3): 풀 스플라이스 — 아군 고스트 전원 강화 (heal_all + stat_boost 재사용)
+  FULL_SPLICE:     { name: 'FULL SPLICE',     bloc: 'HELIX',   tl: 5, main: { cost:['B','B','V'], heal_all: 99, stat_boost: 3 }, side: { gen: 'B' }, combo: {} },
   // AXIOM
   PREDICTION_E:    { name: 'PREDICTION ENGINE',bloc:'AXIOM',   tl: 2, main: { cost:['M','V'], peek_news: 3 }, side: { gen: 'V' }, combo: {} },
   FLASH_CRASH:     { name: 'FLASH CRASH',     bloc: 'AXIOM',   tl: 3, main: { cost:['M','M','V'], crash_target: 4 }, side: { gen: 'V' }, combo: {} },
@@ -734,6 +740,8 @@ const BLOC_CARDS = {
   FLASH_TRADE:     { name: 'FLASH TRADE',     bloc: 'AXIOM',   tl: 2, main: { cost:['M'], same_round_trade: 1 }, side: { gen: 'V' }, combo: {} },
   SURVEILLANCE:    { name: 'SURVEILLANCE',    bloc: 'AXIOM',   tl: 3, main: { cost:['M','V'], scout_all: 1 }, side: { gen: 'M' }, combo: {} },
   SYS_TAKEOVER:    { name: 'SYS TAKEOVER',    bloc: 'AXIOM',   tl: 4, main: { cost:['M','M','V','V'], algorithm: 1 }, side: { gen: 'V' }, combo: {} },
+  // TL5 (docs/09 §3.4): 카오스 프로토콜 — 전장 교란 (algorithm + scout_all 재사용)
+  CHAOS_PROTOCOL:  { name: 'CHAOS PROTOCOL',  bloc: 'AXIOM',   tl: 5, main: { cost:['M','M','V','V'], algorithm: 1, scout_all: 1 }, side: { gen: 'M' }, combo: {} },
   // === 공통 Bloc 추가 카드: 이동·투자·용병·합병 옵션 ===
   BOARDROOM_MOVE:   { name: 'BOARDROOM MOVE',  bloc: 'any',     tl: 1, main: { move: 2 },                                  side: { gen: 'GRID' }, combo: {} },
   MARKET_TRADE:     { name: 'MARKET TRADE',    bloc: 'any',     tl: 1, main: { stock_buy_any: 2 },                         side: { gen: 'M' },    combo: {} },
@@ -756,6 +764,8 @@ const BLOC_CARDS = {
   INFRA_BOND:      { name: 'INFRA BOND',      bloc: 'CARBON',  tl: 2, main: { cost:['V','GRID'], bond: 8 }, side: { gen: 'GRID' }, combo: {} },
   HOSTILE_DIV:     { name: 'HOSTILE DIV',     bloc: 'CARBON',  tl: 3, main: { cost:['V','A'], div_2x: 1 }, side: { gen: 'V' }, combo: {} },
   LEGACY_CONTRACT: { name: 'LEGACY CONTRACT', bloc: 'CARBON',  tl: 4, main: { cost:['V','V','A'], long_contract: 50 }, side: { gen: 'V' }, combo: {} },
+  // TL5 (docs/09 §3.5): 다크 에너지 — 전체 수입 차단 (zero_income/block_resource + credit 재사용)
+  DARK_ENERGY:     { name: 'DARK ENERGY',     bloc: 'CARBON',  tl: 5, main: { cost:['V','V','A'], zero_income: 1, block_resource: 1, credit: 4 }, side: { gen: 'A' }, combo: {} },
 
   // v6.13.1 (P1-1 / docs/05 §2.7): 스캔들 — Ghost 상처의 Bloc 판(런타임 삽입 전용, BLOC_DECKS 미포함).
   //   레이드로 구역을 잃거나 M&A 방어 실패 시 discard에 1장 삽입(게임당 상한 2). MAIN/SIDE 모두 무효.
@@ -767,11 +777,11 @@ const BLOC_CARDS = {
 const BLOC_COMMON = ['BOARDROOM_MOVE','MARKET_TRADE','HIRE_GHOST','ZONE_FORTIFY','EXPAND_OP','INVEST_HEAVY','COUNTER_INTEL','CRISIS_RESPONSE','HOSTILE_BID','SECURITY_SWEEP','BOUNTY_POST','ASSASSIN_HIRE','GHOST_TRACKER'];
 
 const BLOC_DECKS = {
-  VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD', ...BLOC_COMMON],
-  IRONWALL: ['FORWARD_STRIKE','ARMS_SUPPLY','FORWARD_BASE','MARTIAL_LAW','MERCENARY_SURGE','SCORCHED_EARTH', ...BLOC_COMMON],
-  HELIX: ['FIELD_SPLICE','NEURAL_IFACE','AUGMENTATION','QUARANTINE','HARVEST','CLONE_DECOY', ...BLOC_COMMON],
-  AXIOM: ['PREDICTION_E','FLASH_CRASH','ALGO_LOCK','FLASH_TRADE','SURVEILLANCE','SYS_TAKEOVER', ...BLOC_COMMON],
-  CARBON: ['POWER_SURGE','BLACKOUT_C','PIPELINE_LOCK','INFRA_BOND','HOSTILE_DIV','LEGACY_CONTRACT', ...BLOC_COMMON],
+  VANTA: ['SHADOW_FILE','LEVERAGE','VEIL_DEPLOY','GHOST_PROTOCOL','DATA_WIPE','ZERO_RECORD','ZERO_PROTOCOL', ...BLOC_COMMON],
+  IRONWALL: ['FORWARD_STRIKE','ARMS_SUPPLY','FORWARD_BASE','MARTIAL_LAW','MERCENARY_SURGE','SCORCHED_EARTH','ORBITAL_STRIKE', ...BLOC_COMMON],
+  HELIX: ['FIELD_SPLICE','NEURAL_IFACE','AUGMENTATION','QUARANTINE','HARVEST','CLONE_DECOY','FULL_SPLICE', ...BLOC_COMMON],
+  AXIOM: ['PREDICTION_E','FLASH_CRASH','ALGO_LOCK','FLASH_TRADE','SURVEILLANCE','SYS_TAKEOVER','CHAOS_PROTOCOL', ...BLOC_COMMON],
+  CARBON: ['POWER_SURGE','BLACKOUT_C','PIPELINE_LOCK','INFRA_BOND','HOSTILE_DIV','LEGACY_CONTRACT','DARK_ENERGY', ...BLOC_COMMON],
 };
 
 // Curated news (15 for S00)
@@ -1536,11 +1546,20 @@ function evalPlayerVictory(p, idx, state, goals) {
   return null;
 }
 
-// TL 승급 비용: v0.5.21 — 전 레벨 5pt 균일 (1칸=1pt 직관 보장)
+// TL 승급 비용: TL3~5 해금 — docs/09 §1 "TL이 오를수록 비쌈" 곡선.
+//   e2e 축적 분포(중앙 47pt·p75 61·p90 80/게임, 평균 8R)에 맞춰 누적 임계 5/25/55/90 캘리브레이션:
+//   TL2 거의 전원 · TL3 중반 다수(~87% 시트) · TL4 후반 강자(~34%) · TL5 희소 정점(~5%, 게임당 0~1명).
 const tlCostFor = (curTl) => {
-  if (curTl >= 5) return 99;
-  return 5;
+  switch (curTl) {
+    case 1: return 5;    // →TL2 (누적 5)
+    case 2: return 20;   // →TL3 (누적 25)
+    case 3: return 30;   // →TL4 (누적 55)
+    case 4: return 35;   // →TL5 (누적 90)
+    default: return 99999; // TL5 상한
+  }
 };
+// 맵별 TL 상한 — docs/10 §15.7: 5×5 튜토리얼은 TL2까지, 11×11 정규는 TL5.
+const tlCapFor = (mapSize) => (mapSize === '11x11' ? 5 : 2);
 
 // ============================================================================
 // 게임 히스토리 (LocalStorage) — 브라우저 로컬에만 저장, 서버 전송 없음
@@ -3621,7 +3640,8 @@ function reducer(state, action) {
         let tl = p.tl || 1;
         let tlProgress = (p.tlProgress || 0) + gain;
         const events = [];
-        while (tl < 5 && tlProgress >= tlCostFor(tl)) {
+        const maxTl = tlCapFor(state.meta.mapSize);   // docs/10 §15.7: 5×5=TL2 캡, 11×11=TL5
+        while (tl < maxTl && tlProgress >= tlCostFor(tl)) {
           tlProgress -= tlCostFor(tl);
           tl += 1;
           events.push(tl);
@@ -5615,6 +5635,10 @@ function scoreGhostCard(state, pIdx, cid) {
   if (c.wound) return -1000 + Math.random();  // v6.13.1 (P1-1): 상처 = 최하 점수 → 봇 자연 회피
   let score = 10;
 
+  // TL3~5 해금: 클래스 상위 카드는 TL 도달 전 봇이 회피 (docs/09 §4 고스트 스킬 트리).
+  //   블록보다 완화(-16/+8): 고스트 파워 보존. tl 미지정 카드는 상시 사용 가능.
+  if (c.tl) { if (c.tl <= (p.tl || 1)) score += 8; else score -= 16; }
+
   const rep = p.resources.rep || 0;
   const raids = state.meta.raidsThisGame?.[pIdx] || 0;
   const repNeeded = Math.max(0, 16 - rep);
@@ -6731,8 +6755,8 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
               )}
               <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
-                {/* 5칸 진척도 게이지 — 현재 레벨 목표 대비 */}
-                {p.tl < 5 && (() => {
+                {/* 5칸 진척도 게이지 — 현재 레벨 목표 대비 (맵별 TL 상한 반영) */}
+                {p.tl < tlCapFor(state.meta.mapSize) && (() => {
                   const cost = tlCostFor(p.tl);
                   const prog = p.tlProgress || 0;
                   const filled = Math.min(5, Math.floor((prog / cost) * 5));
@@ -6751,7 +6775,7 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                     </span>
                   );
                 })()}
-                {p.tl === 5 && <span style={{ color: 'var(--yellow)', fontSize: 9 }}>MAX</span>}
+                {p.tl >= tlCapFor(state.meta.mapSize) && <span style={{ color: 'var(--yellow)', fontSize: 9 }}>MAX</span>}
                 <span style={{ color: 'var(--text-dim)', fontSize: 9 }}>@ {p.position || '—'} · 덱 {p.deck.length} · 패 {p.hand.length}</span>
               </div>
               {/* v0.6.3b: 5트랙 + 총악명 + 마일스톤 (악명형 악명식) */}
@@ -7637,6 +7661,13 @@ function effectSummary(eff) {
   if (eff.stock_op) parts.push('블록 1곳 주가 ±1 비공개 조작');
   if (eff.zone_income_2x) parts.push('자사 구역 수입 2배 (이번 라운드)');
   if (eff.zero_income) parts.push('대상 구역 수입 0 (이번 라운드)');
+
+  // TL3~5 해금 카드 효과 요약 (기존 핸들러 재사용 키)
+  if (eff.destroy_zone) parts.push('적 구역 1곳 초토화 (파괴, 자기 ₵+5 🔩+2)');
+  if (eff.stat_boost) parts.push(`다음 판정 +${eff.stat_boost}, 다음 R 카드 +1`);
+  if (eff.algorithm) parts.push('대형 알고리즘 계약 (₵+8 🎙+3, 자사 주식 +1)');
+  if (eff.scout_all) parts.push('전 구역 정찰 (토큰 공개)');
+  if (eff.block_resource) parts.push('경쟁자 1명 수입 봉쇄 (₵-3)');
 
   if (eff.loss) parts.push('⚠ 소각 (Long Rest만 복구)');
 

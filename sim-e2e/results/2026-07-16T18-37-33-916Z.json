@@ -1,0 +1,3393 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-16T18:37:33.915Z",
+    "games": 50,
+    "mapSize": "5x5",
+    "elapsedMs": 922,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.11.2"
+  },
+  "outcomes": {
+    "completed": 50,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 25,
+      "bloc": 25,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0.5,
+      "bloc": 0.5
+    },
+    "classWins": {
+      "MOLE": 12,
+      "AXIOM": 12,
+      "CIPHER": 5,
+      "RIGGER": 2,
+      "IRONWALL": 4,
+      "VANTA": 3,
+      "CARBON": 4,
+      "BLADE": 5,
+      "HELIX": 2,
+      "DRIFTER": 1
+    },
+    "avgRound": 6.72,
+    "mnaDeclaresTotal": 5,
+    "mnaDeclaresPerGame": 0.1,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 42,
+    "suppressGrantsPerGame": 0.84,
+    "suppressRetaliations": 1,
+    "shortEntriesTotal": 118,
+    "shortEntriesPerGame": 2.36,
+    "shortSettlementsTotal": 138,
+    "shortCreditTotal": 1014,
+    "shortCreditPerGame": 20.28,
+    "gamesWithShortPct": 0.52,
+    "woundInsertsTotal": 32,
+    "woundInsertsPerGame": 0.64,
+    "gamesWithWoundPct": 0.6,
+    "scandalInsertsTotal": 54,
+    "scandalInsertsPerGame": 1.08,
+    "gamesWithScandalPct": 0.62,
+    "gaugeHooksTotal": 124,
+    "gaugeHooksPerGame": 2.48,
+    "moleRevealsTotal": 0,
+    "moleDisguisesTotal": 15,
+    "rigMilestonesTotal": 29,
+    "rigMilestonesPerGame": 0.58,
+    "brokerMemo5Total": 18,
+    "brokerMemo5PerGame": 0.36,
+    "cipherHackNodesTotal": 71,
+    "cipherHackNodesPerGame": 1.42,
+    "tlSeatHistogram": {
+      "1": 0,
+      "2": 200,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    "tlSeatTotal": 200,
+    "gamesTL3plusPct": 0,
+    "gamesTL4plusPct": 0,
+    "gamesTL5Pct": 0,
+    "tlByRoleReach": {
+      "ghost": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "seats": 102
+      },
+      "bloc": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "seats": 98
+      }
+    }
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "CARBON",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 47
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 34
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 50
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 52/42 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 4,
+      "shortCredit": 18,
+      "woundInserts": 2,
+      "scandalInserts": 2,
+      "gaugeHooks": 6,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 3,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 43,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 43
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 41
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 25
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 138 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 22
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 22
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 26
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 53
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 51/42 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 4,
+      "shortCredit": 20,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 7,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 3,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 20,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 4,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 30
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 37
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 46
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 32
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (전투): 렙 50/42 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 1,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 3,
+      "shortCredit": 26,
+      "woundInserts": 1,
+      "scandalInserts": 2,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 21,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 5,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 38
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 26
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 53
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 25
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (전투): 렙 55/42 + 레이드 5 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 2,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 3,
+      "shortCredit": 8,
+      "woundInserts": 1,
+      "scandalInserts": 2,
+      "gaugeHooks": 6,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 6,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 38
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 63
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 32
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 29
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 64/42 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 4,
+      "shortCredit": 36,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 7,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 32
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 35
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 22
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 132 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 14,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 8,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 16
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 41
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 61
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 50
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "시간 종료 · 최고 렙 50",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 6,
+      "shortCredit": 32,
+      "woundInserts": 1,
+      "scandalInserts": 2,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 9,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 48
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 20
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 17
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 96 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 3,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 3,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 15,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 10,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 60
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 72
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 51
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 55/42 + 레이드 3 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 6,
+      "shortCredit": 28,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 20,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 11,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BROKER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 15
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 29
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 48
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 74 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 12,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 54
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 28
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 26
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 124 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 13,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "MOLE",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 43
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 27
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 15
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 34
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 53/42 + 레이드 4 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 1,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 14,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BROKER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 13
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 56
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 28
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 92 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 2,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 15,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 20
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 30
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 45
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 110 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 11,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 16,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 14
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 58
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 20
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 157 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 1,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 17,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 56
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 40
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 33
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 42
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "시간 종료 · 최고 렙 49",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 9,
+      "shortCredit": 108,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 18,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 53
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 14
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 20
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 107 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 3,
+      "shortCredit": 6,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 6,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 14,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 19,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 28
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 50
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 53
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 38
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "시간 종료 · 최고 렙 52",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 8,
+      "shortCredit": 70,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 20,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 29
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 51
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 19
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 36
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 101 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 2,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 21,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 42
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 22
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 50/42 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 1,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 1,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 22,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 26
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 26
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 32
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 40
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 103 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 23,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 36
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 48
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 21
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 94 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 24,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 40
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 53
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 38
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 18
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 60/42 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 3,
+      "shortSettlements": 3,
+      "shortCredit": 40,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 14,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 25,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 46
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 59
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 33
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "시간 종료 · 최고 렙 55",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 3,
+      "shortCredit": 22,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 26,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 40
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 129 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 27,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 21
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 43
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 46
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 34
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (전투): 렙 48/42 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 3,
+      "shortSettlements": 4,
+      "shortCredit": 26,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 3,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 15,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 28,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 35
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 50
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 52
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 31
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "시간 종료 · 최고 렙 56",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 10,
+      "shortCredit": 100,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 2,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 29,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 15
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 46
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 22
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 60
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 50/42 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 3,
+      "suppressRetaliations": 1,
+      "shortEntries": 2,
+      "shortSettlements": 2,
+      "shortCredit": 12,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 2,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 15,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 30,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BROKER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 12
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 27
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 34
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 54
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 83 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 2,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 31,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 22
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 54
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 34
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 94 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 1,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 32,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 18
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 29
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 55
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 28
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 146 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 11,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 33,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 14
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 51
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 34
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 115 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 34,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 61
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 47
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 36
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 31
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "시간 종료 · 최고 렙 46",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 6,
+      "shortCredit": 48,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 35,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "AXIOM",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 20
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 27
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 37
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 39
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 116 (≥73, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 1,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 3,
+      "shortCredit": 60,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 19,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 36,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 39
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 61
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 26
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 45
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (전투): 렙 58/42 + 레이드 5 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 3,
+      "shortSettlements": 7,
+      "shortCredit": 44,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 7,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 37,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 19
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 38
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 24
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 35
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 115 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 11,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 38,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 53
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 61
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 33
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 50
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 49/42 + 레이드 4 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 14,
+      "shortCredit": 88,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 39,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 19
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 35
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 48
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 26
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 47/42 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 5,
+      "shortSettlements": 4,
+      "shortCredit": 32,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 40,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 16
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 27
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 41
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 104 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 41,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 34
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 61
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 36
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 40
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 53/42 + 레이드 5 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 5,
+      "shortCredit": 44,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 5,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 5,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 42,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "VANTA",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 48
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 48
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 50
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 48/42 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 10,
+      "shortCredit": 56,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 43,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 16
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 33
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 20
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 43
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 104 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 3,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 44,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "RIGGER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 37
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 35
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 30
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 91 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 13,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 45,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 16
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 50
+        },
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 19
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 32
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 50/42 + 레이드 4 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 3,
+      "shortCredit": 12,
+      "woundInserts": 1,
+      "scandalInserts": 2,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 1,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 14,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 46,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "CARBON",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 33
+        },
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 75
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 40
+        }
+      ],
+      "maxTl": 2,
+      "winner": 2,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 52/42 + 레이드 6 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 3,
+      "shortSettlements": 6,
+      "shortCredit": 36,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "gaugeHooks": 8,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 17,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 47,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "CARBON",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 73
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 54
+        },
+        {
+          "role": "ghost",
+          "cls": "BROKER",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 51
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (전투): 렙 55/42 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 6,
+      "shortSettlements": 6,
+      "shortCredit": 42,
+      "woundInserts": 2,
+      "scandalInserts": 2,
+      "gaugeHooks": 6,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 1,
+      "cipherHackNodes": 3,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 48,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 15
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 34
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 31
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 49
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 99 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 2,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 49,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 18
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 39
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 28
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 26
+        }
+      ],
+      "maxTl": 2,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 98 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 1,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 1,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 12,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 50,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 23
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 24
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 30
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 52
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 118 (≥73, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 10,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}
