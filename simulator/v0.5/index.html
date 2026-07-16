@@ -472,6 +472,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 <script src="euro_module.js"></script>
 <script src="tutorial_module.js"></script>
+<script src="lore_module.js"></script>
 <script>
 // v6.11.2: 모듈 자가복구 로더 — 호스팅이 /simulator/v0.5 (슬래시 없음)로 서빙하면
 // 위 상대경로 src가 상위 디렉토리로 풀려 404가 된다 (Vercel 리다이렉트 이슈).
@@ -490,6 +491,7 @@
   window.addEventListener('DOMContentLoaded', function () {
     heal('euro_module.js', 'euro_applyAll');
     heal('tutorial_module.js', 'tutorial_pickStep');
+    heal('lore_module.js', 'loreEpilogue');
   });
 })();
 </script>
@@ -1688,6 +1690,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       gameOver: false,
       winner: null,
       winReason: null,
+      loreQuoted: {},            // 서사 표면화: 게임당 인물별 명대사 1회 캡 { specific: true }
       // v6.10: M&A Stage 2 — 인간 공격자 인수 루프 트래킹
       pendingMna: null,          // { attacker, target(bloc), declaredRound, defense } — 진행 중 M&A
       mnaCount: {},              // { attackerIdx: 선언 횟수 } (게임당 3회 상한)
@@ -2300,6 +2303,8 @@ function reducer(state, action) {
         const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
         const buildStr = destroyedBuilding ? ` · 🏚 ${BUILDINGS[destroyedBuilding].name} 파괴 (★+2 ₵+3)` : '';
         s = logEntry(s, `  ✅ 성공 · 보상 선택 대기(★+${rewards.rep} 또는 약탈) · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}${buildStr}`);
+        // 서사 표면화: 레이드 성공 시 실행 고스트(P0) 명대사 1회 첨가 (게임당 인물별 캡)
+        s = loreFlavorOnce(s, me.specific);
       } else {
         s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
       }
@@ -2515,7 +2520,13 @@ function reducer(state, action) {
     case 'DECLARE_MNA': {
       // v6.10: M&A Stage 2 — 인간(P0) 적대적 인수 선언. 게이트·상태전이는 euro_module에.
       if (typeof euro_declareMna !== 'function') return state;
-      return euro_declareMna(state, action.playerIdx, action.bloc);
+      let mnaState = euro_declareMna(state, action.playerIdx, action.bloc);
+      // 서사 표면화: 인수 선언이 성립(pendingMna 생성)하면 선언 블록 수장 명대사 1회 첨가.
+      if (mnaState !== state && mnaState.meta && mnaState.meta.pendingMna) {
+        const decl = state.players[action.playerIdx];
+        if (decl) mnaState = loreFlavorOnce(mnaState, decl.specific);
+      }
+      return mnaState;
     }
 
     case 'HUMAN_SUPPRESS': {
@@ -2912,6 +2923,16 @@ function reducer(state, action) {
       const maxR = state.meta.mapSize === '11x11' ? 12 : 8;
       if (newRound > maxR) {
         return checkVictoryByPoints(state);
+      }
+      // 서사 표면화(선택): 라운드 시작 도시 분위기 1줄 — 공권력(heat) 3단계. 표시 전용.
+      {
+        const _heat = state.heat || 0;
+        const _mood = _heat >= 9
+          ? '🌆 애시그리드 R' + newRound + ' — 순찰 드론이 낮게 난다. 거리는 숨을 참는다.'
+          : _heat >= 5
+            ? '🌆 애시그리드 R' + newRound + ' — 네온이 깜박이고, 베일 너머로 거래가 오간다.'
+            : '🌆 애시그리드 R' + newRound + ' — 잿빛 격자망 위로 잠시 정적이 흐른다.';
+        state = { ...state, log: [...state.log, { round: newRound, phase: 0, message: _mood }].slice(-150) };
       }
       // v0.9.3: NEXUS 글로벌 룰 적용 (라운드 시작 시)
       const nexRule = getActiveNexusRule(state);
@@ -5271,6 +5292,18 @@ function logEntry(s, msg) {
   return { ...s, log: [...s.log, { round: s.meta.round, phase: s.meta.phase, message: msg }].slice(-150) };
 }
 
+// 서사 표면화 — 명대사 1줄 첨가. 게임당 인물(specific)별 1회 캡(meta.loreQuoted)으로 스팸 방지.
+// 표시 전용: lore_module 미로드 시 무해(no-op). 게임 로직·자원 무변경.
+function loreFlavorOnce(s, specific) {
+  if (!s || !specific || typeof loreQuote !== 'function') return s;
+  const quoted = (s.meta && s.meta.loreQuoted) || {};
+  if (quoted[specific]) return s;
+  const q = loreQuote(specific);
+  if (!q) return s;
+  s = { ...s, meta: { ...s.meta, loreQuoted: { ...quoted, [specific]: true } } };
+  return logEntry(s, q.line);
+}
+
 function checkVictoryByPoints(state) {
   // Find winner by asset (bloc) or rep (ghost)
   let winner = null;
@@ -5328,6 +5361,7 @@ function applyVictoryDeclaration(state) {
   let decl = state.meta.victoryDeclaration || null;
   const counts = { ...(state.meta.declarationCounts || {}) };
   const logMsgs = [];
+  const loreQuoted = { ...(state.meta.loreQuoted || {}) };  // 서사 표면화: 게임당 인물별 명대사 1회 캡
   // ① 현 선언자 조건 이탈 → 선언 해제
   if (decl) {
     const dp = state.players[decl.idx];
@@ -5347,13 +5381,18 @@ function applyVictoryDeclaration(state) {
       counts[i] = (counts[i] || 0) + 1;
       decl = { idx: i, route: v.route, reason: v.reason, round: state.meta.round };
       logMsgs.push(`📢 P${i} [${p.specific}] 승리 조건 도달 (${v.reason}) — 이번 라운드가 마지막 기회. 다음 라운드 종료까지 유지하면 승리!`);
+      // 서사 표면화: 종료 선언 시 선언자 명대사 1회 첨가 (게임당 인물별 캡)
+      if (typeof loreQuote === 'function' && !loreQuoted[p.specific]) {
+        const lq = loreQuote(p.specific);
+        if (lq) { logMsgs.push(lq.line); loreQuoted[p.specific] = true; }
+      }
       break;
     }
   }
   if (logMsgs.length === 0 && (state.meta.victoryDeclaration || null) === decl) return state;
   return {
     ...state,
-    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts },
+    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts, loreQuoted },
     log: [...state.log, ...logMsgs.map(m => ({ round: state.meta.round, phase: 6, message: m }))].slice(-150),
   };
 }
@@ -5957,12 +5996,27 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
 
   if (state.meta.gameOver) {
     const iWon = state.meta.winner === 0;
+    // 서사 표면화: 승자 role×specific×승리경로(winReason 파싱)로 에필로그 재구성 (표시 전용)
+    const winnerP = state.meta.winner != null ? state.players[state.meta.winner] : null;
+    const epi = (winnerP && typeof loreEpilogue === 'function' && typeof loreRouteFromReason === 'function')
+      ? loreEpilogue(winnerP.role, winnerP.specific, loreRouteFromReason(state.meta.winReason, winnerP.role))
+      : null;
     return (
       <div className={`gameover ${iWon ? 'win' : 'lose'}`} style={{ overflow: 'auto', height: '100vh', padding: 24 }}>
         <h1>{iWon ? 'VICTORY' : 'DEFEAT'}</h1>
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
+        {epi && (
+          <div style={{ maxWidth: 640, margin: '0 auto 22px', padding: '18px 22px', background: 'var(--bg2)', border: '1px solid var(--border)', borderLeft: '3px solid var(--cyan)', borderRadius: 4, textAlign: 'left' }}>
+            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: 3, color: 'var(--cyan)', marginBottom: 10 }}>EPILOGUE — ASHGRID</div>
+            {epi.lines.filter(Boolean).map((ln, li) => (
+              <p key={li} style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text)', margin: '0 0 6px' }}>{ln}</p>
+            ))}
+            <p style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--yellow)', margin: '12px 0 2px', lineHeight: 1.6 }}>“{epi.quote}”</p>
+            <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 1, margin: 0, textAlign: 'right' }}>— {epi.quoteBy}</p>
+          </div>
+        )}
         <div className="stats-grid">
           <div className="stat-box">
             <div className="lbl">ROUND</div>
@@ -6445,6 +6499,10 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
               <div className="pheader">
                 <div className="pname">
                   {p.kind === 'human' ? '👤' : (p.isNpc ? '👁' : '🤖')} P{i} · {p.isNpc && (p.signal?.revealed || 0) === 0 ? '???' : p.specific}
+                  {/* 서사 표면화: 클래스명 옆 코드네임(고스트)/수장(블록) 병기 — NPC 미공개 시 생략 */}
+                  {!(p.isNpc && (p.signal?.revealed || 0) === 0) && typeof loreTag === 'function' && loreTag(p.specific) && (
+                    <span style={{ marginLeft: 5, color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1, fontFamily: 'Share Tech Mono, monospace' }}>“{loreTag(p.specific)}”</span>
+                  )}
                   {targetedMe && <span style={{ marginLeft: 4, color: 'var(--magenta)', fontSize: 10 }}>🔴</span>}
                 </div>
                 <div className="php">HP {p.hp}/{p.maxHp}</div>
