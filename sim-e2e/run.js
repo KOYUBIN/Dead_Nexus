@@ -172,10 +172,14 @@ function inPageGame(cfg) {
     const acqCount = Object.values(acquisitions).reduce((a, l) => a + (Array.isArray(l) ? l.length : 0), 0);
     const mnaCountMeta = Object.values(s.meta.mnaCount || {}).reduce((a, b) => a + b, 0);
     const field = s.players.filter(p => !p.isNpc).map(p => p.role);
+    const seats = s.players.filter(p => !p.isNpc);
+    const seatTLs = seats.map(p => ({ role: p.role, cls: p.specific, tl: p.tl || 1, prog: p.tlProgress || 0 }));
     return {
       ok: true,
       gameOver: s.meta.gameOver,
       round: s.meta.round,
+      seatTLs,
+      maxTl: seatTLs.reduce((a, x) => Math.max(a, x.tl), 1),
       winner: w,
       winnerRole: (w != null && s.players[w]) ? s.players[w].role : null,
       winnerClass: (w != null && s.players[w]) ? s.players[w].specific : null,
@@ -278,6 +282,11 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   let shEntry = 0, shSettle = 0, shCredit = 0, gamesWithShort = 0;
   let woundTot = 0, scandalTot = 0, gamesWithWound = 0, gamesWithScandal = 0;
   let gaugeTot = 0, moleRevTot = 0, rigMs = 0, memo5 = 0, hackTot = 0, disgTot = 0;
+  // TL distribution instrumentation
+  const tlSeatDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };   // per-seat final TL histogram
+  let tlSeatTotal = 0;
+  let gamesTL3plus = 0, gamesTL4plus = 0, gamesTL5 = 0;   // games where SOME seat reached TL>=x
+  const tlByRoleReach = { ghost: { 3: 0, 4: 0, 5: 0, seats: 0 }, bloc: { 3: 0, 4: 0, 5: 0, seats: 0 } };
   const allErrors = [];
   for (const g of games) {
     if (g.status === 'ok') {
@@ -291,6 +300,15 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       if ((g.scandalInserts || 0) > 0) gamesWithScandal++;
       gaugeTot += (g.gaugeHooks || 0); moleRevTot += (g.moleReveals || 0);
       rigMs += (g.rigMilestones || 0); memo5 += (g.brokerMemo5 || 0); hackTot += (g.cipherHackNodes || 0); disgTot += (g.moleDisguises || 0);
+      // TL distribution
+      const sts = g.seatTLs || [];
+      if ((g.maxTl || 1) >= 3) gamesTL3plus++;
+      if ((g.maxTl || 1) >= 4) gamesTL4plus++;
+      if ((g.maxTl || 1) >= 5) gamesTL5++;
+      for (const st of sts) {
+        tlSeatDist[st.tl] = (tlSeatDist[st.tl] || 0) + 1; tlSeatTotal++;
+        const r = tlByRoleReach[st.role]; if (r) { r.seats++; if (st.tl >= 3) r[3]++; if (st.tl >= 4) r[4]++; if (st.tl >= 5) r[5]++; }
+      }
     }
     (g.consoleErrors || []).forEach(c => allErrors.push({ game: g.index, kind: 'console.' + c.type, text: c.text }));
     (g.pageErrors || []).forEach(t => allErrors.push({ game: g.index, kind: 'pageerror', text: t }));
@@ -321,6 +339,13 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       rigMilestonesTotal: rigMs, rigMilestonesPerGame: +(rigMs / nOk).toFixed(2),
       brokerMemo5Total: memo5, brokerMemo5PerGame: +(memo5 / nOk).toFixed(2),
       cipherHackNodesTotal: hackTot, cipherHackNodesPerGame: +(hackTot / nOk).toFixed(2),
+      // TL distribution (Tech Level 3~5 unlock)
+      tlSeatHistogram: tlSeatDist,
+      tlSeatTotal,
+      gamesTL3plusPct: +(gamesTL3plus / nOk).toFixed(3),
+      gamesTL4plusPct: +(gamesTL4plus / nOk).toFixed(3),
+      gamesTL5Pct: +(gamesTL5 / nOk).toFixed(3),
+      tlByRoleReach,
     },
     errors: allErrors,
     games,
@@ -359,6 +384,12 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log(`    BROKER memo-5 payout      ${o.brokerMemo5Total} total  (${o.brokerMemo5PerGame}/game)`);
   console.log(`    CIPHER hack-node activ.   ${o.cipherHackNodesTotal} total  (${o.cipherHackNodesPerGame}/game)`);
   console.log(`    MOLE disguises / reveals  ${o.moleDisguisesTotal} / ${o.moleRevealsTotal}`);
+  console.log('  ---- tech level distribution (TL3~5 unlock) ----');
+  console.log(`    seat TL histogram   TL1:${tlSeatDist[1]} TL2:${tlSeatDist[2]} TL3:${tlSeatDist[3]} TL4:${tlSeatDist[4]} TL5:${tlSeatDist[5]}  (n=${tlSeatTotal} seats)`);
+  console.log(`    games w/ TL3+       ${gamesTL3plus}  (${(o.gamesTL3plusPct * 100).toFixed(1)}%)`);
+  console.log(`    games w/ TL4+       ${gamesTL4plus}  (${(o.gamesTL4plusPct * 100).toFixed(1)}%)`);
+  console.log(`    games w/ TL5        ${gamesTL5}  (${(o.gamesTL5Pct * 100).toFixed(1)}%)`);
+  console.log(`    ghost seats TL3/4/5 ${tlByRoleReach.ghost[3]}/${tlByRoleReach.ghost[4]}/${tlByRoleReach.ghost[5]} of ${tlByRoleReach.ghost.seats}   ·   bloc seats TL3/4/5 ${tlByRoleReach.bloc[3]}/${tlByRoleReach.bloc[4]}/${tlByRoleReach.bloc[5]} of ${tlByRoleReach.bloc.seats}`);
   console.log('  ---- errors ----');
   if (allErrors.length === 0) console.log('    (none) 🟢');
   else allErrors.slice(0, 50).forEach(e => console.log(`    g${e.game} [${e.kind}] ${e.text.slice(0, 200)}`));
