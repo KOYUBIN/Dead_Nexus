@@ -780,7 +780,9 @@ const BLOC_DECKS = {
 // all_credit: 전 플레이어 ₵ ±N  / target_credit: {role, delta}  / all_rep: Ghost 전원 렙 ±N
 // all_weapons/parts/data: 전 플레이어 자원 ±N  / signal_lock: 시그널 다이 고정  / bloc_income_2x: 1R Bloc 수입 2배
 // ghost_move: 모든 Ghost 이동 +N  / wanted_all: Ghost 전원 현상수배 ±N  / map_reveal: N라운드 지도 노출
-// random_zone_flip: 랜덤 구역 중립화  / stock_freeze: 주가 변동 1R 정지  / hp_all: 전 고스트 HP ±N
+// random_zone_flip: 랜덤 구역 중립화  / hp_all: 전 고스트 HP ±N
+// v6.15 신규 3종: mna_freeze: 이번 R M&A 선언 전면 금지  / scandal_insert: 랜덤 Bloc 덱에 스캔들 카드 N장 오염
+//   short_settle_mult: 이번 R 숏 정산 배수 (시장 변동성)
 const NEWS = [
   // === 시장 충격 (주가 축) ===
   { id: 11, title: '주식 시장 대폭락', effect: { all_stock: -3, heat: 1 }, flavor: '패닉은 합리적이다.' },
@@ -788,7 +790,6 @@ const NEWS = [
   { id: 14, title: '루머 확산', effect: { random_crash: 3 }, flavor: '소문은 항상 먼저 도착한다.' },
   { id: 15, title: '인수합병 열풍', effect: { all_stock: 1, target_credit: { role: 'bloc', delta: 3 } }, flavor: '큰 생선이 작은 생선을 먹는다.' },
   { id: 16, title: '내부자 고발', effect: { random_crash: 5, heat: 2 }, flavor: '익명의 이메일 한 통.' },
-  { id: 17, title: '주가 동결령', effect: { stock_freeze: 1 }, flavor: '시장을 멈추면 문제가 해결될까?' },
 
   // === 블록별 호재/악재 ===
   { id: 2,  title: 'AI 규제 법안 통과', effect: { target_stock: { bloc: 'AXIOM', delta: -4 } }, flavor: 'AI는 사람을 대체할 수 없다.' },
@@ -798,7 +799,6 @@ const NEWS = [
   { id: 37, title: '용병 수요 폭증', effect: { target_stock: { bloc: 'IRONWALL', delta: 3 }, heat: 1 }, flavor: '총성이 들려야 월급이 온다.' },
   { id: 43, title: '군수 계약 취소', effect: { target_stock: { bloc: 'IRONWALL', delta: -4 } }, flavor: '계약은 깨졌다.' },
   { id: 44, title: '정전 사태', effect: { target_stock: { bloc: 'CARBON', delta: -3 }, all_credit: -2 }, flavor: '어둠 속에서 도시가 멈췄다.' },
-  { id: 45, title: '신재생 에너지 보조금', effect: { target_stock: { bloc: 'CARBON', delta: 4 } }, flavor: '정부는 녹색을 발견했다.' },
 
   // === 공권력·치안 축 ===
   { id: 1,  title: '계엄 부분 해제', effect: { heat: -3 }, flavor: '임시 조치였다고 정부는 말한다.' },
@@ -822,9 +822,6 @@ const NEWS = [
 
   // === Ghost·Bloc 비대칭 이벤트 ===
   { id: 60, title: '영웅 담론', effect: { all_rep: 2, heat: -1 }, flavor: '이름을 지워도 이야기는 남는다.' },
-  { id: 61, title: '마녀사냥', effect: { wanted_all: 2, target_stock: { bloc: 'IRONWALL', delta: 2 } }, flavor: '누군가 대가를 치러야 한다.' },
-  { id: 62, title: 'Bloc 연합 회의', effect: { target_credit: { role: 'bloc', delta: 5 }, target_stock: { bloc: 'CARBON', delta: 1 } }, flavor: '위기는 그들을 묶었다.' },
-  { id: 63, title: '고스트 사냥령', effect: { wanted_all: 3, hp_all: -1 }, flavor: '현상금이 떨어졌다.' },
 
   // === 이동·맵 이벤트 ===
   { id: 70, title: '도로 봉쇄', effect: { ghost_move: -1, heat: 2 }, flavor: '그들은 출구를 닫았다.' },
@@ -837,6 +834,24 @@ const NEWS = [
   { id: 82, title: '지하 정보망 활성화', effect: { target_credit: { role: 'ghost', delta: 3 }, all_data: 1 }, flavor: '말은 소문보다 빠르다.' },
   { id: 83, title: '경찰 부패 수사', effect: { heat: -3, wanted_all: -1 }, flavor: '그들의 집도 압수수색됐다.' },
   { id: 84, title: '고스트 영웅 서사', effect: { all_rep: 3 }, flavor: '이야기가 역사보다 오래 남는다.' },
+
+  // === v6.15: 뉴스 50종 확장 — cards/events/news-events.md 원전 이식 + v6.x 시너지 (docs/21 §3 / K4) ===
+  // §3 분포 보강: Ghost 악재·중립 대사건 신설. 신규 효과 3종(mna_freeze·scandal_insert·short_settle_mult).
+  { id: 103, title: '블록 감독 위원회 설립', effect: { mna_freeze: 1 }, flavor: '아무도 이 위원회가 실제로 뭘 하는지 모른다. 그래서 더 무섭다.' },        // 원전 003
+  { id: 106, title: '블록 세금 인상',        effect: { target_credit: { role: 'bloc', delta: -2 } }, flavor: '정부가 아직 존재한다는 증거 중 하나.' },  // 원전 006
+  { id: 109, title: '뇌물 스캔들',           effect: { heat: -1, all_stock: -1 }, flavor: '누가 누구에게 뭘 줬는지 모두가 안다. 아무도 기소되지 않는다.' }, // 원전 009
+  { id: 105, title: '계엄 선포',             effect: { heat: 4, ghost_move: -1 }, flavor: '자정부터 외출 금지. 예외 없음.' },                        // 원전 005
+  { id: 123, title: '내부 고발자 폭로',       effect: { random_crash: 4, scandal_insert: 1 }, flavor: '그는 영웅으로 죽거나, 이름 없는 시체로 죽는다.' }, // 원전 023
+  { id: 126, title: '미디어 통제',           effect: { all_rep: -1 }, flavor: '뉴스에 나오지 않은 영웅은 영웅이 아니다.' },                          // 원전 026
+  { id: 128, title: '연쇄 살인',             effect: { heat: 1, wanted_all: 1 }, flavor: '경찰은 패턴을 찾고 있다. 살인자도 그렇게 하고 있다.' },       // 원전 028 (all-ghost 완화)
+  { id: 136, title: '신경 바이러스',         effect: { hp_all: -2 }, flavor: '와이어에 들어온 것은 와이어 밖으로 나가지 않는다.' },                   // 원전 036
+  { id: 138, title: '국경 교전',             effect: { heat: 3, all_weapons: 2 }, flavor: '우리가 보는 뉴스는 그들이 보게 하는 뉴스다.' },            // 원전 038
+  { id: 139, title: '무기 압수',             effect: { all_weapons: -2, heat: 1 }, flavor: '비정기 검문이었다. 결과는 정기적이었다.' },               // 원전 039
+  { id: 114, title: '대규모 인프라 계약',     effect: { target_stock: { bloc: 'CARBON', delta: 4 }, target_credit: { role: 'bloc', delta: 2 } }, flavor: '전선이 깔리면, 그 아래 흐르는 것은 돈이다.' }, // 원전 014
+  { id: 145, title: '대통령 사망',           effect: { all_stock: -2, heat: -2 }, flavor: '사인은 밝혀지지 않았다. 늘 그렇다.' },                    // 원전 045
+  { id: 147, title: '역사적 건물 붕괴',       effect: { random_zone_flip: 1, heat: 1 }, flavor: '70년 된 건물이었다. 누구도 그립게 느끼지 않았다.' },    // 원전 047
+  { id: 148, title: '연쇄 기업 붕괴설',       effect: { all_stock: -2, scandal_insert: 1 }, flavor: '루머일 뿐이다. 모든 붕괴는 루머로 시작한다.' },     // 원전 048
+  { id: 190, title: '시장 변동성',           effect: { short_settle_mult: 2 }, flavor: '패닉은 방향을 모른다. 방향을 아는 자만 돈을 번다.' },          // v6.x 시너지 (숏 정산)
 ];
 
 // Hidden objectives (10 simplified for MVP)
@@ -1944,6 +1959,8 @@ const shortTotal = (p) => Object.values((p && p.shortPositions) || {}).reduce((a
 // 단일 지점 정산이라 하락 훅이 아무리 많아도 이중 정산이 없다(스냅샷 1회 비교).
 function settleShortPositions(state) {
   const snap = state.meta.lastStockSnapshot || state.stocks;
+  // v6.15: 시장 변동성 뉴스(short_settle_mult) — 이번 라운드 정산분에 배수 적용 (round 일치 시에만)
+  const mult = (state.meta.shortMultRound === state.meta.round) ? (state.meta.shortMultVal || 1) : 1;
   const logs = [];
   const ps = state.players.map(p => {
     if (p.defeated || p.role !== 'ghost') return p;
@@ -1953,9 +1970,9 @@ function settleShortPositions(state) {
       if (!qty) continue;
       const drop = (snap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
       if (drop > 0) {
-        const payout = drop * qty * SHORT_CONFIG.payoutPerPt;
+        const payout = drop * qty * SHORT_CONFIG.payoutPerPt * mult;
         gained += payout;
-        logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${payout}` });
+        logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${payout}${mult > 1 ? ` (변동성×${mult})` : ''}` });
       }
     }
     if (gained === 0) return p;
@@ -3200,6 +3217,23 @@ function reducer(state, action) {
         }
         logMsgs.push(`❤️Ghost HP${eff.hp_all > 0 ? '+' : ''}${eff.hp_all}`);
       }
+      // v6.15: 스캔들 덱 오염 — 내부 고발자 폭로/기업 붕괴설. 랜덤 Bloc discard에 SCANDAL 삽입(원전 023/048, docs/05 §2.7 재사용)
+      let scandalsThisGame = state.meta.scandalsThisGame;  // 게임당 상한(POLLUTION_CAP) 카운터 — 반드시 return meta로 전파
+      if (eff.scandal_insert) {
+        let tmp = { ...state, players: ps };
+        const blocIdxs = tmp.players.map((p, i) => (p.role === 'bloc' && !p.defeated) ? i : -1).filter(x => x >= 0);
+        let inserted = 0;
+        for (let n = 0; n < eff.scandal_insert && blocIdxs.length > 0; n++) {
+          const bi = blocIdxs[Math.floor(Math.random() * blocIdxs.length)];
+          const before = tmp;
+          tmp = insertScandal(tmp, bi, '내부 고발 폭로');
+          if (tmp !== before) inserted++;
+        }
+        ps = tmp.players;
+        scandalsThisGame = tmp.meta.scandalsThisGame;  // 카운터 반영
+        if (tmp.log.length > state.log.length) extraLog = [...extraLog, ...tmp.log.slice(state.log.length)];
+        logMsgs.push(inserted > 0 ? `📰스캔들오염×${inserted}` : '📰스캔들(상한)');
+      }
       // Random zone flip
       if (eff.random_zone_flip) {
         const newMap = { ...state.map };
@@ -3223,6 +3257,11 @@ function reducer(state, action) {
       // Ghost move boost
       let moveBonusNext = state.meta.moveBonusNext || 0;
       if (eff.ghost_move) { moveBonusNext += eff.ghost_move; logMsgs.push(`🚶이동${eff.ghost_move > 0 ? '+' : ''}${eff.ghost_move}`); }
+      // v6.15: 이번 라운드 한정 지속 플래그 (round 값으로 자동 만료 — 다음 라운드엔 round≠저장값이라 무효)
+      let mnaFrozenRound = state.meta.mnaFrozenRound;
+      if (eff.mna_freeze) { mnaFrozenRound = state.meta.round; logMsgs.push('⚖이번R 인수 선언 금지'); }
+      let shortMultRound = state.meta.shortMultRound, shortMultVal = state.meta.shortMultVal;
+      if (eff.short_settle_mult) { shortMultRound = state.meta.round; shortMultVal = eff.short_settle_mult; logMsgs.push(`📉이번R 숏 정산×${eff.short_settle_mult}`); }
 
       return {
         ...state,
@@ -3231,7 +3270,7 @@ function reducer(state, action) {
         signalDie: newSignal,
         heat: Math.max(0, Math.min(10, newHeat)),
         players: ps,
-        meta: { ...state.meta, mapReveal, moveBonusNext },
+        meta: { ...state.meta, mapReveal, moveBonusNext, mnaFrozenRound, shortMultRound, shortMultVal, scandalsThisGame },
         log: [...state.log, { round: state.meta.round, phase: 1, message: `📰 ${news.title} — ${logMsgs.join(' · ') || '효과 없음'}` }, ...extraLog].slice(-150),
       };
     }

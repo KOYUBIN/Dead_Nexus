@@ -1086,6 +1086,11 @@ function euro_declareMnaCheck(state, attackerIdx, bloc) {
 
 // 선언 적용 — 리듀서 DECLARE_MNA가 호출. 게이트 통과 시 pendingMna 설정 + 카운트/간격 트래킹.
 function euro_declareMna(state, attackerIdx, bloc) {
+  // v6.15: 블록 감독 위원회 뉴스(mna_freeze) — 이번 라운드 M&A 선언 전면 금지 (원전 003). 인간·봇 공통 단일 게이트, 시그니처 불변.
+  if (state.meta && state.meta.mnaFrozenRound === state.meta.round) {
+    if (typeof logEntry === 'function') return logEntry(state, `🚫 M&A 선언 거부: 블록 감독 위원회 (이번 라운드 인수 불가)`);
+    return state;
+  }
   const chk = euro_declareMnaCheck(state, attackerIdx, bloc);
   if (!chk.ok) {
     if (typeof logEntry === 'function') return logEntry(state, `🚫 M&A 선언 거부: ${chk.reason}`);
