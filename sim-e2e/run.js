@@ -95,8 +95,9 @@ function inPageGame(cfg) {
     // tally per-round (max seen per round) as we go — cap-immune.
     const suppressByRound = {}, retalByRound = {}, mnaDeclByRound = {};
     const shortEntryByRound = {}, shortSettleByRound = {}, shortCreditByRound = {};
+    const woundByRound = {}, scandalByRound = {};   // v6.13.1 (P1-1): 덱 오염 발생 빈도
     const tally = (st) => {
-      const sup = {}, ret = {}, mna = {}, shE = {}, shS = {}, shC = {};
+      const sup = {}, ret = {}, mna = {}, shE = {}, shS = {}, shC = {}, wo = {}, sc = {};
       for (const e of st.log) {
         const m = e.message || '';
         if (m.includes('견제 (₵')) { sup[e.round] = (sup[e.round] || 0) + 1; if (m.includes('(보복)')) ret[e.round] = (ret[e.round] || 0) + 1; }
@@ -104,6 +105,9 @@ function inPageGame(cfg) {
         // v6.12 P0-4: 공매도 사용 빈도
         if (m.includes('숏') && m.includes('진입')) shE[e.round] = (shE[e.round] || 0) + 1;
         if (m.includes('숏 정산')) { shS[e.round] = (shS[e.round] || 0) + 1; const mm = m.match(/₵\+(\d+)/); if (mm) shC[e.round] = (shC[e.round] || 0) + parseInt(mm[1], 10); }
+        // v6.13.1 (P1-1): 상처·스캔들 덱 오염 삽입
+        if (m.includes('상처 카드 1장 덱 오염')) wo[e.round] = (wo[e.round] || 0) + 1;
+        if (m.includes('스캔들 카드 1장 덱 오염')) sc[e.round] = (sc[e.round] || 0) + 1;
       }
       for (const r in sup) suppressByRound[r] = Math.max(suppressByRound[r] || 0, sup[r]);
       for (const r in ret) retalByRound[r] = Math.max(retalByRound[r] || 0, ret[r]);
@@ -111,6 +115,8 @@ function inPageGame(cfg) {
       for (const r in shE) shortEntryByRound[r] = Math.max(shortEntryByRound[r] || 0, shE[r]);
       for (const r in shS) shortSettleByRound[r] = Math.max(shortSettleByRound[r] || 0, shS[r]);
       for (const r in shC) shortCreditByRound[r] = Math.max(shortCreditByRound[r] || 0, shC[r]);
+      for (const r in wo) woundByRound[r] = Math.max(woundByRound[r] || 0, wo[r]);
+      for (const r in sc) scandalByRound[r] = Math.max(scandalByRound[r] || 0, sc[r]);
     };
 
     let guard = 0;
@@ -171,6 +177,8 @@ function inPageGame(cfg) {
       shortEntries: sum(shortEntryByRound),        // v6.12 P0-4: 숏 진입 횟수
       shortSettlements: sum(shortSettleByRound),   // 숏 정산 이벤트 수
       shortCredit: sum(shortCreditByRound),        // 숏 정산 총 ₵
+      woundInserts: sum(woundByRound),             // v6.13.1 (P1-1): 상처 삽입 수
+      scandalInserts: sum(scandalByRound),         // v6.13.1 (P1-1): 스캔들 삽입 수
       guardHit: guard >= cfg.roundGuard,
     };
   } catch (e) { return { ok: false, error: String((e && e.stack) || e) }; }
@@ -249,6 +257,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const byClass = {};
   let rounds = 0, mnaDecl = 0, mnaAcq = 0, sup = 0, retal = 0;
   let shEntry = 0, shSettle = 0, shCredit = 0, gamesWithShort = 0;
+  let woundTot = 0, scandalTot = 0, gamesWithWound = 0, gamesWithScandal = 0;
   const allErrors = [];
   for (const g of games) {
     if (g.status === 'ok') {
@@ -257,6 +266,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       rounds += g.round; mnaDecl += g.mnaDeclaresLog; mnaAcq += g.mnaAcquisitions; sup += g.suppressGrants; retal += g.suppressRetaliations;
       shEntry += (g.shortEntries || 0); shSettle += (g.shortSettlements || 0); shCredit += (g.shortCredit || 0);
       if ((g.shortEntries || 0) > 0) gamesWithShort++;
+      woundTot += (g.woundInserts || 0); scandalTot += (g.scandalInserts || 0);
+      if ((g.woundInserts || 0) > 0) gamesWithWound++;
+      if ((g.scandalInserts || 0) > 0) gamesWithScandal++;
     }
     (g.consoleErrors || []).forEach(c => allErrors.push({ game: g.index, kind: 'console.' + c.type, text: c.text }));
     (g.pageErrors || []).forEach(t => allErrors.push({ game: g.index, kind: 'pageerror', text: t }));
@@ -279,6 +291,8 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       shortEntriesTotal: shEntry, shortEntriesPerGame: +(shEntry / nOk).toFixed(2),
       shortSettlementsTotal: shSettle, shortCreditTotal: shCredit, shortCreditPerGame: +(shCredit / nOk).toFixed(2),
       gamesWithShortPct: +(gamesWithShort / nOk).toFixed(3),
+      woundInsertsTotal: woundTot, woundInsertsPerGame: +(woundTot / nOk).toFixed(2), gamesWithWoundPct: +(gamesWithWound / nOk).toFixed(3),
+      scandalInsertsTotal: scandalTot, scandalInsertsPerGame: +(scandalTot / nOk).toFixed(2), gamesWithScandalPct: +(gamesWithScandal / nOk).toFixed(3),
     },
     errors: allErrors,
     games,
@@ -308,6 +322,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log('  ---- shorts (P0-4) ----');
   console.log(`    short entries        ${o.shortEntriesTotal} total  (${o.shortEntriesPerGame}/game)  · games w/ short ${(o.gamesWithShortPct * 100).toFixed(1)}%`);
   console.log(`    short settlements    ${o.shortSettlementsTotal} total  · payout credit ${o.shortCreditTotal}  (${o.shortCreditPerGame}/game)`);
+  console.log('  ---- deck pollution (P1-1) ----');
+  console.log(`    wound inserts        ${o.woundInsertsTotal} total  (${o.woundInsertsPerGame}/game)  · games w/ wound ${(o.gamesWithWoundPct * 100).toFixed(1)}%`);
+  console.log(`    scandal inserts      ${o.scandalInsertsTotal} total  (${o.scandalInsertsPerGame}/game)  · games w/ scandal ${(o.gamesWithScandalPct * 100).toFixed(1)}%`);
   console.log('  ---- errors ----');
   if (allErrors.length === 0) console.log('    (none) 🟢');
   else allErrors.slice(0, 50).forEach(e => console.log(`    g${e.game} [${e.kind}] ${e.text.slice(0, 200)}`));

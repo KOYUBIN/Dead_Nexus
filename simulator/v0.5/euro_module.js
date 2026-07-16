@@ -1155,6 +1155,8 @@ function euro_completeMnaAcquisition(state, attackerIdx, targetIdx, bloc) {
     };
     s = { ...s, players: ps, map: newMap };
     if (typeof logEntry === 'function') s = logEntry(s, `🏴 M&A 완료! P${attackerIdx} → ${bloc} 인수 — 자산 30% 흡수 (₵+${grab}, 구역 ${takeN}곳 이전) · ${bloc} NPC 관리 전환`);
+    // v6.13.1 (P1-1 / docs/05 §2.7): M&A 방어 실패 → 피인수 Bloc 덱 스캔들 오염 (인수 후 존속: acquiredBy 마커만).
+    if (typeof insertScandal === 'function') s = insertScandal(s, targetIdx, 'M&A 방어 실패');
   } else {
     // NPC 블록(플레이어 없음): 상징 보상 ₵+10 + 해당 블록 주가 폭락 -5 (껍데기 흡수)
     const ps = [...s.players];
