@@ -44,8 +44,11 @@ const ROUND_GUARD = 40;                               // hard cap on round-itera
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
 
 // ---- args ------------------------------------------------------------------
+// Usage: node run.js [games] [mapSize] [scenario]
+//   scenario defaults to S01. e.g. `node run.js 100 11x11 S02`.
 const N = Math.max(1, parseInt(process.argv[2] || '10', 10));
 const MAP = process.argv[3] || '11x11';
+const SCENARIO = process.argv[4] || 'S01';
 if (!['5x5', '11x11'].includes(MAP)) { console.error(`mapSize must be 5x5 or 11x11 (got "${MAP}")`); process.exit(1); }
 
 const GHOST_CLASSES = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
@@ -89,7 +92,17 @@ function inPageGame(cfg) {
     if (typeof R !== 'function' || typeof BP !== 'function' || typeof CIV !== 'function' || typeof window.buildInitial !== 'function')
       return { ok: false, error: 'engine globals missing' };
 
-    let s = window.buildInitial({ mode: 'solo', mapSize: cfg.mapSize, difficulty: 'normal', role: cfg.role, specific: cfg.specific, humans: null });
+    let s = window.buildInitial({ mode: 'solo', mapSize: cfg.mapSize, difficulty: 'normal', role: cfg.role, specific: cfg.specific, humans: null, scenario: cfg.scenario || 'S01' });
+    // v6.18: 시나리오 시작 조건 실측 캡처 (변형이 실제로 적용됐는지 확인용)
+    const scenApplied = {
+      scenario: s.meta.scenario,
+      startHeat: s.heat,
+      allBloc: s.players.every(p => p.role === 'bloc'),
+      seatRoles: s.players.filter(p => !p.isNpc).map(p => p.role),
+      npcBlocs: s.players.filter(p => p.isNpc).length,
+      p0Zones: Object.keys(s.map).filter(c => s.map[c].owner === 0).length,
+      mnaNoCooldown: !!s.meta.mnaNoCooldown,
+    };
 
     // suppression grants can't be read from the 150-capped log at the end, so
     // tally per-round (max seen per round) as we go — cap-immune.
@@ -178,6 +191,7 @@ function inPageGame(cfg) {
       ok: true,
       gameOver: s.meta.gameOver,
       round: s.meta.round,
+      scenApplied,
       seatTLs,
       maxTl: seatTLs.reduce((a, x) => Math.max(a, x.tl), 1),
       winner: w,
@@ -229,7 +243,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const server = await startServer();
   const port = server.address().port;
   console.log(`[e2e] serving ${ROOT} on http://127.0.0.1:${port}`);
-  console.log(`[e2e] games=${N}  mapSize=${MAP}  timeout=${PER_GAME_TIMEOUT_MS / 1000}s/game`);
+  console.log(`[e2e] games=${N}  mapSize=${MAP}  scenario=${SCENARIO}  timeout=${PER_GAME_TIMEOUT_MS / 1000}s/game`);
 
   const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium' });
   let pg = await makePage(browser, port);
@@ -237,9 +251,11 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const games = [];
   const t0 = Date.now();
   for (let k = 0; k < N; k++) {
-    const role = Math.random() < 0.5 ? 'ghost' : 'bloc';
+    // v6.18: allBloc 시나리오(S02)는 P0 를 항상 Bloc 으로 (initGame 이 강제하지만 명시).
+    const allBloc = SCENARIO === 'S02';
+    const role = allBloc ? 'bloc' : (Math.random() < 0.5 ? 'ghost' : 'bloc');
     const specific = pick(role === 'ghost' ? GHOST_CLASSES : BLOC_CLASSES);
-    const cfg = { mapSize: MAP, role, specific, roundGuard: ROUND_GUARD };
+    const cfg = { mapSize: MAP, role, specific, roundGuard: ROUND_GUARD, scenario: SCENARIO };
     const startConsole = pg.buf.console.length, startErr = pg.buf.pageerror.length;
     const gStart = Date.now();
 
@@ -316,7 +332,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   }
   const nOk = ok.length || 1;
   const summary = {
-    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: 'simulator/v0.5 v6.11.2' },
+    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, scenario: SCENARIO, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: 'simulator/v0.5 v6.18' },
     outcomes: {
       completed: ok.length,
       timeouts: games.filter(g => g.status === 'timeout').length,
@@ -390,6 +406,19 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log(`    games w/ TL4+       ${gamesTL4plus}  (${(o.gamesTL4plusPct * 100).toFixed(1)}%)`);
   console.log(`    games w/ TL5        ${gamesTL5}  (${(o.gamesTL5Pct * 100).toFixed(1)}%)`);
   console.log(`    ghost seats TL3/4/5 ${tlByRoleReach.ghost[3]}/${tlByRoleReach.ghost[4]}/${tlByRoleReach.ghost[5]} of ${tlByRoleReach.ghost.seats}   ·   bloc seats TL3/4/5 ${tlByRoleReach.bloc[3]}/${tlByRoleReach.bloc[4]}/${tlByRoleReach.bloc[5]} of ${tlByRoleReach.bloc.seats}`);
+  // v6.18: 시나리오 시작 조건 실측 검증 — 변형이 실제 판에 나타났는가.
+  const okScen = ok.map(g => g.scenApplied).filter(Boolean);
+  if (okScen.length) {
+    const avg = (f) => +(okScen.reduce((a, x) => a + f(x), 0) / okScen.length).toFixed(2);
+    const allBlocPct = +(okScen.filter(x => x.allBloc).length / okScen.length).toFixed(3);
+    console.log('  ---- scenario applied (start-condition assertion) ----');
+    console.log(`    scenario meta        ${okScen[0].scenario}  (mnaNoCooldown=${okScen[0].mnaNoCooldown})`);
+    console.log(`    avg start heat       ${avg(x => x.startHeat)}`);
+    console.log(`    all-bloc games       ${(allBlocPct * 100).toFixed(1)}%`);
+    console.log(`    avg NPC blocs        ${avg(x => x.npcBlocs)}`);
+    console.log(`    avg P0 start zones   ${avg(x => x.p0Zones)}`);
+    console.log(`    avg non-NPC seats    ${avg(x => x.seatRoles.length)}`);
+  }
   console.log('  ---- errors ----');
   if (allErrors.length === 0) console.log('    (none) 🟢');
   else allErrors.slice(0, 50).forEach(e => console.log(`    g${e.game} [${e.kind}] ${e.text.slice(0, 200)}`));

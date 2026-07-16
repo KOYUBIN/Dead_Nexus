@@ -1,0 +1,302 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-16T18:58:28.896Z",
+    "games": 3,
+    "mapSize": "11x11",
+    "scenario": "S02",
+    "elapsedMs": 230,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.18"
+  },
+  "outcomes": {
+    "completed": 3,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 0,
+      "bloc": 3,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0,
+      "bloc": 1
+    },
+    "classWins": {
+      "VANTA": 2,
+      "CARBON": 1
+    },
+    "avgRound": 6,
+    "mnaDeclaresTotal": 0,
+    "mnaDeclaresPerGame": 0,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 4,
+    "suppressGrantsPerGame": 1.33,
+    "suppressRetaliations": 2,
+    "shortEntriesTotal": 0,
+    "shortEntriesPerGame": 0,
+    "shortSettlementsTotal": 1,
+    "shortCreditTotal": 0,
+    "shortCreditPerGame": 0,
+    "gamesWithShortPct": 0,
+    "woundInsertsTotal": 0,
+    "woundInsertsPerGame": 0,
+    "gamesWithWoundPct": 0,
+    "scandalInsertsTotal": 0,
+    "scandalInsertsPerGame": 0,
+    "gamesWithScandalPct": 0,
+    "gaugeHooksTotal": 0,
+    "gaugeHooksPerGame": 0,
+    "moleRevealsTotal": 0,
+    "moleDisguisesTotal": 0,
+    "rigMilestonesTotal": 0,
+    "rigMilestonesPerGame": 0,
+    "brokerMemo5Total": 0,
+    "brokerMemo5PerGame": 0,
+    "cipherHackNodesTotal": 0,
+    "cipherHackNodesPerGame": 0,
+    "tlSeatHistogram": {
+      "1": 0,
+      "2": 0,
+      "3": 9,
+      "4": 0,
+      "5": 0
+    },
+    "tlSeatTotal": 9,
+    "gamesTL3plusPct": 1,
+    "gamesTL4plusPct": 0,
+    "gamesTL5Pct": 0,
+    "tlByRoleReach": {
+      "ghost": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "seats": 0
+      },
+      "bloc": {
+        "3": 9,
+        "4": 0,
+        "5": 0,
+        "seats": 9
+      }
+    }
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "CARBON",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "scenApplied": {
+        "scenario": "S02",
+        "startHeat": 3,
+        "allBloc": true,
+        "seatRoles": [
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 2,
+        "p0Zones": 4,
+        "mnaNoCooldown": true
+      },
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 3,
+          "prog": 24
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 3,
+          "prog": 22
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 3,
+          "prog": 24
+        }
+      ],
+      "maxTl": 3,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 127 (≥99, 3인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 3,
+      "suppressRetaliations": 2,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 47,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "IRONWALL",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "scenApplied": {
+        "scenario": "S02",
+        "startHeat": 3,
+        "allBloc": true,
+        "seatRoles": [
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 2,
+        "p0Zones": 4,
+        "mnaNoCooldown": true
+      },
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 3,
+          "prog": 21
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 3,
+          "prog": 19
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 3,
+          "prog": 10
+        }
+      ],
+      "maxTl": 3,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 141 (≥99, 3인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "scenApplied": {
+        "scenario": "S02",
+        "startHeat": 3,
+        "allBloc": true,
+        "seatRoles": [
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 2,
+        "p0Zones": 4,
+        "mnaNoCooldown": true
+      },
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 3,
+          "prog": 13
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 3,
+          "prog": 22
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 3,
+          "prog": 27
+        }
+      ],
+      "maxTl": 3,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 235 (≥99, 3인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "field": [
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 1,
+      "shortCredit": 0,
+      "woundInserts": 0,
+      "scandalInserts": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

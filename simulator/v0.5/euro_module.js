@@ -1076,7 +1076,9 @@ function euro_declareMnaCheck(state, attackerIdx, bloc) {
     return { ok: false, reason: `선언 횟수 소진 (${EURO_MNA_MAX_DECLARES}/${EURO_MNA_MAX_DECLARES})` };
   const round = (state.meta && state.meta.round) || 0;
   const last = euro_mnaLastRoundFor(state, attackerIdx);
-  if (last !== -Infinity && (round - last) < EURO_MNA_MIN_GAP)
+  // v6.18: 시나리오 S02(코프 대전) — meta.mnaNoCooldown 이면 선언 간 2R 간격 게이트 무시(연속 M&A 허용).
+  const noCd = !!(state.meta && state.meta.mnaNoCooldown);
+  if (!noCd && last !== -Infinity && (round - last) < EURO_MNA_MIN_GAP)
     return { ok: false, reason: `선언 간 ${EURO_MNA_MIN_GAP}R 대기 (${EURO_MNA_MIN_GAP - (round - last)}R 남음)` };
   const eq = (typeof euro_equityPct === 'function') ? euro_equityPct(state, attackerIdx, bloc) : 0;
   if (eq < EURO_MNA_THRESHOLD)
