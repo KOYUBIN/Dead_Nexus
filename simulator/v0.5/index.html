@@ -687,6 +687,11 @@ const GHOST_CARDS = {
   DEEP_COVER:     { name: 'DEEP COVER',     cls: 'MOLE',   init: 32, attr: ['S'],      top: { gen: 'S', invisible: 1 },                          bot: { cost: ['S','S'], invisible_2r: 1 } },
   ID_COLLAPSE:    { name: 'ID COLLAPSE',    cls: 'MOLE',   init: 45, attr: ['S','M'], loss: true, top: { gen: 'S', burn_identity: 1 },            bot: { cost: ['S','S','M'], copy_bloc_card: 1 } },
   BASIC_MOVE_M:   { name: 'BASIC MOVE',     cls: 'MOLE',   init: 20, attr: ['GRID'],   top: { move: 2 },                                         bot: { swap: 1 } },
+
+  // v6.13.1 (P1-1 / docs/05 §1.7): 상처 — 런타임 삽입 전용(GHOST_DECKS 미포함). HP가 maxHp 50% 이하로
+  //   교차하는 순간 applyDamage가 discard에 1장 삽입(게임당 상한 2). TOP/BOT 모두 무효 → 손에 오면 그
+  //   슬롯이 죽는다("지속 비용"). 봇 AI는 scoreGhostCard에서 최하 점수 → 자연 회피. cls 'INJURY'.
+  WOUND:          { name: '🩸 상처',         cls: 'INJURY', init: 999, attr: [],        top: { dead: 1 },                                         bot: { dead: 1 }, wound: true },
 };
 
 // Ghost class decks
@@ -751,6 +756,11 @@ const BLOC_CARDS = {
   INFRA_BOND:      { name: 'INFRA BOND',      bloc: 'CARBON',  tl: 2, main: { cost:['V','GRID'], bond: 8 }, side: { gen: 'GRID' }, combo: {} },
   HOSTILE_DIV:     { name: 'HOSTILE DIV',     bloc: 'CARBON',  tl: 3, main: { cost:['V','A'], div_2x: 1 }, side: { gen: 'V' }, combo: {} },
   LEGACY_CONTRACT: { name: 'LEGACY CONTRACT', bloc: 'CARBON',  tl: 4, main: { cost:['V','V','A'], long_contract: 50 }, side: { gen: 'V' }, combo: {} },
+
+  // v6.13.1 (P1-1 / docs/05 §2.7): 스캔들 — Ghost 상처의 Bloc 판(런타임 삽입 전용, BLOC_DECKS 미포함).
+  //   레이드로 구역을 잃거나 M&A 방어 실패 시 discard에 1장 삽입(게임당 상한 2). MAIN/SIDE 모두 무효.
+  //   봇 AI는 scoreBlocCard에서 최하 점수 → 자연 회피.
+  SCANDAL:         { name: '📰 스캔들',        bloc: 'any',     tl: 0, main: { dead: 1 }, side: { dead: 1 }, combo: {}, scandalCard: true },
 };
 
 // 모든 블록이 공통으로 받는 10장 (이동·투자·용병·요새·합병·정보 등)
@@ -1791,6 +1801,7 @@ function applyDamage(state, playerIdx, amount, source) {
   if (dmg <= 0) return state;
   const p = state.players[playerIdx];
   if (!p || p.defeated) return state;
+  const wasBelow = p.belowHalf === true;  // v6.13.1 (P1-1): 상처 교차 판정용 사전 상태
 
   // source 정규화
   let attackerIdx = null;
@@ -1802,7 +1813,7 @@ function applyDamage(state, playerIdx, amount, source) {
   const newHp = Math.max(0, p.hp - dmg);  // 음수 HP 방지
   ps[playerIdx] = { ...p, hp: newHp };
   s = { ...s, players: ps };
-  if (newHp > 0) return s;
+  if (newHp > 0) return checkWoundCross(s, playerIdx, wasBelow);  // v6.13.1 (P1-1): 50% 교차 시 상처
 
   // === HP0 도달 ===
   const downed = ps[playerIdx];
@@ -1813,7 +1824,7 @@ function applyDamage(state, playerIdx, amount, source) {
     s = { ...s, players: ps };
     s = logEntry(s, `🛡 P${playerIdx} (${downed.specific}) · 경호 LV5 deathSave 발동! HP 0→1`);
     s = recordHighlight(s, 'death_save', playerIdx);
-    return s;
+    return checkWoundCross(s, playerIdx, wasBelow);  // v6.13.1 (P1-1): HP 0→1 도 50% 이하 → 상처
   }
 
   // 2) STEP F — 자원 30% 약탈 + 시작 구역 리스폰 + HP 절반 회복
@@ -1838,6 +1849,57 @@ function applyDamage(state, playerIdx, amount, source) {
   }
   s = { ...s, players: ps };
   s = logEntry(s, `💀 P${playerIdx} 격침 — 자원 30% 약탈, 시작 구역 리스폰`);
+  return checkWoundCross(s, playerIdx, wasBelow);  // v6.13.1 (P1-1): 리스폰 후 절반 HP(≤50%) → 상처
+}
+
+// ============================================================================
+// v6.13.1 (P1-1 / docs/05 §1.7·§2.7 / docs/21 K1): 덱 오염 실카드화 — 상처·스캔들.
+// 정적 덱 목록(GHOST_DECKS/BLOC_DECKS) 미포함, 런타임에만 해당 플레이어 discard에 삽입.
+// 게임당 상한 각 2장(스파이럴 방지). 삽입 카드는 무효 슬롯 → 손에 오는 라운드는 실질 1카드 플레이.
+// ============================================================================
+const POLLUTION_CAP = 2;
+
+function insertWound(state, playerIdx) {
+  const p = state.players[playerIdx];
+  if (!p || p.defeated || p.role !== 'ghost') return state;
+  const prev = (state.meta.woundsThisGame && state.meta.woundsThisGame[playerIdx]) || 0;
+  if (prev >= POLLUTION_CAP) return state;  // 상한 도달 — 중복 삽입 방지
+  const ps = [...state.players];
+  ps[playerIdx] = { ...p, discard: [...(p.discard || []), 'WOUND'] };
+  const woundsThisGame = { ...(state.meta.woundsThisGame || {}), [playerIdx]: prev + 1 };
+  let s = { ...state, players: ps, meta: { ...state.meta, woundsThisGame } };
+  const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
+  s = logEntry(s, `${meTag}🩸 P${playerIdx} [${p.specific}] · HP 50% 이하 교차 — 상처 카드 1장 덱 오염 (누적 ${prev + 1}/${POLLUTION_CAP})`);
+  return s;
+}
+
+function insertScandal(state, blocIdx, reason) {
+  const p = state.players[blocIdx];
+  if (!p || p.defeated || p.role !== 'bloc') return state;
+  const prev = (state.meta.scandalsThisGame && state.meta.scandalsThisGame[blocIdx]) || 0;
+  if (prev >= POLLUTION_CAP) return state;  // 상한 도달 — 중복 삽입 방지
+  const ps = [...state.players];
+  ps[blocIdx] = { ...p, discard: [...(p.discard || []), 'SCANDAL'] };
+  const scandalsThisGame = { ...(state.meta.scandalsThisGame || {}), [blocIdx]: prev + 1 };
+  let s = { ...state, players: ps, meta: { ...state.meta, scandalsThisGame } };
+  const meTag = blocIdx === 0 ? '⭐ 당신 ' : '';
+  s = logEntry(s, `${meTag}📰 P${blocIdx} [${p.specific}] · ${reason} — 스캔들 카드 1장 덱 오염 (누적 ${prev + 1}/${POLLUTION_CAP})`);
+  return s;
+}
+
+// HP 50% 교차 감지 — applyDamage가 각 return 직전 호출. p.belowHalf 플래그로 "위→아래" 1회만 삽입.
+// (아래→위 회복은 라운드 시작 리필에서 belowHalf 재계산 → 재교차 시 다시 1회 삽입, 단 게임 상한 2 유지.)
+function checkWoundCross(state, playerIdx, wasBelowHalf) {
+  const p = state.players[playerIdx];
+  if (!p || p.role !== 'ghost') return state;
+  const belowHalf = p.hp <= p.maxHp * 0.5;
+  let s = state;
+  if ((p.belowHalf === true) !== belowHalf) {
+    const ps = [...s.players];
+    ps[playerIdx] = { ...p, belowHalf };
+    s = { ...s, players: ps };
+  }
+  if (belowHalf && !wasBelowHalf) s = insertWound(s, playerIdx);  // 교차 순간 1회
   return s;
 }
 
@@ -1855,6 +1917,8 @@ const MNA_DESIGNATE_CREDIT = 14;  // 목표 지정 ₵ 여유 하한 (충분한 
 const MNA_CREDIT_FLOOR = 0;       // 목표 매수 시 남길 ₵ 하한 (인수 올인 — 청산 실탄이 별도 안전판)
 const MNA_BUY_MAXPRICE = 18;      // 목표 매수 완화 상한 (기존 가격 트레이더 ≤7 대비 대폭 완화)
 const MNA_BUY_QTY = 14;           // 라운드당 목표 매집 상한 주식 수 (신용 한도가 실질 제약)
+                                  // v6.13.1(②): 14→11 재시도 기각·원복. 11×11 n=200 측정에서 11은 ghost 36.5%로
+                                  // 45~55 밴드 미진입(14는 41.0%)이고 M&A 선언은 0.14/판으로 불변 → 중앙화 개선 없음.
 const MNA_EQUITY_STOP = 60;       // 이 지분% 도달 시 매집 중단 (게이트 여유 확보 후 과매수 방지)
 const MNA_TARGET_EXISTING_PCT = 30; // 이미 이만큼 보유한 라이벌은 최우선 목표 (완주가 쌈)
 
@@ -2242,6 +2306,8 @@ function reducer(state, action) {
       // 레이드 카운트 증가 (성공만)
       if (outcome === 'success') {
         s.meta = { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+        // v6.13.1 (P1-1 / docs/05 §2.7): 레이드로 Bloc 구역 상실 → 스캔들 덱 오염 (cell.owner = 직전 소유 Bloc)
+        s = insertScandal(s, cell.owner, '레이드로 구역 상실');
         // v0.9.2: 약속 위반 체크 — Bloc 소유자가 truce 약속한 사이면 P0 ★-2, 피해자 ★+2
         const blocOwnerIdx = state.players.findIndex(pp => pp.specific === bloc && pp.role === 'bloc');
         const activePromises = (s.meta.promises || []).filter(pm => pm.status === 'active' && pm.expiresR >= s.meta.round && pm.type === 'truce' &&
@@ -2358,6 +2424,7 @@ function reducer(state, action) {
         const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
         s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
         s.meta = { ...s.meta, pendingRaid: null, raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 } };
+        s = insertScandal(s, cell.owner, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
         // v6.5: 레이드 성공 기본 평판 보상을 선택 결정으로 큐잉 (밸런스 중립: ★+3 vs 등가 약탈)
         if (typeof euro_addPendingDecision === 'function' && typeof euro_raidLootBundle === 'function') {
           const _lb = euro_raidLootBundle(3);
@@ -3000,7 +3067,9 @@ function reducer(state, action) {
         // 개인 풀 감쇠 (ceil로 시드 보존)
         const decayedPool = {};
         for (const [k, v] of Object.entries(p.pool || {})) decayedPool[k] = Math.ceil(v / 2);
-        return { ...p, hand: newHand, deck: newDeck, discard: newDiscard, pool: decayedPool };
+        // v6.13.1 (P1-1): 상처 교차 플래그 재무장 — 회복해 50% 초과면 다음 교차에서 다시 1회 삽입(게임 상한 2 유지)
+        const belowHalf = p.role === 'ghost' ? (p.hp <= p.maxHp * 0.5) : p.belowHalf;
+        return { ...p, hand: newHand, deck: newDeck, discard: newDiscard, pool: decayedPool, belowHalf };
       });
       // === 이전 라운드 요약 ===
       const summaryLines = [];
@@ -3985,6 +4054,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               const newMap = { ...s.map, [effectiveCoord]: { ...cellThere, owner: null } };
               s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+              s = insertScandal(s, blocIdx, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
               s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+4`);
               s = raiseTrack(s, playerIdx, 'combat', 1, '봇 레이드 성공');  // v0.6.3b
               s.meta._didAutoRaid = true;
@@ -4117,6 +4187,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const newMap = { ...s.map, [curP2.position]: { ...atCell, owner: null } };
       s = { ...s, players: ps, map: newMap, heat: Math.min(10, s.heat + 1) };
       s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
+      s = insertScandal(s, blocIdx, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
       const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
       s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+3 (누적 ${ps[playerIdx].resources.rep}), 현상수배+1`);
       s = raiseTrack(s, playerIdx, 'combat', 1, '레이드 성공');  // v0.6.3b
@@ -5422,6 +5493,7 @@ function scoreGhostCard(state, pIdx, cid) {
   const c = getCard(cid);
   const p = state.players[pIdx];
   if (!c) return 0;
+  if (c.wound) return -1000 + Math.random();  // v6.13.1 (P1-1): 상처 = 최하 점수 → 봇 자연 회피
   let score = 10;
 
   const rep = p.resources.rep || 0;
@@ -5511,6 +5583,7 @@ function scoreBlocCard(state, pIdx, cid) {
   const c = getCard(cid);
   const p = state.players[pIdx];
   if (!c) return 0;
+  if (c.scandalCard) return -1000 + Math.random();  // v6.13.1 (P1-1): 스캔들 = 최하 점수 → 봇 자연 회피
   let score = 10;
 
   // Prefer own TL or lower
@@ -7406,6 +7479,9 @@ function effectSummary(eff) {
   if (eff.zero_income) parts.push('대상 구역 수입 0 (이번 라운드)');
 
   if (eff.loss) parts.push('⚠ 소각 (Long Rest만 복구)');
+
+  // v6.13.1 (P1-1): 덱 오염 죽은 카드(상처·스캔들) — 무효 슬롯
+  if (eff.dead) return '무효 — 죽은 카드 (슬롯 낭비)';
 
   if (parts.length === 0) return '특수 효과';
   return parts.join(' · ');
