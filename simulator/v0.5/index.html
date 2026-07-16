@@ -472,6 +472,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 <script src="euro_module.js"></script>
 <script src="tutorial_module.js"></script>
+<script src="lore_module.js"></script>
 <script>
 // v6.11.2: 모듈 자가복구 로더 — 호스팅이 /simulator/v0.5 (슬래시 없음)로 서빙하면
 // 위 상대경로 src가 상위 디렉토리로 풀려 404가 된다 (Vercel 리다이렉트 이슈).
@@ -490,6 +491,7 @@
   window.addEventListener('DOMContentLoaded', function () {
     heal('euro_module.js', 'euro_applyAll');
     heal('tutorial_module.js', 'tutorial_pickStep');
+    heal('lore_module.js', 'loreEpilogue');
   });
 })();
 </script>
@@ -1688,6 +1690,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       gameOver: false,
       winner: null,
       winReason: null,
+      loreQuoted: {},            // 서사 표면화: 게임당 인물별 명대사 1회 캡 { specific: true }
       // v6.10: M&A Stage 2 — 인간 공격자 인수 루프 트래킹
       pendingMna: null,          // { attacker, target(bloc), declaredRound, defense } — 진행 중 M&A
       mnaCount: {},              // { attackerIdx: 선언 횟수 } (게임당 3회 상한)
@@ -1728,6 +1731,8 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       mapReveal: 0,              // 남은 전체 지도 노출 라운드
       moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
       atkBonusOnce: 0,           // 일회성 공격 판정 보너스 (arms 보너스)
+      // v6.12 P0-4: 공매도 정산 스냅샷 — 라운드 전환 시 전 라운드 종가와 비교(단일 지점 정산)
+      lastStockSnapshot: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
     },
     players,
     map,
@@ -1756,6 +1761,7 @@ function buildPlayer(id, kind, role, specific) {
     discard: [],
     lost: [],
     contracts: [],
+    shortPositions: {},        // v6.12 P0-4: Ghost 공매도 포지션 { BLOC: 계약수 }
     wanted: 0,
     tl: 1,
     tlProgress: 0,
@@ -1851,6 +1857,53 @@ const MNA_BUY_MAXPRICE = 18;      // 목표 매수 완화 상한 (기존 가격 
 const MNA_BUY_QTY = 14;           // 라운드당 목표 매집 상한 주식 수 (신용 한도가 실질 제약)
 const MNA_EQUITY_STOP = 60;       // 이 지분% 도달 시 매집 중단 (게이트 여유 확보 후 과매수 방지)
 const MNA_TARGET_EXISTING_PCT = 30; // 이미 이만큼 보유한 라이벌은 최우선 목표 (완주가 쌈)
+
+// v6.12 P0-4: 공매도 레이드 — 니치 기함 루프 튜닝 상수 (docs/22 §6 P0-4)
+// "레이드(폭력·정보)가 곧 주가 포지션이 되는 사이버펑크 비대칭 시장 전쟁."
+// Ghost가 시장 페이즈에 대상 블록 숏 계약을 사고, 그 블록 주가가 떨어지면 라운드 경계에서
+// 차익을 정산한다(레이드 성공 -3 = 계약당 ₵6). 정산은 스냅샷 방식(meta.lastStockSnapshot):
+// 라운드 전환 시 전 라운드 종가 대비 하락분을 단일 지점에서 잡아, 레이드·뉴스·시그니처 등
+// 여러 하락 훅을 개별 배선하지 않고도 이중 정산 없이 모든 하락을 포착한다. 상승 시 무손실
+// (옵션형, 단순성 우선). 만기 없음(게임 끝까지 유지). 수치는 측정 후 조정 가능한 상수 블록.
+const SHORT_CONFIG = {
+  cost: 4,          // 계약 1건 진입 비용 (₵)
+  payoutPerPt: 2,   // 하락 1pt × 계약 1건당 지급 (₵) — 레이드 -3 = 계약당 ₵6
+  capPerBloc: 2,    // 블록당 계약 상한
+  capTotal: 3,      // 총 계약 상한
+  botProb: 0.5,     // 봇 Ghost 진입 확률 게이트 (과용 방지)
+  botMinCredit: 8,  // 봇 Ghost 진입 최소 여유 ₵ (수익 엔진 과열 방지)
+};
+const shortTotal = (p) => Object.values((p && p.shortPositions) || {}).reduce((a, b) => a + b, 0);
+
+// v6.12 P0-4: 숏 포지션 정산 — 라운드 경계에서 전 라운드 종가(meta.lastStockSnapshot) 대비
+// 하락분을 각 Ghost 보유 계약 수만큼 지급하고, 현재 종가를 새 스냅샷으로 저장한다.
+// 단일 지점 정산이라 하락 훅이 아무리 많아도 이중 정산이 없다(스냅샷 1회 비교).
+function settleShortPositions(state) {
+  const snap = state.meta.lastStockSnapshot || state.stocks;
+  const logs = [];
+  const ps = state.players.map(p => {
+    if (p.defeated || p.role !== 'ghost') return p;
+    const sp = p.shortPositions || {};
+    let gained = 0;
+    for (const [bl, qty] of Object.entries(sp)) {
+      if (!qty) continue;
+      const drop = (snap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
+      if (drop > 0) {
+        const payout = drop * qty * SHORT_CONFIG.payoutPerPt;
+        gained += payout;
+        logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${payout}` });
+      }
+    }
+    if (gained === 0) return p;
+    return { ...p, resources: { ...p.resources, credit: (p.resources.credit || 0) + gained } };
+  });
+  return {
+    ...state,
+    players: ps,
+    meta: { ...state.meta, lastStockSnapshot: { ...state.stocks } },
+    log: logs.length ? [...state.log, ...logs].slice(-150) : state.log,
+  };
+}
 
 function reducer(state, action) {
   switch (action.type) {
@@ -2250,6 +2303,8 @@ function reducer(state, action) {
         const lootStr = Object.values(zoneLoot).length > 0 ? ` + ${zoneLoot.label}` : '';
         const buildStr = destroyedBuilding ? ` · 🏚 ${BUILDINGS[destroyedBuilding].name} 파괴 (★+2 ₵+3)` : '';
         s = logEntry(s, `  ✅ 성공 · 보상 선택 대기(★+${rewards.rep} 또는 약탈) · ${bloc} 주가-${rewards.stockHit} · 중립화${lootStr}${buildStr}`);
+        // 서사 표면화: 레이드 성공 시 실행 고스트(P0) 명대사 1회 첨가 (게임당 인물별 캡)
+        s = loreFlavorOnce(s, me.specific);
       } else {
         s = logEntry(s, `  ❌ 실패 · HP-${rewards.hp || 0} · 수배+${rewards.wanted || 0}`);
       }
@@ -2438,10 +2493,40 @@ function reducer(state, action) {
       };
     }
 
+    case 'BUY_SHORT': {
+      // v6.12 P0-4: Ghost 공매도 진입. action.playerIdx, action.bloc, action.qty(기본 1).
+      const p0 = state.players[action.playerIdx];
+      if (!p0 || p0.role !== 'ghost' || p0.defeated) return state;
+      if (!state.stocks[action.bloc]) return state;
+      const sp = { ...(p0.shortPositions || {}) };
+      const curBloc = sp[action.bloc] || 0;
+      const curTotal = shortTotal(p0);
+      // 상한: 블록당 capPerBloc, 총 capTotal
+      const addable = Math.min(action.qty || 1, SHORT_CONFIG.capPerBloc - curBloc, SHORT_CONFIG.capTotal - curTotal);
+      if (addable <= 0) return state;
+      const cost = SHORT_CONFIG.cost * addable;
+      if ((p0.resources.credit || 0) < cost) return state;
+      const ps = [...state.players];
+      sp[action.bloc] = curBloc + addable;
+      ps[action.playerIdx] = { ...p0, resources: { ...p0.resources, credit: p0.resources.credit - cost }, shortPositions: sp };
+      const marker = action.playerIdx === 0 ? '⭐ 당신 ' : '';
+      return {
+        ...state,
+        players: ps,
+        log: [...state.log, { round: state.meta.round, phase: 1, message: `🔻 ${marker}P${action.playerIdx} · ${action.bloc} 숏 ${addable}건 진입 (₵-${cost}) — 총 ${curTotal + addable}/${SHORT_CONFIG.capTotal}` }].slice(-150),
+      };
+    }
+
     case 'DECLARE_MNA': {
       // v6.10: M&A Stage 2 — 인간(P0) 적대적 인수 선언. 게이트·상태전이는 euro_module에.
       if (typeof euro_declareMna !== 'function') return state;
-      return euro_declareMna(state, action.playerIdx, action.bloc);
+      let mnaState = euro_declareMna(state, action.playerIdx, action.bloc);
+      // 서사 표면화: 인수 선언이 성립(pendingMna 생성)하면 선언 블록 수장 명대사 1회 첨가.
+      if (mnaState !== state && mnaState.meta && mnaState.meta.pendingMna) {
+        const decl = state.players[action.playerIdx];
+        if (decl) mnaState = loreFlavorOnce(mnaState, decl.specific);
+      }
+      return mnaState;
     }
 
     case 'HUMAN_SUPPRESS': {
@@ -2641,6 +2726,30 @@ function reducer(state, action) {
         if (p.kind !== 'bot' || p.defeated) return;
         const credit = p.resources.credit || 0;
         const blocs = Object.keys(s.stocks);
+        // ── v6.12 P0-4: 봇 Ghost 공매도 — 레이드 목표 블록에 1계약 (과용 게이트) ──
+        // heuristic: ₵ 여유(botMinCredit) + 확률(botProb) + 총 상한 미만일 때, 자기가
+        // 레이드로 노리는 블록(findRaidTargetZone 방향)에 1계약. 목표 미상 시 자산 선두 Bloc.
+        if (p.role === 'ghost' && credit >= SHORT_CONFIG.botMinCredit && Math.random() < SHORT_CONFIG.botProb) {
+          const sp = ps[pi].shortPositions || {};
+          if (shortTotal(ps[pi]) < SHORT_CONFIG.capTotal) {
+            let targetBloc = null;
+            if (p.position && typeof findRaidTargetZone === 'function') {
+              const coord = findRaidTargetZone(s, p.position);
+              const cell = coord && s.map[coord];
+              const owner = (cell && cell.owner != null) ? s.players[cell.owner] : null;
+              if (owner && owner.role === 'bloc') targetBloc = owner.specific;
+            }
+            if (!targetBloc) {
+              let best = -1;
+              s.players.forEach(pp => { if (pp.role === 'bloc' && !pp.defeated) { const av = assetValue(pp, s.stocks, s); if (av > best) { best = av; targetBloc = pp.specific; } } });
+            }
+            if (targetBloc && (sp[targetBloc] || 0) < SHORT_CONFIG.capPerBloc && (ps[pi].resources.credit || 0) >= SHORT_CONFIG.cost) {
+              const nsp = { ...sp, [targetBloc]: (sp[targetBloc] || 0) + 1 };
+              ps[pi] = { ...ps[pi], resources: { ...ps[pi].resources, credit: ps[pi].resources.credit - SHORT_CONFIG.cost }, shortPositions: nsp };
+              s = logEntry(s, `🔻 P${pi} [${p.specific}] · ${targetBloc} 숏 1건 진입 (₵-${SHORT_CONFIG.cost})`);
+            }
+          }
+        }
         // ── v6.12 P0-2: M&A 각성 — 인수 목표 지정 + 목표 지분 매집 ──────────
         // 11×11(M&A 활성) · 봇 Bloc 한정. 게이트(euro_declareMnaBots)는 불변 —
         // 매집이 51% 게이트를 "열리게" 만들 뿐. 목표는 p.mnaTarget에 라운드 지속 저장.
@@ -2804,6 +2913,9 @@ function reducer(state, action) {
       if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
       // v6.10: M&A 2블록 인수 즉시 승리면 라운드 진행 중단 (gameOver 세팅됨)
       if (state.meta.gameOver) return state;
+      // v6.12 P0-4: 공매도 정산 — euro_applyAll(시장 시그니처 포함) 후, 전 라운드 종가 대비
+      //   하락분을 Ghost 숏 계약에 지급하고 새 스냅샷 저장(단일 지점 = 이중 정산 없음).
+      state = settleShortPositions(state);
       // v6.12 P0-1: 종료 선언 갱신 (도달 선언 / 조건 이탈 해제) — 방금 끝난 라운드 기준
       state = applyVictoryDeclaration(state);
       const newRound = state.meta.round + 1;
@@ -2811,6 +2923,16 @@ function reducer(state, action) {
       const maxR = state.meta.mapSize === '11x11' ? 12 : 8;
       if (newRound > maxR) {
         return checkVictoryByPoints(state);
+      }
+      // 서사 표면화(선택): 라운드 시작 도시 분위기 1줄 — 공권력(heat) 3단계. 표시 전용.
+      {
+        const _heat = state.heat || 0;
+        const _mood = _heat >= 9
+          ? '🌆 애시그리드 R' + newRound + ' — 순찰 드론이 낮게 난다. 거리는 숨을 참는다.'
+          : _heat >= 5
+            ? '🌆 애시그리드 R' + newRound + ' — 네온이 깜박이고, 베일 너머로 거래가 오간다.'
+            : '🌆 애시그리드 R' + newRound + ' — 잿빛 격자망 위로 잠시 정적이 흐른다.';
+        state = { ...state, log: [...state.log, { round: newRound, phase: 0, message: _mood }].slice(-150) };
       }
       // v0.9.3: NEXUS 글로벌 룰 적용 (라운드 시작 시)
       const nexRule = getActiveNexusRule(state);
@@ -5170,6 +5292,18 @@ function logEntry(s, msg) {
   return { ...s, log: [...s.log, { round: s.meta.round, phase: s.meta.phase, message: msg }].slice(-150) };
 }
 
+// 서사 표면화 — 명대사 1줄 첨가. 게임당 인물(specific)별 1회 캡(meta.loreQuoted)으로 스팸 방지.
+// 표시 전용: lore_module 미로드 시 무해(no-op). 게임 로직·자원 무변경.
+function loreFlavorOnce(s, specific) {
+  if (!s || !specific || typeof loreQuote !== 'function') return s;
+  const quoted = (s.meta && s.meta.loreQuoted) || {};
+  if (quoted[specific]) return s;
+  const q = loreQuote(specific);
+  if (!q) return s;
+  s = { ...s, meta: { ...s.meta, loreQuoted: { ...quoted, [specific]: true } } };
+  return logEntry(s, q.line);
+}
+
 function checkVictoryByPoints(state) {
   // Find winner by asset (bloc) or rep (ghost)
   let winner = null;
@@ -5227,6 +5361,7 @@ function applyVictoryDeclaration(state) {
   let decl = state.meta.victoryDeclaration || null;
   const counts = { ...(state.meta.declarationCounts || {}) };
   const logMsgs = [];
+  const loreQuoted = { ...(state.meta.loreQuoted || {}) };  // 서사 표면화: 게임당 인물별 명대사 1회 캡
   // ① 현 선언자 조건 이탈 → 선언 해제
   if (decl) {
     const dp = state.players[decl.idx];
@@ -5246,13 +5381,18 @@ function applyVictoryDeclaration(state) {
       counts[i] = (counts[i] || 0) + 1;
       decl = { idx: i, route: v.route, reason: v.reason, round: state.meta.round };
       logMsgs.push(`📢 P${i} [${p.specific}] 승리 조건 도달 (${v.reason}) — 이번 라운드가 마지막 기회. 다음 라운드 종료까지 유지하면 승리!`);
+      // 서사 표면화: 종료 선언 시 선언자 명대사 1회 첨가 (게임당 인물별 캡)
+      if (typeof loreQuote === 'function' && !loreQuoted[p.specific]) {
+        const lq = loreQuote(p.specific);
+        if (lq) { logMsgs.push(lq.line); loreQuoted[p.specific] = true; }
+      }
       break;
     }
   }
   if (logMsgs.length === 0 && (state.meta.victoryDeclaration || null) === decl) return state;
   return {
     ...state,
-    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts },
+    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts, loreQuoted },
     log: [...state.log, ...logMsgs.map(m => ({ round: state.meta.round, phase: 6, message: m }))].slice(-150),
   };
 }
@@ -5856,12 +5996,27 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
 
   if (state.meta.gameOver) {
     const iWon = state.meta.winner === 0;
+    // 서사 표면화: 승자 role×specific×승리경로(winReason 파싱)로 에필로그 재구성 (표시 전용)
+    const winnerP = state.meta.winner != null ? state.players[state.meta.winner] : null;
+    const epi = (winnerP && typeof loreEpilogue === 'function' && typeof loreRouteFromReason === 'function')
+      ? loreEpilogue(winnerP.role, winnerP.specific, loreRouteFromReason(state.meta.winReason, winnerP.role))
+      : null;
     return (
       <div className={`gameover ${iWon ? 'win' : 'lose'}`} style={{ overflow: 'auto', height: '100vh', padding: 24 }}>
         <h1>{iWon ? 'VICTORY' : 'DEFEAT'}</h1>
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
+        {epi && (
+          <div style={{ maxWidth: 640, margin: '0 auto 22px', padding: '18px 22px', background: 'var(--bg2)', border: '1px solid var(--border)', borderLeft: '3px solid var(--cyan)', borderRadius: 4, textAlign: 'left' }}>
+            <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: 3, color: 'var(--cyan)', marginBottom: 10 }}>EPILOGUE — ASHGRID</div>
+            {epi.lines.filter(Boolean).map((ln, li) => (
+              <p key={li} style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--text)', margin: '0 0 6px' }}>{ln}</p>
+            ))}
+            <p style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--yellow)', margin: '12px 0 2px', lineHeight: 1.6 }}>“{epi.quote}”</p>
+            <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 1, margin: 0, textAlign: 'right' }}>— {epi.quoteBy}</p>
+          </div>
+        )}
         <div className="stats-grid">
           <div className="stat-box">
             <div className="lbl">ROUND</div>
@@ -6344,6 +6499,10 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
               <div className="pheader">
                 <div className="pname">
                   {p.kind === 'human' ? '👤' : (p.isNpc ? '👁' : '🤖')} P{i} · {p.isNpc && (p.signal?.revealed || 0) === 0 ? '???' : p.specific}
+                  {/* 서사 표면화: 클래스명 옆 코드네임(고스트)/수장(블록) 병기 — NPC 미공개 시 생략 */}
+                  {!(p.isNpc && (p.signal?.revealed || 0) === 0) && typeof loreTag === 'function' && loreTag(p.specific) && (
+                    <span style={{ marginLeft: 5, color: 'var(--text-dim)', fontSize: 9, letterSpacing: 1, fontFamily: 'Share Tech Mono, monospace' }}>“{loreTag(p.specific)}”</span>
+                  )}
                   {targetedMe && <span style={{ marginLeft: 4, color: 'var(--magenta)', fontSize: 10 }}>🔴</span>}
                 </div>
                 <div className="php">HP {p.hp}/{p.maxHp}</div>
@@ -6370,6 +6529,14 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                 }
               </div>
               {p.role === 'ghost' && <div style={{ fontSize: 10, marginTop: 4, color: 'var(--magenta)' }}>⚠ {p.wanted}</div>}
+              {/* v6.12 P0-4: 숏 포지션 뱃지 */}
+              {p.role === 'ghost' && shortTotal(p) > 0 && (
+                <div style={{ fontSize: 9, marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {Object.entries(p.shortPositions).filter(([, q]) => q > 0).map(([bl, q]) => (
+                    <span key={bl} style={{ padding: '0 4px', borderRadius: 2, background: 'rgba(255,45,120,0.15)', color: 'var(--magenta)', border: '1px solid var(--magenta)', fontWeight: 700, fontFamily: 'Share Tech Mono, monospace' }}>🔻{bl}×{q}</span>
+                  ))}
+                </div>
+              )}
               <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
                 {/* 5칸 진척도 게이지 — 현재 레벨 목표 대비 */}
@@ -6779,6 +6946,42 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                   );
                 })}
               </div>
+              {/* v6.12 P0-4: 공매도 숏 패널 (Ghost 전용) */}
+              {me.role === 'ghost' && (() => {
+                const sp = me.shortPositions || {};
+                const total = shortTotal(me);
+                return (
+                  <div style={{ background: 'rgba(255,45,120,0.08)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 8, marginTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{ color: 'var(--magenta)', fontWeight: 700, fontSize: 11, letterSpacing: 1 }}>🔻 공매도 (숏 포지션)</span>
+                      <span style={{ fontSize: 9, color: 'var(--text-dim)' }}>레이드로 떨군 주가가 곧 수익 — 하락 1pt × 계약당 ₵{SHORT_CONFIG.payoutPerPt}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: total >= SHORT_CONFIG.capTotal ? 'var(--magenta)' : 'var(--text)', fontWeight: 700 }}>총 {total}/{SHORT_CONFIG.capTotal}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+                      {Object.entries(state.stocks).map(([bl, v]) => {
+                        const held = sp[bl] || 0;
+                        const canShort = held < SHORT_CONFIG.capPerBloc && total < SHORT_CONFIG.capTotal && (me.resources.credit || 0) >= SHORT_CONFIG.cost;
+                        return (
+                          <div key={bl} style={{ background: 'var(--bg2)', border: `1px solid ${held > 0 ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 3, padding: 5, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: 10 }}>{bl}</strong>
+                              <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>₵{v}</span>
+                            </div>
+                            <div style={{ color: held > 0 ? 'var(--magenta)' : 'var(--text-dim)', fontSize: 9, marginBottom: 3 }}>숏 {held}/{SHORT_CONFIG.capPerBloc}건</div>
+                            <button
+                              disabled={!canShort}
+                              title={canShort ? `${bl} 숏 1계약 진입 (₵${SHORT_CONFIG.cost})` : (held >= SHORT_CONFIG.capPerBloc ? '블록 상한' : total >= SHORT_CONFIG.capTotal ? '총 상한' : '₵ 부족')}
+                              onClick={() => dispatch({ type: 'BUY_SHORT', playerIdx: meIdx, bloc: bl, qty: 1 })}
+                              style={{ width: '100%', fontSize: 9, padding: '3px', background: canShort ? 'var(--bg3)' : 'var(--bg1)', color: canShort ? 'var(--magenta)' : 'var(--text-dim)', border: `1px solid ${canShort ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: canShort ? 'pointer' : 'not-allowed', fontWeight: canShort ? 700 : 400 }}>
+                              🔻 숏 ₵{SHORT_CONFIG.cost}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* 공용 상점 */}
               <div style={{ background: 'rgba(255, 235, 60, 0.08)', border: '1px solid var(--yellow)', borderRadius: 4, padding: 8, marginTop: 8 }}>
                 <div style={{ color: 'var(--yellow)', fontWeight: 700, fontSize: 11, letterSpacing: 1, marginBottom: 6 }}>🏪 공용 상점 (누구나 이용)</div>
