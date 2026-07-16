@@ -94,16 +94,23 @@ function inPageGame(cfg) {
     // suppression grants can't be read from the 150-capped log at the end, so
     // tally per-round (max seen per round) as we go — cap-immune.
     const suppressByRound = {}, retalByRound = {}, mnaDeclByRound = {};
+    const shortEntryByRound = {}, shortSettleByRound = {}, shortCreditByRound = {};
     const tally = (st) => {
-      const sup = {}, ret = {}, mna = {};
+      const sup = {}, ret = {}, mna = {}, shE = {}, shS = {}, shC = {};
       for (const e of st.log) {
         const m = e.message || '';
         if (m.includes('견제 (₵')) { sup[e.round] = (sup[e.round] || 0) + 1; if (m.includes('(보복)')) ret[e.round] = (ret[e.round] || 0) + 1; }
         if (m.includes('인수 선언')) mna[e.round] = (mna[e.round] || 0) + 1;
+        // v6.12 P0-4: 공매도 사용 빈도
+        if (m.includes('숏') && m.includes('진입')) shE[e.round] = (shE[e.round] || 0) + 1;
+        if (m.includes('숏 정산')) { shS[e.round] = (shS[e.round] || 0) + 1; const mm = m.match(/₵\+(\d+)/); if (mm) shC[e.round] = (shC[e.round] || 0) + parseInt(mm[1], 10); }
       }
       for (const r in sup) suppressByRound[r] = Math.max(suppressByRound[r] || 0, sup[r]);
       for (const r in ret) retalByRound[r] = Math.max(retalByRound[r] || 0, ret[r]);
       for (const r in mna) mnaDeclByRound[r] = Math.max(mnaDeclByRound[r] || 0, mna[r]);
+      for (const r in shE) shortEntryByRound[r] = Math.max(shortEntryByRound[r] || 0, shE[r]);
+      for (const r in shS) shortSettleByRound[r] = Math.max(shortSettleByRound[r] || 0, shS[r]);
+      for (const r in shC) shortCreditByRound[r] = Math.max(shortCreditByRound[r] || 0, shC[r]);
     };
 
     let guard = 0;
@@ -161,6 +168,9 @@ function inPageGame(cfg) {
       mnaAcquisitions: acqCount,               // completed hostile takeovers
       suppressGrants: sum(suppressByRound),    // 견제 grants
       suppressRetaliations: sum(retalByRound), // of which retaliation (보복)
+      shortEntries: sum(shortEntryByRound),        // v6.12 P0-4: 숏 진입 횟수
+      shortSettlements: sum(shortSettleByRound),   // 숏 정산 이벤트 수
+      shortCredit: sum(shortCreditByRound),        // 숏 정산 총 ₵
       guardHit: guard >= cfg.roundGuard,
     };
   } catch (e) { return { ok: false, error: String((e && e.stack) || e) }; }
@@ -238,12 +248,15 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const byFaction = { ghost: 0, bloc: 0, none: 0 };
   const byClass = {};
   let rounds = 0, mnaDecl = 0, mnaAcq = 0, sup = 0, retal = 0;
+  let shEntry = 0, shSettle = 0, shCredit = 0, gamesWithShort = 0;
   const allErrors = [];
   for (const g of games) {
     if (g.status === 'ok') {
       byFaction[g.winnerRole || 'none']++;
       if (g.winnerClass) byClass[g.winnerClass] = (byClass[g.winnerClass] || 0) + 1;
       rounds += g.round; mnaDecl += g.mnaDeclaresLog; mnaAcq += g.mnaAcquisitions; sup += g.suppressGrants; retal += g.suppressRetaliations;
+      shEntry += (g.shortEntries || 0); shSettle += (g.shortSettlements || 0); shCredit += (g.shortCredit || 0);
+      if ((g.shortEntries || 0) > 0) gamesWithShort++;
     }
     (g.consoleErrors || []).forEach(c => allErrors.push({ game: g.index, kind: 'console.' + c.type, text: c.text }));
     (g.pageErrors || []).forEach(t => allErrors.push({ game: g.index, kind: 'pageerror', text: t }));
@@ -263,6 +276,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       mnaDeclaresTotal: mnaDecl, mnaDeclaresPerGame: +(mnaDecl / nOk).toFixed(2),
       mnaAcquisitionsTotal: mnaAcq,
       suppressGrantsTotal: sup, suppressGrantsPerGame: +(sup / nOk).toFixed(2), suppressRetaliations: retal,
+      shortEntriesTotal: shEntry, shortEntriesPerGame: +(shEntry / nOk).toFixed(2),
+      shortSettlementsTotal: shSettle, shortCreditTotal: shCredit, shortCreditPerGame: +(shCredit / nOk).toFixed(2),
+      gamesWithShortPct: +(gamesWithShort / nOk).toFixed(3),
     },
     errors: allErrors,
     games,
@@ -289,6 +305,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log(`    M&A declares         ${o.mnaDeclaresTotal} total  (${o.mnaDeclaresPerGame}/game)`);
   console.log(`    M&A acquisitions     ${o.mnaAcquisitionsTotal} total`);
   console.log(`    suppression grants   ${o.suppressGrantsTotal} total  (${o.suppressGrantsPerGame}/game)  · retaliations ${o.suppressRetaliations}`);
+  console.log('  ---- shorts (P0-4) ----');
+  console.log(`    short entries        ${o.shortEntriesTotal} total  (${o.shortEntriesPerGame}/game)  · games w/ short ${(o.gamesWithShortPct * 100).toFixed(1)}%`);
+  console.log(`    short settlements    ${o.shortSettlementsTotal} total  · payout credit ${o.shortCreditTotal}  (${o.shortCreditPerGame}/game)`);
   console.log('  ---- errors ----');
   if (allErrors.length === 0) console.log('    (none) 🟢');
   else allErrors.slice(0, 50).forEach(e => console.log(`    g${e.game} [${e.kind}] ${e.text.slice(0, 200)}`));
