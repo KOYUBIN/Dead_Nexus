@@ -96,8 +96,11 @@ function inPageGame(cfg) {
     const suppressByRound = {}, retalByRound = {}, mnaDeclByRound = {};
     const shortEntryByRound = {}, shortSettleByRound = {}, shortCreditByRound = {};
     const woundByRound = {}, scandalByRound = {};   // v6.13.1 (P1-1): 덱 오염 발생 빈도
+    // v6.16 (P1-2): 클래스 개성 루프 — 시그니처 마일스톤 발동 빈도
+    const rigByRound = {}, memoByRound = {}, hackByRound = {}, disgByRound = {};
     const tally = (st) => {
       const sup = {}, ret = {}, mna = {}, shE = {}, shS = {}, shC = {}, wo = {}, sc = {};
+      const rg = {}, mo = {}, hk = {}, dg = {};
       for (const e of st.log) {
         const m = e.message || '';
         if (m.includes('견제 (₵')) { sup[e.round] = (sup[e.round] || 0) + 1; if (m.includes('(보복)')) ret[e.round] = (ret[e.round] || 0) + 1; }
@@ -108,6 +111,11 @@ function inPageGame(cfg) {
         // v6.13.1 (P1-1): 상처·스캔들 덱 오염 삽입
         if (m.includes('상처 카드 1장 덱 오염')) wo[e.round] = (wo[e.round] || 0) + 1;
         if (m.includes('스캔들 카드 1장 덱 오염')) sc[e.round] = (sc[e.round] || 0) + 1;
+        // v6.16 (P1-2): 시그니처 마일스톤 (euro 틱 + 카드 훅 합산 발동)
+        if (m.includes('함정 발동 ★+2')) rg[e.round] = (rg[e.round] || 0) + 1;   // RIGGER
+        if (m.includes('메모 5 도달')) mo[e.round] = (mo[e.round] || 0) + 1;      // BROKER
+        if (m.includes('해킹 노드')) hk[e.round] = (hk[e.round] || 0) + 1;        // CIPHER
+        if (m.includes('위장 시작')) dg[e.round] = (dg[e.round] || 0) + 1;        // MOLE 위장 개시
       }
       for (const r in sup) suppressByRound[r] = Math.max(suppressByRound[r] || 0, sup[r]);
       for (const r in ret) retalByRound[r] = Math.max(retalByRound[r] || 0, ret[r]);
@@ -117,6 +125,10 @@ function inPageGame(cfg) {
       for (const r in shC) shortCreditByRound[r] = Math.max(shortCreditByRound[r] || 0, shC[r]);
       for (const r in wo) woundByRound[r] = Math.max(woundByRound[r] || 0, wo[r]);
       for (const r in sc) scandalByRound[r] = Math.max(scandalByRound[r] || 0, sc[r]);
+      for (const r in rg) rigByRound[r] = Math.max(rigByRound[r] || 0, rg[r]);
+      for (const r in mo) memoByRound[r] = Math.max(memoByRound[r] || 0, mo[r]);
+      for (const r in hk) hackByRound[r] = Math.max(hackByRound[r] || 0, hk[r]);
+      for (const r in dg) disgByRound[r] = Math.max(disgByRound[r] || 0, dg[r]);
     };
 
     let guard = 0;
@@ -179,6 +191,13 @@ function inPageGame(cfg) {
       shortCredit: sum(shortCreditByRound),        // 숏 정산 총 ₵
       woundInserts: sum(woundByRound),             // v6.13.1 (P1-1): 상처 삽입 수
       scandalInserts: sum(scandalByRound),         // v6.13.1 (P1-1): 스캔들 삽입 수
+      // v6.16 (P1-2): 클래스 개성 루프 측정
+      gaugeHooks: s.meta.gaugeHooks || 0,          // 카드→게이지 훅 발동 총수 (cap-immune meta counter)
+      moleReveals: s.meta.moleReveals || 0,        // MOLE 위장 발각 총수
+      rigMilestones: sum(rigByRound),              // RIGGER 함정 발동 ★+2 (euro+훅 합산)
+      brokerMemo5: sum(memoByRound),               // BROKER 메모 5 도달
+      cipherHackNodes: sum(hackByRound),           // CIPHER 해킹 노드 활성
+      moleDisguises: sum(disgByRound),             // MOLE 위장 개시
       guardHit: guard >= cfg.roundGuard,
     };
   } catch (e) { return { ok: false, error: String((e && e.stack) || e) }; }
@@ -258,6 +277,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   let rounds = 0, mnaDecl = 0, mnaAcq = 0, sup = 0, retal = 0;
   let shEntry = 0, shSettle = 0, shCredit = 0, gamesWithShort = 0;
   let woundTot = 0, scandalTot = 0, gamesWithWound = 0, gamesWithScandal = 0;
+  let gaugeTot = 0, moleRevTot = 0, rigMs = 0, memo5 = 0, hackTot = 0, disgTot = 0;
   const allErrors = [];
   for (const g of games) {
     if (g.status === 'ok') {
@@ -269,6 +289,8 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       woundTot += (g.woundInserts || 0); scandalTot += (g.scandalInserts || 0);
       if ((g.woundInserts || 0) > 0) gamesWithWound++;
       if ((g.scandalInserts || 0) > 0) gamesWithScandal++;
+      gaugeTot += (g.gaugeHooks || 0); moleRevTot += (g.moleReveals || 0);
+      rigMs += (g.rigMilestones || 0); memo5 += (g.brokerMemo5 || 0); hackTot += (g.cipherHackNodes || 0); disgTot += (g.moleDisguises || 0);
     }
     (g.consoleErrors || []).forEach(c => allErrors.push({ game: g.index, kind: 'console.' + c.type, text: c.text }));
     (g.pageErrors || []).forEach(t => allErrors.push({ game: g.index, kind: 'pageerror', text: t }));
@@ -293,6 +315,12 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       gamesWithShortPct: +(gamesWithShort / nOk).toFixed(3),
       woundInsertsTotal: woundTot, woundInsertsPerGame: +(woundTot / nOk).toFixed(2), gamesWithWoundPct: +(gamesWithWound / nOk).toFixed(3),
       scandalInsertsTotal: scandalTot, scandalInsertsPerGame: +(scandalTot / nOk).toFixed(2), gamesWithScandalPct: +(gamesWithScandal / nOk).toFixed(3),
+      // v6.16 (P1-2): 클래스 개성 루프
+      gaugeHooksTotal: gaugeTot, gaugeHooksPerGame: +(gaugeTot / nOk).toFixed(2),
+      moleRevealsTotal: moleRevTot, moleDisguisesTotal: disgTot,
+      rigMilestonesTotal: rigMs, rigMilestonesPerGame: +(rigMs / nOk).toFixed(2),
+      brokerMemo5Total: memo5, brokerMemo5PerGame: +(memo5 / nOk).toFixed(2),
+      cipherHackNodesTotal: hackTot, cipherHackNodesPerGame: +(hackTot / nOk).toFixed(2),
     },
     errors: allErrors,
     games,
@@ -325,6 +353,12 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log('  ---- deck pollution (P1-1) ----');
   console.log(`    wound inserts        ${o.woundInsertsTotal} total  (${o.woundInsertsPerGame}/game)  · games w/ wound ${(o.gamesWithWoundPct * 100).toFixed(1)}%`);
   console.log(`    scandal inserts      ${o.scandalInsertsTotal} total  (${o.scandalInsertsPerGame}/game)  · games w/ scandal ${(o.gamesWithScandalPct * 100).toFixed(1)}%`);
+  console.log('  ---- class personality loop (P1-2) ----');
+  console.log(`    gauge hooks (card→gauge)  ${o.gaugeHooksTotal} total  (${o.gaugeHooksPerGame}/game)`);
+  console.log(`    RIGGER trap-fire ★+2      ${o.rigMilestonesTotal} total  (${o.rigMilestonesPerGame}/game)`);
+  console.log(`    BROKER memo-5 payout      ${o.brokerMemo5Total} total  (${o.brokerMemo5PerGame}/game)`);
+  console.log(`    CIPHER hack-node activ.   ${o.cipherHackNodesTotal} total  (${o.cipherHackNodesPerGame}/game)`);
+  console.log(`    MOLE disguises / reveals  ${o.moleDisguisesTotal} / ${o.moleRevealsTotal}`);
   console.log('  ---- errors ----');
   if (allErrors.length === 0) console.log('    (none) 🟢');
   else allErrors.slice(0, 50).forEach(e => console.log(`    g${e.game} [${e.kind}] ${e.text.slice(0, 200)}`));
