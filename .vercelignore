@@ -3,6 +3,12 @@
 # 헤드리스 시뮬 도구 (node 전용)
 sim-harness/
 
+# E2E 측정 도구·결과 (20MB+, 배포 불필요)
+sim-e2e/
+
+# 폐기 자료 보관소
+archive/
+
 # 설계 문서·카드 데이터 (GitHub로 충분)
 docs/
 cards/
@@ -13,11 +19,6 @@ CHANGELOG.md
 README.md
 contributing.md
 git_guide.md
-PUSH_GUIDE.md
-PUSH_v3.0_GUIDE.md
-push_v1.0.sh
-push_v3.0.sh
-v3.0-v2.4.patch
 
 # 개발 부산물
 node_modules/

@@ -69,3 +69,6 @@ coverage/
 # Local credentials — never commit
 PAT/
 .claude/
+
+# sim-e2e 측정 결과 — 리포 비대화 방지 (대표 측정치는 CHANGELOG/다이제스트에 수치로 기록)
+sim-e2e/results/

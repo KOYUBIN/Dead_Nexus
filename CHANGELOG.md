@@ -8,6 +8,15 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+(다음 릴리스 후보 항목이 여기 쌓입니다)
+
+---
+
+## 릴리스 이력 — v6.1 ~ v6.27 (전부 main 머지·프로덕션 배포 완료)
+
+아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
+(감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
+
 ### v6.27 — highlightPoints 승리 환산 + 선언 역전 재측정 + print-kit 07 현행화 (36~37차)
 - **B-06 highlightPoints 死통화 회생** (docs/22 P1-6): `EURO_HL_VICTORY_SCALE=0.3` — 달성값 가산 방식(asset_eff/rep_eff = 달성값 + round(hp×0.3), 역할 대칭 — P1-6 "유로 층 전체가 승리 문법에 편입"). 임계 −2 변형은 기각(이터레이션 표 기록). **정직성 계약**: 판정(evalPlayerVictory)·레이스 HUD(hudRaceProgress)·플레이어 카드·✨pt 배지가 전부 `euro_hlVictoryBonus()` 단일 소스. 언더독 임계 스케일과 부등식 반대편 독립 합성(순서 무관, 유닛 검증). 11×11 ghost 55.3% (n=1000) 밴드 유지
 - **B-07 종료 선언 역전 — 재측정으로 기해소 확인**: docs/23의 "역전 1.4%"는 구버전 수치 — 현행 빌드 실측 ~4~8% (n=600), v6.24~26 선언자 편향 배선이 갭3을 이미 해소. 압력 레버 2종(레이드 URGENCY·견제 확정발동) 실험 후 **no-op 기각** (95% CI 겹침 + ghost 역효과), euro_module 원복(base와 byte-identical). 선언 라이프사이클 계측(선언/역전/확정)은 run.js에 영구 편입
