@@ -1,7 +1,7 @@
 {
   "name": "deadnexus-sim-harness",
   "version": "6.0.0",
-  "description": "DEAD NEXUS 헤드리스 시뮬 + 밸런스 회귀 테스트 + narrative 생성기",
+  "description": "DEAD NEXUS 헤드리스 시뮬 + 밸런스 회귀 테스트 + narrative 생성기 (도구 버전은 프로젝트 버전과 독립 — package.json version은 갱신하지 않음)",
   "scripts": {
     "test": "node balance_test.js 200 11x11",
     "test:strict": "node balance_test.js 200 11x11 --strict",

@@ -247,7 +247,7 @@
 
 ### No-op·편차
 - **원전 "공매도 활성화"는 부분 No-op**: 공매도는 v6.13부터 **base 게임 상시 기능**(전 시나리오, S01도 판의 52.3%에서 사용). S06 고유는 "저가(≤5) 정산 2배"뿐. 원전이 S06 전용으로 서술한 것은 정정.
-- **⚠ UI 배너 stale(문서-구현 불일치)**: 웹 UI의 S06 안내 배너(index.html ~라인 6591)는 "부분 구현: 첫2R 거래동결·뉴스±50%·재건왕/청산자 타이틀 미배선"으로 표기하나, 첫 2R 거래동결·뉴스±50%는 **v6.22에 이미 배선됨**. 배너 텍스트만 stale(코드 실체는 배선 완료). index.html은 본 개정 범위 밖이라 미수정 — 별도 정정 필요.
+- ~~UI 배너 stale~~ **(v6.27 정정)**: 이전 판이 지적한 S06 안내 배너 "미배선" 오표기는 v6.26에서 이미 정정됨(현재 배너는 "재건왕/청산자 타이틀 미배선"만 표기 — 코드·문서 일치). 아래 발견요약 참조.
 
 ### 언더독 스케일링
 - **제외**. `underdogRelief: false` (v6.25). 설계 편향(경제 붕괴) → 개성 보존.
@@ -367,46 +367,45 @@
 
 ## 검증 — 수치·상태 주장 소스 대조표
 
-문서 내 모든 수치·상태 주장의 소스. `L####` = `simulator/v0.5/index.html` 라인. 창작 없음.
+문서 내 모든 수치·상태 주장의 소스. `simulator/v0.5/index.html`의 함수/상수/객체 필드명 앵커로 표기(라인 번호는 편집마다 어긋나므로 미사용 — v6.27 기준 재검증). 창작 없음.
 
 | 주장 | 소스 |
 |---|---|
 | 전 시나리오 v6.21 개방 | 커밋 a85b25d "S04 해금 — 전 시나리오 개방" |
-| S01 startHeat 5 / underdog 적용(유일) | L1662; L1587(키 미지정→true) |
+| S01 startHeat 5 / underdog 적용(유일) | `SCENARIOS.S01.startHeat`; `scenarioRule(state,'underdogRelief',true)` 기본값 게이트(`euro_underdogGoalScale` 상단) |
 | S01 실측 47.0%·8.07R·자산53%·공매도52.3%·M&A0.26 | docs/23 §3 표 |
-| S02 allBloc·heat3·₵+5·4구역·npcFillTo5·쿨다운제거 | L1669~1676 |
-| S02 blocAssetBonus 175·mnaBotProb 1.0·mnaFloat3·mnaDesignateCredit8·mnaSerial | L1677~1681 |
+| S02 allBloc·heat3·₵+5·4구역·npcFillTo5·쿨다운제거 | `SCENARIOS.S02` 필드(`allBloc`/`startHeat`/`startCredit`/`extraSupport`/`npcFillTo`/`mnaNoCooldown`) |
+| S02 blocAssetBonus 175·mnaBotProb 1.0·mnaFloat3·mnaDesignateCredit8·mnaSerial | `SCENARIOS.S02` 필드(`blocAssetBonus`/`mnaBotProb`/`mnaFloat`/`mnaDesignateCredit`/`mnaSerial`) |
 | S02 실측 10.24R·자산82%·M&A12%·선언1.52·인수32/50 | docs/23 §3·§1 표 |
-| S02 M&A 승리 0→14.7% (결정 레버 mnaBotProb) | CHANGELOG v6.19; L1681 주석 |
-| S02 주식 무제한 거래 = No-op(엔진에 per-round cap 부재) | L3207 BUY_STOCK(캡 없음) |
-| S03 heat4·주가12·렙+3·₵+2·인플+2·렙25/레이드3·보상×1.5·수배−1·방어−1 | L1689~1701 |
-| S03 blocAssetBonus 80 (ghost 28%→66%) | L1705; CHANGELOG v6.20 |
+| S02 M&A 승리 0→14.7% (결정 레버 mnaBotProb) | CHANGELOG v6.19; `SCENARIOS.S02.mnaBotProb` 주석 |
+| S02 주식 무제한 거래 = No-op(엔진에 per-round cap 부재) | `case 'BUY_STOCK'` 리듀서(캡 없음) |
+| S03 heat4·주가12·렙+3·₵+2·인플+2·렙25/레이드3·보상×1.5·수배−1·방어−1 | `SCENARIOS.S03` 필드(`startHeat`/`startStock`/`ghostRepBonus`/`ghostCreditBonus`/`blocInfluenceBonus`/`ghostRepBattleOverride`/`ghostRaidsOverride`/`raidRewardMult`/`raidWantedDelta`/`npcDefenseMod`) |
+| S03 blocAssetBonus 80 (ghost 28%→66%) | `SCENARIOS.S03.blocAssetBonus`; CHANGELOG v6.20 |
 | S03 실측 ghost68%·7.38R·렙배틀68%·공매도100% | docs/23 §3 |
-| S04 heat7·무기−2·경찰3(F3/C6/I6/F9)·구금5·patrolGuard·heat+2 | L1718~1723 |
-| S04 POLICE HP8/ATK4/격파렙+2, CAPTIVE 5/개별+1/전원+10 | L1870~1881 |
+| S04 heat7·무기−2·경찰3(F3/C6/I6/F9)·구금5·patrolGuard·heat+2 | `SCENARIOS.S04` 필드(`startHeat`/`startWeaponsAll`/`policeStart`/`captiveStart`/`patrolGuard`/`raidHeatBonus`) |
+| S04 POLICE HP8/ATK4/격파렙+2, CAPTIVE 5/개별+1/전원+10 | `POLICE_HP`/`POLICE_ATK`/`POLICE_KILL_REP`/`CAPTIVE_COUNT`/`CAPTIVE_RESCUE_REP`/`CAPTIVE_ALL_BONUS_REP` 상수 |
 | S04 실측 ghost26%·자산74%·조기종료58%·구출0.26/판·전원구출0% | docs/23 §3·§3.1 |
-| S04 레거시 챕터3 미배선(부분 구현) | L1712·1724 주석; CHANGELOG v6.20 |
+| S04 레거시 챕터3 미배선(부분 구현) | `SCENARIOS.S04` No-op 주석; CHANGELOG v6.20 |
 | S04 v6.23 n=350 구출 38.9%·v6.21 ghost43% (측정 편차) | 커밋 fad79ef·a85b25d |
-| S05 주가13·₵+5·roundLimit8·자산+25·구역수입+1 | L1732~1737 |
-| S05 금융가×2/변동폭±4/뉴스2장/블랙마켓+2/M&A방어+3 No-op | L1738~1739 주석 |
+| S05 주가13·₵+5·roundLimit8·자산+25·구역수입+1 | `SCENARIOS.S05` 필드(`startStock`/`startCreditAll`/`roundLimit`/`blocAssetBonus`/`zoneIncomeBonus`) |
+| S05 금융가×2/변동폭±4/뉴스2장/블랙마켓+2/M&A방어+3 No-op | `SCENARIOS.S05` No-op 주석 |
 | S05 실측 ghost38%·6.88R·시간종료28%; CHANGELOG "51/49" 편차 | docs/23 §3·§3 note |
-| S06 heat6·주가5·₵−3·인플−1·스캔들선삽입·저가정산2배 | L1747~1752 |
-| S06 blocAssetBonus30·뉴스±50%·거래동결2R·회복배당2배 | L1756~1763 |
-| S06 재건왕/청산자 타이틀 No-op | L1764~1765 주석 |
+| S06 heat6·주가5·₵−3·인플−1·스캔들선삽입·저가정산2배 | `SCENARIOS.S06` 필드(`startHeat`/`startStock`/`startCreditAll`/`startInfluenceAll`/`startScandalEach`/`shortLowPriceMult`) |
+| S06 blocAssetBonus30·뉴스±50%·거래동결2R·회복배당2배 | `SCENARIOS.S06` 필드(`blocAssetBonus`/`newsStockUpMult`/`newsStockDownMult`/`tradeFreezeRounds`/`divRecoveryMult`/`divRecoveryThresh`) |
+| S06 재건왕/청산자 타이틀 No-op | `SCENARIOS.S06` No-op 주석 |
 | S06 실측 ghost54%·8.30R·자산/렙46:46; v6.22 33→53% 회복 | docs/23 §3; 커밋 16e2714 |
-| S06 UI 배너 stale(거래동결·뉴스 "미배선" 오표기) | L6591 vs L1759~1761 |
-| 종료 선언 라운드(선언→유예1R→확정, 5R가드, M&A즉시확정) | L6216~6242·6250; CHANGELOG v6.12 |
-| roundLimit 초과 시 checkVictoryByPoints 자동 승리 | L3703~3705·6200 |
-| 공매도 base 상시(SHORT_CONFIG ₵4·상한2/3·₵2/pt) | L2605~2612 |
+| 종료 선언 라운드(선언→유예1R→확정, 5R가드, M&A즉시확정) | `checkVictoryByPoints`/`state.meta.victoryDeclaration` 처리부; CHANGELOG v6.12 |
+| roundLimit 초과 시 checkVictoryByPoints 자동 승리 | `checkVictoryByPoints` 함수 |
+| 공매도 base 상시(SHORT_CONFIG ₵4·상한2/3·₵2/pt) | `SHORT_CONFIG` 상수 |
 | 덱 오염(상처/스캔들 상한2) | CHANGELOG v6.14 |
-| 언더독 스케일링 게이팅(S01만·S02~S06 false) | L1583~1603·1671·1692·1715·1729·1744 |
-| S07/S08 시나리오 부재(업적 ID임) | L925 I-S07; docs/16; docs/19 narrative 라벨 |
+| 언더독 스케일링 게이팅(S01만·S02~S06 false) | `euro_underdogGoalScale` 함수 + 각 `SCENARIOS.S0N.underdogRelief` 필드 |
+| S07/S08 시나리오 부재(업적 ID임) | `ACHIEVEMENTS_IN` 배열 `id:'I-S07'`; docs/16; docs/19 narrative 라벨 |
 
 ### 발견한 문서↔구현 불일치 (요약)
-1. **CHANGELOG [Unreleased]가 v6.20까지만 기록** — v6.21~v6.25는 커밋만 존재하고 CHANGELOG 항목 없음(stale). *본 개정은 CHANGELOG 수정 금지 범위라 미반영, 보고만.*
-2. **S06 UI 배너 stale** — 거래동결·뉴스±50%가 v6.22 배선됐으나 배너는 "미배선"으로 표기. index.html 범위 밖이라 미수정.
-3. **CHANGELOG vs 실측 방향 편차(추정)** — S05 "51/49" vs ghost 38%, S06 v6.20 "33/67" vs v6.22 이후 54%. n=50 노이즈·구성 랜덤으로 추정.
-4. **원전 서술 정정** — S02 "5주 제한 → 무제한"(No-op), S06 "공매도 활성화"(전 시나리오 base 기능), 원전 "즉시 승리"(→종료 선언 유예).
+1. **CHANGELOG vs 실측 방향 편차(추정)** — S05 "51/49" vs ghost 38%, S06 v6.20 "33/67" vs v6.22 이후 54%. n=50 노이즈·구성 랜덤으로 추정.
+2. **원전 서술 정정** — S02 "5주 제한 → 무제한"(No-op), S06 "공매도 활성화"(전 시나리오 base 기능), 원전 "즉시 승리"(→종료 선언 유예).
+
+> **v6.27 정정**: 이전 판(v6.25 현행화)이 지적했던 "CHANGELOG가 v6.20까지만 기록"·"S06 UI 배너 stale(거래동결·뉴스±50% 미배선 오표기)" 2건은 재검증 결과 이미 해소된 상태다 — CHANGELOG는 v6.27까지 전 버전 기록, S06 배너는 v6.26에서 "재건왕/청산자 타이틀 미배선"으로 정정 완료(`index.html`의 S06 시나리오 안내 문구, 위 표 "S06 재건왕/청산자 타이틀 No-op" 행 참조). 두 항목은 이번 개정에서 삭제한다.
 
 ---
 

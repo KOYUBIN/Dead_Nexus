@@ -1,0 +1,390 @@
+# 25. RPG 모드 — DEAD NEXUS: ASH & SIGNAL
+
+**문서 ID**: `docs/25-rpg-mode.md`
+**버전**: v0.1 (비전 초안 — 수직 슬라이스 확정 전)
+**최종 수정**: 2026-07-17
+**아키텍처 코드네임**: GHOSTGRID (hybrid-scene)
+**관련 문서**: `docs/01-worldbuilding.md`, `docs/03-factions-blocs.md`, `docs/04-characters-ghosts.md`, `docs/06-attribute-system.md`, `docs/07-combat-stats.md`, `docs/09-tech-tree.md`, `docs/12-legacy-campaign.md`, `docs/22-game-identity.md`, `cards/legacy/chapter-01-first-blood.md`, `simulator/v0.5/lore_module.js`
+
+> **표기 규약 (창작 무단 혼입 금지 원칙 승계)**
+> 모든 룰·수치에 계보 태그를 상시 부착한다.
+> - **[계승 docs/NN §M]** — 기존 리포의 수치/규칙을 그대로 이식.
+> - **[각색 docs/NN §M]** — 계승 개념을 턴제 RPG로 변형(원전 조항 명시).
+> - **[신규]** — 이 트랙에서 신설(원전에 대응물 없음).
+> 명대사·슬로건은 **원문 고정**, 산문만 톤 재구성, **외부 IP 무혼입**. 이 태그는 문서뿐 아니라 `data/*` 파일 주석에도 계보 표로 유지한다.
+
+---
+
+## 1. 비전
+
+DEAD NEXUS는 이제 **세 트랙**으로 전개된다. 세 트랙은 **세계관·인물·lore만 공유**하고 룰은 각자 독립한다.
+
+1. **전략 시뮬레이션** — `simulator/v0.5` (기존, 웹 단일 페이지 유로게임식 카드 전략). *이 문서는 시뮬 트랙을 일절 수정하지 않는다.*
+2. **레거시 보드게임** — `cards/legacy/` 챕터 1~8 (물리 봉투 캠페인).
+3. **RPG 모드 (본 문서, 신설)** — 별도 모드. BG3에서 영감받되, 현실 스코프 기준점은 **섀도우런 리턴즈 / 드래곤폴**(2D 턴제 전술 + 내러티브 + 허브 루프)이다.
+
+> **유저 결정 인용**: "기존 웹 전략 시뮬(simulator/v0.5)과 별도의 RPG 모드를 신설한다. BG3에서 영감, 현실 스코프 기준점은 섀도우런 리턴즈/드래곤폴. 세계관·인물·lore는 공유하되 룰은 독립 — 단, 기존 룰에서 계승하는 것과 새로 설계하는 것을 문서에 명시적으로 구분한다(창작 무단 혼입 금지)."
+
+RPG 모드의 **재미의 심장(MFU, Minimum Fun Unit)** 은 다음 한 줄이다:
+
+> **"전투 빌드와 사회/해킹 빌드가 같은 문제를 다르게 푼다."**
+> 대화의 스탯 게이트 선택 하나가 이어질 전투를 실제로 제거하거나 축소한다 → 캐릭터 → 대화 → 전투 → 캠페인 네 시스템이 **단일 결정으로 서로를 필요로 함**을 증명한다. 이것이 섀도우런/BG3식 정체성이며, 수직 슬라이스가 반드시 담아야 할 비트다.
+
+**핵심 제약** (전 시스템 설계에 우선한다):
+- 브라우저 단일 페이지, **외부 CDN 의존 0** (오프라인 / `file://` 더블클릭 호환).
+- **모바일 세로 화면 필수** (유저가 모바일 플레이어). 터치 타깃 ≥ 44px, 가로 스크롤 금지.
+- Vercel 정적 배포, `dead-nexus.vercel.app/rpg/` 하위 경로.
+- `simulator/v0.5`의 어떤 파일도 수정하지 않는 **신규 디렉토리 트랙** `rpg/`.
+
+---
+
+## 2. 확정 아키텍처
+
+### 2.1 승자 — 시안 3 (GHOSTGRID / hybrid-scene)
+
+**심사 3인 만장일치**로 시안 3을 척추로 채택한다.
+
+- **재미 밀도 심사** → 시안 3: 사각 그리드가 모바일 세로 터치를 근원적으로 해결(균일 ≥44px, 역투영 없음), 챕터 1 원전(2.7TB·"블록은 불사신이 아니다"·영웅/유령 선택)을 가장 충실히 매핑해 15분 안에 "내 선택이 남는다"는 payoff 비트를 만든다.
+- **지속 가능성 심사** → 시안 3: 1인+AI가 챕터 8까지 영구 유지할 **비(非)콘텐츠 엔진 코드량이 최소**. 아이소 투영·clip-path·A*-on-diamond·rAF 렌더루프·트윈 상태기계를 전부 제거하고, 남는 것은 `CSS Grid + BFS`뿐. 챕터 추가 = 데이터 파일 추가.
+- **기술 리스크 심사** → 시안 3: 모바일 성능 / `file://`+Vercel 이중 호환 / 오프라인 실패 모드 세 축 모두에서 실패 표면이 가장 작다. 캔버스 rAF·아이소 수학·이중 빌드 산출물이 애초에 존재하지 않는다.
+
+**확정 스택**:
+- **React 18 + Babel Standalone**(브라우저 내 JSX 트랜스파일). 시뮬과 동일 노선 → 학습비용 0, **빌드 스텝 0**.
+- **전투 = 순수 DOM CSS Grid** 탑다운 사각 격자 (Into the Breach식 명료함). **슬라이스에 캔버스 0.**
+- 대화·허브도 순수 DOM/React. 상태 = 단일 게임 상태 트리 + `useReducer`(씬 라우터 hub/dialogue/combat). 외부 상태 라이브러리 0.
+- **`fetch`/XHR 전면 금지** — 모든 콘텐츠 데이터는 `window` 전역 JS 모듈로 `<script>` 로드(`file://` XHR 차단 회피). JSON 파일 로드 금지.
+- 영속: `localStorage` JSON 블롭 + **세이브 문자열 export/import(복사·붙여넣기·다운로드)** 안전판을 **슬라이스부터 필수**.
+- 모든 에셋 경로 **상대(`./`)**, 절대(`/`) 금지 → `/rpg/` 서브패스와 `file://` 동시 성립.
+
+### 2.2 이식 요소 (grafts) 와 선정 근거
+
+세 시안의 강점을 시안 3 척추 위에 이식한다. **캔버스 미니엔진과 dev/deploy 이중 빌드 산출물은 이식 금지**(빌드리스 원칙 파괴·코드 경로 이중화).
+
+| # | 출처 | 이식 내용 | 근거 |
+|---|---|---|---|
+| G1 | 시안 1·2 | **투영 레이어를 교체 가능한 순수 함수 모듈로 격리** (`projection.js`). `combat/grid/ai`는 사각 논리좌표만 다루고, 좌표→스크린 매핑만 이 seam에 격리. 슬라이스는 사각 탑다운으로 출하, 안정화 후 **룰 무변경으로** 아이소 뷰를 이 seam에서만 교체. | 유일한 감점(섀도우런/BG3의 아이소 룩 이탈)을 기술 리스크 없이 로드맵에서 복구. 세 시안 모두 논리 그리드는 사각이므로 아이소는 '스크린 투영 스킨'일 뿐. |
+| G2 | 시안 2 | **DOM-free 엔진 규율 명문화**: `combat/resolve.js`·`combat/ai.js`·`grid.js`에 React/DOM import **0**(린트 항목화). 순수 리듀서/함수, 단일 진실원천 = reducer. | 챕터 8을 얹을 때 챕터 1이 깨지지 않게 하는 회귀 방어 + 유닛테스트 가능. G1(뷰 교체)의 전제. |
+| G3 | 시안 2 | **lore = read-only 스냅샷 벤더링** (`rpg/lore/lore_module.snapshot.js` 복제) + 어댑터 전 필드 null 가드. 라이브 크로스디렉토리 참조는 **폴백으로만** 문서화. | "다른 에이전트가 시뮬 수정 중" 명시 제약 + 실측 정정(§4.3): `window.BLOC_IDENTITY`/`GHOST_IDENTITY` 직접 읽기는 **undefined 버그**. |
+| G4 | 시안 1 | **JSX 트랜스파일 표면을 `ui/scene`으로만 한정**, `data/`·`combat/`·`state/`·`projection`은 순수 JS. | 중저사양 폰 Babel 런타임 작업량 축소. (라이브 시뮬 ~543KB 인라인 Babel이 이미 유저 모바일에서 구동 → 사전 트랜스파일 불필요, 후속 최적화로만 문서화.) |
+| G5 | 시안 2·3 (시안 1의 d6 배제) | **명중/피해 결정론화** (주사위 0). | `file://`·서버 0에서 세이브/로드 재현성 자명. 시안 1의 "RNG 시드를 상태에 저장" 복잡성 제거. 세이브스캠 방지 + Into the Breach식 텔레그래프와 정합. |
+| G6 | 시안 2 | **4-액션 CIPHER 히어로 킷** (해킹샷 + GLITCH + DATA SPIKE + 궁극 ZERO TRACE) + abilities 데이터 드리븐 포맷. | 시안 3 슬라이스 킷(시그니처 1개)이 얇아 15분 전투가 얇음. "AP를 어디에 쓸까" 선택 밀도 확보. |
+| G7 | 시안 2 | **전투 juice를 DOM/CSS로**: 부유 데미지 텍스트·피격 플래시·이동 트윈(CSS transform). | 캔버스 없이 저비용으로 "BG3 체감" 근접. |
+| G8 | 합성 (셋 다 누락) | **적 의도 텔레그래프** (Into the Breach 심장): 다음 턴 적 이동/타격 타일을 색 하이라이트. | 결정론+예고 = 퍼즐형 재미. DOM 타일 색만 바꾸면 되는 극저비용. 결정론 전투의 단조 위험을 상쇄. |
+| G9 | 시안 1 | **적 AI 종료성 보장**: 도달 타일 유한집합 위 탐색 + no-path 가드. | 교착/무한루프 방지. |
+| G10 | 시안 1 | **raidThreshold 이중 용도**: (1) 전투 오브젝티브/엄폐 threshold + (2) 미션 위협/노출 게이지(아크 페이싱). | 계승 공식 하나가 두 몫 = "재사용이 유지보수를 줄임"의 정확한 사례. |
+| G11 | 시안 1·3 공통 | **heal 로더 + `window` 전역 + `typeof` 가드** 로딩 패턴 복제, **version 필드 세이브**, 콘텐츠 확장 아키텍처(`systems`/`data`/`ui` 경계 순도). | 시뮬 복원력 패턴 계승 + 첫 배포 복원력. |
+
+---
+
+## 3. 전투 시스템
+
+전투는 **순수 DOM CSS Grid 탑다운 사각 격자**다. 6열 × 8행(모바일 세로 최적), 타일 = `min(15vw, 56px)` 고정(줌 없음), 8방 이동, `CSS Grid + BFS`. 캔버스·아이소 수학 0.
+
+### 3.1 계승 vs 신규 계보 표 (원전 조항 인용)
+
+| 요소 | 분류 | 원전 조항 | RPG 적용 |
+|---|---|---|---|
+| 5스탯 HP/ATK/DEF/SPD/HACK | **[계승]** | docs/07 §1 | 기호·의미 그대로 (❤⚔🛡⚡💻) |
+| 클래스 기본 스탯 6종 | **[계승]** | docs/07 §2 | CIPHER 6/2/1/4/5, BLADE 10/5/3/3/1, RIGGER 7/3/4/2/3, BROKER 6/2/2/5/2, DRIFTER 9/4/2/4/1, MOLE 7/2/3/3/3 |
+| 블록 임원 베이스 스탯 | **[계승]** | docs/07 §2 (Bloc 임원) | 적 베이스: VANTA 7/2/2/3/5, IRONWALL 10/5/4/3/1, HELIX 8/3/3/2/3, AXIOM 6/2/2/4/5, CARBON 9/3/4/2/2 |
+| 스탯 합계 17~22 밸런스 | **[계승]** | docs/07 §11 | 준수 |
+| 이니셔티브 = SPD 내림차순 | **[각색]** | docs/07 §3 STEP B | 원판은 카드/TL 이니셔티브 → SPD 스탯 하나로 대체 |
+| BLADE 동점 자동 선공 | **[계승]** | docs/07 §3 STEP B(3항) | 패시브 그대로 |
+| HACK가 ATK를 대체 (메시전투) | **[계승]** | docs/07 §5.2 | CIPHER 해킹샷은 HACK를 공격치로 사용 (물리 ATK2는 약함이 정체성) |
+| 베일 = HACK 돌파 | **[계승]** | docs/07 §4 | 오브젝티브/ICE 노드는 HACK로만 파괴 |
+| 침투/레이드 공식 `(7−threshold+atk)/6` | **[각색]** | docs/07 §변경요약 | 그리드에서 **누적 차감형**으로 결정론 각색(§3.5) |
+| 상처/BLEEDING (HP 50%↓) | **[계승]** | docs/07 §7 | 턴당 −1 상태로 축소 이식 |
+| Long Rest 완전회복 + 상처 제거 | **[계승]** | docs/07 §6 | 허브 귀환 시 |
+| 공권력(Heat) +2 (공개 전투) | **[계승]** | docs/07 §8 | 캠페인 위협 게이지에 반영 |
+| 6+1 속성 색·기호 | **[계승]** | docs/06 §1 | MESH◈M #185FA5 · IRON◈I #888780 · VOLT◈V #854F0B · SHADE◈S #534AB7 · BIO◈B #1D9E75 · ASH◈A #C04828 · GRID◇ #888888 |
+| 6속성 상성 | **[계승]** | docs/06 §6 | MESH▶SHADE, IRON▶ASH, VOLT▶BIO, SHADE▶MESH, ASH▶VOLT, BIO▶IRON |
+| 클래스 주/부 속성 | **[계승]** | docs/06 §9 | CIPHER 주◈M 부◈S 등 |
+| 시그널 다이 4상태 | **[계승]** | docs/06 §7 | 🔵UP/🔴DOWN/⚡SURGE/⚫BLACKOUT — 슬라이스는 UP/SURGE 2종만 |
+| 스탯 상한 HP = 기본 ×2 | **[계승]** | docs/07 §10 | 플레이어 유효 HP = 기본 ×2 (CIPHER 6→12 = §10 문서 상한값과 **정합**) |
+| **AP 단일 풀** (기본 2, karma로 3) | **[신규]** | (원전에 AP 없음) | 이동·공격·시그니처 전부 AP 소모. 리필 매 턴 |
+| **이동 = MOV칸** (SPD 파생) | **[신규 파생]** | — | SPD≤2→2 / SPD3→3 / SPD≥4→4칸 (1 AP = MOV칸). SPD가 이니셔티브+이동 이중 가치 |
+| **결정론 피해식** `max(0, ATK − DEF − 엄폐)` | **[각색]** | docs/07 §3 STEP E | 양측 d6 굴림 제거(§변경요약의 d6 판정 → 결정론화). 0 = "튕김"(빗맞음) |
+| **엄폐 플랫 보정** (경 DEF+1 / 완전 DEF+2) | **[신규]** | — | SR식 플랫 엄폐. 각도·파괴·높이 계산 없음. 타일 색으로 안전/위험만 표기 |
+| **쿨다운 시그니처** `{ap, cooldown, range, effect}` | **[각색]** | docs/04 카드명 · docs/07 §5.2 | 카드명 계승, 수치 신규. 슬롯/레스트 없이 쿨다운만 |
+| **적 의도 텔레그래프** | **[신규]** | — | Into the Breach 영감. 다음 턴 적 이동/타격 타일 하이라이트 |
+| **위협/노출 게이지** | **[각색]** | docs/07 §변경요약(raidThreshold) | 엄폐 없는 LoS 노출 시 threat+1 → 임계 시 경보/증원 |
+
+### 3.2 액션 이코노미 [신규, 섀도우런 계승 노선]
+
+- **AP 단일 풀**: 유닛당 턴 시작 2 AP(karma 성장으로 3). 매 턴 리필. **리액션/오버워치/기회공격/보너스액션/수직성 전부 없음** → 적 턴은 CSS 애니메이션만 순차 재생, 중간 플레이어 프롬프트 없음(1인 개발 최대 절약).
+- **이동**: 1 AP = MOV칸 (위 파생표). 8방 BFS, 액터/벽 차단.
+- **기본공격**: 1 AP. 근접 사거리 1 / 원거리 무기 사거리(예 4~5).
+- **시그니처**: 1~2 AP + 쿨다운 N턴.
+
+### 3.3 명중/피해 판정 [G5 결정론]
+
+- **주사위 없음**. 피해 = `max(0, 유효ATK − (DEF + 엄폐보정) ± 상성보정)`. 결과 0 = **튕김**(빗맞음, HP 무변동).
+- **유효ATK**: 물리 무기는 ATK, 해킹 무기/시그니처는 **HACK**를 공격치로 사용 **[계승 docs/07 §5.2]**. → CIPHER는 해킹샷으로 HACK5를 때린다.
+- **속성 상성** **[각색 docs/06 §6]**: 공격 속성이 방어 속성을 상성 → 피해 **+1**. 역상성 → **−1**. (슬라이스는 ±1로 단순화; 풀 매트릭스 체감은 1~2건만 노출.)
+- **고HP 유지**로 "한 방 운"보다 **누적 배치 승부** — 결정론+텔레그래프가 퍼즐형 텍스처를 만든다.
+
+### 3.4 엄폐 [신규, SR식 플랫]
+
+- 엄폐물에 직교 인접 + 공격자–대상 직선상 엄폐물 존재 → **경엄폐 DEF+1 / 완전엄폐 DEF+2**. 각도/파괴/높이 계산 없음.
+- 모바일: 손가락으로 짚은 타일이 **안전/위험 색만** 바뀜.
+
+### 3.5 오브젝티브 타일 / ICE·베일 노드 [각색 계승]
+
+- **목표 타일**(VANTA 서버 랙 등)에 방어도 `threshold` 부여. 인접 유닛이 HACK/ATK 액션으로 threshold **누적 차감**. 베일 레벨이 threshold 가산(최대 +3). `threshold 0 = 미션 목표 달성`(전투 승패와 **독립**).
+- 원판 확률식 `(7 − threshold + atk)/6` **[계승 docs/07 §변경요약]** → 그리드에서 **결정론 누적 차감형**으로 각색. 튜토리얼 threshold를 낮게 튜닝해 CIPHER HACK5가 규칙을 배우게 함.
+- **ICE / 베일 노드** **[각색 docs/07 §5.2]**: 정적·물리 무효·**HACK로만 파괴**. HACK 빌드 vs 물리 빌드 정체성을 극화. CIPHER는 MESH▶SHADE 상성으로 +1. (슬라이스는 실패 백래시 −2 생략, 후속.)
+
+### 3.6 CIPHER 히어로 킷 [G6, 데이터 드리븐 `abilities`]
+
+| 액션 | 유형 | AP / 쿨다운 | 효과 | 계보 |
+|---|---|---|---|---|
+| **해킹샷** | RANGED, MESH, range5 | 1 AP / cd0 | `dmg = max(0, HACK − DEF − 엄폐)` | 기본공격 **[각색 §5.2]** |
+| **GLITCH** | 디버프 | 1 AP / cd3 | 대상 DEF−2 & 엄폐 무효 2턴 | **[각색]** docs/07 §3 STEP D "MESH 풀 2↑ → 적 DEF−1"을 시그니처로 강화 |
+| **DATA SPIKE** | RANGED, MESH, range5 | 2 AP / cd4 | `dmg = (HACK+2) − DEF`; 대상 기계(IRON)면 +2 관통 & 1턴 STUN | **[각색]** docs/04 카드명 + §5.2 |
+| **ZERO TRACE** (궁극) | 미션당 1회 | 2 AP | 2턴 은신(피격 불가) + 해제 후 첫 공격 크리 ×2 | **[각색]** LOSS 카드 계보 |
+| **BACKDOOR** (First Blood 보상 해금) | 지속 | — | 지속 해킹 유지 | **[계승]** chapter-01 봉투 A 해금 카드 |
+
+### 3.7 적 AI 2~3종 [신규 스탯, VANTA 무대 계승 · G9 종료성]
+
+매 적 턴 = 순수 유틸리티 트리(`ai.js`, DOM import 0):
+1. 이번 턴 처치 가능 → 공격.
+2. 비엄폐 + 사거리 내 적 → LoS/사거리 유지되는 최근접 엄폐 타일로 이동 후 사격.
+3. 그 외 → 최근접 플레이어로 BFS 전진, AP 남으면 사격.
+**종료성 보장** **[G9]**: 도달 타일 유한집합 위 탐색 + no-path 가드(무한루프 방지).
+
+| 적 | 스탯(HP/ATK/DEF/SPD/HACK) | 속성 | AI | 역할 |
+|---|---|---|---|---|
+| **VANTA Sentry Drone** 🛸 | 5/3/1/4/— (또는 8/3/2/3) | IRON | 엄폐 사수(**슬라이스 필수 1종**) | 기계 → DATA SPIKE 보너스 대상 |
+| **VANTA Corp Security** 🔫 | 12/4/3/3/— | VOLT | 전진 후 사격 | **★대화에서 회피 가능한 전투**(사회=전투 우회) |
+| **ICE Node** ▦ (선택) | HP=베일레벨 / 물리무효 / HACK만 | SHADE | 정적 오브젝티브 수호 | HACK vs 물리 대비 시연 |
+
+### 3.8 승패/우회 [계승 SR 심장]
+
+- 아군 HP 0 = 다운 → 미션 실패/재시도. 적 전멸 **또는** 오브젝티브 달성 = 승리.
+- **사회 게이트 충족 시 해당 전투 자동 스킵**(대체 보상/불리 포지션). 이 한 결정이 전투빌드/사회빌드가 같은 문제를 다르게 푸는 장르 정체성(§1 MFU).
+
+---
+
+## 4. 대화·내러티브 시스템
+
+**순수 React/DOM 오버레이, 캔버스 0.** 세계관 원전이 이미 풍부해 **재미 대비 구현비가 가장 좋은 시스템** — 최단 경로 재미가 여기에 있다.
+
+### 4.1 레이아웃 (모바일 세로 최적)
+
+- 상단 좌/우 초상 슬롯 1개 + 발화자 이름 라벨(`loreTag`) → 중앙 본문 텍스트 박스(스크롤) → 하단 **세로 선택지 리스트**(엄지 존, 버튼 ≥44px).
+- 초상(슬라이스): 아트 에셋 0 — 팔레트 기반 CSS "글리치 카드"(모노그램/이모지 🎭 고스트 · 🎙 블록 수장 + 스캔라인·플리커). CIPHER = 시안 커서 깜박임 모티프. 후속에 실제 초상 교체.
+- **타자기 텍스트**(연출 핵심): char 단위 노출, 탭하면 즉시 완성. `prefers-reduced-motion` 존중.
+
+### 4.2 선택지 = 결정론 스탯 게이트 [각색 SR 노선]
+
+- **주사위 굴림 없음**(세이브스캠·굴림 애니 불필요). 선택지에 `[HACK 4]`·`[VANTA 태그]`·`[BLADE·근접]` 프리픽스 노출. 미충족 → 회색 비활성(요구치 표시) 또는 flag 기반은 숨김 → **"빌드 축을 광고"**(보이지만 못 고름 = 다음 회차 동기).
+- 선택 시 **flag 세팅** → 이후 노드가 조건 분기. 비가역 분기 = flag write + `missionsDone` 영속.
+
+**노드 스키마** (`data/dialogue/*.js`, 인라인 JS 전역):
+```
+node = { id, speaker, portrait, text, choices:[{
+    label,                          // "[HACK 4] 문 잠금장치를 태운다"
+    gate?: { attr, min } | { tag } | { flag },
+    show: "gray" | "hide",
+    setFlags?: { skipGuardFight: true },
+    effect?: { karma:+1, heat:+1, startCombat | skipCombat | endDialogue },
+    goto
+}], onEnter?, checkpoint? }
+```
+
+### 4.3 lore 인물 재사용 매핑 [그대로 계승 / 각색]
+
+lore는 **읽기 전용 스냅샷** `rpg/lore/lore_module.snapshot.js`(복제)를 `lore/lore-adapter.js`(=`window.RPG_LORE`)가 래핑하는 **단일 seam**을 경유한다. RPG 코드는 시뮬 전역을 직접 접촉하지 않는다.
+
+> **★실측 정정 (가장 중요한 정확성 수정, G3)**: `simulator/v0.5/lore_module.js`가 `window`에 노출하는 전역은 **`LORE_GHOSTS` · `LORE_BLOCS` · `loreTag` · `loreQuote` · `loreEpilogue` · `loreRouteFromReason` 6개뿐**이다. `BLOC_IDENTITY` · `GHOST_IDENTITY`(정체성 산문)는 IIFE 내부 `var`라 **`window`로 도달 불가** — 오직 `loreEpilogue()`가 반환하는 `lines` 안에 임베드되어서만 접근된다. 따라서 어댑터는 (a) **미노출 전역 존재를 가정 금지**(전 필드 null 가드), (b) 정체성 산문이 필요하면 **스냅샷 복제본에서 재노출**한다. 라이브 크로스디렉토리 참조(`<script src="../simulator/...">`)는 폴백으로만 문서화하되, "다른 에이전트가 시뮬 수정 중"이라는 제약과 이 미노출 사실 때문에 **스냅샷이 기본값**이다.
+
+**인물 매핑** (원문 고정, 산문만 톤 재구성):
+
+| 소스 (lore_module) | RPG 재사용 |
+|---|---|
+| `LORE_GHOSTS.CIPHER` = STATIC / LENA GREY · *"The Veil doesn't hide you. It just tells me where to look."* | 슬라이스 플레이어블. 명대사 → 인트로/전투 로그 버블. HACK 특화 정체성 = 해킹 잠입에 정합 |
+| `LORE_GHOSTS.*` (RUST/PATCH/SILK/FLINT/ECHO) | 후속 로스터. 명대사 → 대화 노드 text 소스 |
+| `LORE_BLOCS.VANTA` = VERA ASHTON, DIRECTOR · 슬로건 *"We don't watch. We remember."* · *"There are no secrets. Only prices that haven't been met."* | First Blood 적대 발화자 |
+| `LORE_BLOCS.*` (IRONWALL/HELIX/AXIOM/CARBON 수장) | 후속 챕터 적대 발화자 |
+| `loreQuote(spec)` → 🎭/🎙 버블 | 대사 버블 · 전투 로그 첨가 |
+| `loreEpilogue(role, spec, route)` | **[각색]** 챕터 8 4엔딩(🏙️Corporate Eternal / 🔥Street Rising / 🕊️Nexus Reborn / 💀Dead Nexus)으로 후속 재배선 |
+
+### 4.4 사회 = 전투 우회 (심장 MFU 노드) [계승 SR]
+
+First Blood "경비 조우" 노드가 **1개 캐릭터로도** "같은 문제를 다르게 푼다"를 증명한다 — 3출구:
+1. **"무력으로 돌파한다"** → 전투 인카운터(항상 열림).
+2. **`[HACK 4]` 문 잠금장치를 태우고 우회** → CIPHER HACK5로 개방 → `setFlags{ skipGuardFight }` → 전투 스킵, 서버룸 직행. *(해킹 빌드의 우회)*
+3. **`[VANTA 태그]` 사원증 위조로 통과** → VANTA 태그 필요(회색 표시) → 사회/BROKER 빌드용, 슬라이스 CIPHER로는 잠김. *(미래 빌드 축 광고)*
+
+---
+
+## 5. 캠페인 구조
+
+### 5.1 루프 (Dragonfall 허브 모델 증류)
+
+```
+허브(1화면) → 미션 선택 → [대화 노드 + 전투 1~2] → 귀환 → 보상 정산(karma/₵)
+   → 성장 소비/상점 → 세이브 → 다음 방문
+```
+
+- **허브 = 단일 React 화면**(물리적 워킹 씬 없음), 노드 4개: 🎯미션 보드 · 🛒상점/의료(HELIX 회복 계승) · 👥크루/로스터 · 📋캐릭터 시트. 애시그리드 톤(팔레트).
+- **미션 = 씬 시퀀스 데이터**: `{ id, title, intro(챕터 카드 원문), scenes:[대화|전투|체크포인트], rewards, unlocks }`. 전투는 미션 내부에서만.
+- **중앙 위협 게이지** **[G10, 각색 raidThreshold + docs/07 §8 Heat]**: 지속 "SIGNAL 추적/블록 위협/Heat" 게이지가 미션마다 차오르며 아크 페이싱. 슬라이스는 표시만, 밸런싱 후속.
+
+### 5.2 성장 = karma 포인트바이 [각색 SR, 레벨 없음]
+
+- **레벨 없음.** 귀환마다 karma를 속성/스킬/시그니처에 **직접 지출**. TL 트리(**[계승 후보 docs/09]**)를 "karma로 해금하는 노드 트리" 하나로 재해석 → 성장 UI 단일화.
+- **₵ = 상점 아이템.** "이번 karma를 명중에 쓸까 대화에 쓸까"가 허브 루프의 즉시 재미.
+
+### 5.3 세이브 [file:// 결정적]
+
+- `localStorage` JSON 블롭: `{ version, character, karma, nuyen(₵), inventory, flags, missionsDone, heat, crew, hubState }`. 서버 0, 오프라인 OK.
+- 자동세이브: 허브 귀환 + checkpoint 노드.
+- **★안전판(슬라이스부터 필수)**: 일부 브라우저가 `file://` 오리진 `localStorage`를 비움 → **세이브 문자열 export/import**(base64 JSON 복사·붙여넣기·다운로드)를 `SaveMenu`에 포함. `version` 필드로 스키마 마이그레이션 대비.
+
+### 5.4 챕터 1 "First Blood" 수직 슬라이스 상세
+
+**서사는 원전 그대로, 메커닉만 각색.** 플레이어블 = **CIPHER (STATIC / LENA GREY)** 단독 — HACK 특화가 해킹 잠입/오브젝티브와 정합.
+
+**원전 앵커 (cards/legacy/chapter-01-first-blood.md, 원문 고정)**:
+- 오프닝 내러티브 **[그대로]**: *"2091년 3월 14일… VANTA 금융가 구역의 서브 서버가 해킹당했다. 데이터 유출량: 2.7테라바이트… 블록은 불사신이 아니다."*
+- 스토리 카드 **[그대로]**: *"그날 밤, 어떤 이름 없는 고스트가 VANTA의 방화벽을 뚫었다. 이름이 알려졌을 때는 이미 너무 늦었다."*
+
+**씬 흐름**:
+1. **인트로 컷씬** — 대화 오버레이, chapter-01 오프닝 원문 + `loreQuote(CIPHER)` 버블.
+2. **접근 대화 (★심장 MFU 노드)** — VANTA 경비. §4.4 3출구: 전투 / `[HACK 4]` 우회(첫 전투 스킵) / `[VANTA 태그]` 잠김.
+3. **전투(스킵 안 하면)** — VANTA 서버룸 6×8, CIPHER vs Drone×1~2 + Corp Security×1 (+ 선택 ICE Node). 목표 = 서버 랙 오브젝티브 타일. AP 배분 · 엄폐 · HACK 레이어 · 상성 1건 · **적 의도 텔레그래프** 시연.
+4. **데이터 추출** — 서버 랙 threshold 누적 차감(ICE Node 파괴 시 개방) → 2.7TB 유출 → `flag firstBlood = true`.
+5. **탈출/아웃트로** — "블록은 불사신이 아니다" 리프레인.
+6. **★플레이어 선택 [계승 chapter-01 §플레이어 선택]** — **"영웅이 되겠는가, 유령이 되겠는가?"**
+   - **A. 영웅**: 렙 +5(영구), 모든 블록 적대 flag.
+   - **B. 유령**: 현상수배 0 유지, 향후 레이드 보상 +50% flag.
+   → 캠페인 flag로 **영속** → 15분 안에 "내 선택이 남는다" payoff.
+7. **귀환/정산 [계승 chapter-01 §챕터 효과]**: **렙 +3**(첫 레이드), **공권력 트랙 최대치 +1**(이제 11까지), **CIPHER BACKDOOR 카드 해금**(봉투 A), karma 지급, ₵. → 성장 소비 → 세이브.
+8. **다음 챕터 힌트**: Chapter 02 "Insider Game" 텍스트 연결.
+
+> **루프 성립 증명**: 보상이 허브로 환류 → karma 지출로 다음 방문 변화 = 네 시스템이 한 바퀴로 엮임.
+
+---
+
+## 6. 파일 배치·배포
+
+신규 트랙 `/rpg/` (`simulator/v0.5` **절대 미수정**). 모든 경로 **상대(`./`)** → `/rpg/` 서브패스와 `file://` 양쪽 동작.
+
+```
+rpg/
+  index.html                # 셸: 로컬 vendor 로드, heal 로더, 데이터 <script>, #root 마운트, CDN 0
+  vendor/                   # sim-e2e/vendor 에서 복제(참조 아닌 복제 → 경로 독립·원본 무수정)
+    react.production.min.js
+    react-dom.production.min.js
+    babel.min.js
+  styles/
+    palette.css             # simulator 팔레트 복제(독립): --bg #06060e / --cyan #00e5ff / --magenta #ff003c …
+    app.css                 # 모바일 세로 레이아웃, 사각 타일 그리드, 초상 애니, safe-area, 터치 ≥44px
+  core/
+    loader.js               # window 전역 heal 로더 (시뮬 패턴 재사용) [G11]
+    projection.js           # ★좌표→스크린 순수 투영 seam (사각→향후 아이소 교체 지점) [G1]
+  systems/                  # 순수 JS (JSX 아님, DOM import 0) [G2/G4]
+    combat/
+      grid.js               # BFS 이동범위, 인접/LoS/엄폐 판정
+      resolve.js            # 결정론 피해 max(0,ATK−DEF−엄폐), threshold 누적 차감 [G5]
+      ai.js                 # 유틸리티 트리 + 종료성 가드 [G9]
+    dialogue.js             # 노드 그래프 러너·게이트·플래그
+    campaign.js             # 허브·미션 라우터·보상·성장
+    character.js            # 시트·karma 지출·장비
+  state/
+    store.js                # useReducer + Context, 단일 진실원천
+    save.js                 # localStorage + base64 export/import, version 마이그레이션
+  data/                     # 인라인 JS 전역, fetch 0 (file:// OK). 로직 없는 리터럴
+    classes.js              # 6클래스 스탯표 [계승 docs/07] + 시그니처
+    enemies.js              # 적 2~3종 + 블록 임원 베이스
+    abilities.js            # CIPHER 4-액션 킷 [G6]
+    attributes.js           # 6속성 색·기호·상성표 [계승 docs/06]
+    weapons.js              # 무기/방어구/소모품
+    missions/ch01-first-blood.js   # 대화트리 + 전투 인카운터 + 챕터효과 (챕터 = 데이터 파일 1개)
+  ui/                       # type=text/babel JSX (트랜스파일 표면 최소화) [G4]
+    App.js Board.js CombatHUD.js DialogueOverlay.js Hub.js CharacterSheet.js SaveMenu.js
+  lore/
+    lore_module.snapshot.js # ★read-only 스냅샷 벤더링 [G3]
+    lore-adapter.js         # window.RPG_LORE: 스냅샷 → RPG 정규화, 전 필드 null 가드 (유일한 결합 seam)
+  README.md
+```
+
+**모듈 경계**: `systems/*` = (거의)순수 로직, `data/*` = 로직 없는 리터럴, `ui/*` = 상태 읽기·dispatch, `lore/lore-adapter.js` = 유일 seam. `combat/resolve.js`·`combat/ai.js`·`grid.js`·`projection.js`에 **React/DOM import 0**(린트 항목화, G2).
+
+**vendor 복제**: `sim-e2e/vendor/`에 `react.production.min.js`·`react-dom.production.min.js`·`babel.min.js`가 **이미 존재** → `rpg/vendor/`로 복제만 하면 CDN 0 즉시 충족. (시뮬 `index.html`은 CDN 로드이므로 "vendor 재사용"은 부정확 — 복제가 정답이며 원본 무수정 제약과 정합.)
+
+**lore 공유 방법**: §4.3 (스냅샷 벤더링 기본, 라이브 참조 폴백). 어댑터 인터페이스를 동일 유지해 안정화 후 라이브 참조 전환 가능하게 남긴다.
+
+**Vercel 라우팅**:
+- `vercel.json`은 이미 `"trailingSlash": true`, `"cleanUrls": false`. `/rpg/` 디렉토리 인덱스가 `rpg/index.html`로 **설정 변경 0** 자동 서빙(`dead-nexus.vercel.app/rpg/`).
+- 기존 redirects(`/simulator`·`/sim`·`/play` → `/simulator/v0.5/`)와 **무충돌** — `/rpg` 경로는 미점유. `vercel.json` 편집 불필요 → 시뮬 라우트 교란 리스크 0.
+- 모든 자산 상대경로 → 서브패스·`file://` 동시 호환.
+
+---
+
+## 7. 로드맵
+
+### Stage 1 — 수직 슬라이스 (First Blood MFU 한 바퀴)
+
+**포함**: CIPHER 단독(유효HP 12) · 4-액션 킷 · 6×8 사각 그리드 · AP 단일풀(2) · 이동/기본공격/시그니처/엄폐/상성 1건/HP · 오브젝티브 threshold 1개 · 적 의도 텔레그래프 · 적 2~3종(Drone 필수) · 대화 1씬(사회 스킵 게이트 포함) · 허브 1화면(미션보드+시트 필수, 상점/크루 스텁) · karma 1점 지출→전투 반영 · 영웅/유령 선택 flag · localStorage + 문자열 export/import · Signal Die 🔵UP/⚡SURGE 2종.
+
+**수용 기준 (Definition of Done)**: 모바일 세로에서, CIPHER로 First Blood를 **(a)해킹 우회 또는 (b)전투로** 클리어하고 → 귀환해 karma로 스탯을 올려 **다음 전투에 반영**된 뒤 → 세이브를 **문자열로 내보냈다 불러와 복원**된다. `file://` 더블클릭과 `/rpg/` 배포 **양쪽에서 동일 동작**. 사회 스킵 선택지가 실제로 전투를 제거하고 대체 결과를 준다.
+
+### Stage 2 — 대화 심화 + 전투 텍스처
+
+**포함**: 다중 대화 노드/분기 심화 · 시그널 다이 4상태 전체 · 위협/노출 게이지 실동(G10) · CIPHER 외 1~2 클래스 로스터 · 시그니처 확장 · 상성 매트릭스 체감 확대 · 전투 juice 마감(G7).
+
+**수용 기준**: 서로 다른 빌드(예 CIPHER 해킹 vs BLADE 근접)가 같은 미션을 다르게 완주. 위협 게이지가 전투 페이싱을 실제로 바꾼다. 대화 분기가 다음 미션 상태에 영속 반영된다.
+
+### Stage 3 — 챕터 2+ 확장 & 뷰 스킨
+
+**포함**: 챕터 2~8을 **데이터 파일 추가만으로**(엔진 무편집) 확장 · `projection.js` seam에서 **아이소메트릭 뷰 스킨 교체**(G1, 룰 무변경) → 섀도우런/BG3 미학 복구 · 캔버스 메시다이브 FX 레이어(선택) · loreEpilogue 4엔딩 재배선.
+
+**수용 기준**: 신규 챕터 추가가 `systems/*` 엔진 코드를 건드리지 않는다. 아이소 뷰 전환이 `combat/grid/ai` 테스트를 통과한 채 이뤄진다(회귀 0). 아이소 전환 시 rotate45 폴백·유효 타깃 ≥44px·탭선택→확인 2단계를 완화책으로 승계.
+
+---
+
+## 8. 비-목표 (Non-goals)
+
+이 트랙에서 **하지 않을 것**을 명시한다. 아래는 매력적이나 스코프 크립의 주범이며, MFU 한 바퀴 완성 전에는 착수 금지다.
+
+- **캔버스 렌더**(슬라이스~Stage 2 한정 배제; Stage 3 FX 훅으로만 예약).
+- **아이소메트릭 뷰**(슬라이스 배제; `projection.js` seam 뒤 Stage 3에서 복구 — 영구 포기 아님).
+- **dev/deploy 이중 빌드 산출물**(사전 트랜스파일 `build/app.js`) — 빌드리스 원칙 파괴, 코드 경로 이중화. 후속 최적화로만 문서화.
+- **리액션 / 오버워치 / 기회공격 / 수직성 / 플랭킹 각도 / 파괴 가능 엄폐.**
+- **주사위 굴림 연출**(결정론 채택 — G5).
+- 다중 상태이상 · 소환/드론 빌드 · 메시 별도 레이어 전장.
+- essence↔magic 풀 트레이드오프 심화 · approval 미터 · 관계 반응 매트릭스 · 크루 개인런.
+- 경제 밸런싱 · 다중 벤더/상점 · 리스펙 · 다중 허브.
+- 6클래스 전체 로스터(슬라이스는 CIPHER 단독) · 시그니처 풀 매트릭스.
+- 온라인 · 서버 · 클라우드 세이브 · 다중 슬롯 · 플레이타임(오프라인/localStorage 우선).
+- 챕터 2~8(슬라이스는 챕터 1) · 4엔딩 loreEpilogue 재배선(Stage 3).
+- `simulator/v0.5` 어떤 파일의 수정 · `vercel.json` 편집(디렉토리 인덱스 의존).
+
+---
+
+## 부록: 탈락 시안 요약과 기각 사유
+
+세 시안 모두 재미의 심장(사회=전투 우회 MFU) · 빌드리스 · `file://` 안전판 · window 전역 데이터 · 상대경로 · 계승/신규 태깅에 수렴했다. 차별점은 **전투 렌더러**였고, 여기서 갈렸다.
+
+### 시안 1 — "react-dom-iso" (DOM 아이소메트릭) — 기각
+
+- **개요**: Canvas 없이 React + 순수 DOM/CSS로 아이소메트릭 전장(clip-path 마름모 타일 + 절대배치 액터 레이어 + 역투영 히트테스트). 시뮬 동일 스택.
+- **강점**: 학습비용 0, 아이소 룩을 캔버스 없이 달성, 콘텐츠 확장 아키텍처(systems/data/ui 경계 순도)가 가장 엄밀.
+- **기각 사유**: 모바일 세로에서 마름모 타일 축소 → 터치 정확도 붕괴(스스로 "44px 미달 시 탭-선택→확인 2단계" 폴백, 역투영 `--iso-scale` 보정 인정). clip-path 리페인트·구형/파일오리진 이슈·z-index 페인터 정렬을 **콘텐츠 확장에 이득 없는 순수 유지세**로 떠안는다. → 그 콘텐츠 확장 아키텍처(G11)와 raidThreshold 이중 용도(G10), 순수 로직 경계는 **이식**해 살렸다.
+
+### 시안 2 — "canvas-engine" (Canvas 2D 미니엔진) — 기각
+
+- **개요**: 전투만 Canvas 2D 미니엔진(아이소 투영/역투영 · rAF 렌더루프 · 트윈 상태기계 · DPR 백킹스토어 · 오프스크린 캐싱), 그 외 UI는 React DOM 셸. dev=인라인 Babel / deploy=사전 트랜스파일 이중 산출물.
+- **강점**: React↔engine imperative 경계 규약이 최고 설계(순수 유닛테스트), 4-액션 히어로 킷·전투 juice·유효HP×2·스냅샷 lore seam이 뛰어남.
+- **기각 사유**: 자체 리스크 레지스터에서 **"신규 코드량 최대 … 미완 위험 1순위"**, y-sort/역투영이 "캔버스 트랙 최다 버그원"임을 인정. 1인 개발 첫 배포에선 완성 리스크 = 재미 리스크. dev/deploy 이중 산출물은 `file://`과 Vercel에서 **다른 코드가 도는 유일한 발산 표면**을 자초. → 그 최고 자산(DOM-free 엔진 규율 G2 · 스냅샷 seam G3 · 4-액션 킷 G6 · juice G7 · 유효HP×2)은 **캔버스/이중빌드 부채 없이 이식**했다.
+
+### 시안 3 — "hybrid-scene / GHOSTGRID" — **채택 (만장일치)**
+
+- 순수 DOM CSS Grid 탑다운 사각 격자 → 모바일 세로 터치를 근원 해결(균일 ≥44px, 역투영 0), 엔진 유지비 최소(챕터당 전투 저작 최저), `file://`+Vercel 이중 호환 실패 표면 최소, 챕터 1 원전 매핑 최충실.
+- **유일한 감점**(섀도우런 아이소 앵커에서 탑다운으로 미학 이탈)은 **기술 리스크가 아니라 미학 스코프**이며 G1(투영 seam)으로 Stage 3에서 룰 무변경 복구 → 영구 희생 아님.
+
+---
+
+*본 문서는 비전 초안(v0.1)이다. 수직 슬라이스 착수 시 각 `data/*` 파일에 계보 표를 동기화하고, 확정 수치는 `docs/07`·`docs/06` 원전과 대조 감사한다.*

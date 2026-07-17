@@ -1,6 +1,6 @@
 # DEAD NEXUS — Web Simulator E2E Balance Runner (`sim-e2e/`)
 
-Runs the **real deployed** web build (`simulator/v0.5/`, v6.11.2) bots-only, headless, and
+Runs the **real deployed** web build (`simulator/v0.5/`, whatever version is currently live — this runner tracks the deployed build, not a pinned version) bots-only, headless, and
 collects faction/class win rates, round length, M&A / suppression frequency, and every
 console error / pageerror. Does not modify `simulator/` or `sim-harness/`.
 
@@ -15,7 +15,7 @@ PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node run.js 20 11x11    # 20 games on 
 offline from `sim-e2e/vendor/` via request interception, so no network is needed at run time.
 
 ## How it drives the game
-v6.11.2 has **no bots-only UI mode** (only solo/hot-seat, both with a human seat P0). The
+The currently deployed build has **no bots-only UI mode** (only solo/hot-seat, both with a human seat P0). The
 runner therefore loads the actual page and drives the engine head-less via the page's own
 globals (`buildInitial` / `reducer` / `botPickCards` / `checkInstantVictory` + `euro_module`'s
 `euro_applyAll`), replaying the exact phase-dispatch sequence the React auto-advance effect

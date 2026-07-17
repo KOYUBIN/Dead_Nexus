@@ -8,6 +8,26 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ## [Unreleased] — 작업 중
 
+(다음 릴리스 후보 항목이 여기 쌓입니다)
+
+---
+
+## 릴리스 이력 — v6.1 ~ v6.27 (전부 main 머지·프로덕션 배포 완료)
+
+아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
+(감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
+
+### v6.28 — NEXUS BAR 하단 상태 바 + 전체 검수 39건 정정 + RPG 모드 비전 (38~40차)
+- **NEXUS BAR** (유저 피드백 "내 상태창 하단 고정" — 문명/BG3/토탈워 연구 + 시안 3개 심사 만장일치 civ-ribbon): 화면 최하단 고정 바 — 좌(클래스 초상·코드네임·HP 바) / 중(₵·핵심지표 절대값·수배·시그니처·속성 핍·경제칩) / 우(손패·결정 큐 차단 뱃지·**NEXT 컨텍스트 버튼**). 상단 레이스 HUD(세계/상대) vs 하단 바(나/행동) 2밴드 분리 — 진척률·목표선은 하단에 없음(정직화: 절대값 소스 = 판정 소스, players[0] 하드코딩 없음). 모바일 좌우 핀 + 중앙 스크롤 + 폭 단계별 티어 절단, NEXT 44px 터치 타깃. nextAction 헬퍼는 기존 dispatch/confirmPlan 미러링(신규 게임 로직 0, 정합 유닛 9종). Playwright 1280×800/390×844 실검증
+- **전체 검수 (7차원 감사 + 발견별 적대 검증, 39건 전건 CONFIRMED) 일괄 정정**:
+  - **P0**: `/simulator`가 v0.5.3 구버전 스텁("BOOTING…" 영구 정지)을 서빙 — 스텁 archive 이동 + vercel.json trailing-slash 리다이렉트 보강
+  - README(v6.8→v6.27, 완료 기능 오표기 해소, S01~S08→S06, 문서 인덱스 21~25), 랜딩 푸터 v6.1→v6.27, 시뮬 README 변경이력 19행 백필, docs/00·02·14·18·23 현행화, session-00 브리핑 수치 통일
+  - print-kit 구버전 승리 수치 일괄 정정 (01 자산 25→73·렙 10→42 / 01b 95→100 / 06 시트 3종 + 자산 공식 "50% 할인"→"완전 제외" + TL 상한 / 09 S01·S05·S02 / 03 TL5 카드 3종 추가 18→21장)
+  - UI 정직성: 5×5 "5~9R"→"5~8R", 튜토리얼 Bloc 폴백 70→73, 레이드 성공률 힌트 raidThreshold 통일, euro/tutorial 모듈 'use strict' 통일
+  - 위생: sim-e2e/results 추적 해제(137만 줄)·.vercelignore에 sim-e2e(20.9MB)·레거시 push 스크립트 archive 이동·CHANGELOG 릴리스 승격
+- **docs/25-rpg-mode.md 신설** (유저 확정 "별도 RPG 모드"): GHOSTGRID 아키텍처(심사 만장일치) — DOM CSS Grid 6×8 탑다운 결정론 전투 + 적 의도 텔레그래프 + 대화 스탯 게이트, 계승/각색/신규 계보 표(docs/07 스탯 계승), 챕터 1 First Blood 수직 슬라이스 로드맵
+- 유닛 171/171 (신규 9) · babel 0 에러 · e2e 스모크 에러 0
+
 ### v6.27 — highlightPoints 승리 환산 + 선언 역전 재측정 + print-kit 07 현행화 (36~37차)
 - **B-06 highlightPoints 死통화 회생** (docs/22 P1-6): `EURO_HL_VICTORY_SCALE=0.3` — 달성값 가산 방식(asset_eff/rep_eff = 달성값 + round(hp×0.3), 역할 대칭 — P1-6 "유로 층 전체가 승리 문법에 편입"). 임계 −2 변형은 기각(이터레이션 표 기록). **정직성 계약**: 판정(evalPlayerVictory)·레이스 HUD(hudRaceProgress)·플레이어 카드·✨pt 배지가 전부 `euro_hlVictoryBonus()` 단일 소스. 언더독 임계 스케일과 부등식 반대편 독립 합성(순서 무관, 유닛 검증). 11×11 ghost 55.3% (n=1000) 밴드 유지
 - **B-07 종료 선언 역전 — 재측정으로 기해소 확인**: docs/23의 "역전 1.4%"는 구버전 수치 — 현행 빌드 실측 ~4~8% (n=600), v6.24~26 선언자 편향 배선이 갭3을 이미 해소. 압력 레버 2종(레이드 URGENCY·견제 확정발동) 실험 후 **no-op 기각** (95% CI 겹침 + ghost 역효과), euro_module 원복(base와 byte-identical). 선언 라이프사이클 계측(선언/역전/확정)은 run.js에 영구 편입

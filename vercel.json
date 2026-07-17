@@ -25,7 +25,10 @@
   ],
   "redirects": [
     { "source": "/simulator", "destination": "/simulator/v0.5/", "permanent": false },
+    { "source": "/simulator/", "destination": "/simulator/v0.5/", "permanent": false },
     { "source": "/sim", "destination": "/simulator/v0.5/", "permanent": false },
-    { "source": "/play", "destination": "/simulator/v0.5/", "permanent": false }
+    { "source": "/sim/", "destination": "/simulator/v0.5/", "permanent": false },
+    { "source": "/play", "destination": "/simulator/v0.5/", "permanent": false },
+    { "source": "/play/", "destination": "/simulator/v0.5/", "permanent": false }
   ]
 }

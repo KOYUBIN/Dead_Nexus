@@ -28,6 +28,7 @@
     --purple: #a855f7;
     --text-dim: #9090a8;
     --text: #e0e0e0;
+    --botbar-h: 46px;   /* v6.28: 하단 NEXUS BAR 높이 (모바일 56px 오버라이드) */
   }
 
   /* ---- Boot screen ---- */
@@ -97,7 +98,8 @@
     display: grid;
     grid-template-columns: 300px 1fr 280px;
     grid-template-rows: 50px 1fr;
-    height: 100vh; max-height: 100vh;
+    /* v6.28: 하단 고정 NEXUS BAR(46px) 만큼 그리드 높이 축소 → 콘텐츠 가림 0 (z-index 트릭 불필요) */
+    height: calc(100vh - var(--botbar-h)); max-height: calc(100vh - var(--botbar-h));
     grid-template-areas:
       "top top top"
       "left center right";
@@ -365,7 +367,7 @@
     background: var(--bg2); border-top: 1px solid var(--border);
     padding: 10px; flex: 1 1 280px;
     display: flex; flex-direction: column;
-    min-height: 280px; max-height: 320px;
+    min-height: 240px; max-height: 320px;   /* v6.28: NEXUS BAR 축소분 흡수 (was 280) */
   }
   .hand-wrap h4 { margin: 0 0 6px; font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
   .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex: 1; align-items: flex-start; }
@@ -465,12 +467,12 @@
     font-size: 13px; color: var(--text); line-height: 1.55;
   }
   .tut-bubble.a-center { left: 50%; top: 50%; transform: translate(-50%, -50%); border-color: var(--cyan); box-shadow: 0 0 24px rgba(0,229,255,0.35); }
-  .tut-bubble.a-bottom { left: 50%; bottom: 24px; transform: translateX(-50%); }
+  .tut-bubble.a-bottom { left: 50%; bottom: calc(var(--botbar-h) + 12px); transform: translateX(-50%); }   /* v6.28: NEXUS BAR 위로 상향 */
   .tut-bubble.a-map    { left: 50%; top: 120px; transform: translateX(-50%); }
   .tut-bubble.a-left   { left: 16px; top: 70px; }
   .tut-bubble.a-right  { right: 16px; top: 70px; }
   @media (max-width: 720px) {
-    .tut-bubble.a-left, .tut-bubble.a-right { left: 50%; right: auto; top: auto; bottom: 24px; transform: translateX(-50%); }
+    .tut-bubble.a-left, .tut-bubble.a-right { left: 50%; right: auto; top: auto; bottom: calc(var(--botbar-h) + 12px); transform: translateX(-50%); }   /* v6.28: NEXUS BAR 위로 상향 */
     .tut-bubble.a-map { top: 80px; }
 
     /* v6.25-fix: 모바일 세로 스택 — 고정 3컬럼(300+280=580px)이 폰 세로(~390px)에서
@@ -554,6 +556,62 @@
   }
   .gameover .stat-box .lbl { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 2px; }
   .gameover .stat-box .val { font-family: 'Share Tech Mono', monospace; font-size: 28px; color: var(--cyan); margin-top: 4px; }
+
+  /* ===== v6.28: NEXUS BAR — 하단 고정 "내 상태 바" =====
+     상단 Race HUD = 세계/상대(진척·시장·위협), 하단 = 나 자신의 절대값 + 내 행동.
+     진척 트랙/게이지/임계선은 하단에 절대 그리지 않음(계기판 정직화: 표시값=판정값). */
+  .dn-botbar {
+    position: fixed; left: 0; right: 0; bottom: 0; height: var(--botbar-h); z-index: 90;
+    background: var(--bg2); border-top: 2px solid var(--cyan);
+    box-shadow: 0 -4px 12px rgba(0,0,0,.45);
+    display: grid; grid-template-columns: 300px 1fr 280px; align-items: center;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text);
+  }
+  .bb-id { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-width: 0; }
+  .bb-core { display: flex; align-items: center; gap: 12px; padding: 0 12px; min-width: 0;
+    overflow-x: auto; white-space: nowrap; flex-wrap: nowrap;   /* 세로 wrap 금지(높이 폭발 방지) */
+    border-left: 1px solid var(--border); }
+  .bb-core::-webkit-scrollbar { height: 4px; }
+  .bb-core > span { flex: 0 0 auto; }
+  .bb-act { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 12px;
+    border-left: 1px solid var(--border); }
+  .bb-face { font-size: 18px; flex: 0 0 auto; cursor: pointer; }
+  .bb-name { color: var(--cyan); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+  .bb-hp { display: inline-flex; align-items: center; white-space: nowrap; flex: 0 0 auto; }
+  .bb-hp b { color: var(--magenta); font-weight: 700; }
+  .bb-hpbar { display: inline-block; width: 44px; height: 4px; background: var(--bg3); border-radius: 2px; vertical-align: middle; margin-left: 4px; overflow: hidden; }
+  .bb-hpbar i { display: block; height: 100%; background: var(--magenta); }
+  .bb-cr { color: var(--text); }
+  .bb-key { color: var(--yellow); font-size: 14px; font-weight: 700; }
+  .bb-pool { display: inline-flex; gap: 3px; align-items: center; }
+  .bb-eco { color: var(--text-dim); }
+  .bb-hand { color: var(--text-dim); flex: 0 0 auto; }
+  .bb-decq { min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 9px;
+    background: var(--magenta); color: #fff; font-size: 11px; font-weight: 700; padding: 0 5px;
+    animation: dnBotPulse 1.2s infinite; flex: 0 0 auto; }
+  .bb-next { flex: 0 0 auto; min-height: 34px; padding: 4px 14px; white-space: nowrap; }
+  @keyframes dnBotPulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+  .bb-hp.low b { color: var(--magenta); animation: dnBotPulse 1s infinite; }
+  .bb-hpbar.low i { animation: dnBotPulse 1s infinite; }
+  .bb-wanted.hot { color: var(--magenta); animation: dnBotPulse 1s infinite; }
+  .bb-sig.charged { color: var(--yellow); }
+  @media (max-width: 720px) {
+    :root { --botbar-h: 56px; }                       /* 터치존 확대 */
+    .dn-botbar { display: flex; padding: 0 8px; gap: 8px; }
+    .bb-id { flex: 0 0 auto; padding: 0 4px; }         /* 좌 고정 핀: 역할+HP 항상 보임 */
+    .bb-core { flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 0 4px; border-left: none; }
+    .bb-act { flex: 0 0 auto; margin-left: auto; padding: 0 4px; border-left: none; }  /* 우 고정 핀 */
+    .bb-next { min-height: 44px; min-width: 88px; }    /* 터치 타깃 */
+    body { padding-bottom: var(--botbar-h); }          /* 스크롤 레이아웃 하단 가림 방지 */
+    .game { min-height: calc(100vh - var(--botbar-h)); }
+    .bb-t4 { display: none; }                          /* ≤720: 경제칩 숨김 */
+  }
+  @media (max-width: 520px) { .bb-t3 { display: none; } }   /* 속성풀·시그니처 숨김 */
+  @media (max-width: 400px) {
+    .bb-t2 { display: none; }                          /* 손패·수배 숨김 */
+    .bb-name { display: none; }                        /* 코드네임 숨김, 초상만 */
+  }
+  /* Tier1(항상 노출): 초상·HP·₵·핵심지표·결정뱃지·NEXT */
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -6728,7 +6786,7 @@ function SetupScreen({ onStart }) {
           onClick={() => { if (scen.maps && !scen.maps.includes('5x5')) return; setMapSize('5x5'); }}
         >
           <h3>🎓 5×5 튜토리얼</h3>
-          <p>25 셀 축약형. 시스템 학습용. 빠른 5~9R.{scen.maps && !scen.maps.includes('5x5') ? ' (이 시나리오 불가)' : ''}</p>
+          <p>25 셀 축약형. 시스템 학습용. 빠른 5~8R.{scen.maps && !scen.maps.includes('5x5') ? ' (이 시나리오 불가)' : ''}</p>
         </div>
       </div>
 
@@ -6918,6 +6976,32 @@ function SetupScreen({ onStart }) {
       )}
     </div>
   );
+}
+
+// v6.28: NEXUS BAR 및 phase-actions primary 진행 로직의 단일 소스.
+//   페이즈 3~6은 useEffect 에서 setTimeout 자동 진행이므로 수동 매핑은 0/1/2 만.
+//   신규 게임 로직 없음 — 기존 dispatch(SET_PHASE)/confirmPlan 을 그대로 미러링.
+function nextAction(state, ctx) {
+  const pending = (state.meta.pendingDecisions && state.meta.pendingDecisions.length) || 0;
+  if (pending > 0)   // Civ 결정-게이트: 미해소 결정 있으면 진행 차단
+    return { label: `결정 필요 ${pending}`, disabled: true, tone: 'block', onClick: null, title: '미해소 결정을 먼저 처리하세요' };
+  const ph = state.meta.phase;
+  const decl = state.meta.victoryDeclaration;
+  const declTone = (decl && decl.idx === ctx.meIdx) ? 'won' : null;   // 종료 선언 유지 = 승리 톤
+  if (ph === 0) return { label: '▶ 뉴스로', disabled: false, tone: declTone || 'cyan',
+                         onClick: () => ctx.dispatch({ type: 'SET_PHASE', phase: 1 }), title: '시장 → 뉴스' };
+  if (ph === 1) return { label: '▶ 거래 끝', disabled: false, tone: declTone || 'cyan',
+                         onClick: () => ctx.dispatch({ type: 'SET_PHASE', phase: 2 }), title: '거래 종료 → 계획 단계' };
+  if (ph === 2) {
+    if (state.meta.awaitingMoveTarget)   // 계획 확정 후 이동 목표 대기 — 지도 클릭 유도
+      return { label: '🎯 이동 목표', disabled: true, tone: 'dim', onClick: null, title: '지도에서 이동 목표 칸을 클릭하세요' };
+    const ready = ctx.canPlan && ctx.selectedCards.length === ctx.needCards;
+    return { label: ready ? '✓ 확정' : `카드 ${ctx.selectedCards.length}/${ctx.needCards}`,
+             disabled: !ready, tone: ready ? (declTone || 'yellow') : 'dim',
+             onClick: ready ? ctx.confirmPlan : null,
+             title: ready ? '계획 확정' : `카드 ${ctx.needCards}장을 선택하세요` };
+  }
+  return { label: '⏳ 처리 중', disabled: true, tone: 'dim', onClick: null, title: '자동 진행 중' };
 }
 
 function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
@@ -8432,7 +8516,9 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             // 가장 가까운 Bloc 구역 + 레이드 성공률 계산
             const nearest = me.position ? findNearestBlocZone(state, me.position) : null;
             const nearestDist = nearest ? (nearest === me.position ? 0 : bfsDistance(state, me.position, nearest)) : null;
-            const succRolls = Math.max(0, Math.min(6, 6 - (5 - me.stats.atk - 1)));
+            // v6.28: 맵 프리뷰(L8000)와 동일 식 — raidThreshold(cell) 기반·크리티컬 실패 반영 상한 5/6 (정직성 통일)
+            const nearestCell = nearest ? state.map[nearest] : null;
+            const succRolls = nearestCell ? Math.max(0, Math.min(5, 7 - raidThreshold(nearestCell) + me.stats.atk)) : 0;
             const raidPct = Math.round(succRolls / 6 * 100);
             // 승리 예측: 현재 렙 + 성공 시 +3, 레이드 목표도 충족?
             const repNeeded = Math.max(0, repGoal - rep);
@@ -8640,6 +8726,63 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           </div>
         </div>
       </div>
+      {/* ===== v6.28: NEXUS BAR — 하단 고정 "내 상태 바" (좌: 정체성+HP / 중: 절대값 리본 / 우: 행동+NEXT) =====
+          정직성: 핵심지표는 절대 현재값만 — getVictoryGoals/hudRaceProgress 미호출(진척은 상단 Race HUD 독점).
+          표시 소스 = 판정 소스(assetValue·me.resources.rep). meIdx 기준(players[0] 하드코딩 없음, 핫시트 호환). */}
+      {(() => {
+        const roleGlyph = me.role === 'ghost' ? '👻' : '🏢';
+        const codename = (typeof loreTag === 'function' && loreTag(me.specific)) ? loreTag(me.specific) : me.specific;
+        const hpPct = me.maxHp ? Math.round(me.hp / me.maxHp * 100) : 0;
+        const hpLow = me.maxHp ? (me.hp / me.maxHp <= 0.3) : false;
+        const wanted = me.wanted || 0;
+        const pendingN = (state.meta.pendingDecisions && state.meta.pendingDecisions.length) || 0;
+        // 시그니처 게이지(기함) — 클래스 스위치. G[me.specific] 없는 클래스는 슬롯 생략(undefined 참조·크래시 0).
+        const SIG = {
+          RIGGER: { key: 'rigTraps',    icon: '🪤', label: '함정',   hint: (v) => `함정 발동 ★+2까지 ${3 - (v % 3)}`, charged: (v) => v % 3 === 2 },
+          CIPHER: { key: 'hackNodes',   icon: '💾', label: '해킹',   hint: (v) => v >= 3 ? '해킹 신 달성' : `해킹 신까지 ${3 - v}`, charged: (v) => v === 2 },
+          BROKER: { key: 'tradeMemo',   icon: '🤝', label: '거래',   hint: (v) => v >= 5 ? '외교 능숙 달성' : `₵+5 ★+3까지 ${5 - v}`, charged: (v) => v === 4 },
+          HELIX:  { key: 'helixClones', icon: '🧬', label: '클론',   hint: (v) => `주식 매집까지 ${3 - (v % 3)}`, charged: (v) => v % 3 === 2 },
+        };
+        const sig = SIG[me.specific];
+        const sigV = sig ? (me[sig.key] || 0) : null;
+        const sigCharged = sig ? sig.charged(sigV) : false;
+        const next = nextAction(state, { canPlan, needCards, selectedCards, confirmPlan, dispatch, meIdx });
+        const scrollToMe = () => { const el = document.getElementById(`pcard-${meIdx}`); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
+        return (
+          <div className="dn-botbar" role="region" aria-label="내 상태">
+            {/* 좌존: 초상 + 코드네임 + HP바 */}
+            <div className="bb-id">
+              <span className="bb-face" title={me.specific} onClick={scrollToMe}>{roleGlyph}</span>
+              <span className="bb-name">{codename}</span>
+              <span className={`bb-hp ${hpLow ? 'low' : ''}`}><b>❤ {me.hp}/{me.maxHp}</b>
+                <span className={`bb-hpbar ${hpLow ? 'low' : ''}`}><i style={{ width: hpPct + '%' }}/></span>
+              </span>
+            </div>
+            {/* 중존(가로 스크롤): ₵ · 핵심지표(절대값) · 수배 · 시그니처 · 속성풀 · 경제칩 */}
+            <div className="bb-core">
+              <span className="bb-cr">₵{me.resources.credit || 0}</span>
+              {me.role === 'ghost'
+                ? <span className="bb-key" title="명성(절대값)">★{me.resources.rep || 0}</span>
+                : <span className="bb-key" title="자산(절대값)">📊{assetValue(me, state.stocks, state)}</span>}
+              {me.role === 'ghost' && <span className={`bb-wanted bb-t2 ${wanted >= 3 ? 'hot' : ''}`} title="수배">⚠{wanted}</span>}
+              {sig && <span className={`bb-sig bb-t3 ${sigCharged ? 'charged' : ''}`} title={sig.hint(sigV)}>{sig.icon}{sig.label} {sigV}</span>}
+              {!sig && me.specific === 'MOLE' && me.disguiseBloc && <span className="bb-sig bb-t3" title="위장 대상">🕶{me.disguiseBloc}</span>}
+              <span className="bb-pool bb-t3">
+                {Object.entries(me.pool || {}).map(([k, v]) => (
+                  <span key={k} className={`attr-tag a-${k}`} style={{ opacity: v > 0 ? 1 : 0.3, fontSize: 9, padding: '1px 4px' }}>◈{k}{v}</span>
+                ))}
+              </span>
+              <span className="bb-eco bb-t4" title="데이터·영향력·무기·부품">📡{me.resources.data || 0} 🎙{me.resources.influence || 0} 🔩{me.resources.weapons || 0} ⚙️{me.resources.parts || 0}</span>
+            </div>
+            {/* 우존: 손패 + 결정 큐 뱃지 + NEXT */}
+            <div className="bb-act">
+              <span className="bb-hand bb-t2" title="손패 수">✋{me.hand.length}</span>
+              {pendingN > 0 && <span className="bb-decq" title="미해소 결정">{pendingN}</span>}
+              <button className="pa-btn primary bb-next" disabled={next.disabled} onClick={next.onClick || undefined} title={next.title || next.label}>{next.label}</button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

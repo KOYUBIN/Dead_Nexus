@@ -1,3 +1,4 @@
+'use strict';
 // ============================================================================
 // DEAD NEXUS — simulator/v0.5 유로 메커닉 모듈 (v5.2.1+)
 // sim-harness/euro_mechanics.js의 simulator 버전
