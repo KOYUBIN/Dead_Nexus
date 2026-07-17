@@ -1695,18 +1695,40 @@ function getVictoryGoals(state) {
     underdog:       ud,
   };
 }
+// ============================================================================
+// v6.27 (B-06, docs/22 P1-6): highlightPoints 승리 환산 — write-only 통화 회생.
+//   [원전] docs/22 §5.4 "₵를 내고 아무것도 얻지 않는 미끼" 진단 → P1-6 처방:
+//     "checkInstantVictory에서 asset_eff = assetValue + highlightPoints … write-only 통화
+//      회생으로 유로 층 전체가 승리 문법에 편입, 어워드 5종이 경쟁 축으로."
+//   [배선] 원전의 1차 표기(asset_eff = 달성값 + hp)를 채택 — 달성값(Bloc=assetValue,
+//     Ghost=rep)에 hp×SCALE 를 가산한다. 두 변형 중 '달성값 가산'을 선택한 근거:
+//     ① 임계(getVictoryGoals)를 건드리지 않아 언더독 스케일과 부등식 반대편에서 독립 합성
+//        (적용 순서 무관) ② HUD·판정이 동일 asset_eff/rep_eff 를 읽어 정직성 계약 유지.
+//   [역할 대칭 — 원전 근거] P1-6 "유로 층 전체가 승리 문법에 편입". EURO_HIGHLIGHTS 8종은
+//     Ghost 트리거(hp_one_raid·triple_raid·zero_wanted·rep_legend)와 Bloc 트리거(imperium·
+//     stock_legend)를 모두 포함하고 마일스톤은 양 역할 공통 → 두 역할 모두 환산해야 "전체"
+//     편입이 성립. 따라서 Bloc=asset_eff, Ghost=rep_eff 대칭 적용. 단 레이드 게이트는
+//     원전이 asset/rep 값만 언급하므로 불변(별도 축).
+const EURO_HL_VICTORY_SCALE = 0.5;  // highlightPoint 당 달성값 가산치 (측정 튜닝값; 반환 이터레이션 표 참조)
+function euro_hlVictoryBonus(p) {
+  if (!p) return 0;
+  return Math.round((p.highlightPoints || 0) * EURO_HL_VICTORY_SCALE);
+}
 // 플레이어가 현재 승리 조건을 충족하면 { route, reason } 반환, 아니면 null (단일 판정 소스).
 function evalPlayerVictory(p, idx, state, goals) {
   if (!p || p.defeated || p.isNpc) return null;
   goals = goals || getVictoryGoals(state);
+  const hlBonus = euro_hlVictoryBonus(p);  // v6.27 (B-06): 달성값 가산 (역할 대칭)
   if (p.role === 'bloc') {
-    const av = assetValue(p, state.stocks, state);
-    if (av >= goals.blocAsset) return { route: 'asset', reason: `Bloc 승리: 자산 ${av} (≥${goals.blocAsset}, ${goals.nonNpcCount}인)` };
+    const avBase = assetValue(p, state.stocks, state);
+    const av = avBase + hlBonus;
+    if (av >= goals.blocAsset) return { route: 'asset', reason: `Bloc 승리: 자산 ${avBase}${hlBonus ? `+${hlBonus}✨` : ''} (≥${goals.blocAsset}, ${goals.nonNpcCount}인)` };
   } else {
-    const rep = p.resources.rep || 0;
+    const repBase = p.resources.rep || 0;
+    const rep = repBase + hlBonus;
     const raids = (state.meta.raidsThisGame || {})[idx] || 0;
-    if (rep >= goals.ghostRepBattle && raids >= goals.ghostRaids) return { route: 'repBattle', reason: `Ghost 승리 (전투): 렙 ${rep}/${goals.ghostRepBattle} + 레이드 ${raids}` };
-    if (rep >= goals.ghostRepOnly) return { route: 'repOnly', reason: `Ghost 승리 (평판): 렙 ${rep} (≥${goals.ghostRepOnly})` };
+    if (rep >= goals.ghostRepBattle && raids >= goals.ghostRaids) return { route: 'repBattle', reason: `Ghost 승리 (전투): 렙 ${repBase}${hlBonus ? `+${hlBonus}✨` : ''} /${goals.ghostRepBattle} + 레이드 ${raids}` };
+    if (rep >= goals.ghostRepOnly) return { route: 'repOnly', reason: `Ghost 승리 (평판): 렙 ${repBase}${hlBonus ? `+${hlBonus}✨` : ''} (≥${goals.ghostRepOnly})` };
   }
   return null;
 }
@@ -1722,12 +1744,13 @@ function evalPlayerVictory(p, idx, state, goals) {
 function hudRaceProgress(p, idx, state, goals) {
   if (!p || p.isNpc || p.defeated) return 0;
   goals = goals || getVictoryGoals(state);
+  const hlBonus = euro_hlVictoryBonus(p);  // v6.27 (B-06): 판정과 동일 asset_eff/rep_eff (정직성 계약)
   if (p.role === 'bloc') {
-    const av = assetValue(p, state.stocks, state);
+    const av = assetValue(p, state.stocks, state) + hlBonus;
     if (!goals.blocAsset) return 0;
     return Math.max(0, Math.min(100, Math.round(av / goals.blocAsset * 100)));
   }
-  const rep = p.resources.rep || 0;
+  const rep = (p.resources.rep || 0) + hlBonus;
   const raids = (state.meta.raidsThisGame || {})[idx] || 0;
   // 렙배틀 경로: 렙≥ghostRepBattle && 레이드≥ghostRaids — 뒤처진 성분이 레이스를 게이트 → min.
   const battleRep  = goals.ghostRepBattle > 0 ? rep / goals.ghostRepBattle : 1;
@@ -7590,8 +7613,11 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           // 위협도 계산: 승리 조건 대비 남은 수치 (단일 소스 VICTORY_GOALS 참조)
           let progressPct = 0, needLabel = '', threatLevel = 'safe', threatBadge = null;
           const isWinning = !!evalPlayerVictory(p, i, state, vGoals);
+          // v6.27 (B-06): highlightPoints 승리 환산 — 판정과 동일한 asset_eff/rep_eff 로 표시 (정직성).
+          const hlBonus = euro_hlVictoryBonus(p);
           if (p.role === 'ghost') {
-            const rep = p.resources.rep || 0;
+            const repBase = p.resources.rep || 0;
+            const rep = repBase + hlBonus;
             const raids = state.meta.raidsThisGame?.[i] || 0;
             const repGoalV = vGoals.ghostRepBattle;
             const raidDone = raids >= vGoals.ghostRaids;
@@ -7600,16 +7626,17 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (repLeft <= 6) { threatLevel = 'warn'; }
-            needLabel = `렙 ${rep}/${repGoalV} · 레이드 ${raids}/${vGoals.ghostRaids}`;
+            needLabel = `렙 ${repBase}${hlBonus ? `+${hlBonus}✨` : ''}/${repGoalV} · 레이드 ${raids}/${vGoals.ghostRaids}`;
           } else {
-            const asset = assetValue(p, state.stocks, state);
+            const assetBase = assetValue(p, state.stocks, state);
+            const asset = assetBase + hlBonus;
             const assetGoalV = vGoals.blocAsset;
             progressPct = Math.min(100, Math.round(asset / assetGoalV * 100));
             const assetLeft = Math.max(0, assetGoalV - asset);
             if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (assetLeft <= 15) { threatLevel = 'warn'; }
-            needLabel = `자산 ${asset}/${assetGoalV}`;
+            needLabel = `자산 ${assetBase}${hlBonus ? `+${hlBonus}✨` : ''}/${assetGoalV}`;
           }
           const isDeclared = declIdx === i;
           if (isDeclared) threatBadge = '📢 종료 선언';
@@ -7662,6 +7689,10 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
               )}
               <div style={{ fontSize: 10, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--green)', fontWeight: 700, letterSpacing: 1 }}>⚡TL {p.tl}</span>
+                {/* v6.27 (B-06): highlightPoints 가시화 — 승리 환산 게이지 (판정에 asset_eff/rep_eff 로 편입) */}
+                {(p.highlightPoints || 0) > 0 && (
+                  <span title={`유로 하이라이트 ${p.highlightPoints}pt → 승리 환산 +${euro_hlVictoryBonus(p)}`} style={{ color: 'var(--yellow)', fontWeight: 700, letterSpacing: 1 }}>✨{p.highlightPoints}pt<span style={{ color: 'var(--text-dim)', fontWeight: 400 }}> (+{euro_hlVictoryBonus(p)})</span></span>
+                )}
                 {/* 5칸 진척도 게이지 — 현재 레벨 목표 대비 (맵별 TL 상한 반영) */}
                 {p.tl < tlCapFor(state.meta.mapSize) && (() => {
                   const cost = tlCostFor(p.tl);
