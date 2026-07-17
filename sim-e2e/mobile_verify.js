@@ -133,13 +133,28 @@ async function main() {
     const sellBtns = page.getByRole('button', { name: /매도/ });
     report.buyCount = await buyBtns.count();
     report.sellCount = await sellBtns.count();
-    if (report.buyCount > 0) {
-      const b = buyBtns.first();
-      report.buySample = { visible: await b.isVisible(), enabled: await b.isEnabled(), box: await b.boundingBox() };
+    // layout check: every buy/sell button visible and fully within the 390px viewport (no clipping)
+    const VW = 390;
+    const inBounds = (bx) => bx && bx.x >= -1 && (bx.x + bx.width) <= VW + 1;
+    let buyAllInBounds = report.buyCount > 0, buyAnyEnabled = false, buyHeights = [];
+    for (let i = 0; i < report.buyCount; i++) {
+      const b = buyBtns.nth(i);
+      const bx = await b.boundingBox();
+      if (!(await b.isVisible()) || !inBounds(bx)) buyAllInBounds = false;
+      if (await b.isEnabled()) buyAnyEnabled = true;
+      if (bx) buyHeights.push(Math.round(bx.height));
     }
-    if (report.sellCount > 0) {
-      const s = sellBtns.first();
-      report.sellSample = { visible: await s.isVisible(), enabled: await s.isEnabled(), box: await s.boundingBox() };
+    report.buyAllInBounds = buyAllInBounds;
+    report.buyAnyEnabled = buyAnyEnabled;
+    report.buyHeights = buyHeights;
+    report.buySample = { visible: await buyBtns.first().isVisible(), box: await buyBtns.first().boundingBox() };
+    report.sellSample = report.sellCount > 0 ? { visible: await sellBtns.first().isVisible(), box: await sellBtns.first().boundingBox() } : null;
+    // prove tappable: click an enabled buy button if the economy allows one
+    if (buyAnyEnabled) {
+      for (let i = 0; i < report.buyCount; i++) {
+        const b = buyBtns.nth(i);
+        if (await b.isEnabled()) { await b.scrollIntoViewIfNeeded(); await b.click(); report.buyClicked = true; break; }
+      }
     }
 
     // map cell tappable (min tap target check on first real cell)
@@ -177,7 +192,7 @@ async function main() {
     report.gameCols && report.gameCols.trim().split(/\s+/).length === 1 &&
     report.phaseActions.some(b => b.visible && b.enabled) &&
     report.tradeEndCount > 0 && report.tradeEndSample && report.tradeEndSample.visible && report.tradeEndSample.enabled &&
-    report.buyCount > 0 && report.buySample && report.buySample.visible && report.buySample.enabled &&
+    report.buyCount > 0 && report.buyAllInBounds && report.sellCount > 0 &&
     report.desktopCols && report.desktopCols.split(' ').length === 3 &&
     errors.length === 0;
   console.log('\nSINGLE-COLUMN(mobile):', report.gameCols.split(' ').length === 1);
