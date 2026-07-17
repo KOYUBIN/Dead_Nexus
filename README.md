@@ -5,12 +5,13 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.8 (2026-07) — 결정 모달 2종 완전 라이브 + 견제 양방향/보복 AI + 시뮬레이터 v1.0.5-fix
+**현재 버전**: v6.27 (2026-07) — 레이스 HUD + 시나리오 S01~S06 전체 개방 + 레거시 캠페인 Stage 1 + 모바일 지원 + highlightPoints 승리 환산
 
-- **결정 모달 2종 라이브 연결**: 레이드 보상(★평판 vs ₵+⚙약탈, v6.6) + Bloc 투자(주가 부양 vs ₵비축, v6.8) — 둘 다 EV/점수-중립 설계로 v6.0 결정 골격 두 템플릿 모두 실연결 완료
-- **견제 양방향 라이브 + 보복(grudge) AI**: 봇→인간(v6.4)에 이어 인간→봇/인간 능동 견제 UI(시장 페이즈 패널, ₵5, v6.5) 추가로 양방향 라이브화. 견제 시 최근 2R 내 나를 견제한 상대를 확률적으로 우선 보복 타겟(`EURO_GRUDGE_BONUS`, v6.7)
-- **`index.html` 렌더 불능 핫픽스**: `App()` 브레이스 불균형으로 babel transform 전체 실패하던 문제 1줄 복원 (v6.5)
-- **웹 시뮬레이터 v1.0.5-fix**: 11×11 정식 + 5×5 튜토리얼 통합, 솔로/핫시트/봇 모드, EASY/NORMAL/HARD 난이도
+- **라이브 플레이**: [dead-nexus.vercel.app](https://dead-nexus.vercel.app) — 브라우저에서 바로 시작 (모바일 세로 스택 지원, v6.25)
+- **레이스 HUD**: 중앙 상단 4요소 — VICTORY RACE 트랙(전 좌석 승리 진척 %) · MARKET 틱커 · THREAT 스트립 · ROUND BRIEF. 판정 코드(`getVictoryGoals`/`evalPlayerVictory`)와 동일 소스로 계기판 정직성 유지 (v6.26)
+- **시나리오 S01~S06 전체 개방**: 표준·코프 대전(all-Bloc M&A)·스트리트 라이징(Ghost 주도)·계엄의 밤(모바일 경찰 NPC)·골드러시(8R 스프린트)·마켓 크래시(공매도 전성) — 시나리오별 개성 실측 검증 완료 (docs/14, v6.21)
+- **레거시 캠페인 Stage 1**: 최초 레이드 발생 시 First Blood 챕터 해금 + 도시 흉터(최다 피격 블록 다음 판 주가 −1) 영속 계층, `legacy_module.js` (v6.24)
+- **highlightPoints 승리 환산**: 하이라이트 포인트가 판정·HUD·배지 단일 소스로 승리 임계에 직결(`EURO_HL_VICTORY_SCALE`) — 종료 선언 역전율 재측정으로 기해소 확인 포함 (v6.27)
 
 ---
 
@@ -24,7 +25,7 @@
 | **난이도** | ★★★★☆ |
 | **장르** | 전략 / 자원 관리 / 구역 장악 / 레거시 |
 | **핵심 메커니즘** | 6속성 마나형 시스템 + 2카드 TOP/BOTTOM + 덱빌딩+사이드웨이 + **5트랙 거리명성** + **Phase 1.5 협상** + **NEXUS 동적 룰** + **Cyberware 슬롯** |
-| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — 단일 HTML, Chrome/Safari 직접 실행 |
+| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — index.html + JS 모듈 4종(euro/tutorial/lore/legacy), Chrome/Safari 직접 실행 |
 
 ---
 
@@ -113,10 +114,13 @@ dead-nexus/
 │       └── meta.md
 │
 ├── simulator/                         # 웹 시뮬레이터
-│   ├── index.html                     # (스캐폴드)
-│   └── v0.5/                          # 메인 시뮬레이터 (단일 HTML, v1.0.5-fix)
-│       ├── index.html                 # React 18 + Babel · 11×11 + 5×5
+│   ├── index.html                     # (구 스캐폴드 — 배포는 v0.5/ 사용)
+│   └── v0.5/                          # 메인 시뮬레이터 (v6.27)
+│       ├── index.html                 # React 18 + Babel · 11×11 + 5×5 · 엔트리+코어 로직
 │       ├── euro_module.js             # 유로 메커닉 (web 빌드)
+│       ├── tutorial_module.js         # BGA 스타일 가이드 튜토리얼 (5×5 솔로)
+│       ├── lore_module.js             # 서사 표면화 (인물 11인·명대사·에필로그)
+│       ├── legacy_module.js           # 레거시 캠페인 Stage 1 (localStorage 영속)
 │       └── README.md
 │
 ├── sim-harness/                       # 헤드리스 시뮬 + 밸런스 회귀
@@ -129,7 +133,7 @@ dead-nexus/
 ├── print-kit/                         # 인쇄 플레이 세트
 │   ├── 01-map.html · 01b-map-11x11.html
 │   ├── 02-cards-ghost.html · 03-cards-bloc.html
-│   ├── 04-news-15.html · 05-tokens.html
+│   ├── 04-news-v1.html · 05-tokens.html          # 뉴스 36장(v1 정본)
 │   ├── 06-character-sheets.html · 07-reference.html
 │   ├── 08-feedback-form.html · 09-scenarios.html
 │   ├── 10-objectives.html · 11-achievements.html
@@ -162,7 +166,7 @@ dead-nexus/
 - **[09-tech-tree.md](docs/09-tech-tree.md)** — TL 1~5 업그레이드 트리
 - **[10-map-zones.md](docs/10-map-zones.md)** — 11×11 동심원 + 5×5 튜토리얼
 - **[11-events-quests.md](docs/11-events-quests.md)** — 이벤트 토큰·뉴스·퀘스트
-- **[14-scenarios.md](docs/14-scenarios.md)** — 시나리오 S01~S08
+- **[14-scenarios.md](docs/14-scenarios.md)** — 시나리오 S01~S06
 - **[15-hidden-objectives.md](docs/15-hidden-objectives.md)** — 숨은 목표
 - **[16-achievements.md](docs/16-achievements.md)** — 업적 (in-game / meta)
 - **[17-v1.0-systems.md](docs/17-v1.0-systems.md)** — v0.6~v1.0 통합 시스템
@@ -171,8 +175,15 @@ dead-nexus/
 - **[18-playtest-guide.md](docs/18-playtest-guide.md)** — 첫 플레이 가이드
 - **[19-sample-game-narrative.md](docs/19-sample-game-narrative.md)** — BLADE 11×11 표본 게임
 - **[docs/narratives/](docs/narratives/)** — MOLE / BROKER / CIPHER / HELIX 추가 표본
-- **[20-balance-audit-v2.x.md](docs/)** — 밸런스 감사 리포트 (v2.1 / v2.2)
+- **[20-balance-audit-v2.1.md](docs/20-balance-audit-v2.1.md)** / **[20-balance-audit-v2.2.md](docs/20-balance-audit-v2.2.md)** — 밸런스 감사 리포트
 - **[sim-harness/README.md](sim-harness/README.md)** — 헤드리스 N판 회귀 도구
+
+### 연구·감사 (v6.x)
+- **[21-design-research.md](docs/21-design-research.md)** — 기계적 설계 감사 (死코드·불일치 발굴)
+- **[22-game-identity.md](docs/22-game-identity.md)** — 게임 정체성 연구 (권장 정체성 도출)
+- **[23-gameplay-audit.md](docs/23-gameplay-audit.md)** — 게임성 재감사 (v6.11→v6.23 실측)
+- **[24-tabletop-operations.md](docs/24-tabletop-operations.md)** — 테이블탑 운영 연구 (print-kit 테이블 에디션 v1 스코프 근거)
+- **[25-rpg-mode.md](docs/25-rpg-mode.md)** — RPG 모드 비전 (신설 트랙, GHOSTGRID 아키텍처)
 
 ---
 
@@ -262,16 +273,24 @@ dead-nexus/
 - `SUPPRESSION_SPEC` + `euro_applySuppression`(견제 적용, 무력★/정보📡/외교🎙) web 이식 (v6.3)
 - `euro_grantSuppression` — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 견제 토큰 자동 부여(₵-5), 인간 타겟 시 알림 배너. 견제 시스템 완전 라이브화 (v6.4)
 
-### ✅ v6.5–v6.8 — 결정 모달 실연결 + 견제 양방향/보복 AI (이번 사이클)
+### ✅ v6.5–v6.8 — 결정 모달 실연결 + 견제 양방향/보복 AI
 - 인간 능동 견제 UI(`HUMAN_SUPPRESS` + 시장 페이즈 견제 패널, ₵5) + `index.html` 렌더 불능 핫픽스 — 견제 양방향 라이브화 (v6.5)
 - 레이드 보상 결정 모달 라이브 트리거 — ★평판 루트 vs ₵+⚙약탈 루트, EV-중립 (v6.6)
 - 봇 견제 보복(grudge) AI — 최근 2R 내 나를 견제한 상대를 확률적으로 우선 타겟, 발동률/비용 불변 (v6.7)
 - `bloc_invest` 결정 라이브 연결 — 인간 Bloc 잉여 자본 시 주가 부양 vs ₵비축, 점수-중립. v6.0 결정 골격 두 템플릿 모두 라이브 완주 (v6.8)
 
-### 🔄 v2.0+ — 다음 마일스톤
-- 대면 플레이테스트 1~3회 (실 데이터 수집)
-- M&A 시스템 전체 (적대적 인수·방어 라운드·백기사 동맹)
-- 캠페인 시나리오 S02~S06 시뮬 통합
+### ✅ v6.9–v6.27 — M&A 완주 + 시나리오 S02~S06 + 레거시 Stage 1 + 레이스 HUD
+- **M&A 시스템 전체** — 지분 모델·11×11 게이트(Stage 1, v6.9) → 봇 능동 인수·인간 방어 4종 모달·백기사 동맹(Stage 3, v6.10) → S02(코프 대전)에서 각성(0→14.7% 승리, v6.19)
+- **캠페인 시나리오 S02~S06 시뮬 통합** — 코프 대전(v6.18)·스트리트 라이징(v6.19)·골드러시·마켓 크래시(v6.20)·계엄의 밤 부분 개방(v6.21) — **v6.21에 S01~S06 전 시나리오 개방**, 시나리오별 개성 실측 검증(docs/14, docs/23)
+- **레거시 캠페인 Stage 1** — First Blood 챕터 해금 + 도시 흉터 영속 계층, `legacy_module.js` (v6.24)
+- **모바일 세로 스택 레이아웃** — 720px 이하 실기기 검증 (v6.25)
+- **레이스 HUD + print-kit 테이블 에디션 v1** — 승리 진척 계기판 4요소 + 인쇄 세트 수치 현행화 (v6.26)
+- **highlightPoints 승리 환산** — 하이라이트 포인트를 판정 임계에 직결, 종료 선언 역전 재측정 (v6.27)
+
+### 🔄 다음 마일스톤 — 실제 미완 항목
+- 대면 플레이테스트 1~3회 (실 데이터 수집, `playtesting/session-00-guide.md` 가이드 준비 완료)
+- 오토마 덱 설계 (봇 3인의 테이블 번역 — `playtesting/balance-issues-digest.md` §4 로드맵)
+- RPG 모드 Stage 1 수직 슬라이스 (`docs/25-rpg-mode.md` 비전 확정, 구현 전)
 - TTS(Tabletop Simulator) 익스포트
 - 일러스트 + 공식 룰북 PDF + 카드 아트
 - 킥스타터 준비

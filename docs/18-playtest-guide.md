@@ -144,7 +144,7 @@ A. 그림자 LV5 도달 시 deathSave 능력 (1회 한정). 또는 HELIX의 CLON
 ### 공용 (테이블당 1세트)
 - `02-cards-ghost.html` (60장, 슬리브 권장)
 - `03-cards-bloc.html` (43장 = 30 전용 + 13 공통)
-- `04-news-15.html` (뉴스 이벤트 카드)
+- `04-news-v1.html` (뉴스 이벤트 카드, 36장 — v1 정본)
 - `05-tokens.html` (자원·구역·수배·HP 토큰)
 - `07-reference.html` (진행자 참조)
 

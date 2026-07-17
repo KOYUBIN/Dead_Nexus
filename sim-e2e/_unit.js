@@ -335,6 +335,36 @@ function tests(){
   const udB=mkS(['ghost','bloc','bloc','bloc']);
   const gvNoHp=GVG(udB); udB.players[1].highlightPoints=50; const gvHp=GVG(udB);
   ok('B06 order-indep: hp 는 임계(getVictoryGoals) 불변', gvNoHp.blocAsset===gvHp.blocAsset&&gvNoHp.ghostRepBattle===gvHp.ghostRepBattle, `${gvNoHp.blocAsset}/${gvHp.blocAsset}`);
+  // ============================================================
+  // v6.28: NEXUS BAR — nextAction 단일 헬퍼(하단 NEXT의 진행 로직 정본) 정합성
+  //   기존 dispatch(SET_PHASE)/confirmPlan 미러링·결정 게이트·페이즈 라벨을 검증(신규 게임 로직 0).
+  // ============================================================
+  const NA=window.nextAction;
+  ok('NB nextAction exposed', typeof NA==='function');
+  const nbS=B({mode:'solo',mapSize:'5x5',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
+  const mkCtx=(over)=>Object.assign({canPlan:true,needCards:2,selectedCards:[],confirmPlan:()=>'CONFIRM',dispatch:()=>{},meIdx:0},over||{});
+  // (1) 결정 큐 게이트 — pendingDecisions 있으면 진행 차단 (honesty 비용 0, 원시 state 카운트)
+  const rPend=NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[{a:1},{b:2}]}},mkCtx());
+  ok('NB pending gate: disabled + 결정 필요 N + onClick null', rPend.disabled===true&&rPend.label==='결정 필요 2'&&rPend.onClick===null, `label ${rPend.label}`);
+  // (2) phase0 → SET_PHASE 1 (기존 버튼 미러)
+  let disp0=null; const r0=NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[]}},mkCtx({dispatch:(a)=>{disp0=a;}}));
+  r0.onClick(); ok('NB ph0 → dispatch SET_PHASE phase:1', r0.disabled===false&&disp0&&disp0.type==='SET_PHASE'&&disp0.phase===1, JSON.stringify(disp0));
+  // (3) phase1 → SET_PHASE 2
+  let disp1=null; const r1=NA({...nbS,meta:{...nbS.meta,phase:1,pendingDecisions:[]}},mkCtx({dispatch:(a)=>{disp1=a;}}));
+  r1.onClick(); ok('NB ph1 → dispatch SET_PHASE phase:2', disp1&&disp1.phase===2, JSON.stringify(disp1));
+  // (4) phase2 미완성 카드 → 비활성 '카드 x/2'
+  const r2a=NA({...nbS,meta:{...nbS.meta,phase:2,pendingDecisions:[],awaitingMoveTarget:false}},mkCtx({selectedCards:['X']}));
+  ok('NB ph2 미완성 → disabled + 카드 1/2', r2a.disabled===true&&r2a.label==='카드 1/2', `label ${r2a.label}`);
+  // (5) phase2 완성 → '✓ 확정' + onClick===confirmPlan 참조 (판정 이원화 방지)
+  const cpRef=()=>'CONFIRM';
+  const r2b=NA({...nbS,meta:{...nbS.meta,phase:2,pendingDecisions:[],awaitingMoveTarget:false}},mkCtx({selectedCards:['X','Y'],confirmPlan:cpRef}));
+  ok('NB ph2 완성 → ✓ 확정 · onClick===confirmPlan', r2b.disabled===false&&r2b.label==='✓ 확정'&&r2b.onClick===cpRef);
+  // (6) 이동 목표 대기 → '🎯 이동 목표' 비활성 (지도 클릭 유도)
+  const r2c=NA({...nbS,meta:{...nbS.meta,phase:2,pendingDecisions:[],awaitingMoveTarget:true}},mkCtx());
+  ok('NB ph2 awaitingMoveTarget → 🎯 이동 목표 disabled', r2c.disabled===true&&r2c.label==='🎯 이동 목표');
+  // (7) 종료 선언 유지 톤 — 내 선언이면 tone=won (meIdx 기준, players[0] 하드코딩 아님)
+  ok('NB decl tone=won when decl.idx===meIdx', NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[],victoryDeclaration:{idx:0}}},mkCtx({meIdx:0})).tone==='won');
+  ok('NB decl tone≠won when decl.idx≠meIdx', NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[],victoryDeclaration:{idx:1}}},mkCtx({meIdx:0})).tone!=='won');
   return out;
 }
 (async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();

@@ -12,7 +12,7 @@ React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
 - **난이도** (솔로): 🟢 EASY / 🟡 NORMAL / 🔴 HARD
 - **Ghost 클래스 6**: CIPHER · BLADE · RIGGER · BROKER · DRIFTER · MOLE
 - **Bloc 5**: VANTA · IRONWALL · HELIX · AXIOM · CARBON
-- **시나리오**: S01 표준
+- **시나리오**: S01~S06 전 시나리오 개방 (표준·코프 대전·스트리트 라이징·계엄의 밤·골드러시·마켓 크래시, v6.21)
 - **시스템**:
   - 7페이즈 턴 (시장 거래 · 뉴스 · 계획 · 실행 · 수익 · R&D · 결산)
   - 개인 속성 풀 (플레이어별 M/I/V/S/B/A/GRID)
@@ -33,14 +33,14 @@ React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
   - **견제 토큰 3종** (무력★/정보📡/외교🎙, `SUPPRESSION_SPEC`) — 봇 AI가 매R 확률적으로(`MODE_CONFIG.suppressionProb`: 11×11 0.30 / 5×5 0.15) 최다위협 상대에 자동 부여(`euro_grantSuppression`, ₵-5) + R 시작 시 자동 페널티 적용. **양방향 라이브**: 인간도 시장 페이즈 "능동 견제" 패널에서 대상·유형 선택 후 ₵5로 직접 부여 가능(`HUMAN_SUPPRESS`, v6.5). 봇 견제엔 보복(grudge) AI 편향 적용 — 최근 2R 내 나를 견제한 상대를 확률적으로 우선 타겟(`EURO_GRUDGE_BONUS`, v6.7)
   - **결정 모달 2종 라이브**: 레이드 성공 시 ★평판 루트 vs ₵+⚙약탈 루트 선택(EV-중립, v6.6), 인간 Bloc 잉여 자본(₵≥12) 시 주가 부양 vs ₵비축 선택(점수-중립, v6.8) — v6.0 결정 골격의 두 템플릿 모두 실연결 완료
 
-### 다음 사이클 (v0.6+ 예정)
-- 시나리오 S02~S06 시뮬 통합
-- M&A 시스템 전체 (적대적 인수·방어 라운드·백기사 동맹)
-- 뉴스 카드 50종 (원설계 50장 목표 달성)
-- Tech Level 3~5 전용 카드 해금
+### 다음 사이클 (B노선 로드맵 — `playtesting/balance-issues-digest.md` §4 참조)
+- 오토마 덱 설계 (봇 3인의 테이블 번역, v2)
+- 대면 플레이테스트 세션 00 실시 (갱신된 가이드로)
+- 레거시 캠페인 Stage 2+ (챕터 2~8)
+- 주권 액면화 등 테이블탑 운영 기법 적용 (docs/24)
+- RPG 모드 Stage 1 수직 슬라이스 (docs/25 비전 확정, 구현 전 — 시뮬 트랙과 독립)
 
 ### v0.7+
-- 레거시 캠페인 연동
 - 메시 맵 (챕터 5+)
 - TTS(Tabletop Simulator) 익스포트
 
@@ -206,3 +206,23 @@ Phase 6 결산     → 승리 체크 → 다음 라운드
 | v6.6   | 레이드 보상 결정 모달 라이브 트리거(`type:'raid_reward'`) — ★ 평판 루트 vs ₵+⚙ 약탈 루트, `euro_raidLootBundle` units 완전보존 환산으로 EV-중립 |
 | v6.7   | 봇 견제 보복(grudge) AI — `lastSuppressedBy` 기억, 최근 2R(`EURO_GRUDGE_WINDOW`) 내 나를 견제한 상대를 확률적으로 우선 타겟(`EURO_GRUDGE_BONUS`), 발동률/비용/토큰 수 불변 |
 | v6.8   | `bloc_invest` 결정 라이브 연결 — 인간 Bloc 잉여 자본(₵≥12) 시 주가 부양 vs ₵비축 선택(점수-중립). v6.0 결정 골격 두 템플릿(raid_reward·bloc_invest) 모두 라이브 완주 |
+| v6.9   | M&A 시스템 Stage 1+2 — 지분 모델 + 11×11 게이트 + 적대적 인수 루프(인간 공격자) UI 표면화 |
+| v6.10  | M&A Stage 3 — 봇 능동 인수 + 인간 방어 4종 모달 + 백기사 동맹 — M&A 시스템 완주 |
+| v6.11  | BGA 스타일 가이드 튜토리얼(`tutorial_module.js` 신규) — 첫 판 위 8스텝 단계별 코치마크(5×5 솔로 전용) |
+| v6.11.1/.2 | Vercel 배포 핫픽스 — trailingSlash/cleanUrls 충돌로 인한 모듈 미로드를 자가복구 로더로 최종 복구 |
+| v6.12  | 15차 사이클 — raidThreshold 통일·HP0 STEP F·M&A 봇 각성·VICTORY_GOALS 단일 소스 + 종료 선언 라운드(즉시 승리 폐지) |
+| v6.13  | 공매도 레이드(니치 기함) + 서사 표면화(`lore_module.js` 신규 — 인물 11인·명대사·에필로그) |
+| v6.14  | 상처/스캔들 덱 오염 실카드화 — HP 50%/구역 상실·M&A 실패 시 discard 삽입(상한 2) |
+| v6.15  | 뉴스 카드 50종 — 원설계 50장 목표 달성(호재/악재·시장 충격·M&A/스캔들/숏 시너지) |
+| v6.16  | 클래스 개성 루프 — 카드→시그니처 게이지 훅 5건 + MOLE 위장 실효화(시그니처 13종 전부 소비처 확보) |
+| v6.17  | TL 3~5 정점화 곡선 캘리브레이션 + 5×5 TL 캡 버그 수정 + TL5 Bloc 카드 5종 |
+| v6.18  | 시나리오 S02(코프 대전) + SCENARIOS 프레임워크(scenarioRule/initGame 훅) 신설 |
+| v6.19  | S02 밸런스(M&A 승리 0→14.7%) + S03(스트리트 라이징) 원전 구현 |
+| v6.20  | 시나리오 S05(골드러시)·S06(마켓 크래시) 구현 + S03 튜닝 + S04 잠금 사유 표기 |
+| v6.21  | 모바일 NPC 엔진(경찰 순찰·자동전투) + 공권력 9 규칙 + S04 부분 개방 — **S01~S06 전 시나리오 개방** |
+| v6.22  | S06 방향 보정 — 거래동결·뉴스±50%·회복배당 심층 룰 배선, ghost 33%→53% 원전 방향 회복 |
+| v6.23  | S04 구출 퀘스트 — 구금 NPC 5인 + 경찰 수호 + 레이드 heat+2 |
+| v6.24  | 레거시 캠페인 Stage 1(`legacy_module.js` 신규) — First Blood 챕터 해금 + 도시 흉터 영속 계층 |
+| v6.25  | 모바일 세로 스택 레이아웃 픽스 + 구성 결정론 완화(`euro_underdogGoalScale`) + 테이블탑 운영 연구(docs/24) |
+| v6.26  | 레이스 HUD(VICTORY RACE·MARKET·THREAT·ROUND BRIEF) + print-kit 테이블 에디션 v1 + docs/14 시나리오 문서 현행화 |
+| v6.27  | highlightPoints 승리 환산(`EURO_HL_VICTORY_SCALE`) + 종료 선언 역전 재측정(기해소 확인) + print-kit 07 참조카드 현행화 |
