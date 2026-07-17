@@ -150,6 +150,7 @@
   .player-card .pstats strong { color: var(--text); }
 
   /* v6.26 Race HUD / Market ticker / Threat strip (docs/22 §계기판) */
+  .hud-wrap.decl { margin-top: 34px; }   /* 종료 선언 배너(fixed, top:50) 겹침 회피 */
   .race-hud {
     flex: 0 0 auto; margin-bottom: 10px;
     background: linear-gradient(180deg, rgba(10,10,22,0.96), rgba(15,15,26,0.92));
@@ -495,6 +496,7 @@
     .top-bar .phases { order: 3; flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
     .center-panel { overflow: visible; padding: 10px; }
     /* v6.26: 모바일 — HUD/틱커/위협 스트립은 center 최상단(=top 바 아래·지도 위) 자동 배치 */
+    .hud-wrap.decl { margin-top: 100px; }   /* 모바일 배너는 3줄 랩 → 더 큰 오프셋 */
     .mkt-ticker { flex-wrap: nowrap; overflow-x: auto; }
     .race-track { height: 30px; }
     .race-marker .rm-dot { width: 17px; height: 17px; }
@@ -6682,7 +6684,7 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S06' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult}. (부분 구현: 첫2R 거래동결·뉴스±50%·재건왕/청산자 타이틀 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult} · 첫 {scen.tradeFreezeRounds}R 거래 동결 · 뉴스 상승 ×{scen.newsStockUpMult}/하락 ×{scen.newsStockDownMult}. (부분 구현: 재건왕/청산자 타이틀 미배선)
         </div>
       )}
 
@@ -7862,9 +7864,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             const hit = briefPats.find(bp => bp.re.test(msg));
             if (hit && !brief.some(b => b.msg === msg)) brief.push({ ic: hit.ic, msg: msg.replace(/^[·\s]+/, '').slice(0, 60) });
           }
-          const wrapStyle = state.meta.victoryDeclaration ? { marginTop: 30 } : undefined;
           return (
-          <div style={wrapStyle}>
+          <div className={`hud-wrap ${state.meta.victoryDeclaration ? 'decl' : ''}`}>
             {/* ① 레이스 트랙 */}
             <div className="race-hud">
               <div className="rh-head">
