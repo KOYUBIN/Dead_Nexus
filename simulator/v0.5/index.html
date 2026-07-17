@@ -1606,11 +1606,51 @@ const SCENARIOS = {
     raidRewardMult: 1.5,         // docs/14 특수: Ghost 레이드 보상 +50% (렙; 봇 레이드 핸들러)
     raidWantedDelta: -1,         // docs/14 특수: Ghost 현상수배 상승 −1 (덜 위험)
     npcDefenseMod: -1,           // docs/14 특수: NPC Bloc 방어력 −1 (레이드 threshold −1)
+    // v6.20 (S03 밸런스): 단독 실참 Bloc 이 startStock 12 로 자산 승리를 조기 수렴(관측 ghost 28%, avg~6R).
+    //   S02식 blocAssetBonus 를 얹어 게임을 8~11R 로 연장 → Ghost 렙25+레이드3 승리창 확보.
+    //   docs/14 밸런스표 "Ghost 압도(●●●●●)" 지향 (측정 튜닝값; iteration 기록은 반환 표 참조).
+    blocAssetBonus: 80,          // 자산 목표 100 → 180 (단독 Bloc 조기승리 지연; iter3 확정값)
   },
-  // --- S04~S06: 자리표(잠금). 미구현 — 설계는 docs/14, 구현은 후속 확장 ---
-  S04: { id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.', desc: '공권력 7 시작 · 경찰 NPC 상시 이동. (미구현)', locked: true, maps: ['11x11'] },
-  S05: { id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다.', desc: '경제 ×1.5 · 8R 단축 · 주가 과열. (미구현)', locked: true, maps: ['11x11'] },
-  S06: { id: 'S06', name: '마켓 크래시', tagline: '어제까지 부자였다.', desc: '전 주가 5 시작 · 공매도 전성기. (미구현)', locked: true, maps: ['11x11'] },
+  // --- S04: 계엄의 밤 — 잠금 유지 (미구현 대형 시스템 의존). 판단 근거는 아래 주석 참조 ---
+  //   docs/14 S04 정체성 = "경찰 NPC 3체 상시 배치 + 매 라운드 랜덤 이동 + Ghost 진입 시 자동 전투
+  //   (NPC HP8/ATK4)" + "구출 퀘스트 덱" + "레거시 챕터 3 자동 해금". 이 셋은 모두 엔진에 부재한
+  //   대형 시스템 — (1) 이동·전투하는 모바일 NPC 엔티티(현 NPC 는 정적 Bloc 자동 등락·방어만),
+  //   (2) 구출 퀘스트 전용 덱, (3) 레거시 챕터 진행. 시작 조건(공권력7·무기−2·레이드 공권력+2)만
+  //   얹으면 시나리오 정체성이 소거되어 "고공권력 표준판"이 될 뿐이라, 창작 없이 원전 구현 불가.
+  //   → 잠금 유지 + 사유 표기(locked 카드). 후속: 모바일 NPC 전투 엔진 선행 필요.
+  S04: { id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.',
+    desc: '공권력 7 · 경찰 NPC 상시 이동/자동전투 · 구출 퀘스트 · 레거시 챕터. 🔒 모바일 NPC 전투 엔진 미구현으로 잠금.',
+    locked: true, maps: ['11x11'], lockReason: '모바일 경찰 NPC(이동+자동전투)·구출 퀘스트 덱·레거시 챕터 = 미구현 대형 시스템' },
+  // --- S05: 골드러시 (docs/14) — 경제 과열 · 8R 스프린트 (구현) ---
+  S05: {
+    id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다. 먼저 줍지 않으면 밟고 간다.',
+    desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향.',
+    locked: false, maps: ['11x11'],
+    startHeat: 5,                // docs/14: 시작 공권력 5 (정상)
+    startStock: 13,             // docs/14: 시작 주가 13 (과열)
+    startCreditAll: 5,          // docs/14: 시작 자원 표준 + 크레딧 +5 (전원)
+    roundLimit: 8,              // docs/14: 8라운드 타임리밋 (도달 시 checkVictoryByPoints 자동 승리)
+    blocAssetBonus: 25,         // docs/14: Bloc 자산 60→75 (+25%) → 사sim base 100 → +25
+    zoneIncomeBonus: 1,         // docs/14 특수: 모든 구역 수입 +1 (영구, COLLECT_INCOME 훅)
+    // No-op(부분 구현 보고): 금융가 ×2 · 주가 변동폭 ±4 · 뉴스 2장 · 블랙마켓 +2 · M&A 방어 +3
+    //   — 세밀 경제 배선(구역타입별 수입 배수·주가 변동 커브·뉴스 드로우 수)은 엔진 심층부라 미배선.
+  },
+  // --- S06: 마켓 크래시 (docs/14) — 경제 붕괴 · 공매도 전성기 (구현) ---
+  S06: {
+    id: 'S06', name: '마켓 크래시', tagline: '어제까지 부자였다. 오늘은 살아남는 게 목표다.',
+    desc: '경제 붕괴 · 전 주가 5 시작. 크레딧 −3 · 인플루언스 −1 · 공매도 전성(저가 정산 2배).',
+    locked: false, maps: ['11x11'],
+    startHeat: 6,               // docs/14: 시작 공권력 6 (위기감)
+    startStock: 5,              // docs/14: 시작 주가 5 (정상 10의 절반 — sim base 8 대비 붕괴)
+    startCreditAll: -3,         // docs/14: 시작 자원 표준 + 크레딧 −3 (전원)
+    startInfluenceAll: -1,      // docs/14: 인플루언스 −1 (전원)
+    startScandalEach: true,     // docs/14 특수: 모든 블록 스캔들 카드 1장씩 덱 추가 상태로 시작
+    shortLowPriceMult: 2,       // docs/14 특수: 주가 저가(≤ threshold)일 때 숏 정산 수익 2배
+    shortLowPriceThresh: 5,     // 저가 임계 (원전 "−5 이하" 취지 = 붕괴가 유지‧심화 구간)
+    // No-op(부분 구현 보고): 첫 2R 거래 동결 · 뉴스 상승−50%/하락+50% · 경제회복 배당 2배 ·
+    //   재건왕/청산자 특수 타이틀 — 뉴스 효과 부호 배율·조건부 승리 타이틀은 엔진 심층부라 미배선.
+    //   공매도 자체는 기존 시스템(SHORT_CONFIG)으로 상시 활성 → 붕괴 저가에서 정산 2배로 실효.
+  },
 };
 const getScenario = (id) => SCENARIOS[id] || SCENARIOS.S01;
 // 룰 오버라이드 조회 — 사용처에서 state.meta.scenario 기준 값 획득 (없으면 fallback).
@@ -1665,6 +1705,19 @@ function applyScenarioInit(scen, players, map) {
     players.forEach(p => {
       if (p.role === 'bloc' && !p.isNpc) p.resources = { ...p.resources, influence: (p.resources.influence || 0) + scen.blocInfluenceBonus };
     });
+  }
+  // v6.20 (S05/S06): 전원 대상 시작 자원 델타 (docs/14 S05 크레딧 +5 · S06 크레딧 −3·인플루언스 −1).
+  //   role 무관 전 좌석에 적용. 음수는 0 하한으로 클램프(자원 음수 방지).
+  if (scen.startCreditAll) {
+    players.forEach(p => { p.resources = { ...p.resources, credit: Math.max(0, (p.resources.credit || 0) + scen.startCreditAll) }; });
+  }
+  if (scen.startInfluenceAll) {
+    players.forEach(p => { p.resources = { ...p.resources, influence: Math.max(0, (p.resources.influence || 0) + scen.startInfluenceAll) }; });
+  }
+  // v6.20 (S06): 모든 블록 스캔들 카드 1장씩 덱 오염 상태로 시작 (docs/14 S06).
+  //   insertScandal 코어와 동일하게 'SCANDAL' 카드를 discard 에 선삽입 (런타임 오염 카드).
+  if (scen.startScandalEach) {
+    players.forEach(p => { if (p.role === 'bloc') p.discard = [...(p.discard || []), 'SCANDAL']; });
   }
   if (scen.extraSupport) {
     players.forEach(p => {
@@ -2217,6 +2270,9 @@ function settleShortPositions(state) {
   const snap = state.meta.lastStockSnapshot || state.stocks;
   // v6.15: 시장 변동성 뉴스(short_settle_mult) — 이번 라운드 정산분에 배수 적용 (round 일치 시에만)
   const mult = (state.meta.shortMultRound === state.meta.round) ? (state.meta.shortMultVal || 1) : 1;
+  // v6.20 (S06): 붕괴 저가 정산 2배 — 정산 시점 종가가 저가 임계 이하인 블록은 추가 배수 (docs/14 S06).
+  const lowMult   = scenarioRule(state, 'shortLowPriceMult', 1);
+  const lowThresh = scenarioRule(state, 'shortLowPriceThresh', 5);
   const logs = [];
   const ps = state.players.map(p => {
     if (p.defeated || p.role !== 'ghost') return p;
@@ -2226,7 +2282,9 @@ function settleShortPositions(state) {
       if (!qty) continue;
       const drop = (snap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
       if (drop > 0) {
-        const payout = drop * qty * SHORT_CONFIG.payoutPerPt * mult;
+        // 저가 임계 이하(붕괴 지속)면 lowMult 추가 적용 — 미지정 시나리오는 lowMult=1(항등).
+        const crashBonus = ((state.stocks[bl] ?? 0) <= lowThresh) ? lowMult : 1;
+        const payout = drop * qty * SHORT_CONFIG.payoutPerPt * mult * crashBonus;
         gained += payout;
         logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${payout}${mult > 1 ? ` (변동성×${mult})` : ''}` });
       }
@@ -3272,7 +3330,8 @@ function reducer(state, action) {
       state = applyVictoryDeclaration(state);
       const newRound = state.meta.round + 1;
       // v0.8.3: 맵별 maxRounds — 5×5: 8, 11×11: 12
-      const maxR = state.meta.mapSize === '11x11' ? 12 : 8;
+      // v6.20 (S05): 시나리오 roundLimit 오버라이드 (골드러시 8R 단축). 미지정 시 맵 기본값.
+      const maxR = scenarioRule(state, 'roundLimit', state.meta.mapSize === '11x11' ? 12 : 8);
       if (newRound > maxR) {
         return checkVictoryByPoints(state);
       }
@@ -3634,6 +3693,9 @@ function reducer(state, action) {
         if (nexRule3?.id === 'energy_grid') {
           res.credit = (res.credit || 0) + ownedCoords.length;
         }
+        // v6.20 (S05): 시나리오 구역 수입 보너스 — 모든 자사 구역당 +N 크레딧 (골드러시 +1, docs/14).
+        const scZoneInc = scenarioRule(state, 'zoneIncomeBonus', 0);
+        if (scZoneInc) res.credit = (res.credit || 0) + ownedCoords.length * scZoneInc;
 
         // v0.6.3e: 건물 라운드 수익
         ownedCoords.forEach(c => {
@@ -6063,6 +6125,16 @@ function SetupScreen({ onStart }) {
       {scen.ghostRising && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           ⚠ {scen.id} {scen.name}: Ghost 주도 · 11×11 전용 · 실참 Bloc 1 + Ghost 다수 + NPC Bloc 4 · 시작 공권력 {scen.startHeat} · 주가 {scen.startStock} · Ghost 렙+{scen.ghostRepBonus}/₵+{scen.ghostCreditBonus} · 레이드 보상+50%·수배−1·NPC 방어−1 · Ghost 승리 렙 {scen.ghostRepBattleOverride}+레이드 {scen.ghostRaidsOverride}. (역할 자동 Ghost)
+        </div>
+      )}
+      {scen.id === 'S05' && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus}. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4·뉴스2장 미배선)
+        </div>
+      )}
+      {scen.id === 'S06' && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult}. (부분 구현: 첫2R 거래동결·뉴스±50%·재건왕/청산자 타이틀 미배선)
         </div>
       )}
 
