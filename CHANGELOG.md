@@ -17,6 +17,11 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.30 — 홈 포털 + 트랙 간 내비게이션 (42차)
+- **루트 홈 화면 전면 개편** (유저 요청 "규모가 커졌으니 홈화면"): 히어로(DEAD_NEXUS 로고 + docs/22 정체성 한 줄) + 트랙 카드 3장 — 🎮 전략 시뮬레이션(시나리오 6종·튜토리얼·모바일) / ⚔ RPG ASH & SIGNAL(NEW) / 🖨 프린트 킷(테이블 v1·PnP) + GitHub·docs 링크. 순수 HTML/CSS·JS 0·외부 폰트 CDN 제거(시스템 mono 폴백) — 오프라인/file:// 호환, 모바일 1열/데스크톱 3열
+- **크로스 내비 ⌂**: 시뮬레이터 top-bar·RPG TopBar·프린트 킷 상단에 홈 링크 — 어느 트랙에서든 홈 복귀 (Playwright 왕복 3경로 실검증)
+- 검증: babel 0 에러(시뮬 468KB·RPG 블록) · 유닛 171+46 전수 · e2e 3판 스모크 에러 0 · 링크 대상 실존 확인
+
 ### v6.29 — RPG 모드 Stage 1: 챕터 1 "First Blood" 수직 슬라이스 (41차)
 - **rpg/ 신규 트랙 라이브** (dead-nexus.vercel.app/rpg/ · file:// 더블클릭 겸용): docs/25 GHOSTGRID 아키텍처 그대로 — React+Babel 빌드리스, fetch/XHR 0, 전 경로 상대, 모바일 세로 우선
 - **수직 슬라이스 루프 완주**: 허브(미션보드+캐릭터 시트) → 대화 씬(VANTA 디렉터, 명대사 원문 고정) → 6×8 그리드 전투(First Blood: VANTA 서버룸) → 에필로그 → karma 성장 → 세이브
