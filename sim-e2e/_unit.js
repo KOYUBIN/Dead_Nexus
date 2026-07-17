@@ -121,9 +121,47 @@ function tests(){
   ok('S06 lastStockSnapshot=5',s6.meta.lastStockSnapshot.VANTA===5);
   ok('S06 all-seat credit -3 (bloc 8-3=5)',bloc6&&bloc6.resources.credit===5,`got ${bloc6&&bloc6.resources.credit}`);
   ok('S06 all-seat influence -1 (bloc 3-1=2)',bloc6&&bloc6.resources.influence===2,`got ${bloc6&&bloc6.resources.influence}`);
-  ok('S06 shortLowPriceMult=2',SR(s6,'shortLowPriceMult',1)===2);
+  ok('S06 shortLowPriceMult=2 (원전 값)',SR(s6,'shortLowPriceMult',1)===2);
   ok('S06 each bloc seeded SCANDAL card',s6.players.filter(p=>p.role==='bloc').every(p=>(p.discard||[]).includes('SCANDAL')),`sample discard ${JSON.stringify(bloc6&&bloc6.discard)}`);
-  ok('S06 blocAsset=base+adj (no bonus)',g6.blocAsset===100+adj6,`got ${g6.blocAsset}`);
+  ok('S06 blocAsset=base+adj+30 (iter2 방향 보정)',g6.blocAsset===100+adj6+SR(s6,'blocAssetBonus',0)&&SR(s6,'blocAssetBonus',0)===30,`got ${g6.blocAsset} bonus ${SR(s6,'blocAssetBonus',0)}`);
+  // ---- v6.22: S06 심층 룰 배선 (뉴스 배율·거래 동결·회복 배당) ----
+  const R=window.reducer, SND=window.scenNewsStockDelta;
+  // 시나리오 룰 키 존재
+  ok('S06 newsStockUpMult=0.5',SR(s6,'newsStockUpMult',1)===0.5);
+  ok('S06 newsStockDownMult=1.5',SR(s6,'newsStockDownMult',1)===1.5);
+  ok('S06 tradeFreezeRounds=2',SR(s6,'tradeFreezeRounds',0)===2);
+  ok('S06 divRecoveryMult=2',SR(s6,'divRecoveryMult',1)===2);
+  ok('S06 divRecoveryThresh=50',SR(s6,'divRecoveryThresh',0)===50);
+  // 뉴스 주가 방향 배율 (상승 −50% / 하락 +50%)
+  ok('S06 news UP delta ×0.5 (+4→+2)',SND(s6,4)===2,`got ${SND(s6,4)}`);
+  ok('S06 news DOWN delta ×1.5 (−4→−6)',SND(s6,-4)===-6,`got ${SND(s6,-4)}`);
+  ok('S06 news zero delta identity',SND(s6,0)===0);
+  // 거래 동결 게이트: R≤2 매수/매도/숏 no-op(동일 참조 반환), R3 정상
+  const s6r1={...s6,meta:{...s6.meta,round:1}};
+  const s6r2={...s6,meta:{...s6.meta,round:2}};
+  const s6r3={...s6,meta:{...s6.meta,round:3}};
+  ok('S06 R1 BUY_STOCK frozen (no-op)',R(s6r1,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1})===s6r1);
+  ok('S06 R2 BUY_STOCK frozen (no-op)',R(s6r2,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1})===s6r2);
+  const buyR3=R(s6r3,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1});
+  ok('S06 R3 BUY_STOCK allowed',buyR3!==s6r3&&(buyR3.players[0].stocks.VANTA||0)===1,`VANTA held ${buyR3.players[0].stocks.VANTA}`);
+  const s6sell1={...s6,meta:{...s6.meta,round:1},players:s6.players.map((p,i)=>i===0?{...p,stocks:{...p.stocks,VANTA:2}}:p)};
+  const s6sell3={...s6,meta:{...s6.meta,round:3},players:s6.players.map((p,i)=>i===0?{...p,stocks:{...p.stocks,VANTA:2}}:p)};
+  ok('S06 R1 SELL_STOCK frozen (no-op)',R(s6sell1,{type:'SELL_STOCK',playerIdx:0,bloc:'VANTA',qty:1})===s6sell1);
+  ok('S06 R3 SELL_STOCK allowed',R(s6sell3,{type:'SELL_STOCK',playerIdx:0,bloc:'VANTA',qty:1})!==s6sell3);
+  // 숏 진입 동결 (Ghost 좌석 필요)
+  const s6g=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S06'});
+  const s6gRich=s6g.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:20}}:p);
+  const s6gR1={...s6g,meta:{...s6g.meta,round:1},players:s6gRich};
+  const s6gR3={...s6g,meta:{...s6g.meta,round:3},players:s6gRich};
+  ok('S06 R1 BUY_SHORT frozen (no-op)',R(s6gR1,{type:'BUY_SHORT',playerIdx:0,bloc:'VANTA',qty:1})===s6gR1);
+  ok('S06 R3 BUY_SHORT allowed',R(s6gR3,{type:'BUY_SHORT',playerIdx:0,bloc:'VANTA',qty:1})!==s6gR3);
+  // 회복 배당 배수: 주가 합계 임계 도달 시 divMult 적용 (COLLECT_INCOME divMult 로직 항등 검증)
+  const stockSumLow=Object.values(s6.stocks).reduce((a,v)=>a+v,0); // 5×5=25 (붕괴 — 미도달)
+  ok('S06 붕괴 시작 주가합=25 (<50 → 배당 미배수)',stockSumLow===25,`got ${stockSumLow}`);
+  const s6recov={...s6,stocks:Object.fromEntries(Object.keys(s6.stocks).map(k=>[k,11]))}; // 5×11=55 (회복)
+  const recSum=Object.values(s6recov.stocks).reduce((a,v)=>a+v,0);
+  const recMult=(recSum>=SR(s6recov,'divRecoveryThresh',Infinity))?SR(s6recov,'divRecoveryMult',1):1;
+  ok('S06 회복 주가합≥50 → 배당 배수=2',recSum>=50&&recMult===2,`sum ${recSum} mult ${recMult}`);
   // ---- S01 unchanged (fallbacks) ----
   const s1=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
   const g1=GVG(s1);
@@ -133,6 +171,17 @@ function tests(){
   ok('S01 euro_totalShares uses float 10',ETS(s1,'VANTA')===s1.players.reduce((a,p)=>a+((p.stocks&&p.stocks.VANTA)||0),0)+10);
   ok('S01 heat=5',s1.heat===5);
   ok('S01 startStock=8',s1.stocks.VANTA===8);
+  // ---- v6.22: S06 심층 룰이 타 시나리오로 새지 않는지 항등 폴백 검증 (S01) ----
+  ok('S01 tradeFreezeRounds fallback 0',SR(s1,'tradeFreezeRounds',0)===0);
+  ok('S01 newsStockUpMult fallback 1',SR(s1,'newsStockUpMult',1)===1);
+  ok('S01 newsStockDownMult fallback 1',SR(s1,'newsStockDownMult',1)===1);
+  ok('S01 divRecoveryMult fallback 1',SR(s1,'divRecoveryMult',1)===1);
+  ok('S01 news delta identity (+4→+4)',SND(s1,4)===4,`got ${SND(s1,4)}`);
+  ok('S01 news delta identity (−4→−4)',SND(s1,-4)===-4,`got ${SND(s1,-4)}`);
+  // S01 R1 거래 비동결 — 거래가 정상 동작해야 함(회귀 불변)
+  const s1r1={...s1,meta:{...s1.meta,round:1},players:s1.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:50}}:p)};
+  const s1buy=R(s1r1,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1});
+  ok('S01 R1 BUY_STOCK not frozen (works)',s1buy!==s1r1&&(s1buy.players[0].stocks.VANTA||0)===1,`VANTA ${s1buy.players[0].stocks.VANTA}`);
   return out;
 }
 (async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();

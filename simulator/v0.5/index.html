@@ -1652,10 +1652,20 @@ const SCENARIOS = {
     startCreditAll: -3,         // docs/14: 시작 자원 표준 + 크레딧 −3 (전원)
     startInfluenceAll: -1,      // docs/14: 인플루언스 −1 (전원)
     startScandalEach: true,     // docs/14 특수: 모든 블록 스캔들 카드 1장씩 덱 추가 상태로 시작
-    shortLowPriceMult: 2,       // docs/14 특수: 주가 저가(≤ threshold)일 때 숏 정산 수익 2배
+    shortLowPriceMult: 2,       // docs/14 특수: 주가 저가(≤ threshold)일 때 숏 정산 수익 2배 (원전 값 유지)
+    // v6.22 iter2 (S06 방향 보정): 실측상 Bloc 승리는 대부분 R5→R6 조기 자산 승리(자산 ≥100), Ghost 승리는
+    //   R7~12 렙/레이드 — Bloc 이 경제 레이스를 먼저 끝내 우위. blocAssetBonus 로 Bloc 자산 목표를 올려
+    //   조기 자산 승리를 1~2R 지연 → Ghost 렙 승리창 확보 (S03/S05 선례; scenarioRule 게이팅, 코어 불변).
+    blocAssetBonus: 30,         // 자산 목표 100 → 130 (iter2 확정값; 측정 근거 반환 표)
     shortLowPriceThresh: 5,     // 저가 임계 (원전 "−5 이하" 취지 = 붕괴가 유지‧심화 구간)
-    // No-op(부분 구현 보고): 첫 2R 거래 동결 · 뉴스 상승−50%/하락+50% · 경제회복 배당 2배 ·
-    //   재건왕/청산자 특수 타이틀 — 뉴스 효과 부호 배율·조건부 승리 타이틀은 엔진 심층부라 미배선.
+    // v6.22 (S06 심층 룰 배선): docs/14 §S06 원전 우선 — No-op 4건 중 3건을 기존 시스템으로 배선.
+    newsStockUpMult: 0.5,       // docs/14 특수: 주가 상승 뉴스 효과 −50% (DRAW_NEWS 주가 델타류 배수)
+    newsStockDownMult: 1.5,     // docs/14 특수: 주가 하락 뉴스 효과 +50% (붕괴 가속 → Ghost 숏 차익↑)
+    tradeFreezeRounds: 2,       // docs/14 특수: 첫 2R 주식 거래 동결 (매수/매도/숏 R≤2 금지, 3R 재개)
+    divRecoveryMult: 2,         // docs/14 특수: 경제 회복 배당 2배 (주가 합계 threshold 도달 라운드)
+    divRecoveryThresh: 50,      // 회복 임계 (원전 "주가 합계 50+" — 붕괴 5×5=25 → 회복 구간 정의)
+    // No-op 유지(보고): 재건왕/청산자 특수 타이틀 — 파산 복구/유도 조건부 ★ 타이틀 + 렙/자산 보너스는
+    //   전용 점수·타이틀 시스템(달성 추적 엔티티) 의존이라 미배선. docs/14 §S06 판단.
     //   공매도 자체는 기존 시스템(SHORT_CONFIG)으로 상시 활성 → 붕괴 저가에서 정산 2배로 실효.
   },
 };
@@ -1668,6 +1678,14 @@ function scenarioRule(state, key, fallback) {
 // v6.19 (S03) — Ghost 레이드 특수 룰 헬퍼 (scenarioRule 게이팅; 미지정 시 항등 → 타 시나리오 불변).
 //   원전(docs/14 S03): 레이드 보상 +50% · 현상수배 상승 −1 · NPC Bloc 방어력 −1.
 //   기존 레이드 핸들러(봇/인간 공용)에서 보상·수배·방어 임계에 얇게 곱/가산한다.
+// v6.22 (S06): 뉴스 주가 효과 방향 배율 — 상승 델타·하락 델타에 시나리오 배수(원전 상승−50%/하락+50%).
+//   자원/구조 효과(시그널·존 플립·스캔들·인수 동결 등)는 배제, 주가 델타류만. 미지정 시나리오는 배수 1(항등 폴백).
+//   function 선언 = 전역(window) 노출 → 유닛 테스트 직접 검증 가능.
+function scenNewsStockDelta(state, delta) {
+  if (delta > 0) return Math.round(delta * scenarioRule(state, 'newsStockUpMult', 1));
+  if (delta < 0) return Math.round(delta * scenarioRule(state, 'newsStockDownMult', 1));
+  return delta;
+}
 const scenRaidRep    = (state, rep) => Math.round((rep || 0) * scenarioRule(state, 'raidRewardMult', 1));
 const scenRaidWanted = (state, w)   => Math.max(0, (w || 0) + scenarioRule(state, 'raidWantedDelta', 0));
 //   방어 임계 보정: 대상 구역 소유자가 NPC Bloc 이면 npcDefenseMod 가산(음수 = 방어 약화).
@@ -2977,6 +2995,8 @@ function reducer(state, action) {
 
     case 'BUY_STOCK': {
       // action.playerIdx, action.bloc, action.qty
+      // v6.22 (S06): 첫 N R 거래 동결 — R≤tradeFreezeRounds 매수 금지(원전 시장 동결). 타 시나리오 0 → 무효.
+      if (state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0)) return state;
       const price = state.stocks[action.bloc];
       if (!price) return state;
       const cost = price * action.qty;
@@ -3000,6 +3020,8 @@ function reducer(state, action) {
     }
 
     case 'SELL_STOCK': {
+      // v6.22 (S06): 첫 N R 거래 동결 — R≤tradeFreezeRounds 매도 금지. 타 시나리오 0 → 무효.
+      if (state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0)) return state;
       const price = state.stocks[action.bloc];
       if (!price) return state;
       const ps = [...state.players];
@@ -3025,6 +3047,8 @@ function reducer(state, action) {
 
     case 'BUY_SHORT': {
       // v6.12 P0-4: Ghost 공매도 진입. action.playerIdx, action.bloc, action.qty(기본 1).
+      // v6.22 (S06): 첫 N R 거래 동결 — 숏 진입도 시장 동결 대상. 타 시나리오 0 → 무효.
+      if (state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0)) return state;
       const p0 = state.players[action.playerIdx];
       if (!p0 || p0.role !== 'ghost' || p0.defeated) return state;
       if (!state.stocks[action.bloc]) return state;
@@ -3252,8 +3276,11 @@ function reducer(state, action) {
       // 봇들 자동 거래 (간단 AI)
       let s = { ...state };
       const ps = [...state.players];
+      // v6.22 (S06): 첫 N R 시장 동결 — 봇 매수/매도/숏/M&A 매집 전부 스킵(원전 시장 동결). 타 시나리오 0 → 무효.
+      const marketFrozen = state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0);
       state.players.forEach((p, pi) => {
         if (p.kind !== 'bot' || p.defeated) return;
+        if (marketFrozen) return;
         const credit = p.resources.credit || 0;
         const blocs = Object.keys(s.stocks);
         // ── v6.12 P0-4: 봇 Ghost 공매도 — 레이드 목표 블록에 1계약 (과용 게이트) ──
@@ -3604,32 +3631,36 @@ function reducer(state, action) {
 
       // Heat
       if (eff.heat) { newHeat += eff.heat; logMsgs.push(`🔥공권력${eff.heat > 0 ? '+' : ''}${eff.heat}`); }
-      // Stock: all
+      // Stock: all — v6.22 (S06): 방향 배율 적용(상승−50%/하락+50%). 타 시나리오는 항등.
       if (eff.all_stock) {
-        Object.keys(newStocks).forEach(k => newStocks[k] = Math.max(1, Math.min(20, newStocks[k] + eff.all_stock)));
-        logMsgs.push(`📊전체주가${eff.all_stock > 0 ? '+' : ''}${eff.all_stock}`);
+        const d = scenNewsStockDelta(state, eff.all_stock);
+        Object.keys(newStocks).forEach(k => newStocks[k] = Math.max(1, Math.min(20, newStocks[k] + d)));
+        logMsgs.push(`📊전체주가${d > 0 ? '+' : ''}${d}`);
       }
       // Stock: target
       if (eff.target_stock) {
-        const { bloc, delta } = eff.target_stock;
+        const { bloc } = eff.target_stock;
+        const delta = scenNewsStockDelta(state, eff.target_stock.delta);
         if (newStocks[bloc] != null) {
           newStocks[bloc] = Math.max(1, Math.min(20, newStocks[bloc] + delta));
           logMsgs.push(`📊${bloc}${delta > 0 ? '+' : ''}${delta}`);
         }
       }
       if (eff.target_stock2) {
-        const { bloc, delta } = eff.target_stock2;
+        const { bloc } = eff.target_stock2;
+        const delta = scenNewsStockDelta(state, eff.target_stock2.delta);
         if (newStocks[bloc] != null) {
           newStocks[bloc] = Math.max(1, Math.min(20, newStocks[bloc] + delta));
           logMsgs.push(`📊${bloc}${delta > 0 ? '+' : ''}${delta}`);
         }
       }
-      // Random crash
+      // Random crash — 하락 델타(−크래시)에 방향 배율 적용 후 다시 양수 크기로.
       if (eff.random_crash) {
         const blocs = Object.keys(newStocks);
         const pick = blocs[Math.floor(Math.random() * blocs.length)];
-        newStocks[pick] = Math.max(1, newStocks[pick] - eff.random_crash);
-        logMsgs.push(`📉${pick}-${eff.random_crash}`);
+        const mag = -scenNewsStockDelta(state, -eff.random_crash);
+        newStocks[pick] = Math.max(1, newStocks[pick] - mag);
+        logMsgs.push(`📉${pick}-${mag}`);
       }
       // Signal lock
       if (eff.signal_lock) { newSignal = eff.signal_lock; logMsgs.push(`📡고정${eff.signal_lock}`); }
@@ -3807,10 +3838,14 @@ function reducer(state, action) {
           }
         });
 
+        // v6.22 (S06): 경제 회복 배당 배수 — 이번 라운드 전 주가 합계가 임계 도달 시 배당 ×N (원전 "합계 50+ 배당 2배").
+        //   COLLECT_INCOME 은 라운드 후반 수입 단계 → "해당 라운드" 회복 상태를 판정. 타 시나리오는 배수 1(항등).
+        const stockSum = Object.values(state.stocks).reduce((a, v) => a + v, 0);
+        const divMult = (stockSum >= scenarioRule(state, 'divRecoveryThresh', Infinity)) ? scenarioRule(state, 'divRecoveryMult', 1) : 1;
         for (const [bl, qty] of Object.entries(p.stocks)) {
           if (qty >= 2) {
             const divPerShare = state.stocks[bl] >= 15 ? 1 : 0.5;
-            const div = Math.floor(qty * divPerShare);
+            const div = Math.floor(qty * divPerShare * divMult);
             if (div > 0) res.credit = (res.credit || 0) + div;
           }
         }
@@ -7600,12 +7635,19 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                   🏴 {state.meta.pendingMna.target} 인수 진행 — 방어 라운드 (다음 라운드 판정)
                 </div>
               )}
+              {/* v6.22 (S06): 첫 N R 시장 동결 배너 — 거래 버튼 비활성 표기 */}
+              {state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0) && (
+                <div style={{ background: 'rgba(255,193,7,0.12)', border: '1px solid var(--yellow)', borderRadius: 4, padding: 8, marginBottom: 6, fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--yellow)', fontWeight: 700, textAlign: 'center' }}>
+                  🧊 시장 동결 — 첫 {scenarioRule(state, 'tradeFreezeRounds', 0)}라운드 주식 거래 불가 (R{scenarioRule(state, 'tradeFreezeRounds', 0) + 1}부터 재개)
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
                 {Object.entries(state.stocks).map(([bl, v]) => {
+                  const tradeFrozen = state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0);
                   const myQty = me.stocks[bl] || 0;
                   const isOwnBloc = me.role === 'bloc' && me.specific === bl;
-                  const canBuy = !isOwnBloc && (me.resources.credit || 0) >= v;
-                  const canSell = !isOwnBloc && myQty > 0;
+                  const canBuy = !isOwnBloc && !tradeFrozen && (me.resources.credit || 0) >= v;
+                  const canSell = !isOwnBloc && !tradeFrozen && myQty > 0;
                   const color = v > 12 ? 'var(--green)' : (v < 8 ? 'var(--magenta)' : 'var(--text)');
                   return (
                     <div key={bl} style={{ background: 'var(--bg2)', border: `1px solid ${isOwnBloc ? 'var(--yellow)' : 'var(--border)'}`, borderRadius: 3, padding: 6, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
@@ -7671,7 +7713,8 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
                       {Object.entries(state.stocks).map(([bl, v]) => {
                         const held = sp[bl] || 0;
-                        const canShort = held < SHORT_CONFIG.capPerBloc && total < SHORT_CONFIG.capTotal && (me.resources.credit || 0) >= SHORT_CONFIG.cost;
+                        const shortFrozen = state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0);
+                        const canShort = !shortFrozen && held < SHORT_CONFIG.capPerBloc && total < SHORT_CONFIG.capTotal && (me.resources.credit || 0) >= SHORT_CONFIG.cost;
                         return (
                           <div key={bl} style={{ background: 'var(--bg2)', border: `1px solid ${held > 0 ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 3, padding: 5, fontFamily: 'Share Tech Mono, monospace', fontSize: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -7681,7 +7724,7 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                             <div style={{ color: held > 0 ? 'var(--magenta)' : 'var(--text-dim)', fontSize: 9, marginBottom: 3 }}>숏 {held}/{SHORT_CONFIG.capPerBloc}건</div>
                             <button
                               disabled={!canShort}
-                              title={canShort ? `${bl} 숏 1계약 진입 (₵${SHORT_CONFIG.cost})` : (held >= SHORT_CONFIG.capPerBloc ? '블록 상한' : total >= SHORT_CONFIG.capTotal ? '총 상한' : '₵ 부족')}
+                              title={canShort ? `${bl} 숏 1계약 진입 (₵${SHORT_CONFIG.cost})` : (shortFrozen ? '시장 동결(첫 R)' : held >= SHORT_CONFIG.capPerBloc ? '블록 상한' : total >= SHORT_CONFIG.capTotal ? '총 상한' : '₵ 부족')}
                               onClick={() => dispatch({ type: 'BUY_SHORT', playerIdx: meIdx, bloc: bl, qty: 1 })}
                               style={{ width: '100%', fontSize: 9, padding: '3px', background: canShort ? 'var(--bg3)' : 'var(--bg1)', color: canShort ? 'var(--magenta)' : 'var(--text-dim)', border: `1px solid ${canShort ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: canShort ? 'pointer' : 'not-allowed', fontWeight: canShort ? 700 : 400 }}>
                               🔻 숏 ₵{SHORT_CONFIG.cost}
