@@ -114,9 +114,12 @@ function inPageGame(cfg) {
     const woundByRound = {}, scandalByRound = {};   // v6.13.1 (P1-1): 덱 오염 발생 빈도
     // v6.16 (P1-2): 클래스 개성 루프 — 시그니처 마일스톤 발동 빈도
     const rigByRound = {}, memoByRound = {}, hackByRound = {}, disgByRound = {};
+    // v6.27 (B-07, docs/23 갭3): 종료 선언 라이프사이클 계측 — 선언·해제(역전)·확정 집계.
+    //   선언/해제는 라운드당 최대 1건(applyVictoryDeclaration 단일 분기)이라 max-per-round tally 로 cap-immune.
+    const declByRound = {}, releaseByRound = {};
     const tally = (st) => {
       const sup = {}, ret = {}, mna = {}, shE = {}, shS = {}, shC = {}, wo = {}, sc = {};
-      const rg = {}, mo = {}, hk = {}, dg = {};
+      const rg = {}, mo = {}, hk = {}, dg = {}, dc = {}, rl = {};
       for (const e of st.log) {
         const m = e.message || '';
         if (m.includes('견제 (₵')) { sup[e.round] = (sup[e.round] || 0) + 1; if (m.includes('(보복)')) ret[e.round] = (ret[e.round] || 0) + 1; }
@@ -132,6 +135,9 @@ function inPageGame(cfg) {
         if (m.includes('메모 5 도달')) mo[e.round] = (mo[e.round] || 0) + 1;      // BROKER
         if (m.includes('해킹 노드')) hk[e.round] = (hk[e.round] || 0) + 1;        // CIPHER
         if (m.includes('위장 시작')) dg[e.round] = (dg[e.round] || 0) + 1;        // MOLE 위장 개시
+        // v6.27 (B-07): 종료 선언 라이프사이클
+        if (m.includes('승리 조건 도달')) dc[e.round] = (dc[e.round] || 0) + 1;    // 선언 (📢)
+        if (m.includes('종료 선언 해제')) rl[e.round] = (rl[e.round] || 0) + 1;    // 해제=역전 (⚖ 견제 성공)
       }
       for (const r in sup) suppressByRound[r] = Math.max(suppressByRound[r] || 0, sup[r]);
       for (const r in ret) retalByRound[r] = Math.max(retalByRound[r] || 0, ret[r]);
@@ -145,6 +151,8 @@ function inPageGame(cfg) {
       for (const r in mo) memoByRound[r] = Math.max(memoByRound[r] || 0, mo[r]);
       for (const r in hk) hackByRound[r] = Math.max(hackByRound[r] || 0, hk[r]);
       for (const r in dg) disgByRound[r] = Math.max(disgByRound[r] || 0, dg[r]);
+      for (const r in dc) declByRound[r] = Math.max(declByRound[r] || 0, dc[r]);
+      for (const r in rl) releaseByRound[r] = Math.max(releaseByRound[r] || 0, rl[r]);
     };
 
     let guard = 0;
@@ -188,6 +196,13 @@ function inPageGame(cfg) {
     const acqCount = Object.values(acquisitions).reduce((a, l) => a + (Array.isArray(l) ? l.length : 0), 0);
     const mnaCountMeta = Object.values(s.meta.mnaCount || {}).reduce((a, b) => a + b, 0);
     const field = s.players.filter(p => !p.isNpc).map(p => p.role);
+    // v6.27 (B-07): 종료 선언 계측 + (B-06) highlightPoints 실측 (승리 환산 게이지)
+    const reason0 = s.meta.winReason || '';
+    const declConfirmed = /종료 선언 확정/.test(reason0);
+    const hlPts = s.players.filter(p => !p.isNpc && !p.defeated).map(p => p.highlightPoints || 0);
+    const hlPtsMax = hlPts.reduce((a, b) => Math.max(a, b), 0);
+    const hlPtsSum = hlPts.reduce((a, b) => a + b, 0);
+    const winnerHlPts = (w != null && s.players[w]) ? (s.players[w].highlightPoints || 0) : 0;
     const seats = s.players.filter(p => !p.isNpc);
     const seatTLs = seats.map(p => ({ role: p.role, cls: p.specific, tl: p.tl || 1, prog: p.tlProgress || 0 }));
     return {
@@ -207,6 +222,12 @@ function inPageGame(cfg) {
       mnaAcquisitions: acqCount,               // completed hostile takeovers
       suppressGrants: sum(suppressByRound),    // 견제 grants
       suppressRetaliations: sum(retalByRound), // of which retaliation (보복)
+      // v6.27 (B-07, docs/23 갭3): 종료 선언 라이프사이클
+      victoryDeclares: sum(declByRound),       // 선언 총수 (📢 승리 조건 도달)
+      victoryReleases: sum(releaseByRound),    // 해제=역전 총수 (⚖ 종료 선언 해제 — 견제 성공)
+      declConfirmed,                           // 이 판이 "종료 선언 확정"으로 종료됐는가
+      // v6.27 (B-06, docs/22 P1-6): highlightPoints 실측 (승리 환산 게이지)
+      hlPtsMax, hlPtsSum, winnerHlPts,
       shortEntries: sum(shortEntryByRound),        // v6.12 P0-4: 숏 진입 횟수
       shortSettlements: sum(shortSettleByRound),   // 숏 정산 이벤트 수
       shortCredit: sum(shortCreditByRound),        // 숏 정산 총 ₵
@@ -307,6 +328,10 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const byFaction = { ghost: 0, bloc: 0, none: 0 };
   const byClass = {};
   let rounds = 0, mnaDecl = 0, mnaAcq = 0, sup = 0, retal = 0;
+  // v6.27 (B-07): 종료 선언 라이프사이클 집계
+  let declTot = 0, releaseTot = 0, declGames = 0, releaseGames = 0, declConfirmedGames = 0;
+  // v6.27 (B-06): highlightPoints 집계
+  let hlMaxSum = 0, hlSumTot = 0, winnerHlSum = 0;
   let shEntry = 0, shSettle = 0, shCredit = 0, gamesWithShort = 0;
   let woundTot = 0, scandalTot = 0, gamesWithWound = 0, gamesWithScandal = 0;
   let gaugeTot = 0, moleRevTot = 0, rigMs = 0, memo5 = 0, hackTot = 0, disgTot = 0;
@@ -323,6 +348,13 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       byFaction[g.winnerRole || 'none']++;
       if (g.winnerClass) byClass[g.winnerClass] = (byClass[g.winnerClass] || 0) + 1;
       rounds += g.round; mnaDecl += g.mnaDeclaresLog; mnaAcq += g.mnaAcquisitions; sup += g.suppressGrants; retal += g.suppressRetaliations;
+      // v6.27 (B-07): 선언 라이프사이클
+      declTot += (g.victoryDeclares || 0); releaseTot += (g.victoryReleases || 0);
+      if ((g.victoryDeclares || 0) > 0) declGames++;
+      if ((g.victoryReleases || 0) > 0) releaseGames++;
+      if (g.declConfirmed) declConfirmedGames++;
+      // v6.27 (B-06): highlightPoints
+      hlMaxSum += (g.hlPtsMax || 0); hlSumTot += (g.hlPtsSum || 0); winnerHlSum += (g.winnerHlPts || 0);
       shEntry += (g.shortEntries || 0); shSettle += (g.shortSettlements || 0); shCredit += (g.shortCredit || 0);
       if ((g.shortEntries || 0) > 0) gamesWithShort++;
       woundTot += (g.woundInserts || 0); scandalTot += (g.scandalInserts || 0);
@@ -369,6 +401,13 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       mnaDeclaresTotal: mnaDecl, mnaDeclaresPerGame: +(mnaDecl / nOk).toFixed(2),
       mnaAcquisitionsTotal: mnaAcq,
       suppressGrantsTotal: sup, suppressGrantsPerGame: +(sup / nOk).toFixed(2), suppressRetaliations: retal,
+      // v6.27 (B-07, docs/23 갭3): 종료 선언 라이프사이클 — 역전률 = 해제판 / 선언판
+      victoryDeclaresTotal: declTot, declGames, declConfirmedGames,
+      victoryReleasesTotal: releaseTot, releaseGames,
+      reversalRateOfDecl: +(releaseGames / (declGames || 1)).toFixed(4),
+      reversalRateOfAll: +(releaseGames / nOk).toFixed(4),
+      // v6.27 (B-06, docs/22 P1-6): highlightPoints 실측
+      hlPtsMaxAvg: +(hlMaxSum / nOk).toFixed(2), hlPtsSumAvg: +(hlSumTot / nOk).toFixed(2), winnerHlPtsAvg: +(winnerHlSum / nOk).toFixed(2),
       shortEntriesTotal: shEntry, shortEntriesPerGame: +(shEntry / nOk).toFixed(2),
       shortSettlementsTotal: shSettle, shortCreditTotal: shCredit, shortCreditPerGame: +(shCredit / nOk).toFixed(2),
       gamesWithShortPct: +(gamesWithShort / nOk).toFixed(3),
@@ -424,6 +463,12 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log(`    M&A declares         ${o.mnaDeclaresTotal} total  (${o.mnaDeclaresPerGame}/game)`);
   console.log(`    M&A acquisitions     ${o.mnaAcquisitionsTotal} total`);
   console.log(`    suppression grants   ${o.suppressGrantsTotal} total  (${o.suppressGrantsPerGame}/game)  · retaliations ${o.suppressRetaliations}`);
+  console.log('  ---- victory declaration lifecycle (B-07 · docs/23 갭3) ----');
+  console.log(`    declarations         ${o.victoryDeclaresTotal} total  · games w/ decl ${o.declGames}  · confirmed-win games ${o.declConfirmedGames}`);
+  console.log(`    releases (reversal)  ${o.victoryReleasesTotal} total  · games w/ release ${o.releaseGames}`);
+  console.log(`    REVERSAL RATE        ${(o.reversalRateOfDecl * 100).toFixed(1)}% of decl-games  ·  ${(o.reversalRateOfAll * 100).toFixed(1)}% of all`);
+  console.log('  ---- highlightPoints victory conversion (B-06 · docs/22 P1-6) ----');
+  console.log(`    pt  max/game ${o.hlPtsMaxAvg}  · sum/game ${o.hlPtsSumAvg}  · winner ${o.winnerHlPtsAvg}`);
   console.log('  ---- shorts (P0-4) ----');
   console.log(`    short entries        ${o.shortEntriesTotal} total  (${o.shortEntriesPerGame}/game)  · games w/ short ${(o.gamesWithShortPct * 100).toFixed(1)}%`);
   console.log(`    short settlements    ${o.shortSettlementsTotal} total  · payout credit ${o.shortCreditTotal}  (${o.shortCreditPerGame}/game)`);
