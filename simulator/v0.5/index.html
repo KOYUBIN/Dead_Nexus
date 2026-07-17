@@ -1522,11 +1522,19 @@ function getVictoryGoals(state) {
   const base = isLarge ? VICTORY_GOALS['11x11'] : VICTORY_GOALS['5x5'];
   const nonNpcCount = state && state.players ? state.players.filter(p => !p.isNpc).length : 4;
   const adj = nonNpcCount === 2 ? -2 : nonNpcCount === 3 ? -1 : 0;
+  // v6.19 (S02 밸런스): 시나리오별 Bloc 자산 목표 보정 (scenarioRule 게이팅, 코어 VICTORY_GOALS 불변).
+  //   S02(코프 대전)는 자산 루트로 R6 조기 수렴 → M&A 창이 열리기 전 종료. 목표를 상향해
+  //   게임을 8~11R로 늘려 51% 매집·연속 M&A 창을 확보한다. S01 등 미지정 시나리오는 0(무변화).
+  const scAssetBonus = scenarioRule(state, 'blocAssetBonus', 0);
+  // v6.19 (S03): Ghost 승리 임계 시나리오 오버라이드 (docs/14 S03: 렙 25 + 레이드 3).
+  //   null 이면 코어 계산(base+adj) 유지 — 미지정 시나리오 불변.
+  const scGhostRep   = scenarioRule(state, 'ghostRepBattleOverride', null);
+  const scGhostRaids = scenarioRule(state, 'ghostRaidsOverride', null);
   return {
-    blocAsset:      base.blocAsset + adj,
-    ghostRepBattle: base.ghostRepBattle + Math.floor(adj / 2),
+    blocAsset:      base.blocAsset + adj + scAssetBonus,
+    ghostRepBattle: scGhostRep != null ? scGhostRep : base.ghostRepBattle + Math.floor(adj / 2),
     ghostRepOnly:   base.ghostRepOnly + adj,
-    ghostRaids:     base.ghostRaids,
+    ghostRaids:     scGhostRaids != null ? scGhostRaids : base.ghostRaids,
     nonNpcCount,
   };
 }
@@ -1574,9 +1582,32 @@ const SCENARIOS = {
     startCredit: 5,         // 표준 + 크레딧 +5 (조기 M&A 자금)
     extraSupport: 1,        // 표준 3구역 + Ring 확장 1구역 (총 4)
     mnaNoCooldown: true,    // M&A 쿨다운(선언 간 2R 간격) 제거 — 연속 M&A 허용
+    blocAssetBonus: 175,    // v6.19: 자산 목표 상향 (게임 연장 → M&A 창 확보; 측정 튜닝값)
+    mnaFloat: 3,            // v6.19: M&A 지분 분모 float 하향(기본 10) — 소규모판 51% 게이트 실효화
+    mnaDesignateCredit: 8,  // v6.19: 목표 지정 ₵ 하한 하향(기본 14) — 1차 인수 후 잔여 ₵로 2차 재지정 허용
+    mnaSerial: true,        // v6.19: 인수 완료 후 목표 재지정 허용 — 2곳 연속 인수(승리) 경로 개통
+    mnaBotProb: 1.0,        // v6.19: 봇 M&A 선언 cadence 상향(기본 0.5) — 단일 슬롯 병목 완화, 연속 인수 가속
   },
-  // --- S03~S06: 자리표(잠금). 미구현 — 설계는 docs/14, 구현은 후속 확장 ---
-  S03: { id: 'S03', name: '스트리트 라이징', tagline: '거리의 분노가 먼저 도착했다.', desc: 'Ghost 주도 · 하층 혁명. NPC Bloc 다수. (미구현)', locked: true, maps: ['11x11'] },
+  // --- S03: 스트리트 라이징 (docs/14) — Ghost 주도 · 하층 혁명 (v6.19 통합) ---
+  S03: {
+    id: 'S03', name: '스트리트 라이징', tagline: '거리의 분노가 먼저 도착했다.',
+    desc: 'Ghost 주도 · 하층 혁명. Bloc 1 + Ghost 다수 + NPC Bloc 4. 레이드 강화·완화 승리.',
+    // Ghost 레이드가 핵심 → M&A 활성과 무관하나 원전상 11×11 정규판.
+    locked: false, maps: ['11x11'],
+    startHeat: 4,                 // docs/14: 시작 공권력 4
+    startStock: 12,              // docs/14: 시작 주가 12 (Ghost 레이드 타겟 강화)
+    ghostRising: true,           // 컴포지션 훅 — 실참 = Bloc 1 + 나머지 Ghost (initGame)
+    npcFillTo: 9,                // 실참(≤5) + NPC Bloc 충원 — 잔여 블록명 소진 = NPC Bloc 4
+    ghostRepBonus: 3,            // docs/14: Ghost 시작 렙 +3
+    ghostCreditBonus: 2,         // docs/14: Ghost 시작 크레딧 +2
+    blocInfluenceBonus: 2,       // docs/14: (실참) Bloc 시작 인플루언스 +2
+    ghostRepBattleOverride: 25,  // docs/14: Ghost 승리 렙 25 (정규 완화, getVictoryGoals)
+    ghostRaidsOverride: 3,       // docs/14: Ghost 승리 레이드 3회
+    raidRewardMult: 1.5,         // docs/14 특수: Ghost 레이드 보상 +50% (렙; 봇 레이드 핸들러)
+    raidWantedDelta: -1,         // docs/14 특수: Ghost 현상수배 상승 −1 (덜 위험)
+    npcDefenseMod: -1,           // docs/14 특수: NPC Bloc 방어력 −1 (레이드 threshold −1)
+  },
+  // --- S04~S06: 자리표(잠금). 미구현 — 설계는 docs/14, 구현은 후속 확장 ---
   S04: { id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.', desc: '공권력 7 시작 · 경찰 NPC 상시 이동. (미구현)', locked: true, maps: ['11x11'] },
   S05: { id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다.', desc: '경제 ×1.5 · 8R 단축 · 주가 과열. (미구현)', locked: true, maps: ['11x11'] },
   S06: { id: 'S06', name: '마켓 크래시', tagline: '어제까지 부자였다.', desc: '전 주가 5 시작 · 공매도 전성기. (미구현)', locked: true, maps: ['11x11'] },
@@ -1587,6 +1618,16 @@ function scenarioRule(state, key, fallback) {
   const sc = getScenario(state && state.meta && state.meta.scenario);
   return (sc && sc[key] != null) ? sc[key] : fallback;
 }
+// v6.19 (S03) — Ghost 레이드 특수 룰 헬퍼 (scenarioRule 게이팅; 미지정 시 항등 → 타 시나리오 불변).
+//   원전(docs/14 S03): 레이드 보상 +50% · 현상수배 상승 −1 · NPC Bloc 방어력 −1.
+//   기존 레이드 핸들러(봇/인간 공용)에서 보상·수배·방어 임계에 얇게 곱/가산한다.
+const scenRaidRep    = (state, rep) => Math.round((rep || 0) * scenarioRule(state, 'raidRewardMult', 1));
+const scenRaidWanted = (state, w)   => Math.max(0, (w || 0) + scenarioRule(state, 'raidWantedDelta', 0));
+//   방어 임계 보정: 대상 구역 소유자가 NPC Bloc 이면 npcDefenseMod 가산(음수 = 방어 약화).
+const scenNpcDefMod  = (state, ownerIdx) => {
+  const owner = (ownerIdx != null && state.players) ? state.players[ownerIdx] : null;
+  return (owner && owner.isNpc) ? scenarioRule(state, 'npcDefenseMod', 0) : 0;
+};
 // 시작 구역 확장용: origin 좌표에서 가장 가까운 미소유 일반(비-NEXUS) 구역 1칸을 찾는다.
 //   좌표 = 열문자(A..)+행숫자(1..). 맵에 존재·owner null·zone!=='nex' 조건.
 function nearestUnownedZone(map, origin) {
@@ -1609,6 +1650,20 @@ function applyScenarioInit(scen, players, map) {
   if (scen.startCredit) {
     players.forEach(p => {
       if (p.role === 'bloc') p.resources = { ...p.resources, credit: (p.resources.credit || 0) + scen.startCredit };
+    });
+  }
+  // v6.19 (S03): Ghost 시작 렙/크레딧 보강 + (실참) Bloc 인플루언스 보강 (docs/14 S03).
+  if (scen.ghostRepBonus || scen.ghostCreditBonus) {
+    players.forEach(p => {
+      if (p.role !== 'ghost') return;
+      p.resources = { ...p.resources,
+        rep:    (p.resources.rep || 0)    + (scen.ghostRepBonus || 0),
+        credit: (p.resources.credit || 0) + (scen.ghostCreditBonus || 0) };
+    });
+  }
+  if (scen.blocInfluenceBonus) {
+    players.forEach(p => {
+      if (p.role === 'bloc' && !p.isNpc) p.resources = { ...p.resources, influence: (p.resources.influence || 0) + scen.blocInfluenceBonus };
     });
   }
   if (scen.extraSupport) {
@@ -1771,8 +1826,11 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   const pickBloc = () => { const avail = allBlocs.filter(b => !usedBlocs.includes(b)); const p = rand(avail); if (p) usedBlocs.push(p); return p; };
   const pickGhost = () => { const avail = allGhosts.filter(g => !usedGhosts.includes(g)); const p = rand(avail); if (p) usedGhosts.push(p); return p; };
   // v6.18: 전원 Bloc 시나리오(S02) — 인간 역할/멀티 humansList 를 Bloc 으로 정규화.
-  const effHumanRole = scen.allBloc ? 'bloc' : humanRole;
-  const effHumanSpecific = (scen.allBloc && !allBlocs.includes(humanSpecific)) ? allBlocs[0] : humanSpecific;
+  // v6.19: Ghost 주도 시나리오(S03) — P0(protagonist)를 Ghost 로 정규화 (실참 Bloc 은 봇 1명).
+  const effHumanRole = scen.allBloc ? 'bloc' : (scen.ghostRising ? 'ghost' : humanRole);
+  const effHumanSpecific = (scen.allBloc && !allBlocs.includes(humanSpecific)) ? allBlocs[0]
+    : (scen.ghostRising && !allGhosts.includes(humanSpecific)) ? allGhosts[0]
+    : humanSpecific;
   if (scen.allBloc && humansList) {
     humansList = humansList.map(h => h.role === 'bloc' ? h : { role: 'bloc', specific: allBlocs.includes(h.specific) ? h.specific : 'VANTA' });
   }
@@ -1806,6 +1864,8 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     const botRoles = [];
     for (let i = 0; i < botCount; i++) {
       if (scen.allBloc) botRoles.push('bloc');
+      // v6.19 (S03 ghostRising): 봇 1명만 Bloc(악당 보스), 나머지 Ghost — P0 Ghost 와 합쳐 실참 Bloc=1.
+      else if (scen.ghostRising) botRoles.push(i === 0 ? 'bloc' : 'ghost');
       else if (i === 0) botRoles.push(oppositeRole);
       else if (i === 1 && botCount >= 2) botRoles.push(oppositeRole);
       else botRoles.push(i % 2 === 0 ? oppositeRole : effHumanRole);
@@ -1817,7 +1877,8 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   // v0.6.1: 2인 모드 NPC 중립 블록 2개 추가 (Bloc 편향 해소)
   // v0.6.3d: NPC는 시그널 점진 공개(정보)을 점진 공개하는 표적 역할
   // v6.18: allBloc 시나리오(S02)는 아래 npcFillTo 로직으로 대체 — 중복 방지.
-  if (totalPlayers === 2 && !scen.allBloc) {
+  // v6.19: ghostRising(S03)도 npcFillTo 로 NPC Bloc 충원 → 이 2인 기본 NPC 경로 제외.
+  if (totalPlayers === 2 && !scen.allBloc && !scen.ghostRising) {
     const npc1 = pickBloc();
     const npc2 = pickBloc();
     const npcP1 = buildPlayer(players.length, 'npc', 'bloc', npc1);
@@ -1951,12 +2012,13 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       moveBonusNext: 0,          // 다음 턴 이동 보너스 (port 보너스)
       atkBonusOnce: 0,           // 일회성 공격 판정 보너스 (arms 보너스)
       // v6.12 P0-4: 공매도 정산 스냅샷 — 라운드 전환 시 전 라운드 종가와 비교(단일 지점 정산)
-      lastStockSnapshot: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
+      // v6.19 (S03): 시작 주가 시나리오 오버라이드 (docs/14 S03=12; 미지정 시 기본 8).
+      lastStockSnapshot: (() => { const sp = scen.startStock != null ? scen.startStock : 8; return { VANTA: sp, IRONWALL: sp, HELIX: sp, AXIOM: sp, CARBON: sp }; })(),
     },
     players,
     map,
     pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
-    stocks: { VANTA: 8, IRONWALL: 8, HELIX: 8, AXIOM: 8, CARBON: 8 },
+    stocks: (() => { const sp = scen.startStock != null ? scen.startStock : 8; return { VANTA: sp, IRONWALL: sp, HELIX: sp, AXIOM: sp, CARBON: sp }; })(),
     heat: (scen.startHeat != null ? scen.startHeat : 5),  // v6.18: 시나리오 시작 공권력 (S02=3)
     signalDie: rollSignalDie(),
     currentNews: null,
@@ -3039,9 +3101,17 @@ function reducer(state, action) {
         const curRound = (s.meta && s.meta.round) || 0;
         // 예약된 블록: 이미 어떤 플레이어가 인수 목표로 삼은 블록 (희석 방지 — 지정·일반매수 제외)
         const reserved = () => new Set(ps.map(x => x && x.mnaTarget).filter(Boolean));
+        // v6.19 (S02 mnaSerial): 인수 완료된 목표는 해제 → 2차 목표 재지정 허용(2곳 인수 승리 경로 개통).
+        //   기존 로직은 mnaTarget 을 인수 후에도 유지 → 봇이 1곳 인수 뒤 정지(2곳 승리 불가).
+        //   S02 전용(scenarioRule 게이팅) — S01 등 다른 시나리오는 기존대로 단일 목표 유지(회귀 불변).
+        if (scenarioRule(s, 'mnaSerial', false) && ps[pi].mnaTarget
+            && (typeof euro_acquisitionsFor === 'function')
+            && euro_acquisitionsFor(s, pi).includes(ps[pi].mnaTarget)) {
+          ps[pi] = { ...ps[pi], mnaTarget: null };
+        }
         // 목표 지정: 게임당 봇별 1회, R1+(가드 완화 근거 상단), ₵ 여유 있을 때만. 예약 안 된 라이벌만 후보.
         if (mnaOn && p.role === 'bloc' && !ps[pi].mnaTarget && curRound >= MNA_MIN_ROUND
-            && (ps[pi].resources.credit || 0) >= MNA_DESIGNATE_CREDIT) {
+            && (ps[pi].resources.credit || 0) >= scenarioRule(s, 'mnaDesignateCredit', MNA_DESIGNATE_CREDIT)) {
           const already = (typeof euro_acquisitionsFor === 'function') ? euro_acquisitionsFor(s, pi) : [];
           const taken = reserved();
           const rivals = blocs.filter(bl => bl !== p.specific && !already.includes(bl));
@@ -4284,20 +4354,22 @@ function applyEffect(state, playerIdx, effect, kind, card) {
             const tBonus = trackBonus(pAfterMove, 'atk');
             const raidTotal = raidRoll + pAfterMove.stats.atk + counterBonus + tBonus;
             // v6.16 (P1-2): MOLE 위장 대상 Bloc이면 threshold -2 (내부자 이점)
-            const threshold = raidThreshold(cellThere) + moleDisguiseMod(pAfterMove, bloc);
+            // v6.19 (S03): NPC Bloc 방어력 −1 (scenNpcDefMod) — 타 시나리오 0.
+            const threshold = raidThreshold(cellThere) + moleDisguiseMod(pAfterMove, bloc) + scenNpcDefMod(s, blocIdx);
             if (raidTotal >= threshold) {
               const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
               const ps = [...s.players];
+              const repGain = scenRaidRep(s, 4);  // v6.19 (S03): 레이드 보상 +50% (미지정 시 4)
               ps[playerIdx] = {
                 ...ps[playerIdx],
-                resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 4 },  // v6.12: 봇 레이드 보상 3→4 (진영 균형 — RAID_TYPES.violent 보상과 정합)
-                wanted: ps[playerIdx].wanted + 1,
+                resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + repGain },  // v6.12: 봇 레이드 보상 3→4 (진영 균형 — RAID_TYPES.violent 보상과 정합)
+                wanted: ps[playerIdx].wanted + scenRaidWanted(s, 1),  // v6.19 (S03): 현상수배 상승 −1
               };
               const newMap = { ...s.map, [effectiveCoord]: { ...cellThere, owner: null } };
               s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + 1) };
               s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
               s = insertScandal(s, blocIdx, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
-              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+4`);
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+${repGain}`);
               s = raiseTrack(s, playerIdx, 'combat', 1, '봇 레이드 성공');  // v0.6.3b
               s.meta._didAutoRaid = true;
               if (blocIdx === 0 && playerIdx !== 0) {
@@ -4307,10 +4379,10 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               const ps = [...s.players];
               ps[playerIdx] = {
                 ...ps[playerIdx],
-                wanted: ps[playerIdx].wanted + 1,
+                wanted: ps[playerIdx].wanted + scenRaidWanted(s, 1),  // v6.19 (S03): 현상수배 상승 −1
               };
               s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+1`);
+              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+${scenRaidWanted(s, 1)}`);
               s = applyDamage(s, playerIdx, 3, { attacker: blocIdx, label: '레이드 실패' });  // v6.11.4 (P0-4)
               s = moleRaidReveal(s, playerIdx, bloc);  // v6.16 (P1-2): 위장 발각
               s.meta._didAutoRaid = true;
@@ -4417,33 +4489,35 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const raidTotal = raidRoll + curP2.stats.atk + trackBonus(curP2, 'atk');
     // v6.11.3 (P0-1): 고정 5 → 5 + fortified + garrison + veil. 모달 흡수(C2)는 리스크로 P0 보류, threshold만 정합.
     // v6.16 (P1-2): MOLE 위장 대상 Bloc이면 threshold -2 (내부자 이점)
-    const threshold = raidThreshold(atCell) + moleDisguiseMod(curP2, bloc);
+    // v6.19 (S03): NPC Bloc 방어력 −1 (scenNpcDefMod) — 타 시나리오 0.
+    const threshold = raidThreshold(atCell) + moleDisguiseMod(curP2, bloc) + scenNpcDefMod(s, blocIdx);
     if (raidTotal >= threshold) {
       // 성공 — 주가 -3, 렙 +3, 구역 점령 여부 선택
       const newStocks = { ...s.stocks, [bloc]: Math.max(1, s.stocks[bloc] - 3) };
       s = { ...s, stocks: newStocks };
       const ps = [...s.players];
+      const repGain = scenRaidRep(s, 3);  // v6.19 (S03): 레이드 보상 +50% (미지정 시 3)
       ps[playerIdx] = {
         ...ps[playerIdx],
-        resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + 3 },
-        wanted: ps[playerIdx].wanted + 1,
+        resources: { ...ps[playerIdx].resources, rep: ps[playerIdx].resources.rep + repGain },
+        wanted: ps[playerIdx].wanted + scenRaidWanted(s, 1),  // v6.19 (S03): 현상수배 상승 −1
       };
       const newMap = { ...s.map, [curP2.position]: { ...atCell, owner: null } };
       s = { ...s, players: ps, map: newMap, heat: Math.min(10, s.heat + 1) };
       s.meta.raidsThisGame[playerIdx] = (s.meta.raidsThisGame[playerIdx] || 0) + 1;
       s = insertScandal(s, blocIdx, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
       const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+3 (누적 ${ps[playerIdx].resources.rep}), 현상수배+1`);
+      s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+${repGain} (누적 ${ps[playerIdx].resources.rep}), 현상수배+${scenRaidWanted(s, 1)}`);
       s = raiseTrack(s, playerIdx, 'combat', 1, '레이드 성공');  // v0.6.3b
     } else {
       const ps = [...s.players];
       ps[playerIdx] = {
         ...ps[playerIdx],
-        wanted: ps[playerIdx].wanted + 1,
+        wanted: ps[playerIdx].wanted + scenRaidWanted(s, 1),  // v6.19 (S03): 현상수배 상승 −1
       };
       s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
       const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `${meTag}❌ 레이드 실패 [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+1`);
+      s = logEntry(s, `${meTag}❌ 레이드 실패 [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+${scenRaidWanted(s, 1)}`);
       s = applyDamage(s, playerIdx, 3, { attacker: blocIdx, label: '레이드 실패' });  // v6.11.4 (P0-4)
       s = moleRaidReveal(s, playerIdx, bloc);  // v6.16 (P1-2): 위장 발각
     }
@@ -5984,6 +6058,11 @@ function SetupScreen({ onStart }) {
       {scen.allBloc && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           ⚠ {scen.id} {scen.name}: 전원 Bloc · 11×11 전용 · 시작 공권력 {scen.startHeat} · 크레딧 +{scen.startCredit} · 4구역 시작 · M&A 쿨다운 없음. (역할 자동 Bloc, Ghost 선택 무시)
+        </div>
+      )}
+      {scen.ghostRising && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚠ {scen.id} {scen.name}: Ghost 주도 · 11×11 전용 · 실참 Bloc 1 + Ghost 다수 + NPC Bloc 4 · 시작 공권력 {scen.startHeat} · 주가 {scen.startStock} · Ghost 렙+{scen.ghostRepBonus}/₵+{scen.ghostCreditBonus} · 레이드 보상+50%·수배−1·NPC 방어−1 · Ghost 승리 렙 {scen.ghostRepBattleOverride}+레이드 {scen.ghostRaidsOverride}. (역할 자동 Ghost)
         </div>
       )}
 
