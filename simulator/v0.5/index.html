@@ -149,6 +149,66 @@
   }
   .player-card .pstats strong { color: var(--text); }
 
+  /* v6.26 Race HUD / Market ticker / Threat strip (docs/22 §계기판) */
+  .hud-wrap.decl { margin-top: 34px; }   /* 종료 선언 배너(fixed, top:50) 겹침 회피 */
+  .race-hud {
+    flex: 0 0 auto; margin-bottom: 10px;
+    background: linear-gradient(180deg, rgba(10,10,22,0.96), rgba(15,15,26,0.92));
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px 12px;
+  }
+  .race-hud .rh-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px;
+    color: var(--text-dim); margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .race-hud .rh-head .rh-lead { color: var(--yellow); letter-spacing: 1px; }
+  .race-track {
+    position: relative; height: 34px; border-radius: 3px;
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg, rgba(0,229,255,0.05), rgba(255,215,0,0.04) 60%, rgba(255,0,60,0.06));
+  }
+  .race-track .rt-danger {
+    position: absolute; top: 0; bottom: 0; pointer-events: none; border-left: 1px dashed var(--magenta);
+    background: repeating-linear-gradient(45deg, rgba(255,0,60,0.14) 0 6px, rgba(255,0,60,0.03) 6px 12px);
+  }
+  .race-track .rt-finish { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .race-marker {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    transition: left 0.45s ease; z-index: 2;
+  }
+  .race-marker .rm-dot {
+    width: 19px; height: 19px; border-radius: 50%; border: 2px solid;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; background: var(--bg1);
+  }
+  .race-marker.me { z-index: 6; }
+  .race-marker.me .rm-dot { width: 24px; height: 24px; font-size: 13px; box-shadow: 0 0 10px currentColor; }
+  .race-marker .rm-cap {
+    font-family: 'Share Tech Mono', monospace; font-size: 8px; margin-top: 1px;
+    white-space: nowrap; color: var(--text-dim); line-height: 1.1; text-align: center;
+  }
+  .race-marker .rm-cap .rm-pct { color: var(--text); font-weight: 700; }
+  .race-marker .rm-up { color: var(--green); } .race-marker .rm-dn { color: var(--magenta); }
+  @keyframes rhBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+  .race-marker .rm-decl { animation: rhBlink 0.9s infinite; font-size: 12px; margin-bottom: 1px; }
+  .mkt-ticker, .threat-strip, .round-brief {
+    flex: 0 0 auto; font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    border-radius: 3px; padding: 5px 10px; margin-bottom: 8px;
+  }
+  .mkt-ticker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #000; border: 1px solid var(--border); }
+  .mkt-ticker .mt-label { color: var(--text-dim); font-size: 9px; letter-spacing: 1px; }
+  .mkt-ticker .mt-item { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+  .mkt-ticker .mt-item b { color: var(--text); }
+  .mkt-ticker .mt-up { color: var(--green); } .mkt-ticker .mt-down { color: var(--magenta); } .mkt-ticker .mt-flat { color: var(--text-dim); }
+  .mkt-ticker .mt-short { margin-left: auto; color: var(--yellow); font-weight: 700; }
+  .threat-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(45,15,30,0.55); border: 1px solid var(--magenta); color: var(--magenta); }
+  .threat-strip .ts-lbl { font-size: 9px; letter-spacing: 1px; color: var(--magenta); opacity: 0.8; }
+  .threat-strip .ts-chip { padding: 1px 7px; border: 1px solid var(--magenta); border-radius: 2px; color: var(--text); }
+  .threat-strip .ts-hint { color: var(--yellow); border-color: var(--yellow); font-weight: 700; }
+  .round-brief { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--bg2); border: 1px solid var(--border); color: var(--text-dim); font-size: 10px; }
+  .round-brief .rb-lbl { color: var(--cyan); font-size: 9px; letter-spacing: 1px; }
+  .round-brief .rb-item b { color: var(--text); }
+
   /* Center - map */
   .center-panel {
     grid-area: center; display: flex; flex-direction: column; padding: 12px;
@@ -435,6 +495,12 @@
     }
     .top-bar .phases { order: 3; flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
     .center-panel { overflow: visible; padding: 10px; }
+    /* v6.26: 모바일 — HUD/틱커/위협 스트립은 center 최상단(=top 바 아래·지도 위) 자동 배치 */
+    .hud-wrap.decl { margin-top: 100px; }   /* 모바일 배너는 3줄 랩 → 더 큰 오프셋 */
+    .mkt-ticker { flex-wrap: nowrap; overflow-x: auto; }
+    .race-track { height: 30px; }
+    .race-marker .rm-dot { width: 17px; height: 17px; }
+    .race-marker.me .rm-dot { width: 21px; height: 21px; }
     .map-wrap { overflow-x: auto; overflow-y: visible; }
     .map-board, .map-board.size-11 { margin: 0 auto; }
     .map-board.size-11 { min-width: 460px; }   /* 11×11 셀 탭 타깃 확보 → 가로 스크롤 */
@@ -1643,6 +1709,33 @@ function evalPlayerVictory(p, idx, state, goals) {
     if (rep >= goals.ghostRepOnly) return { route: 'repOnly', reason: `Ghost 승리 (평판): 렙 ${rep} (≥${goals.ghostRepOnly})` };
   }
   return null;
+}
+
+// ============================================================================
+// v6.26 (docs/22 §계기판·docs/23): 레이스 HUD 정직성 진척 함수 — 단일 소스 계기판
+//   원칙: "HUD 숫자 = 판정 숫자". 진척률은 evalPlayerVictory(=checkInstantVictory)와
+//   동일 소스만 사용한다: getVictoryGoals(언더독 스케일 반영) + assetValue/rep/raidsThisGame.
+//   새 임계 수학을 도입하지 않는다 — 오직 이미 판정에 쓰는 값을 0~100 으로 정규화할 뿐.
+//   [정직성 계약] evalPlayerVictory 가 승리(non-null)를 반환하는 상태에서는 반드시 100 을
+//   반환한다(각 경로의 게이트가 곧 100% 지점). Ghost 는 두 승리 경로(렙배틀·렙온리)의
+//   max 진척(레이스에서 실제로 더 가까운 경로). 렙배틀은 렙·레이드 동시 게이트 → min 성분.
+function hudRaceProgress(p, idx, state, goals) {
+  if (!p || p.isNpc || p.defeated) return 0;
+  goals = goals || getVictoryGoals(state);
+  if (p.role === 'bloc') {
+    const av = assetValue(p, state.stocks, state);
+    if (!goals.blocAsset) return 0;
+    return Math.max(0, Math.min(100, Math.round(av / goals.blocAsset * 100)));
+  }
+  const rep = p.resources.rep || 0;
+  const raids = (state.meta.raidsThisGame || {})[idx] || 0;
+  // 렙배틀 경로: 렙≥ghostRepBattle && 레이드≥ghostRaids — 뒤처진 성분이 레이스를 게이트 → min.
+  const battleRep  = goals.ghostRepBattle > 0 ? rep / goals.ghostRepBattle : 1;
+  const battleRaid = goals.ghostRaids     > 0 ? raids / goals.ghostRaids   : 1;
+  const battlePct  = Math.min(battleRep, battleRaid) * 100;
+  // 렙온리 경로: 렙≥ghostRepOnly.
+  const onlyPct = goals.ghostRepOnly > 0 ? rep / goals.ghostRepOnly * 100 : 0;
+  return Math.max(0, Math.min(100, Math.round(Math.max(battlePct, onlyPct))));
 }
 
 // ============================================================================
@@ -3815,6 +3908,11 @@ function reducer(state, action) {
         { round: newRound, phase: 0, message: `🔄 R${newRound} 시작 · 시그널 ${nd} · 손패 리필 · 개인 풀 절반 감쇠` }
       ].slice(-150);
 
+      // v6.26: 레이스 HUD 델타용 스냅샷 — 방금 끝난 라운드의 진척률을 표시 전용으로 저장
+      //   (loreQuoted 선례: meta 표시 필드, 게임 로직 무영향). HUD 는 현재값 - 스냅샷 = ▲▼.
+      const raceSnapPct = {};
+      state.players.forEach((p, i) => { if (!p.isNpc && !p.defeated) raceSnapPct[i] = hudRaceProgress(p, i, state, sumGoals); });
+
       return {
         ...state,
         meta: { ...state.meta, round: newRound, phase: 0, extraDrawNext: 0,
@@ -3822,6 +3920,8 @@ function reducer(state, action) {
           promises: (state.meta.promises || []).filter(pm => pm.expiresR >= newRound),
           // v6.4: 인간 능동 견제 라운드별 트래킹 리셋
           humanSuppressedThisRound: {},
+          // v6.26: 레이스 HUD — 전 라운드 진척 스냅샷 (표시 전용)
+          raceSnapshot: { round: state.meta.round, pct: raceSnapPct },
         },
         signalDie: nd,
         currentNews: null,
@@ -6584,7 +6684,7 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S06' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult}. (부분 구현: 첫2R 거래동결·뉴스±50%·재건왕/청산자 타이틀 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult} · 첫 {scen.tradeFreezeRounds}R 거래 동결 · 뉴스 상승 ×{scen.newsStockUpMult}/하락 ×{scen.newsStockDownMult}. (부분 구현: 재건왕/청산자 타이틀 미배선)
         </div>
       )}
 
@@ -7518,7 +7618,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           // "내가 타겟됨" 하이라이트 (P0 아닌데 최근에 나를 공격한 경우)
           const targetedMe = state.meta.lastTargetedBy?.attacker === i;
           return (
-            <div key={i} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`} style={{ ...extraStyle, opacity: p.defeated ? 0.4 : 1 }}>
+            <div key={i} id={`pcard-${i}`} className={`player-card ${i === 0 ? 'me' : ''} ${p.defeated ? '' : ''}`} style={{ ...extraStyle, opacity: p.defeated ? 0.4 : 1 }}>
               <div className="pheader">
                 <div className="pname">
                   {p.kind === 'human' ? '👤' : (p.isNpc ? '👁' : '🤖')} P{i} · {p.isNpc && (p.signal?.revealed || 0) === 0 ? '???' : p.specific}
@@ -7714,6 +7814,121 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
 
       {/* CENTER — Map + Hand */}
       <div className="center-panel">
+        {/* ═══ v6.26 레이스 HUD — ①트랙 ②마켓 틱커 ③위협 스트립 ④라운드 브리핑 (docs/22 §계기판) ═══ */}
+        {(() => {
+          const vG = getVictoryGoals(state);
+          const declIdx = state.meta.victoryDeclaration ? state.meta.victoryDeclaration.idx : -1;
+          const X = pct => 3 + Math.max(0, Math.min(100, pct)) * 0.94;  // 진척%→트랙 위치% (3~97 인셋)
+          // ── 레이서: 실 플레이어(비NPC·생존)만 정규화 배치 ──
+          const racers = state.players
+            .map((p, i) => ({ p, i, pct: hudRaceProgress(p, i, state, vG) }))
+            .filter(r => !r.p.isNpc && !r.p.defeated);
+          const snap = (state.meta.raceSnapshot && state.meta.raceSnapshot.pct) || {};
+          const leader = racers.reduce((a, r) => r.pct > a.pct ? r : a, { pct: -1, i: -1 });
+          const scrollTo = i => { const el = document.getElementById('pcard-' + i); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+          // ── 마켓 틱커 데이터 ──
+          const stkSnap = state.meta.lastStockSnapshot || state.stocks;
+          const blocs = Object.keys(state.stocks);
+          const me0 = state.players[0];
+          let shortPnl = 0, shortQty = 0;
+          if (me0 && me0.role === 'ghost') {
+            for (const [bl, q] of Object.entries(me0.shortPositions || {})) {
+              if (!q) continue; shortQty += q;
+              const drop = (stkSnap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
+              if (drop > 0) shortPnl += drop * q * SHORT_CONFIG.payoutPerPt;
+            }
+          }
+          // ── 위협 스트립 데이터 (있을 때만) ──
+          const threats = [];
+          if (declIdx >= 0 && declIdx !== 0) { const dp = state.players[declIdx]; threats.push({ k: 'decl', t: `📢 P${declIdx} ${dp ? dp.specific : '?'} 종료 선언 — 끌어내려라` }); }
+          const tb = state.meta.lastTargetedBy;
+          if (tb && tb.attacker != null && tb.attacker !== 0) { const ap = state.players[tb.attacker]; threats.push({ k: 'hit', t: `🔴 P${tb.attacker} ${ap ? ap.specific : '?'} 피격: ${tb.detail || ''}` }); }
+          const pm = state.meta.pendingMna;
+          if (pm && me0 && me0.role === 'bloc' && pm.target === me0.specific) { const atk = state.players[pm.attacker]; threats.push({ k: 'mna', t: `🏴 ${atk ? atk.specific : '?'} M&A 진행 — 내 블록 인수 위협` }); }
+          const tok = (me0 && me0.suppressionTokens) || {};
+          const tokActive = Object.entries(tok).filter(([, v]) => v > 0).map(([k]) => ({ combat: '전투', info: '정보', diplomacy: '외교' }[k] || k));
+          if (tokActive.length) threats.push({ k: 'sup', t: `⛓ 견제됨: ${tokActive.join('·')}` });
+          // 상황 힌트: 85%+ 상대(규칙 기반, AI 아님)
+          const hotFoe = racers.filter(r => r.i !== 0 && r.pct >= 85).sort((a, b) => b.pct - a.pct)[0];
+          if (hotFoe) threats.push({ k: 'hint', hint: true, t: `⚠ ${hotFoe.p.specific} ${hotFoe.pct}% — 이번 R 견제/레이드 기회` });
+          // ── 라운드 브리핑: 최근 로그에서 주요 이벤트 추출 ──
+          const briefPats = [
+            { re: /레이드|🗡|⚔/, ic: '⚔' }, { re: /인수|M&A|🏴|피인수/, ic: '🏴' },
+            { re: /견제|🚫/, ic: '🚫' }, { re: /구출|⛓/, ic: '⛓' },
+          ];
+          const brief = [];
+          const logArr = state.log || [];
+          for (let li = logArr.length - 1; li >= 0 && brief.length < 3; li--) {
+            const msg = logArr[li].message || '';
+            if (msg.includes('요약') || msg.includes('시작')) continue;
+            const hit = briefPats.find(bp => bp.re.test(msg));
+            if (hit && !brief.some(b => b.msg === msg)) brief.push({ ic: hit.ic, msg: msg.replace(/^[·\s]+/, '').slice(0, 60) });
+          }
+          return (
+          <div className={`hud-wrap ${state.meta.victoryDeclaration ? 'decl' : ''}`}>
+            {/* ① 레이스 트랙 */}
+            <div className="race-hud">
+              <div className="rh-head">
+                <span>◈ VICTORY RACE · R{state.meta.round}</span>
+                {leader.i >= 0 && <span className="rh-lead">선두 P{leader.i} {leader.p.specific} {leader.pct}%{leader.pct >= 85 ? ' 🔥' : ''}</span>}
+              </div>
+              <div className="race-track">
+                <div className="rt-danger" style={{ left: X(85) + '%', width: (X(100) - X(85)) + '%' }}/>
+                <div className="rt-finish" style={{ left: X(100) + '%' }}/>
+                {racers.map(r => {
+                  const isMe = r.i === 0;
+                  const col = r.p.role === 'ghost' ? 'var(--magenta)' : 'var(--cyan)';
+                  const glyph = r.p.role === 'ghost' ? '👻' : '🏢';
+                  const prev = snap[r.i];
+                  const d = (prev == null) ? 0 : r.pct - prev;
+                  return (
+                    <div key={r.i} className={`race-marker ${isMe ? 'me' : ''}`} style={{ left: X(r.pct) + '%', color: col }}
+                      title={`P${r.i} ${r.p.specific} · ${r.pct}%`} onClick={() => scrollTo(r.i)}>
+                      {r.i === declIdx && <span className="rm-decl">📢</span>}
+                      <span className="rm-dot" style={{ borderColor: col, color: col }}>{glyph}</span>
+                      <span className="rm-cap">
+                        {isMe ? <b style={{ color: 'var(--cyan)' }}>나</b> : r.p.specific.slice(0, 4)}{' '}
+                        <span className="rm-pct">{r.pct}%</span>
+                        {d !== 0 && <span className={d > 0 ? 'rm-up' : 'rm-dn'}> {d > 0 ? '▲' : '▼'}{Math.abs(d)}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* ② 마켓 틱커 */}
+            <div className="mkt-ticker">
+              <span className="mt-label">MARKET▮</span>
+              {blocs.map(b => {
+                const cur = state.stocks[b]; const d = cur - (stkSnap[b] ?? cur);
+                const cls = d > 0 ? 'mt-up' : d < 0 ? 'mt-down' : 'mt-flat';
+                return (
+                  <span key={b} className="mt-item">
+                    {b.slice(0, 3)} <b>{cur}</b>
+                    <span className={cls}>{d > 0 ? '▲' + d : d < 0 ? '▼' + Math.abs(d) : '—'}</span>
+                  </span>
+                );
+              })}
+              {me0 && me0.role === 'ghost' && shortQty > 0 &&
+                <span className="mt-short">🔻숏 {shortQty}계약 · 평가 ₵{shortPnl > 0 ? '+' + shortPnl : shortPnl}</span>}
+            </div>
+            {/* ③ 위협 스트립 (있을 때만) */}
+            {threats.length > 0 && (
+              <div className="threat-strip">
+                <span className="ts-lbl">THREAT</span>
+                {threats.map((t, ti) => <span key={ti} className={`ts-chip ${t.hint ? 'ts-hint' : ''}`}>{t.t}</span>)}
+              </div>
+            )}
+            {/* ④ 라운드 브리핑 (있을 때만) */}
+            {brief.length > 0 && (
+              <div className="round-brief">
+                <span className="rb-lbl">R{state.meta.round} BRIEF</span>
+                {brief.map((b, bi) => <span key={bi} className="rb-item">{b.ic} {b.msg}</span>)}
+              </div>
+            )}
+          </div>
+          );
+        })()}
         <div className="map-wrap">
           {(() => {
             // v0.8.2: 맵 사이즈에 따라 동적 그리드
@@ -8595,6 +8810,9 @@ function App() {
     evalTut(opts);
     setState(buildInitial(opts));
   }, []);
+
+  // v6.26: E2E/스크린샷 전용 상태 주입 훅 (표시 전용 — 게임 규칙 무영향). 프로덕션 무해(호출자 없음).
+  useEffect(() => { window.__dnInject = (s) => setState(s); return () => { try { delete window.__dnInject; } catch (e) {} }; }, []);
 
   const dispatch = useCallback((action) => {
     if (action.type === 'RESET') {

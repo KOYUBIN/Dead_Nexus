@@ -179,10 +179,10 @@
     margin-bottom: 1.5mm;
   }
 
-  /* v6.x 신규 시스템 (견제/결정/M&A) */
+  /* v1 수기 절차 박스 (✅ 정본 시스템) */
   .v6-box {
     border: 1px solid #888;
-    border-left: 3px solid #6a1b9a;
+    border-left: 3px solid #2e7d32;
     padding: 1.2mm 1.5mm;
     background: #fff;
   }
@@ -190,7 +190,7 @@
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
     font-size: 7.3pt;
-    color: #6a1b9a;
+    color: #2e7d32;
     margin-bottom: 0.8mm;
   }
   .v6-box table { font-size: 6.8pt; margin-bottom: 0.8mm; }
@@ -198,17 +198,58 @@
   .v6-box table td { padding: 0.4mm 0.8mm; }
   .v6-box ul { margin: 0; padding-left: 3mm; font-size: 6.6pt; line-height: 1.28; }
   .v6-box li { margin-bottom: 0.4mm; }
+
+  /* v2 예정 — 테이블 v1 미포함 (웹판 전용) */
+  .v2-box {
+    border: 1.5px dashed #9e9e9e;
+    background: #f5f5f5;
+    padding: 1.5mm 2mm;
+    margin-top: 1mm;
+    color: #555;
+  }
+  .v2-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 7.6pt;
+    color: #616161;
+    margin-bottom: 0.8mm;
+    letter-spacing: 0.03em;
+  }
+  .v2-box .lead {
+    font-size: 6.8pt;
+    color: #757575;
+    margin-bottom: 1mm;
+  }
+  .v2-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2mm 3mm;
+    font-size: 6.7pt;
+    line-height: 1.3;
+  }
+  .v2-grid b { font-family: 'JetBrains Mono', monospace; color: #424242; }
+  .v2-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 6pt;
+    font-weight: 700;
+    background: #616161;
+    color: #fff;
+    padding: 0 1mm;
+    border-radius: 1mm;
+    margin-left: 1mm;
+  }
 </style>
 </head>
 <body>
 <div class="no-print">
   <a href="index.html">← 인덱스</a>
-  · DEAD NEXUS 퀵 레퍼런스 v1.1 — A4 1매, 모든 플레이어 자리에 1장씩 비치 권장 (v6.x 견제·결정·M&A 반영)
+  · DEAD NEXUS 퀵 레퍼런스 <b>테이블 에디션 v1</b> — A4 1매, 모든 플레이어 자리에 1장씩 (3~4인 인간·오토마 없음 스코프, docs/24 기준)
   <button onclick="window.print()" style="margin-left:10px;">🖨 인쇄</button>
 </div>
 
 <h1>DEAD NEXUS — 퀵 레퍼런스</h1>
-<div class="subtitle">v1.1 · A4 1매 · 모든 플레이어 자리에 1장씩 · 7페이즈 + 5트랙 + 승리 조건 + 견제·결정·M&A(v6.x)</div>
+<div class="subtitle">테이블 에디션 v1 · A4 1매 · 3~4인 인간 · 오토마 없음 · 7페이즈 + 5트랙 + 승리 조건 + ✅ 수기 정본 시스템 (docs/24 감사 ✅11종)</div>
 
 <div class="grid">
   <!-- 좌단: 페이즈 -->
@@ -259,8 +300,10 @@
 
     <h2>🎲 레이드 판정 공식</h2>
     <div class="raid-formula">
-      🎲 d6 + 화력LV + 카드보너스<br>
-      ≥ 방어구역(전형 5/요새 7/NEXUS 9) → <b>성공</b>
+      <b>threshold = 5 + 방어토큰</b> (요새🏰 / 주둔👮 / 베일🛡 각 +1)<br>
+      · <b>인간</b>: d6 + 투자스탯(atk/spd/hack) + 카드보너스 ≥ threshold → 성공<br>
+      · <b>봇·카드 레이드</b>: 주사위 없음(결정론) — raidBonus[3 + 무기÷3(최대+3)] ≥ threshold<br>
+      · 성공 시 보상 <b>결정</b>: ★평판 vs ₵+⚙약탈 택1 (기본=평판)
     </div>
 
     <h2>🆔 자원 아이콘</h2>
@@ -310,23 +353,27 @@
     </div>
 
     <div class="win-card bloc">
-      <div class="title">🏢 Bloc (메가기업) — 자산 60 도달</div>
+      <div class="title">🏢 Bloc (메가기업) — 자산 도달</div>
       <ul>
-        <li>자산 = 자기자본 + 주식 + NEXUS 점유 보너스</li>
-        <li>NEXUS 점유 시 자기 룰 활성 (CARBON: 수입 +1 등)</li>
-        <li><b>M&A 루트</b> (11×11): 지분 51%+ 인수 선언 → 방어 무산 시 흡수 · <b>타 블록 2곳 인수 = 즉시 승리</b></li>
+        <li><b>자산 ≥ 73</b>(5×5) / <b>100</b>(11×11) — 인원 보정: 3인 −1 / 2인 −2</li>
+        <li>자산 = 자기자본 + 주식(자기주가 제외) + NEXUS 점유 보너스</li>
+        <li>NEXUS 점유 시 자기 룰 활성 (CARBON: 자사 구역 수입 +1 등)</li>
+        <li>선언 → 유예 1R → 확정 (즉시 아님, 아래 종료 선언 참조)</li>
+        <li style="color:#888"><i>M&A 인수 루트는 테이블 v1 미포함 → v2 (아래 박스)</i></li>
       </ul>
     </div>
 
     <h2>⚙ 핵심 숫자</h2>
     <div class="key-numbers">
       <span class="label">맵</span> 5×5 (튜토리얼) / 11×11 (정식) ·
-      <span class="label">라운드</span> 평균 5~7R (최대 8R) ·
+      <span class="label">라운드</span> 평균 5~7R ·
       <span class="label">손패</span> 6장 시작 ·
       <span class="label">계획</span> 라운드당 2장<br>
       <span class="label">트랙</span> 5개 × LV 1~5 ·
       <span class="label">Cyberware</span> 게임당 2개 (R3/R6) ·
       <span class="label">하이라이트</span> 12종 (게임당 1회씩)<br>
+      <span class="label">TL 누적비용</span> TL1→2:5 · →3:+20(25) · →4:+30(55) · →5:+35(<b>90</b>) ·
+      <span class="label">TL상한</span> 5×5=TL2 / 11×11=TL5<br>
       <span class="label">HP</span> Ghost 8~10 (LV5 그림자 deathSave 1회) ·
       <span class="label">시그널</span> d6 매 라운드 (NPC 정보 점진 공개)
     </div>
@@ -335,72 +382,70 @@
     <table>
       <thead><tr><th>소유</th><th>전 플레이어 효과</th></tr></thead>
       <tbody>
-        <tr><td><b>VANTA</b></td><td>이번 R 정찰 자유 (모두 시야 +1)</td></tr>
-        <tr><td><b>IRONWALL</b></td><td>모두 ATK +1 (전쟁판)</td></tr>
-        <tr><td><b>HELIX</b></td><td>모두 시작시 HP+1 (안전판)</td></tr>
-        <tr><td><b>AXIOM</b></td><td>주가 변동 ×2</td></tr>
-        <tr><td><b>CARBON</b></td><td>모두 수입 +1 (자원판)</td></tr>
-        <tr><td><i>중립</i></td><td>효과 없음 — 점유 경쟁 발생</td></tr>
+        <tr><td><b>VANTA</b></td><td>정보 공개 — NPC 시그널 +1, 정찰 +1</td></tr>
+        <tr><td><b>IRONWALL</b></td><td>계엄 — 모두 ATK +1 / Ghost 수배 +1/R</td></tr>
+        <tr><td><b>HELIX</b></td><td>바이오코드 — 모두 매 R HP +1</td></tr>
+        <tr><td><b>AXIOM</b></td><td>알고 시장 — 주가 변동 ×2, 매 R 데이터 +1</td></tr>
+        <tr><td><b>CARBON</b></td><td>에너지망 — 자사 구역 수입 +1 ₵</td></tr>
+        <tr><td><i>중립·Ghost</i></td><td>효과 없음 (Ghost 점령해도 중립) — 점유 경쟁</td></tr>
       </tbody>
     </table>
 
-    <h2>🎬 첫 게임 권장 (Ghost · BLADE)</h2>
-    <table>
-      <thead><tr><th>R</th><th>액션</th><th>R&D</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>인접 Bloc 구역 이동 → raid 시도</td><td>화력 LV3</td></tr>
-        <tr><td>2</td><td>두 번째 raid + execute</td><td>그리드런 LV2</td></tr>
-        <tr><td>3</td><td>Cyberware 자동 장착 (reflex)</td><td>화력 LV4</td></tr>
-        <tr><td>4</td><td>NEXUS 도전</td><td>그림자 LV2</td></tr>
-        <tr><td>5</td><td>승리 시도 (전투 루트)</td><td>—</td></tr>
-      </tbody>
-    </table>
+    <div class="icon-set" style="margin-top:1mm;">
+      <b>첫 게임 온보딩</b> → 시나리오 카드(09) + Session 00 가이드 참조. 권장 첫 클래스: Ghost <b>BLADE</b>(화력 루트) / Bloc <b>CARBON</b>(수입판).
+    </div>
   </div>
 </div>
 
-<h2>🆕 v6.x 신규 시스템 (견제 · 결정 · M&A)</h2>
+<h2>✅ 테이블 v1 수기 정본 절차 <span class="accent">(docs/24 감사 ✅)</span></h2>
 <div class="grid-3">
   <div class="v6-box">
-    <div class="v6-title">🚧 견제 토큰 3종</div>
-    <table>
-      <thead><tr><th></th><th>종류</th><th>R시작 페널티</th></tr></thead>
-      <tbody>
-        <tr><td>🔥</td><td>무력</td><td>★-1</td></tr>
-        <tr><td>📡</td><td>정보</td><td>data-1</td></tr>
-        <tr><td>🤝</td><td>외교</td><td>🎙-1</td></tr>
-      </tbody>
-    </table>
+    <div class="v6-title">📢 종료 선언 (자산·평판 경로)</div>
     <ul>
-      <li>부여 ₵5 · R시작 적용 후 소진</li>
-      <li>인간 1회/R (자기·탈락 불가)</li>
-      <li>봇: 매R 확률 부여 (최고위협 우선)</li>
-      <li><b>보복</b>: 최근2R 내 견제자 봇이 우선 타겟</li>
+      <li>승리 임계 도달 = <b>즉시 승리 아님</b></li>
+      <li>도달자 <b>선언</b> → 라운드 트랙에 📢 마커</li>
+      <li><b>유예 1R</b> 진행 (전원이 지켜봄)</li>
+      <li>유예 후에도 조건 유지 → <b>확정 승리</b></li>
+      <li>이탈 시 해제, 재도달 시 재선언 (같은 플레이어 <b>게임당 2회 캡</b>)</li>
     </ul>
   </div>
 
   <div class="v6-box">
-    <div class="v6-title">🎯 결정 모달 2종</div>
+    <div class="v6-title">🃏 덱 오염 (상처 · 스캔들)</div>
     <ul>
-      <li><b>레이드 성공</b>: ★평판 vs ₵+⚙약탈 택1 (등가 · 기본=평판)</li>
-      <li><b>Bloc 잉여</b>(₵≥12): 주가+1 부양 vs ₵+1 비축 (기본=부양)</li>
-      <li>미선택·만료 시 기본값 자동 적용</li>
+      <li><b>상처</b>: HP 임계 교차 시 자기 discard에 1장 삽입</li>
+      <li><b>스캔들</b>: 레이드로 구역 상실 · 스캔들 뉴스 시 삽입</li>
+      <li>오염 카드 = TOP/BOT·MAIN/SIDE 모두 무효 (손에 오면 낭비)</li>
+      <li>물리 카드로 실삽입 — <b>게임당 상한 2장</b></li>
     </ul>
   </div>
 
   <div class="v6-box">
-    <div class="v6-title">📈 M&A (11×11 전용, 5×5 비활성)</div>
+    <div class="v6-title">⚔ 상성 · 이니셔티브 · 트랙</div>
     <ul>
-      <li>지분%=보유주÷(전체보유+float10)</li>
-      <li>51%+ → 선언 (3회 · 2R 간격)</li>
-      <li>방어: 재매입₵10 / 백기사🎙3 / 법적🎙5(1R지연) / 상호파괴(주가-3)</li>
-      <li>판정: 지분&lt;51 무산(공격10%매도·대상주가+2) / 유지 인수(₵·구역30%)</li>
-      <li><b>타 블록 2곳 인수 = 즉시 승리</b></li>
+      <li><b>상성</b>: 진영 카드 아이콘 이중 사이클 +2 / +1 (조회 불필요)</li>
+      <li><b>이니셔티브</b>: init(=TL×10 정렬) 낮은 값부터 실행</li>
+      <li><b>수배·공권력(heat)</b>: 0~10 트랙 + 큐브 1개 (10 도달=계엄/종료)</li>
+      <li><b>거리명성</b> = 5트랙 LV 합. LV2 패시브 / LV4 강화 / LV5 1회 능력</li>
     </ul>
+  </div>
+</div>
+
+<div class="v2-box">
+  <div class="v2-title">🚧 v2 예정 — 테이블 v1 <u>미포함</u> (웹 시뮬엔 있음 · 조용한 누락 아님)</div>
+  <div class="lead">아래는 웹판(v6.x)에 구현돼 있으나 수기 부담·컴포넌트 재설계 대기로 <b>테이블 v1에서 의도적으로 뺀</b> 시스템이다. v1 = <b>3~4인 인간 · 오토마 없음</b>. (근거: docs/24 §2.1 감사 ❌·중⚠️ / §3.1 v1 제외 목록)</div>
+  <div class="v2-grid">
+    <div><b>시그니처 13종 자동발동</b><span class="v2-tag">❌</span><br>매R 무성 자동(4×13=52회/R) → Root식 진영보드 1동사로 재설계 전까지 제외</div>
+    <div><b>M&A 지분% 인수</b><span class="v2-tag">⚠️</span><br>가변분모 나눗셈 → 10주권 액면화 완료 전까지 제외 (타블록 2곳 인수 승리도 v2)</div>
+    <div><b>공매도 스냅샷 정산</b><span class="v2-tag">⚠️</span><br>숏 진입·2R만기·주가−3 정산 → 숏계약 카드화 전까지 제외</div>
+    <div><b>봇 AI 3인 (오토마)</b><span class="v2-tag">⚠️</span><br>suppressionProb 0.30·grudge·mnaTarget 확률 → 모디파이어 덱화 전까지 v1은 인간으로 대체</div>
+    <div><b>EV-중립 환산 정밀표</b><span class="v2-tag">⚠️</span><br>3★≡₵4+⚙2 등 암산 → 인쇄 교환표 완성 전까지 근사 운용 (v1은 레이드 보상 택1만)</div>
+    <div><b>개인 풀 절반 감쇠+반올림</b><span class="v2-tag">⚠️</span><br>분수·반올림 암산 → 정액 −1 재설계 전까지 제외</div>
   </div>
 </div>
 
 <div class="footer">
-  DEAD NEXUS · v1.1 퀵 레퍼런스 · github.com/KOYUBIN/Dead_Nexus · 2026-07-14 · 7페이즈 / 5트랙 / 6 Ghost · 5 Bloc / 견제·결정·M&A(v6.x) · 🎓가이드 튜토리얼(5×5 솔로 자동)
+  DEAD NEXUS · 퀵 레퍼런스 <b>테이블 에디션 v1</b> · github.com/KOYUBIN/Dead_Nexus · 2026-07-17 · 7페이즈 / 5트랙 / 6 Ghost · 5 Bloc / 수기 정본 ✅11종 · 웹 수치 대조(VICTORY_GOALS·raidThreshold·TL곡선) 정합 · v2 제외목록 명시
 </div>
 
 </body>
