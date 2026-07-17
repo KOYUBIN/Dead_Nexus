@@ -6445,7 +6445,7 @@ function botPickCards(state, playerIdx) {
 //   (Bloc 존 점유 → assetValue-5)로 선언자를 끌어내릴 Ghost 봇 '동기'만 강화한다. 활성 Bloc
 //   선언자가 봇 레이드 도달권(findRaidTargetZone→선언자 소유 존)이면 move/atk 카드에 가점 →
 //   유예 라운드에 근방 Ghost 가 "끌어내리기 집중 레이드"로 수렴 (전원이 지켜보는 종결).
-const EURO_DECL_RAID_URGENCY = 0;  // 활성 Bloc 선언 시 Ghost 봇 레이드 동기 가점 (측정 튜닝값)
+const EURO_DECL_RAID_URGENCY = 14;  // 활성 Bloc 선언 시 Ghost 봇 레이드 동기 가점 (측정 튜닝값)
 function scoreGhostCard(state, pIdx, cid) {
   const c = getCard(cid);
   const p = state.players[pIdx];
