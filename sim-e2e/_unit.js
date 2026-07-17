@@ -296,6 +296,45 @@ function tests(){
   const gv31=GVG(mkS(['ghost','ghost','ghost','bloc']));
   ok('GVG 3g1b blocAsset lowered <100 (Bloc 완화)',gv31.blocAsset<100,`got ${gv31.blocAsset}`);
   ok('GVG 3g1b ghostRepBattle raised >45 (Ghost 지연)',gv31.ghostRepBattle>45,`got ${gv31.ghostRepBattle}`);
+  // ============================================================
+  // B-06 (docs/22 P1-6): highlightPoints 승리 환산 — write-only 통화 회생
+  //   판정(evalPlayerVictory)·HUD(hudRaceProgress)·표시가 동일 asset_eff/rep_eff 를 읽는지,
+  //   역할 대칭·정직성 계약·언더독 순서 독립을 검증.
+  // ============================================================
+  const EPV=window.evalPlayerVictory, HRP=window.hudRaceProgress, HLB=window.euro_hlVictoryBonus;
+  ok('B06 fns exposed (EPV/HRP/HLB)', typeof EPV==='function'&&typeof HRP==='function'&&typeof HLB==='function');
+  // 환산 계수 round(hp*0.3)
+  ok('B06 hlVictoryBonus(10)=3', HLB({highlightPoints:10})===3, `got ${HLB({highlightPoints:10})}`);
+  ok('B06 hlVictoryBonus(0)=0', HLB({highlightPoints:0})===0);
+  ok('B06 hlVictoryBonus(null)=0', HLB(null)===0);
+  ok('B06 hlVictoryBonus(7)=round(2.1)=2', HLB({highlightPoints:7})===2, `got ${HLB({highlightPoints:7})}`);
+  // 상태 빌더: 자사=VANTA, 교차보유 IRONWALL(qty×price=10) 로 assetValue 제어, map 비움
+  const mkState6=(over)=>Object.assign({stocks:{VANTA:10,IRONWALL:10,HELIX:10,AXIOM:10,CARBON:10},map:{},meta:{mapSize:'11x11',raidsThisGame:{},scenario:'S01'},players:[]},over||{});
+  const mkBloc6=(hp,ironQty)=>({role:'bloc',specific:'VANTA',isNpc:false,defeated:false,highlightPoints:hp,resources:{rep:0},stocks:{VANTA:10,IRONWALL:ironQty}});
+  const mkGhost6=(hp,rep)=>({role:'ghost',specific:'BLADE',isNpc:false,defeated:false,highlightPoints:hp,resources:{rep},stocks:{}});
+  // Bloc: assetValue=ironQty×10 → 100. 임계 103. hp0 → 100<103(패); hp10(+3) → 103(승)
+  const gBloc6={blocAsset:103,ghostRepBattle:42,ghostRepOnly:70,ghostRaids:1,nonNpcCount:4};
+  const st6=mkState6();
+  ok('B06 bloc av100 no-hp <103 → no win', EPV(mkBloc6(0,10),0,st6,gBloc6)===null);
+  ok('B06 bloc av100 +hp10(=+3) ≥103 → asset win', (v=>!!v&&v.route==='asset')(EPV(mkBloc6(10,10),0,st6,gBloc6)), JSON.stringify(EPV(mkBloc6(10,10),0,st6,gBloc6)));
+  // Ghost 대칭: rep_eff=rep+bonus. rep40, raids2, battle42 → hp0 패 / hp10(+3)=43 승(repBattle)
+  const gG6={blocAsset:100,ghostRepBattle:42,ghostRepOnly:70,ghostRaids:1,nonNpcCount:4};
+  const stG6=mkState6({meta:{mapSize:'11x11',raidsThisGame:{0:2},scenario:'S01'}});
+  ok('B06 ghost rep40 no-hp <42 → no win', EPV(mkGhost6(0,40),0,stG6,gG6)===null);
+  ok('B06 ghost rep40 +hp10(=+3) ≥42 & raids2 → repBattle win', (v=>!!v&&v.route==='repBattle')(EPV(mkGhost6(10,40),0,stG6,gG6)), JSON.stringify(EPV(mkGhost6(10,40),0,stG6,gG6)));
+  // 역할 대칭: 동일 hp → 동일 bonus (Bloc·Ghost 모두 환산)
+  ok('B06 role symmetry: same bonus both roles', HLB(mkBloc6(10,10))===HLB(mkGhost6(10,40))&&HLB(mkBloc6(10,10))===3);
+  // HUD 정직성: hudRaceProgress 가 동일 asset_eff 반영 (hp 있는 쪽 진척 ↑)
+  const gHud6={blocAsset:200,ghostRepBattle:42,ghostRepOnly:70,ghostRaids:1,nonNpcCount:4};
+  const hud0=HRP(mkBloc6(0,10),0,st6,gHud6), hudH=HRP(mkBloc6(10,10),0,st6,gHud6);
+  ok('B06 HUD reflects hp (progress↑)', hudH>hud0, `no-hp ${hud0} hp ${hudH}`);
+  // 정직성 계약: 승리 상태 → HUD=100
+  const winBloc6=mkBloc6(10,10);
+  ok('B06 honesty contract: win → HUD=100', EPV(winBloc6,0,st6,gBloc6)!==null && HRP(winBloc6,0,st6,gBloc6)===100, `hud ${HRP(winBloc6,0,st6,gBloc6)}`);
+  // 언더독 순서 독립: hp 는 달성값에만 가산 → getVictoryGoals 임계는 hp 와 무관
+  const udB=mkS(['ghost','bloc','bloc','bloc']);
+  const gvNoHp=GVG(udB); udB.players[1].highlightPoints=50; const gvHp=GVG(udB);
+  ok('B06 order-indep: hp 는 임계(getVictoryGoals) 불변', gvNoHp.blocAsset===gvHp.blocAsset&&gvNoHp.ghostRepBattle===gvHp.ghostRepBattle, `${gvNoHp.blocAsset}/${gvHp.blocAsset}`);
   return out;
 }
 (async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();
