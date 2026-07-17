@@ -1709,7 +1709,12 @@ function getVictoryGoals(state) {
 //     stock_legend)를 모두 포함하고 마일스톤은 양 역할 공통 → 두 역할 모두 환산해야 "전체"
 //     편입이 성립. 따라서 Bloc=asset_eff, Ghost=rep_eff 대칭 적용. 단 레이드 게이트는
 //     원전이 asset/rep 값만 언급하므로 불변(별도 축).
-const EURO_HL_VICTORY_SCALE = 0.0;  // highlightPoint 당 달성값 가산치 (측정 튜닝값; 반환 이터레이션 표 참조)
+// [측정 튜닝] SCALE 이터레이션 (S01 11×11 n=300 ghost% / 1g3b n=100 minority ghost%):
+//   0.0(baseline) 56.7% / 33% · 0.3 → 59.0% / 46% · 0.5 → 58.7% / 52%.
+//   S01 밴드는 전 구간 노이즈 내 불변(40~60 유지). 1g3b 언더독은 hp 환산이 소수 Ghost 를
+//   double-dip(임계 완화 + 렙 환산)시켜 상향 — 0.5 는 52%(v6.25 목표 25~45 초과), 0.3 은 46%
+//   (목표 상단, n=100 노이즈 내). 동일 밴드에서 언더독 초과가 최소인 0.3 채택 (반환 표 참조).
+const EURO_HL_VICTORY_SCALE = 0.3;  // highlightPoint 당 달성값 가산치 (측정 튜닝값)
 function euro_hlVictoryBonus(p) {
   if (!p) return 0;
   return Math.round((p.highlightPoints || 0) * EURO_HL_VICTORY_SCALE);
