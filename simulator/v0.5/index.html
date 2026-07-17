@@ -1611,16 +1611,23 @@ const SCENARIOS = {
     //   docs/14 밸런스표 "Ghost 압도(●●●●●)" 지향 (측정 튜닝값; iteration 기록은 반환 표 참조).
     blocAssetBonus: 80,          // 자산 목표 100 → 180 (단독 Bloc 조기승리 지연; iter3 확정값)
   },
-  // --- S04: 계엄의 밤 — 잠금 유지 (미구현 대형 시스템 의존). 판단 근거는 아래 주석 참조 ---
-  //   docs/14 S04 정체성 = "경찰 NPC 3체 상시 배치 + 매 라운드 랜덤 이동 + Ghost 진입 시 자동 전투
-  //   (NPC HP8/ATK4)" + "구출 퀘스트 덱" + "레거시 챕터 3 자동 해금". 이 셋은 모두 엔진에 부재한
-  //   대형 시스템 — (1) 이동·전투하는 모바일 NPC 엔티티(현 NPC 는 정적 Bloc 자동 등락·방어만),
-  //   (2) 구출 퀘스트 전용 덱, (3) 레거시 챕터 진행. 시작 조건(공권력7·무기−2·레이드 공권력+2)만
-  //   얹으면 시나리오 정체성이 소거되어 "고공권력 표준판"이 될 뿐이라, 창작 없이 원전 구현 불가.
-  //   → 잠금 유지 + 사유 표기(locked 카드). 후속: 모바일 NPC 전투 엔진 선행 필요.
-  S04: { id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.',
-    desc: '공권력 7 · 경찰 NPC 상시 이동/자동전투 · 구출 퀘스트 · 레거시 챕터. 🔒 모바일 NPC 전투 엔진 미구현으로 잠금.',
-    locked: true, maps: ['11x11'], lockReason: '모바일 경찰 NPC(이동+자동전투)·구출 퀘스트 덱·레거시 챕터 = 미구현 대형 시스템' },
+  // --- S04: 계엄의 밤 (docs/14) — 공권력 최고조 · 모바일 경찰 NPC (v6.21 부분 구현 해금) ---
+  //   v6.20 은 모바일 NPC 전투 엔진 부재로 잠금이었음. v6.21 에서 NPC 엔티티 엔진(meta.npcs:
+  //   스폰·매 라운드 랜덤 이동·Ghost 자동전투 HP8/ATK4·격파 렙+2)을 구축해 정체성의 핵심을 배선.
+  //   해금 판단: 원전 3대 정체성 중 (1) 모바일 경찰 NPC = 구현. 남은 (2) 구출 퀘스트 덱(구금 NPC 5
+  //   구출 렙+10), (3) 레거시 챕터 3 자동 해금은 각각 전용 덱/캠페인 진행 = 별개 대형 시스템이라
+  //   여전히 미배선. S05/S06 과 동일한 "부분 구현 해금 + 배너 명시" 관례를 따른다 (정체성 소거가
+  //   아니라 핵심 축이 실동작하므로 잠금 해제가 타당).
+  S04: {
+    id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.',
+    desc: '공권력 7 시작 · 경찰 NPC 3체 상시 이동/자동전투(HP8·ATK4). ⚠ 구출 퀘스트 덱·레거시 챕터 미배선(부분 구현).',
+    locked: false, maps: ['11x11'],
+    startHeat: 7,                          // docs/14 S04: 시작 공권력 7
+    startWeaponsAll: -2,                    // docs/14 S04: 시작 자원 표준 + 무기 −2 (압수)
+    policeStart: ['F3', 'C6', 'I6', 'F9'], // docs/14 S04: 경찰 NPC 3체를 이 4곳 중 3곳 랜덤 배치
+    // No-op(부분 구현 보고): 구출 퀘스트 덱(구금 NPC 5 구출 렙+10) · 레거시 챕터 3 자동 해금 무효 ·
+    //   Ghost 레이드 성공 시 공권력 +2 — 전용 덱/캠페인 진행/레이드 훅 배선은 별개 대형 작업이라 미배선.
+  },
   // --- S05: 골드러시 (docs/14) — 경제 과열 · 8R 스프린트 (구현) ---
   S05: {
     id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다. 먼저 줍지 않으면 밟고 간다.',
@@ -1728,6 +1735,121 @@ function applyScenarioInit(scen, players, map) {
       }
     });
   }
+  // v6.21 (S04): 전원 무기 델타 (docs/14 S04 무기 −2 압수). 0 하한 클램프.
+  if (scen.startWeaponsAll) {
+    players.forEach(p => { p.resources = { ...p.resources, weapons: Math.max(0, (p.resources.weapons || 0) + scen.startWeaponsAll) }; });
+  }
+}
+
+// ============================================================================
+// v6.21 — 모바일 NPC 엔티티 엔진 (docs/02 §6.3 공권력 9 · docs/14 S04 계엄의 밤).
+//   meta.npcs = [{ id, type:'police', position, hp, atk, maxHp }] — 이동·전투 하는 경찰 NPC.
+//   설계 원칙(스코프 통제): NPC 는 (1) 맵 표시, (2) Ghost 자동전투 외 경제 효과 없음.
+//   전투는 기존 applyDamage(STEP F)·d6 판정을 재사용 — 신규 전투 시스템 없음.
+//   두 진입점에서 조우: (A) Ghost 가 NPC 위치로 이동(EXECUTE effect.move), (B) NPC 가
+//   Ghost 위치로 이동(NEXT_ROUND updatePoliceForRound). 둘 다 resolvePoliceCombat 호출.
+// ============================================================================
+const POLICE_HP = 8;          // docs/14 S04: NPC HP 8
+const POLICE_ATK = 4;         // docs/14 S04: NPC ATK 4
+const POLICE_KILL_REP = 2;    // NPC 격파 보상 렙 (기존 Ghost 결투 승리 렙+2 선례; docs 무명시→소액 정합)
+const POLICE_COUNT = 3;       // docs/02 §6.3 · docs/14 S04: 3체
+const mapMaxIdx = (state) => (state.meta && state.meta.mapSize === '11x11') ? 10 : 4;
+
+// 맵 상의 유효 좌표에서 count 곳을 무작위로 뽑아 police NPC 엔티티 배열 생성.
+function spawnPoliceEntities(map, candidates, count) {
+  const valid = (candidates && candidates.length ? candidates : Object.keys(map)).filter(c => map[c] && map[c].zone !== 'nex');
+  const chosen = shuffle(valid).slice(0, count != null ? count : POLICE_COUNT);
+  return chosen.map((pos, i) => ({ id: i, type: 'police', position: pos, hp: POLICE_HP, maxHp: POLICE_HP, atk: POLICE_ATK }));
+}
+
+// Ghost ↔ 경찰 NPC 자동전투. 단일 조우를 결론까지 해소 (docs/14 "자동 전투").
+//   판정: 매 교환 양측 d6. Ghost atk(+트랙 보너스)+d6 vs POLICE_ATK+d6.
+//   Ghost 우세 → NPC HP −Ghost atk. NPC 우세 → Ghost 피해 누적(POLICE_ATK).
+//   NPC HP0 → 격파(렙+2·디스폰). Ghost 피해는 마지막에 applyDamage 1회 위임(HP0 시 STEP F 자동).
+function resolvePoliceCombat(state, ghostIdx, npcId, trigger) {
+  let s = state;
+  const npcs = s.meta.npcs || [];
+  const npc = npcs.find(n => n.id === npcId);
+  const ghost = s.players[ghostIdx];
+  if (!npc || !ghost || ghost.defeated || ghost.role !== 'ghost') return s;
+  let npcHp = npc.hp;
+  let ghostHpSim = ghost.hp;
+  let ghostDmg = 0;
+  const gAtkBase = (ghost.stats.atk || 0) + trackBonus(ghost, 'atk');
+  let ghostWon = false, guard = 0;
+  while (guard++ < 30) {
+    const gTotal = gAtkBase + d6();
+    const nTotal = POLICE_ATK + d6();
+    if (gTotal >= nTotal) npcHp -= Math.max(1, ghost.stats.atk || 1);   // Ghost 가격
+    else { ghostHpSim -= POLICE_ATK; ghostDmg += POLICE_ATK; }          // 경찰 반격 (누적)
+    if (npcHp <= 0) { ghostWon = true; break; }
+    if (ghostHpSim <= 0) { ghostWon = false; break; }
+  }
+  const meTag = ghostIdx === 0 ? '⭐ 당신 ' : '';
+  const zNm = ZONE_TYPES[s.map[npc.position]?.zone]?.name || npc.position;
+  if (ghostWon) {
+    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임 (가해자 없음=환경)
+    const gNow = s.players[ghostIdx];
+    if (gNow && !gNow.defeated) {
+      const ps = [...s.players];
+      ps[ghostIdx] = { ...gNow, resources: { ...gNow.resources, rep: (gNow.resources.rep || 0) + POLICE_KILL_REP } };
+      s = { ...s, players: ps };
+    }
+    s = { ...s, meta: { ...s.meta, npcs: (s.meta.npcs || []).filter(n => n.id !== npcId), policeKills: (s.meta.policeKills || 0) + 1 } };
+    s = logEntry(s, `${meTag}🚔 경찰 NPC 격파 (${zNm}) — P${ghostIdx} [${ghost.specific}] 렙+${POLICE_KILL_REP}`);
+  } else {
+    const npcs2 = (s.meta.npcs || []).map(n => n.id === npcId ? { ...n, hp: Math.max(0, npcHp) } : n);
+    s = { ...s, meta: { ...s.meta, npcs: npcs2, policeFights: (s.meta.policeFights || 0) + 1 } };
+    s = logEntry(s, `${meTag}🚔 경찰 자동전투 (${zNm}) — P${ghostIdx} [${ghost.specific}] 피해 −${ghostDmg} · 경찰 HP ${Math.max(0, npcHp)}/${POLICE_HP}`);
+    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임
+  }
+  return s;
+}
+
+// 매 라운드(NEXT_ROUND) NPC 갱신: (1) heat≥9 최초 스폰 (docs/02 §6.3, 게임당 1회, 하락해도 유지),
+//   (2) 각 NPC 무작위 인접 1칸 이동, (3) Ghost 와 같은 칸이면 자동전투(진입점 B).
+function updatePoliceForRound(state) {
+  let s = state;
+  // (1) 공권력 9 도달 시 경찰 3체 스폰 (S01 포함 전 게임 공통 코어 규칙). policeSpawned 로 1회 게이트.
+  if (!s.meta.policeSpawned && (s.heat || 0) >= 9) {
+    const npcs = spawnPoliceEntities(s.map, null, POLICE_COUNT);
+    s = { ...s, meta: { ...s.meta, npcs, policeSpawned: true } };
+    s = logEntry(s, `🚔 공권력 ${s.heat} 도달 — 공권력 NPC ${npcs.length}체 출현 (무작위 구역)`);
+  }
+  const cur = s.meta.npcs || [];
+  if (!cur.length) return s;
+  // (2) 무작위 인접 이동 (맵 유효칸만).
+  const maxIdx = mapMaxIdx(s);
+  const moved = cur.map(n => {
+    const adj = coordsAdj(n.position, maxIdx).filter(c => s.map[c]);
+    return adj.length ? { ...n, position: rand(adj) } : { ...n };
+  });
+  s = { ...s, meta: { ...s.meta, npcs: moved } };
+  // (3) 이동 후 Ghost 와 겹친 NPC → 자동전투 (진입점 B). id 스냅샷 순회 (디스폰 안전).
+  for (const npc of [...s.meta.npcs]) {
+    const ghost = s.players.find(p => !p.defeated && p.role === 'ghost' && p.position === npc.position);
+    if (ghost) s = resolvePoliceCombat(s, ghost.id, npc.id, 'police-entry');
+  }
+  return s;
+}
+
+// 봇 Ghost 이동 heuristic — NPC 회피/격파 판단 (간단). 각 이동 스텝의 nextStep 보정.
+//   HP 여유(≥60%) → 인접 경찰 있으면 격파 보상 추구(경찰칸으로 진입). 여유 없으면 회피(경찰칸 배제).
+function policeAwareStep(s, playerIdx, current, nextStep) {
+  const npcs = s.meta.npcs || [];
+  if (!npcs.length) return nextStep;
+  const g = s.players[playerIdx];
+  const engage = g.maxHp ? (g.hp / g.maxHp) >= 0.6 : true;
+  const policeAt = (c) => npcs.some(n => n.position === c);
+  const adj = coordsAdj(current, mapMaxIdx(s)).filter(c => s.map[c]);
+  if (engage) {
+    const adjPolice = adj.filter(policeAt);
+    if (adjPolice.length) return adjPolice[0];   // 격파 추구: 인접 경찰로 진입
+  } else if (nextStep && policeAt(nextStep)) {
+    const safe = adj.filter(c => !policeAt(c));   // 회피: 경찰 없는 인접칸
+    return safe.length ? rand(safe) : current;
+  }
+  return nextStep;
 }
 
 // TL 승급 비용: TL3~5 해금 — docs/09 §1 "TL이 오를수록 비쌈" 곡선.
@@ -2013,6 +2135,12 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   return {
     meta: {
       scenario: scenarioId,
+      // v6.21: 모바일 NPC 엔티티 엔진 상태. S04 는 시작 시 경찰 3체 배치(policeStart) + policeSpawned=true
+      //   (heat9 코어 규칙의 이중 스폰 방지). 그 외 시나리오는 빈 배열 — heat≥9 도달 시 스폰.
+      npcs: scen.policeStart ? spawnPoliceEntities(map, scen.policeStart, POLICE_COUNT) : [],
+      policeSpawned: !!scen.policeStart,   // 게임당 1회 스폰 게이트 (하락해도 유지)
+      policeKills: 0,                      // NPC 격파 누적 (cap-immune 계측)
+      policeFights: 0,                     // NPC 자동전투(비격파) 누적 (cap-immune 계측)
       mnaNoCooldown: !!scen.mnaNoCooldown,  // v6.18: S02 — M&A 선언 간 2R 간격 게이트 무시 (euro_declareMnaCheck 조회)
       mapSize: useSize,
       round: 1,
@@ -3328,6 +3456,9 @@ function reducer(state, action) {
       state = settleShortPositions(state);
       // v6.12 P0-1: 종료 선언 갱신 (도달 선언 / 조건 이탈 해제) — 방금 끝난 라운드 기준
       state = applyVictoryDeclaration(state);
+      // v6.21: 모바일 NPC 엔진 — heat9 스폰 + 경찰 랜덤 이동 + 이동 후 Ghost 조우 자동전투 (진입점 B).
+      state = updatePoliceForRound(state);
+      if (state.meta.gameOver) return state;
       const newRound = state.meta.round + 1;
       // v0.8.3: 맵별 maxRounds — 5×5: 8, 11×11: 12
       // v6.20 (S05): 시나리오 roundLimit 오버라이드 (골드러시 8R 단축). 미지정 시 맵 기본값.
@@ -4282,6 +4413,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           const adj = coordsAdj(current);
           if (adj.length) nextStep = rand(adj);
         }
+        // v6.21: 봇 Ghost NPC 회피/격파 heuristic (인간 자동경로는 UI 정합 위해 미적용)
+        if (pNow.kind === 'bot') nextStep = policeAwareStep(s, playerIdx, current, nextStep);
       } else {
         // Bloc: 빈 buildable 구역 선호
         const adj = coordsAdj(current);
@@ -4309,9 +4442,20 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       // v0.9.1: NEXUS 첫 도달 하이라이트
       if (s.map[finalPos]?.zone === 'nex') s = recordHighlight(s, 'first_nexus_visit', playerIdx);
 
+      // v6.21: === Ghost가 경찰 NPC 위치로 진입 → 자동전투 (진입점 A / docs/14 S04) ===
+      //   교전 시 이 이동의 PvP·레이드는 생략(_didAutoRaid). STEP F 리스폰이 발생하면 pAfterMove 는
+      //   갱신된 위치를 읽는다 (아래 재조회).
+      {
+        const pHere = s.players[playerIdx];
+        if (pHere.role === 'ghost' && !pHere.defeated) {
+          const npcHere = (s.meta.npcs || []).find(n => n.position === pHere.position);
+          if (npcHere) { s = resolvePoliceCombat(s, playerIdx, npcHere.id, 'ghost-entry'); s.meta._didAutoRaid = true; }
+        }
+      }
+
       // === Ghost가 다른 Ghost와 같은 구역에 있음 → PvP 옵션 ===
       const pAfterMove = s.players[playerIdx];
-      if (pAfterMove.role === 'ghost') {
+      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
         const rivalGhosts = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.role === 'ghost' && pp.position === pAfterMove.position);
         if (rivalGhosts.length > 0) {
           const rival = rivalGhosts[0];
@@ -6127,6 +6271,11 @@ function SetupScreen({ onStart }) {
           ⚠ {scen.id} {scen.name}: Ghost 주도 · 11×11 전용 · 실참 Bloc 1 + Ghost 다수 + NPC Bloc 4 · 시작 공권력 {scen.startHeat} · 주가 {scen.startStock} · Ghost 렙+{scen.ghostRepBonus}/₵+{scen.ghostCreditBonus} · 레이드 보상+50%·수배−1·NPC 방어−1 · Ghost 승리 렙 {scen.ghostRepBattleOverride}+레이드 {scen.ghostRaidsOverride}. (역할 자동 Ghost)
         </div>
       )}
+      {scen.id === 'S04' && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚠ {scen.id} {scen.name}: 공권력 최고조 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전원 무기 {scen.startWeaponsAll} (압수) · 경찰 NPC {POLICE_COUNT}체 상시 배치(F3·C6·I6·F9 중 3곳) · 매 라운드 랜덤 이동 · Ghost 진입 시 자동전투(HP{POLICE_HP}·ATK{POLICE_ATK}, 격파 시 렙+{POLICE_KILL_REP}). (부분 구현: 구출 퀘스트 덱·레거시 챕터 3·레이드 공권력+2 미배선)
+        </div>
+      )}
       {scen.id === 'S05' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus}. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4·뉴스2장 미배선)
@@ -7274,6 +7423,17 @@ function GameScreen({ state, dispatch, tutorialEnabled }) {
                           {hasMe ? '★' + pm.map(p => p.specific.slice(0,2)).join(',') : pm.map(p => p.specific.slice(0,2)).join(',')}
                         </div>
                       )}
+                      {/* v6.21: 모바일 경찰 NPC 표시 (docs/14 S04 · heat9). HP 툴팁. */}
+                      {(() => {
+                        const here = (state.meta.npcs || []).filter(n => n.position === cd);
+                        if (!here.length) return null;
+                        return (
+                          <div title={`경찰 NPC ${here.length}체 · HP ${here.map(n => n.hp).join('/')} · ATK ${POLICE_ATK}`}
+                            style={{ position: 'absolute', top: '50%', left: 2, transform: 'translateY(-50%)', fontSize: 13, lineHeight: 1, filter: 'drop-shadow(0 0 3px #ff003c)', zIndex: 4, pointerEvents: 'none' }}>
+                            🚔{here.length > 1 ? here.length : ''}
+                          </div>
+                        );
+                      })()}
                       {isTargeting && isReachable && previewTag && (
                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 10, color: previewColor, background: 'rgba(0,0,0,0.85)', padding: '2px 4px', borderRadius: 2, pointerEvents: 'none', fontWeight: 900, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{previewTag}</div>
                       )}

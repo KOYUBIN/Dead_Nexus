@@ -43,9 +43,59 @@ function tests(){
   ok('S03 ghostRepBattle=25',g3.ghostRepBattle===25,`got ${g3.ghostRepBattle}`);
   ok('S03 ghostRaids=3',g3.ghostRaids===3,`got ${g3.ghostRaids}`);
   ok('S03 SCENARIOS unlocked (selectable)',SR(s3,'ghostRising',false)===true);
-  // ---- S04 (locked — 미구현 대형 시스템 의존) ----
-  ok('S04 locked=true (scenarioRule)',SR({meta:{scenario:'S04'}},'locked',null)===true);
-  ok('S04 lockReason present',typeof SR({meta:{scenario:'S04'}},'lockReason','')==='string'&&SR({meta:{scenario:'S04'}},'lockReason','').length>0);
+  // ---- S04 계엄의 밤 (v6.21 부분 구현 해금 — 모바일 경찰 NPC 엔진) ----
+  const s4=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S04'});
+  const S04Z=['F3','C6','I6','F9'];
+  ok('S04 unlocked (locked=false)',SR(s4,'locked',null)===false);
+  ok('S04 startHeat=7',s4.heat===7);
+  ok('S04 startWeaponsAll=-2 rule',SR(s4,'startWeaponsAll',0)===-2);
+  ok('S04 npcs=3 at start',(s4.meta.npcs||[]).length===3,`got ${(s4.meta.npcs||[]).length}`);
+  ok('S04 npc type=police hp8 atk4',(s4.meta.npcs||[]).every(n=>n.type==='police'&&n.hp===8&&n.atk===4),JSON.stringify(s4.meta.npcs));
+  ok('S04 npc positions ⊆ F3/C6/I6/F9',(s4.meta.npcs||[]).every(n=>S04Z.includes(n.position)),JSON.stringify((s4.meta.npcs||[]).map(n=>n.position)));
+  ok('S04 npc positions distinct',new Set((s4.meta.npcs||[]).map(n=>n.position)).size===3);
+  ok('S04 policeSpawned=true (no heat9 double-spawn)',s4.meta.policeSpawned===true);
+  // ---- NPC 엔진: 스폰 헬퍼 ----
+  const spEnts=window.spawnPoliceEntities(s4.map,S04Z,3);
+  ok('spawnPoliceEntities count=3',spEnts.length===3);
+  ok('spawnPoliceEntities all police hp8/atk4/maxHp8',spEnts.every(n=>n.type==='police'&&n.hp===8&&n.atk===4&&n.maxHp===8));
+  ok('spawnPoliceEntities positions from candidates',spEnts.every(n=>S04Z.includes(n.position)));
+  // ---- NPC 엔진: 매 라운드 랜덤 인접 이동 (P0 CIPHER=A6 → 경찰과 비조우) ----
+  const isAdj=(a,b)=>{const c1=a.charCodeAt(0)-65,r1=+a.slice(1),c2=b.charCodeAt(0)-65,r2=+b.slice(1);return Math.abs(c1-c2)+Math.abs(r1-r2)===1;};
+  const beforePos=(s4.meta.npcs||[]).map(n=>n.position);
+  const mv=window.updatePoliceForRound(s4);
+  const afterN=(mv.meta.npcs||[]);
+  ok('movement keeps 3 npcs on valid cells',afterN.length===3&&afterN.every(n=>!!mv.map[n.position]));
+  ok('movement = 1 adjacent step each',afterN.every((n,i)=>isAdj(n.position,beforePos[i])),`before ${beforePos} after ${afterN.map(n=>n.position)}`);
+  // ---- NPC 엔진: 조우 전투 — 승리 (Ghost atk 압도 → NPC 격파·렙+2·디스폰) ----
+  const sg=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S01'});
+  const gpos=sg.players[0].position;
+  let win={...sg,meta:{...sg.meta,npcs:[{id:0,type:'police',position:gpos,hp:8,maxHp:8,atk:4}],policeKills:0,policeFights:0}};
+  win={...win,players:win.players.map((p,i)=>i===0?{...p,stats:{...p.stats,atk:50},tracks:{}}:p)};
+  const repB=win.players[0].resources.rep, hpB=win.players[0].hp;
+  const wr=window.resolvePoliceCombat(win,0,0,'unit');
+  ok('combat WIN despawns NPC',(wr.meta.npcs||[]).length===0);
+  ok('combat WIN rep +2',wr.players[0].resources.rep===repB+2,`got ${wr.players[0].resources.rep} (before ${repB})`);
+  ok('combat WIN policeKills=1',wr.meta.policeKills===1);
+  ok('combat WIN ghost undamaged',wr.players[0].hp===hpB,`got ${wr.players[0].hp} (before ${hpB})`);
+  // ---- NPC 엔진: 조우 전투 — 패배 (Ghost atk 열세 → NPC 잔존·applyDamage STEP F) ----
+  let lose={...sg,meta:{...sg.meta,npcs:[{id:0,type:'police',position:sg.players[0].position,hp:8,maxHp:8,atk:4}],policeKills:0,policeFights:0}};
+  lose={...lose,players:lose.players.map((p,i)=>i===0?{...p,stats:{...p.stats,atk:-10},tracks:{},hp:6,maxHp:6}:p)};
+  const lr=window.resolvePoliceCombat(lose,0,0,'unit');
+  ok('combat LOSE keeps NPC',(lr.meta.npcs||[]).some(n=>n.id===0));
+  ok('combat LOSE NPC hp intact (8)',((lr.meta.npcs||[]).find(n=>n.id===0)||{}).hp===8);
+  ok('combat LOSE policeFights=1',lr.meta.policeFights===1);
+  ok('combat LOSE ghost STEP F respawn (hp≤3, 미격침)',lr.players[0].hp<=3&&lr.players[0].hp>=1&&!lr.players[0].defeated,`got hp ${lr.players[0].hp}`);
+  // ---- NPC 엔진: 공권력 9 트리거 (코어 규칙, S01 포함) ----
+  let h9={...sg,heat:9,meta:{...sg.meta,npcs:[],policeSpawned:false,policeKills:0,policeFights:0}};
+  // P0 BLADE(F1)를 경찰 스폰과 겹치지 않게 원격 이동 — 스폰 검증에 조우 노이즈 배제
+  h9={...h9,players:h9.players.map((p,i)=>i===0?{...p,position:'A1'}:p)};
+  const h9r=window.updatePoliceForRound(h9);
+  ok('heat9 spawns police (≥1) + policeSpawned',(h9r.meta.npcs||[]).length>=1&&h9r.meta.policeSpawned===true,`spawned ${(h9r.meta.npcs||[]).length}`);
+  let h8={...sg,heat:8,meta:{...sg.meta,npcs:[],policeSpawned:false}};
+  const h8r=window.updatePoliceForRound(h8);
+  ok('heat8 no spawn (<9)',(h8r.meta.npcs||[]).length===0&&h8r.meta.policeSpawned===false);
+  // ---- S01 회귀: NPC 엔진 비활성 (npcs 빈 배열) ----
+  ok('S01 npcs empty (no police at start)',(sg.meta.npcs||[]).length===0&&sg.meta.policeSpawned===false);
   // ---- S05 골드러시 ----
   const s5=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'AXIOM',humans:null,scenario:'S05'});
   const g5=GVG(s5);
