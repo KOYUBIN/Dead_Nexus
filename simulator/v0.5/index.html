@@ -110,6 +110,11 @@
     display: flex; align-items: center; padding: 0 16px; gap: 24px;
     font-family: 'Share Tech Mono', monospace; font-size: 12px;
   }
+  .top-bar .home-link {
+    color: var(--text-dim); text-decoration: none; font-size: 15px; line-height: 1;
+    padding: 1px 6px; border: 1px solid var(--border); border-radius: 3px;
+  }
+  .top-bar .home-link:hover { color: var(--cyan); border-color: var(--cyan); }
   .top-bar .title {
     font-weight: 700; letter-spacing: 3px; color: var(--cyan);
   }
@@ -7643,6 +7648,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
       )}
 
       <div className="top-bar">
+        <a className="home-link" href="../../index.html" title="홈으로">⌂</a>
         <div className="title">DEAD NEXUS · SIM v1.0 {isMulti ? `· P${meIdx} ${me.specific} 차례` : ''}</div>
         <div className="phases">
           {PHASE_NAMES.map((name, i) => (
