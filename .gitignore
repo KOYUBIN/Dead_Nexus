@@ -68,3 +68,4 @@ coverage/
 
 # Local credentials — never commit
 PAT/
+.claude/
