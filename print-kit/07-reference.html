@@ -157,7 +157,7 @@
 </div>
 <div class="step">
   <div class="step-num">3</div>
-  <div class="step-body"><strong>계획</strong> · 전원 <strong>동시</strong> 카드 선택 (Ghost 2장, Bloc 1-3장) → 속성 비용 선언 → 이니셔티브 공개 <span class="mini-note">(5-10분)</span></div>
+  <div class="step-body"><strong>계획</strong> · 전원 <strong>동시</strong> 카드 <strong>2장</strong> 선택 (Ghost TOP/BOT · Bloc MAIN/SIDE) → 속성 비용 선언 → 이니셔티브 공개 <span class="mini-note">(5-10분)</span></div>
 </div>
 <div class="step">
   <div class="step-num">4</div>
@@ -169,7 +169,7 @@
 </div>
 <div class="step">
   <div class="step-num">6</div>
-  <div class="step-body"><strong>테크 R&D</strong> · 대기 카운터 −1 → 0 도달 시 TL 상승 (튜토 상한 TL 3) <span class="mini-note">(1분)</span></div>
+  <div class="step-body"><strong>테크 R&D</strong> · 대기 카운터 −1 → 0 도달 시 TL 상승 (튜토 상한 TL 2, 정규 TL 5) <span class="mini-note">(1분)</span></div>
 </div>
 <div class="step">
   <div class="step-num">7</div>
@@ -208,11 +208,11 @@
   </div>
 </div>
 
-<h2>🎯 튜토리얼 승리 조건</h2>
+<h2>🎯 튜토리얼 승리 조건 (5×5)</h2>
 <div class="callout">
-  <strong>Bloc</strong>: 주식 자산 <strong>25</strong> 도달 (자기 지분 50% 할인) · <strong>Ghost</strong>: 렙 <strong>10</strong> + 레이드 <strong>1</strong>회 · <strong>즉시 승리</strong>: NEXUS <strong>2라운드 연속</strong> 장악 · <strong>최대</strong>: 6~8 라운드 경과
+  <strong>Bloc</strong>: 자산 <strong>73</strong> 도달 (자기 주가/지분 제외 · 3인 −1 / 2인 −2) · <strong>Ghost</strong>: 전투 루트 평판 <strong>42</strong>+레이드 <strong>2</strong>회 <em>또는</em> 단독 루트 평판 <strong>60</strong>(레이드 무관) · <strong>종료</strong>: 임계 도달 → 선언 → 유예 1R → 유지 시 확정 (재선언 게임당 2회 캡) · <strong>평균</strong>: 5~7 라운드 경과 (하드캡 10R)
 </div>
-<div class="mini-note">🆕 v6.x: 견제 토큰 3종(🔥📡🤝)·레이드/Bloc 결정 모달은 5×5에도 적용. M&A는 11×11 정식 전용 (튜토리얼 미적용) — 상세는 <strong>12. 퀵 레퍼런스</strong> 참조.</div>
+<div class="mini-note">🆕 v6.x: 견제 토큰 3종(🔥📡🤝)·레이드/Bloc 결정 모달은 5×5에도 적용. M&A(지분 인수)는 테이블 에디션 <strong>미포함</strong>(맵 크기 무관, 웹 시뮬레이터 전용) — 지분% 소거(주권 액면화) 완료 전까지 v2 예정, 상세는 <strong>12. 퀵 레퍼런스</strong> 참조.</div>
 
 </div><!-- /page 1 -->
 
@@ -265,14 +265,15 @@
       <tr><td>6</td><td>⚫ BLACKOUT</td><td>HACK 불가, CIPHER 이니 +20</td></tr>
     </table>
 
-    <h2>🚨 공권력 트랙 (0~8 튜토)</h2>
+    <h2>🚨 공권력 트랙 (0~10, 맵 공통)</h2>
     <table>
       <tr><th>트랙</th><th>효과</th></tr>
       <tr><td>0-2</td><td>평시</td></tr>
       <tr><td>3-4</td><td>경계 — 무기 거래 비용 +1</td></tr>
       <tr><td>5-6</td><td>단속 — 구역당 ₵ −0.5</td></tr>
       <tr><td>7-8</td><td>긴장 — Ghost 이동 −1</td></tr>
-      <tr><td class="mini-note" colspan="2">튜토리얼은 10 (계엄) 안 감. 정규는 10 = 계엄.</td></tr>
+      <tr><td>9</td><td>임박 — 공권력 NPC 출현</td></tr>
+      <tr><td>10</td><td>계엄 — 특수 엔딩 분기</td></tr>
     </table>
 
     <h2>💥 Ghost 카드 [LOSS]</h2>
@@ -288,12 +289,12 @@
   <div>
     <h3>블록 HQ</h3>
     <table>
-      <tr><th>블록</th><th>HQ</th><th>지원</th></tr>
+      <tr><th>블록</th><th>HQ</th><th>지원(시작 소유)</th></tr>
       <tr><td>VANTA</td><td>C2 데이터</td><td>C1 금융</td></tr>
-      <tr><td>AXIOM</td><td>D2 데이터</td><td>D1 데이터</td></tr>
+      <tr><td>AXIOM</td><td>D2 데이터</td><td>D1 데이터, E1 폐허</td></tr>
       <tr><td>HELIX</td><td>D3 의료</td><td>E2 의료</td></tr>
       <tr><td>IRONWALL</td><td>C4 무기</td><td>E4 무기</td></tr>
-      <tr><td>CARBON</td><td>B3 공업</td><td>A4 공업</td></tr>
+      <tr><td>CARBON</td><td>B3 공업</td><td>A4 공업, B4 부속</td></tr>
     </table>
 
     <h3>Ghost 시작 위치</h3>
