@@ -569,10 +569,16 @@ const EURO_DECLARER_BONUS = 10;
 //          (3) 인간(P0) 타겟 시 lastTargetedBy 알림 배너
 // v6.6: (4) 보복 편향 — 최근 EURO_GRUDGE_WINDOW라운드 내 나(부여 봇)를 견제한 상대는
 //           위협도 +EURO_GRUDGE_BONUS. 발동 확률·비용·토큰 수는 불변, "타겟 선정"만 변화.
+// v6.27 (B-07, docs/23 갭3 fix#3): 종료 선언 견제 집중 — 활성 선언 시 견제 부여를 확정 발동.
+//   원전: "압력 스파이크(견제 집중)". 발동 확률 게이트를 우회해 유예 라운드에 선언자(threat +10
+//   으로 이미 최우선 타겟)를 반드시 1회 견제(Ghost 렙 선언자엔 combat -rep 로 실효). 토큰 수·
+//   비용·타겟 선정 로직은 불변 — "언제 발동하나"만 강화 (기존 시스템 강도 조정, 신규 메커닉 없음).
+const EURO_DECL_SUPPRESS_FOCUS = true;  // true=활성 선언 시 견제 확정 발동 (측정 토글; 기각 시 false)
 function euro_grantSuppression(state) {
   const mode = (typeof euro_mode === 'function') ? euro_mode(state.meta.mapSize) : null;
   const prob = (mode && mode.suppressionProb != null) ? mode.suppressionProb : 0.3;
-  if (Math.random() >= prob) return state;
+  const declActive = EURO_DECL_SUPPRESS_FOCUS && state.meta && state.meta.victoryDeclaration;
+  if (!declActive && Math.random() >= prob) return state;  // 선언 집중 시 확률 게이트 우회
   let s = state;
   // 부여 주체: 봇 · 미탈락 · ₵≥5 중 가장 부유한 1명
   const actors = s.players
