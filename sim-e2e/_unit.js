@@ -43,6 +43,37 @@ function tests(){
   ok('S03 ghostRepBattle=25',g3.ghostRepBattle===25,`got ${g3.ghostRepBattle}`);
   ok('S03 ghostRaids=3',g3.ghostRaids===3,`got ${g3.ghostRaids}`);
   ok('S03 SCENARIOS unlocked (selectable)',SR(s3,'ghostRising',false)===true);
+  // ---- S04 (locked — 미구현 대형 시스템 의존) ----
+  ok('S04 locked=true (scenarioRule)',SR({meta:{scenario:'S04'}},'locked',null)===true);
+  ok('S04 lockReason present',typeof SR({meta:{scenario:'S04'}},'lockReason','')==='string'&&SR({meta:{scenario:'S04'}},'lockReason','').length>0);
+  // ---- S05 골드러시 ----
+  const s5=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'AXIOM',humans:null,scenario:'S05'});
+  const g5=GVG(s5);
+  const nn5=s5.players.filter(p=>!p.isNpc).length;const adj5=(nn5===2?-2:nn5===3?-1:0);
+  const bloc5=s5.players.find(p=>p.role==='bloc'&&!p.isNpc);
+  ok('S05 meta.scenario=S05',s5.meta.scenario==='S05');
+  ok('S05 startHeat=5',s5.heat===5);
+  ok('S05 startStock=13 (all blocs)',['VANTA','IRONWALL','HELIX','AXIOM','CARBON'].every(b=>s5.stocks[b]===13),JSON.stringify(s5.stocks));
+  ok('S05 lastStockSnapshot=13',s5.meta.lastStockSnapshot.VANTA===13);
+  ok('S05 roundLimit override=8',SR(s5,'roundLimit',12)===8);
+  ok('S05 zoneIncomeBonus=1',SR(s5,'zoneIncomeBonus',0)===1);
+  ok('S05 blocAsset=base+adj+25',g5.blocAsset===100+adj5+25,`got ${g5.blocAsset} (adj ${adj5})`);
+  ok('S05 all-seat credit +5 (bloc 8+5=13)',bloc5&&bloc5.resources.credit>=13,`got ${bloc5&&bloc5.resources.credit}`);
+  ok('S05 ghostRepBattle standard (no override)',g5.ghostRepBattle===45+Math.floor(adj5/2),`got ${g5.ghostRepBattle}`);
+  // ---- S06 마켓 크래시 ----
+  const s6=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'CARBON',humans:null,scenario:'S06'});
+  const g6=GVG(s6);
+  const nn6=s6.players.filter(p=>!p.isNpc).length;const adj6=(nn6===2?-2:nn6===3?-1:0);
+  const bloc6=s6.players.find(p=>p.role==='bloc'&&!p.isNpc);
+  ok('S06 meta.scenario=S06',s6.meta.scenario==='S06');
+  ok('S06 startHeat=6',s6.heat===6);
+  ok('S06 startStock=5 (all blocs)',['VANTA','IRONWALL','HELIX','AXIOM','CARBON'].every(b=>s6.stocks[b]===5),JSON.stringify(s6.stocks));
+  ok('S06 lastStockSnapshot=5',s6.meta.lastStockSnapshot.VANTA===5);
+  ok('S06 all-seat credit -3 (bloc 8-3=5)',bloc6&&bloc6.resources.credit===5,`got ${bloc6&&bloc6.resources.credit}`);
+  ok('S06 all-seat influence -1 (bloc 3-1=2)',bloc6&&bloc6.resources.influence===2,`got ${bloc6&&bloc6.resources.influence}`);
+  ok('S06 shortLowPriceMult=2',SR(s6,'shortLowPriceMult',1)===2);
+  ok('S06 each bloc seeded SCANDAL card',s6.players.filter(p=>p.role==='bloc').every(p=>(p.discard||[]).includes('SCANDAL')),`sample discard ${JSON.stringify(bloc6&&bloc6.discard)}`);
+  ok('S06 blocAsset=base+adj (no bonus)',g6.blocAsset===100+adj6,`got ${g6.blocAsset}`);
   // ---- S01 unchanged (fallbacks) ----
   const s1=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
   const g1=GVG(s1);
