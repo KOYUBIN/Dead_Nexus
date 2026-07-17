@@ -1,0 +1,546 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-17T04:29:55.631Z",
+    "games": 5,
+    "mapSize": "5x5",
+    "scenario": "S01",
+    "elapsedMs": 255,
+    "engine": "headless reducer drive (all seats botPickCards)",
+    "build": "simulator/v0.5 v6.18"
+  },
+  "outcomes": {
+    "completed": 5,
+    "timeouts": 0,
+    "errors": 0,
+    "factionWins": {
+      "ghost": 4,
+      "bloc": 1,
+      "none": 0
+    },
+    "factionWinRate": {
+      "ghost": 0.8,
+      "bloc": 0.2
+    },
+    "classWins": {
+      "DRIFTER": 1,
+      "BLADE": 1,
+      "MOLE": 1,
+      "CIPHER": 1,
+      "AXIOM": 1
+    },
+    "avgRound": 7.4,
+    "mnaDeclaresTotal": 0,
+    "mnaDeclaresPerGame": 0,
+    "mnaAcquisitionsTotal": 0,
+    "suppressGrantsTotal": 2,
+    "suppressGrantsPerGame": 0.4,
+    "suppressRetaliations": 0,
+    "shortEntriesTotal": 4,
+    "shortEntriesPerGame": 0.8,
+    "shortSettlementsTotal": 4,
+    "shortCreditTotal": 20,
+    "shortCreditPerGame": 4,
+    "gamesWithShortPct": 0.2,
+    "woundInsertsTotal": 5,
+    "woundInsertsPerGame": 1,
+    "gamesWithWoundPct": 0.8,
+    "scandalInsertsTotal": 2,
+    "scandalInsertsPerGame": 0.4,
+    "gamesWithScandalPct": 0.2,
+    "npcStartAvg": 0,
+    "gamesWithPolicePct": 0,
+    "policeFightsTotal": 0,
+    "policeFightsPerGame": 0,
+    "policeKillsTotal": 0,
+    "policeKillsPerGame": 0,
+    "gamesWithFightPct": 0,
+    "captiveGames": 0,
+    "rescuesTotal": 0,
+    "rescuesPerCaptiveGame": 0,
+    "rescueOccurRate": 0,
+    "allRescuedRate": 0,
+    "gaugeHooksTotal": 10,
+    "gaugeHooksPerGame": 2,
+    "moleRevealsTotal": 0,
+    "moleDisguisesTotal": 1,
+    "rigMilestonesTotal": 2,
+    "rigMilestonesPerGame": 0.4,
+    "brokerMemo5Total": 0,
+    "brokerMemo5PerGame": 0,
+    "cipherHackNodesTotal": 10,
+    "cipherHackNodesPerGame": 2,
+    "tlSeatHistogram": {
+      "1": 0,
+      "2": 20,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    "tlSeatTotal": 20,
+    "gamesTL3plusPct": 0,
+    "gamesTL4plusPct": 0,
+    "gamesTL5Pct": 0,
+    "tlByRoleReach": {
+      "ghost": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "seats": 7
+      },
+      "bloc": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "seats": 13
+      }
+    }
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "scenApplied": {
+        "scenario": "S01",
+        "startHeat": 5,
+        "allBloc": false,
+        "seatRoles": [
+          "ghost",
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 0,
+        "p0Zones": 0,
+        "mnaNoCooldown": false,
+        "npcStart": 0,
+        "policeSpawned": false,
+        "captiveStart": 0
+      },
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 29
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 44
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 32
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 45
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 26/25 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 1,
+      "shortCredit": 0,
+      "woundInserts": 2,
+      "scandalInserts": 0,
+      "policeFights": 0,
+      "policeKills": 0,
+      "rescues": 0,
+      "rescuedAll": false,
+      "captiveEnd": 0,
+      "npcEnd": 0,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 43,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "BLADE",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "scenApplied": {
+        "scenario": "S01",
+        "startHeat": 5,
+        "allBloc": false,
+        "seatRoles": [
+          "ghost",
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 0,
+        "p0Zones": 0,
+        "mnaNoCooldown": false,
+        "npcStart": 0,
+        "policeSpawned": false,
+        "captiveStart": 0
+      },
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "BLADE",
+          "tl": 2,
+          "prog": 40
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 36
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 42
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 64
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 41/25 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "policeFights": 0,
+      "policeKills": 0,
+      "rescues": 0,
+      "rescuedAll": false,
+      "captiveEnd": 0,
+      "npcEnd": 3,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 21,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "p0Role": "bloc",
+      "p0Class": "HELIX",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "scenApplied": {
+        "scenario": "S01",
+        "startHeat": 5,
+        "allBloc": false,
+        "seatRoles": [
+          "bloc",
+          "ghost",
+          "ghost",
+          "ghost"
+        ],
+        "npcBlocs": 0,
+        "p0Zones": 2,
+        "mnaNoCooldown": false,
+        "npcStart": 0,
+        "policeSpawned": false,
+        "captiveStart": 0
+      },
+      "seatTLs": [
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 18
+        },
+        {
+          "role": "ghost",
+          "cls": "RIGGER",
+          "tl": 2,
+          "prog": 54
+        },
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 30
+        },
+        {
+          "role": "ghost",
+          "cls": "MOLE",
+          "tl": 2,
+          "prog": 64
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 57/49 + 레이드 4 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "bloc",
+        "ghost",
+        "ghost",
+        "ghost"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 4,
+      "shortSettlements": 3,
+      "shortCredit": 20,
+      "woundInserts": 0,
+      "scandalInserts": 2,
+      "policeFights": 0,
+      "policeKills": 0,
+      "rescues": 0,
+      "rescuedAll": false,
+      "captiveEnd": 0,
+      "npcEnd": 3,
+      "gaugeHooks": 6,
+      "moleReveals": 0,
+      "rigMilestones": 2,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 6,
+      "moleDisguises": 1,
+      "guardHit": false,
+      "ms": 24,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 4,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "CIPHER",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "scenApplied": {
+        "scenario": "S01",
+        "startHeat": 5,
+        "allBloc": false,
+        "seatRoles": [
+          "ghost",
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 0,
+        "p0Zones": 0,
+        "mnaNoCooldown": false,
+        "npcStart": 0,
+        "policeSpawned": false,
+        "captiveStart": 0
+      },
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "CIPHER",
+          "tl": 2,
+          "prog": 28
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 51
+        },
+        {
+          "role": "bloc",
+          "cls": "IRONWALL",
+          "tl": 2,
+          "prog": 49
+        },
+        {
+          "role": "bloc",
+          "cls": "HELIX",
+          "tl": 2,
+          "prog": 18
+        }
+      ],
+      "maxTl": 2,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 39 (≥36) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 1,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "policeFights": 0,
+      "policeKills": 0,
+      "rescues": 0,
+      "rescuedAll": false,
+      "captiveEnd": 0,
+      "npcEnd": 0,
+      "gaugeHooks": 4,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 4,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 18,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 5,
+      "status": "ok",
+      "p0Role": "ghost",
+      "p0Class": "DRIFTER",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "scenApplied": {
+        "scenario": "S01",
+        "startHeat": 5,
+        "allBloc": false,
+        "seatRoles": [
+          "ghost",
+          "bloc",
+          "bloc",
+          "bloc"
+        ],
+        "npcBlocs": 0,
+        "p0Zones": 0,
+        "mnaNoCooldown": false,
+        "npcStart": 0,
+        "policeSpawned": false,
+        "captiveStart": 0
+      },
+      "seatTLs": [
+        {
+          "role": "ghost",
+          "cls": "DRIFTER",
+          "tl": 2,
+          "prog": 25
+        },
+        {
+          "role": "bloc",
+          "cls": "VANTA",
+          "tl": 2,
+          "prog": 43
+        },
+        {
+          "role": "bloc",
+          "cls": "CARBON",
+          "tl": 2,
+          "prog": 38
+        },
+        {
+          "role": "bloc",
+          "cls": "AXIOM",
+          "tl": 2,
+          "prog": 47
+        }
+      ],
+      "maxTl": 2,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 155 (≥121, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "mnaDeclaresLog": 0,
+      "mnaDeclaresMeta": 0,
+      "mnaAcquisitions": 0,
+      "suppressGrants": 0,
+      "suppressRetaliations": 0,
+      "shortEntries": 0,
+      "shortSettlements": 0,
+      "shortCredit": 0,
+      "woundInserts": 1,
+      "scandalInserts": 0,
+      "policeFights": 0,
+      "policeKills": 0,
+      "rescues": 0,
+      "rescuedAll": false,
+      "captiveEnd": 0,
+      "npcEnd": 3,
+      "gaugeHooks": 0,
+      "moleReveals": 0,
+      "rigMilestones": 0,
+      "brokerMemo5": 0,
+      "cipherHackNodes": 0,
+      "moleDisguises": 0,
+      "guardHit": false,
+      "ms": 16,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

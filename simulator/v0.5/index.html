@@ -412,6 +412,41 @@
   @media (max-width: 720px) {
     .tut-bubble.a-left, .tut-bubble.a-right { left: 50%; right: auto; top: auto; bottom: 24px; transform: translateX(-50%); }
     .tut-bubble.a-map { top: 80px; }
+
+    /* v6.25-fix: 모바일 세로 스택 — 고정 3컬럼(300+280=580px)이 폰 세로(~390px)에서
+       중앙 게임 UI를 음수 폭으로 소멸시키던 크리티컬 버그 수정.
+       스택 순서: 페이즈 바(고정) → 중앙 게임(지도+손패+행동/거래) → 좌 플레이어 → 우 정보. */
+    html, body, #root { height: auto; min-height: 100%; }
+    .game {
+      grid-template-columns: minmax(0, 1fr);   /* min 0 → 단일 컬럼이 min-content로 폭 터지는 것 방지 */
+      grid-template-rows: 50px auto auto auto;
+      height: auto; max-height: none; min-height: 100vh;
+      grid-template-areas:
+        "top"
+        "center"
+        "left"
+        "right";
+    }
+    .top-bar, .left-panel, .center-panel, .right-panel { min-width: 0; }
+    .left-panel, .right-panel { overflow-x: hidden; }
+    .top-bar {
+      position: sticky; top: 0; z-index: 50;
+      flex-wrap: wrap; gap: 6px 12px; padding: 6px 10px; min-height: 50px;
+    }
+    .top-bar .phases { order: 3; flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .center-panel { overflow: visible; padding: 10px; }
+    .map-wrap { overflow-x: auto; overflow-y: visible; }
+    .map-board, .map-board.size-11 { margin: 0 auto; }
+    .map-board.size-11 { min-width: 460px; }   /* 11×11 셀 탭 타깃 확보 → 가로 스크롤 */
+    .hand-wrap { max-height: none; min-height: 0; flex: 0 0 auto; }
+    .card { width: 132px; height: 212px; }
+    .left-panel, .right-panel {
+      overflow-y: visible;
+      border-left: none; border-right: none; border-top: 1px solid var(--border);
+    }
+    .phase-actions { flex-wrap: wrap; }
+    .pa-btn { flex: 1 1 auto; min-height: 40px; }
+    .modal { max-height: 88vh; overflow-y: auto; }
   }
   .tut-bubble .tut-title {
     font-family: 'Share Tech Mono', monospace;
@@ -1519,6 +1554,54 @@ const VICTORY_GOALS = {
   '5x5':   { blocAsset: 73, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
   '11x11': { blocAsset: 100, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
 };
+// ============================================================================
+// v6.25 (docs/23 갭#1): 구성 결정론 완화 — 언더독 진영 승리 임계 스케일링
+//   [진단] 승부는 "진영별 승리 임계까지의 병렬 레이스"다. 다수 진영은 (1) 병렬 레이서 수
+//     오더-통계 우위(임계를 먼저 밟음) + (2) Bloc 교차보유 시너지(assetValue 가 자기주가를
+//     제외 → Bloc 은 서로의 부양 주식을 보유해 자산 축적 → 초선형)로 유리하다. 실측(v6.24,
+//     n=150): 1g3b→bloc 99.3% · 3g1b→ghost 82.7% · 심지어 2:2 도 bloc 94.0%(=교차보유 시너지가
+//     동수에서도 Bloc 우위를 만든다). 솔로 인간은 항상 소수 1석 → 90~99% 패.
+//   [처방] 열세 진영의 승리 임계를 진영 인원 비에 따라 하향(레이스 거리 단축)해 병렬성·시너지를
+//     상쇄한다. Bloc 은 자기주가 자산 제외 탓에 "매R 수익 증폭"이 자기 자산에 무의미(euro_marketCycle
+//     자기 부양은 남을 이롭게 함) → 임계 스케일이 진단에 부합하는 유효 처방이다.
+//   [양면 핸디캡] 실측상 완화만으로는 부족하다 — Bloc 자산 레이스가 ~R6 에 100 을 밟아 Ghost 가
+//     임계를 낮춰도 그 전에 끝난다(binding constraint = Bloc 속도). 따라서 임계를 (1) 열세 진영은
+//     하향(레이스 단축) + (2) 우세/동수 Bloc 은 상향(레이스 지연)해 양면으로 벌린다. d = bc - gc.
+//   [비대칭 근거] Bloc 교차보유 시너지는 동수(d=0)에서도 우위 → parity 오프셋을 Ghost 하향·Bloc 상향
+//     양쪽에 실어 동수를 Ghost 쪽으로 되돌린다. 순열세 진영은 별도 하향(min 배수로 과보정 차단).
+//     단일 진영 판(gc·bc 중 0)·의도적 편향 시나리오(S02·S03)는 항등.
+const EURO_UD_GHOST_PARITY  = 0.24;  // 동수 시 Ghost 임계 완화분 (시너지 상쇄; iter4 동수 중심화)
+const EURO_UD_GHOST_STEP    = 0.08;  // Bloc 초과 1인당 Ghost 임계 추가 완화 (d>0; iter4로 1g3b 불변 유지)
+const EURO_UD_GHOST_MIN     = 0.50;  // Ghost 임계 하한 배수
+const EURO_UD_GHOST_MAJSTEP = 0.08;  // Ghost 순우세 1인당 임계 상향 (d<0, 빠른 다수 Ghost 지연)
+const EURO_UD_GHOST_MAX      = 1.45; // Ghost 임계 상한 배수
+const EURO_UD_BLOC_PARITY    = 0.40; // 동수/우세 Bloc 임계 상향 기본분 (레이스 지연; iter4 동수 중심화)
+const EURO_UD_BLOC_STEP      = 0.13; // Bloc 초과 1인당 추가 상향 (d>0; iter4로 1g3b 불변 유지)
+const EURO_UD_BLOC_MAX       = 1.95; // Bloc 임계 상한 배수
+const EURO_UD_BLOC_MINSTEP   = 0.10; // Bloc 순열세 1인당 임계 하향 (d<0)
+const EURO_UD_BLOC_MIN       = 0.58; // Bloc 임계 하한 배수
+function euro_underdogGoalScale(state) {
+  const identity = { ghostMult: 1, blocMult: 1, gc: 0, bc: 0, d: 0, applied: false };
+  if (!state || !state.players) return identity;
+  // 의도적 편향 시나리오(S02 all-bloc · S03 ghostRising)는 원전 구성 유지 → 항등 폴백.
+  if (typeof scenarioRule === 'function' && scenarioRule(state, 'underdogRelief', true) === false) return identity;
+  let gc = 0, bc = 0;
+  for (const p of state.players) {
+    if (!p || p.defeated || p.isNpc) continue;
+    if (p.role === 'ghost') gc++; else if (p.role === 'bloc') bc++;
+  }
+  if (gc === 0 || bc === 0) return { ...identity, gc, bc };  // 단일 진영 판 → 상쇄 불필요
+  const d = bc - gc;   // Bloc 잉여(>0 = Bloc 다수). 소수 진영 = d 부호 반대편.
+  let ghostMult, blocMult;
+  if (d >= 0) {        // Ghost 열세/동수 → 임계 하향 ; Bloc 우세/동수 → 임계 상향
+    ghostMult = Math.max(EURO_UD_GHOST_MIN, 1 - EURO_UD_GHOST_PARITY - EURO_UD_GHOST_STEP * d);
+    blocMult  = Math.min(EURO_UD_BLOC_MAX,  1 + EURO_UD_BLOC_PARITY + EURO_UD_BLOC_STEP * d);
+  } else {             // Ghost 순우세 → 임계 상향(지연) ; Bloc 순열세 → 임계 하향(단축)
+    ghostMult = Math.min(EURO_UD_GHOST_MAX, 1 + EURO_UD_GHOST_MAJSTEP * (-d));
+    blocMult  = Math.max(EURO_UD_BLOC_MIN,  1 - EURO_UD_BLOC_MINSTEP * (-d));
+  }
+  return { ghostMult, blocMult, gc, bc, d, applied: ghostMult !== 1 || blocMult !== 1 };
+}
 function getVictoryGoals(state) {
   const isLarge = !!(state && state.meta && state.meta.mapSize === '11x11');
   const base = isLarge ? VICTORY_GOALS['11x11'] : VICTORY_GOALS['5x5'];
@@ -1532,12 +1615,18 @@ function getVictoryGoals(state) {
   //   null 이면 코어 계산(base+adj) 유지 — 미지정 시나리오 불변.
   const scGhostRep   = scenarioRule(state, 'ghostRepBattleOverride', null);
   const scGhostRaids = scenarioRule(state, 'ghostRaidsOverride', null);
+  // v6.25: 언더독 임계 스케일 — 열세 진영 승리 거리 단축(구성 결정론 완화). 항등 시 무변화.
+  const ud = euro_underdogGoalScale(state);
+  const rawBlocAsset      = base.blocAsset + adj + scAssetBonus;
+  const rawGhostRepBattle = scGhostRep != null ? scGhostRep : base.ghostRepBattle + Math.floor(adj / 2);
+  const rawGhostRepOnly   = base.ghostRepOnly + adj;
   return {
-    blocAsset:      base.blocAsset + adj + scAssetBonus,
-    ghostRepBattle: scGhostRep != null ? scGhostRep : base.ghostRepBattle + Math.floor(adj / 2),
-    ghostRepOnly:   base.ghostRepOnly + adj,
+    blocAsset:      Math.round(rawBlocAsset * ud.blocMult),
+    ghostRepBattle: Math.round(rawGhostRepBattle * ud.ghostMult),
+    ghostRepOnly:   Math.round(rawGhostRepOnly * ud.ghostMult),
     ghostRaids:     scGhostRaids != null ? scGhostRaids : base.ghostRaids,
     nonNpcCount,
+    underdog:       ud,
   };
 }
 // 플레이어가 현재 승리 조건을 충족하면 { route, reason } 반환, 아니면 null (단일 판정 소스).
@@ -1579,6 +1668,7 @@ const SCENARIOS = {
     locked: false, maps: ['11x11'],
     startHeat: 3,            // docs/14: Ghost 없어 공권력 낮게 시작
     allBloc: true,          // 전원 Bloc 강제 (Ghost 배제)
+    underdogRelief: false,  // v6.25: 의도적 편향 시나리오 — 언더독 임계 완화 제외 (원전 구성 유지)
     maxParticipants: 3,     // 인원 2~3
     npcFillTo: 5,           // 5 − 참가 수만큼 NPC Bloc 충원 (자동 등락·방어)
     startCredit: 5,         // 표준 + 크레딧 +5 (조기 M&A 자금)
@@ -1599,6 +1689,7 @@ const SCENARIOS = {
     startHeat: 4,                 // docs/14: 시작 공권력 4
     startStock: 12,              // docs/14: 시작 주가 12 (Ghost 레이드 타겟 강화)
     ghostRising: true,           // 컴포지션 훅 — 실참 = Bloc 1 + 나머지 Ghost (initGame)
+    underdogRelief: false,       // v6.25: 의도적 편향(Ghost 주도) — 언더독 임계 완화 제외 (원전 구성 유지)
     npcFillTo: 9,                // 실참(≤5) + NPC Bloc 충원 — 잔여 블록명 소진 = NPC Bloc 4
     ghostRepBonus: 3,            // docs/14: Ghost 시작 렙 +3
     ghostCreditBonus: 2,         // docs/14: Ghost 시작 크레딧 +2
@@ -1621,6 +1712,7 @@ const SCENARIOS = {
   //   남은 미배선: 레거시 챕터 3 자동 해금 무효 = 캠페인 진행 엔티티 의존 별개 시스템.
   S04: {
     id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.',
+    underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
     desc: '공권력 7 시작 · 경찰 NPC 3체 순찰/자동전투(HP8·ATK4) · 구금 NPC 5 구출(⛓ 전원 렙+10) · 레이드 공권력+2. ⚠ 레거시 챕터 3 미배선(부분 구현).',
     locked: false, maps: ['11x11'],
     startHeat: 7,                          // docs/14 S04: 시작 공권력 7
@@ -1634,6 +1726,7 @@ const SCENARIOS = {
   // --- S05: 골드러시 (docs/14) — 경제 과열 · 8R 스프린트 (구현) ---
   S05: {
     id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다. 먼저 줍지 않으면 밟고 간다.',
+    underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
     desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향.',
     locked: false, maps: ['11x11'],
     startHeat: 5,                // docs/14: 시작 공권력 5 (정상)
@@ -1648,6 +1741,7 @@ const SCENARIOS = {
   // --- S06: 마켓 크래시 (docs/14) — 경제 붕괴 · 공매도 전성기 (구현) ---
   S06: {
     id: 'S06', name: '마켓 크래시', tagline: '어제까지 부자였다. 오늘은 살아남는 게 목표다.',
+    underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
     desc: '경제 붕괴 · 전 주가 5 시작. 크레딧 −3 · 인플루언스 −1 · 공매도 전성(저가 정산 2배).',
     locked: false, maps: ['11x11'],
     startHeat: 6,               // docs/14: 시작 공권력 6 (위기감)
