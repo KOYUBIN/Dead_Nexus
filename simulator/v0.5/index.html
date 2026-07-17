@@ -412,6 +412,41 @@
   @media (max-width: 720px) {
     .tut-bubble.a-left, .tut-bubble.a-right { left: 50%; right: auto; top: auto; bottom: 24px; transform: translateX(-50%); }
     .tut-bubble.a-map { top: 80px; }
+
+    /* v6.25-fix: 모바일 세로 스택 — 고정 3컬럼(300+280=580px)이 폰 세로(~390px)에서
+       중앙 게임 UI를 음수 폭으로 소멸시키던 크리티컬 버그 수정.
+       스택 순서: 페이즈 바(고정) → 중앙 게임(지도+손패+행동/거래) → 좌 플레이어 → 우 정보. */
+    html, body, #root { height: auto; min-height: 100%; }
+    .game {
+      grid-template-columns: minmax(0, 1fr);   /* min 0 → 단일 컬럼이 min-content로 폭 터지는 것 방지 */
+      grid-template-rows: 50px auto auto auto;
+      height: auto; max-height: none; min-height: 100vh;
+      grid-template-areas:
+        "top"
+        "center"
+        "left"
+        "right";
+    }
+    .top-bar, .left-panel, .center-panel, .right-panel { min-width: 0; }
+    .left-panel, .right-panel { overflow-x: hidden; }
+    .top-bar {
+      position: sticky; top: 0; z-index: 50;
+      flex-wrap: wrap; gap: 6px 12px; padding: 6px 10px; min-height: 50px;
+    }
+    .top-bar .phases { order: 3; flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .center-panel { overflow: visible; padding: 10px; }
+    .map-wrap { overflow-x: auto; overflow-y: visible; }
+    .map-board, .map-board.size-11 { margin: 0 auto; }
+    .map-board.size-11 { min-width: 460px; }   /* 11×11 셀 탭 타깃 확보 → 가로 스크롤 */
+    .hand-wrap { max-height: none; min-height: 0; flex: 0 0 auto; }
+    .card { width: 132px; height: 212px; }
+    .left-panel, .right-panel {
+      overflow-y: visible;
+      border-left: none; border-right: none; border-top: 1px solid var(--border);
+    }
+    .phase-actions { flex-wrap: wrap; }
+    .pa-btn { flex: 1 1 auto; min-height: 40px; }
+    .modal { max-height: 88vh; overflow-y: auto; }
   }
   .tut-bubble .tut-title {
     font-family: 'Share Tech Mono', monospace;
