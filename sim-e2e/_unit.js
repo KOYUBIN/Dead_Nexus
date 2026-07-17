@@ -49,23 +49,31 @@ function tests(){
   ok('S04 unlocked (locked=false)',SR(s4,'locked',null)===false);
   ok('S04 startHeat=7',s4.heat===7);
   ok('S04 startWeaponsAll=-2 rule',SR(s4,'startWeaponsAll',0)===-2);
-  ok('S04 npcs=3 at start',(s4.meta.npcs||[]).length===3,`got ${(s4.meta.npcs||[]).length}`);
-  ok('S04 npc type=police hp8 atk4',(s4.meta.npcs||[]).every(n=>n.type==='police'&&n.hp===8&&n.atk===4),JSON.stringify(s4.meta.npcs));
-  ok('S04 npc positions ⊆ F3/C6/I6/F9',(s4.meta.npcs||[]).every(n=>S04Z.includes(n.position)),JSON.stringify((s4.meta.npcs||[]).map(n=>n.position)));
-  ok('S04 npc positions distinct',new Set((s4.meta.npcs||[]).map(n=>n.position)).size===3);
+  const s4police=(s4.meta.npcs||[]).filter(n=>n.type==='police');  // v6.23: npcs 는 police+captive 혼재 → police 필터
+  ok('S04 police=3 at start',s4police.length===3,`got ${s4police.length}`);
+  ok('S04 police type hp8 atk4',s4police.every(n=>n.type==='police'&&n.hp===8&&n.atk===4),JSON.stringify(s4police));
+  ok('S04 police positions ⊆ F3/C6/I6/F9',s4police.every(n=>S04Z.includes(n.position)),JSON.stringify(s4police.map(n=>n.position)));
+  ok('S04 police positions distinct',new Set(s4police.map(n=>n.position)).size===3);
   ok('S04 policeSpawned=true (no heat9 double-spawn)',s4.meta.policeSpawned===true);
   // ---- NPC 엔진: 스폰 헬퍼 ----
   const spEnts=window.spawnPoliceEntities(s4.map,S04Z,3);
   ok('spawnPoliceEntities count=3',spEnts.length===3);
   ok('spawnPoliceEntities all police hp8/atk4/maxHp8',spEnts.every(n=>n.type==='police'&&n.hp===8&&n.atk===4&&n.maxHp===8));
   ok('spawnPoliceEntities positions from candidates',spEnts.every(n=>S04Z.includes(n.position)));
-  // ---- NPC 엔진: 매 라운드 랜덤 인접 이동 (P0 CIPHER=A6 → 경찰과 비조우) ----
+  // ---- NPC 엔진: 매 라운드 이동 (S04 patrolGuard=구금 NPC 로 수호 순찰, 여전히 1칸) ----
   const isAdj=(a,b)=>{const c1=a.charCodeAt(0)-65,r1=+a.slice(1),c2=b.charCodeAt(0)-65,r2=+b.slice(1);return Math.abs(c1-c2)+Math.abs(r1-r2)===1;};
-  const beforePos=(s4.meta.npcs||[]).map(n=>n.position);
-  const mv=window.updatePoliceForRound(s4);
-  const afterN=(mv.meta.npcs||[]);
-  ok('movement keeps 3 npcs on valid cells',afterN.length===3&&afterN.every(n=>!!mv.map[n.position]));
-  ok('movement = 1 adjacent step each',afterN.every((n,i)=>isAdj(n.position,beforePos[i])),`before ${beforePos} after ${afterN.map(n=>n.position)}`);
+  const beforePolById=Object.fromEntries(s4police.map(n=>[n.id,n.position]));
+  const beforeCapById=Object.fromEntries((s4.meta.npcs||[]).filter(n=>n.type==='captive').map(n=>[n.id,n.position]));
+  // P0(ghost)를 어떤 경찰의 1칸 반경에도 없는 빈 칸으로 옮겨 이동 검증에 조우 노이즈 배제
+  const s4occ=new Set((s4.meta.npcs||[]).map(n=>n.position));
+  const s4free=Object.keys(s4.map).find(c=>s4.map[c].zone!=='nex'&&!s4occ.has(c)&&!s4police.some(pp=>isAdj(c,pp.position)))||s4.players[0].position;
+  const s4mv={...s4,players:s4.players.map((p,i)=>i===0?{...p,position:s4free}:p)};
+  const mv=window.updatePoliceForRound(s4mv);
+  const mvPol=(mv.meta.npcs||[]).filter(n=>n.type==='police');
+  const mvCap=(mv.meta.npcs||[]).filter(n=>n.type==='captive');
+  ok('movement keeps 3 police on valid cells',mvPol.length===3&&mvPol.every(n=>!!mv.map[n.position]));
+  ok('movement = 1 adjacent step each police',mvPol.every(n=>isAdj(n.position,beforePolById[n.id])),`before ${JSON.stringify(beforePolById)} after ${JSON.stringify(mvPol.map(n=>[n.id,n.position]))}`);
+  ok('movement captives stay fixed (비이동)',mvCap.length===5&&mvCap.every(n=>n.position===beforeCapById[n.id]));
   // ---- NPC 엔진: 조우 전투 — 승리 (Ghost atk 압도 → NPC 격파·렙+2·디스폰) ----
   const sg=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S01'});
   const gpos=sg.players[0].position;
@@ -96,6 +104,72 @@ function tests(){
   ok('heat8 no spawn (<9)',(h8r.meta.npcs||[]).length===0&&h8r.meta.policeSpawned===false);
   // ---- S01 회귀: NPC 엔진 비활성 (npcs 빈 배열) ----
   ok('S01 npcs empty (no police at start)',(sg.meta.npcs||[]).length===0&&sg.meta.policeSpawned===false);
+  // ==== v6.23: S04 구출 퀘스트 (구금 NPC · docs/14 §S04) ====
+  const RCR=window.resolveCaptiveRescue, SCE=window.spawnCaptiveEntities, FRT=window.findRescueTargetZone, SRH=window.scenRaidHeat, UPR=window.updatePoliceForRound;
+  const s4caps=(s4.meta.npcs||[]).filter(n=>n.type==='captive');
+  const s4pol=(s4.meta.npcs||[]).filter(n=>n.type==='police');
+  ok('S04 captives=5 at start',s4caps.length===5,`got ${s4caps.length}`);
+  ok('S04 npcs total=8 (3 police + 5 captive)',(s4.meta.npcs||[]).length===8,`got ${(s4.meta.npcs||[]).length}`);
+  ok('S04 captive type + no combat fields',s4caps.every(n=>n.type==='captive'&&n.hp===undefined&&n.atk===undefined));
+  ok('S04 captive ids ≥100 (police id 격리)',s4caps.every(n=>n.id>=100));
+  ok('S04 captive positions distinct & non-nexus',new Set(s4caps.map(n=>n.position)).size===5&&s4caps.every(n=>s4.map[n.position]&&s4.map[n.position].zone!=='nex'));
+  ok('S04 captive not colocated with police',s4caps.every(n=>!s4pol.some(p=>p.position===n.position)));
+  ok('S04 rescue meta init (0/{}/{})',s4.meta.rescues===0&&JSON.stringify(s4.meta.rescuesByPlayer)==='{}'&&JSON.stringify(s4.meta.captiveBonusAwarded)==='{}');
+  ok('S04 captiveStart=5 / patrolGuard=true / raidHeatBonus=1',SR(s4,'captiveStart',0)===5&&SR(s4,'patrolGuard',false)===true&&SR(s4,'raidHeatBonus',0)===1);
+  // spawnCaptiveEntities 헬퍼
+  const spCaps=SCE(s4.map,5,[]);
+  ok('spawnCaptiveEntities count=5 type captive id≥100',spCaps.length===5&&spCaps.every(n=>n.type==='captive'&&n.id>=100));
+  const exCoords=Object.keys(s4.map).filter(c=>s4.map[c].zone!=='nex').slice(0,3);
+  ok('spawnCaptiveEntities excludes given coords',SCE(s4.map,5,exCoords).every(n=>!exCoords.includes(n.position)));
+  // 개별 구출: ghost P0 를 구금 칸으로 → 디스폰 + ★+1 + 카운트 (경찰 제거)
+  const capPos0=s4caps[0].position;
+  const rs={...s4,players:s4.players.map((p,i)=>i===0?{...p,role:'ghost',defeated:false,position:capPos0}:p),meta:{...s4.meta,npcs:s4.meta.npcs.filter(n=>!(n.type==='police'&&n.position===capPos0))}};
+  const repR0=rs.players[0].resources.rep;
+  const rr=RCR(rs,0);
+  ok('rescue despawns captive at tile',!(rr.meta.npcs||[]).some(n=>n.type==='captive'&&n.position===capPos0));
+  ok('rescue rep +1 (개별 보상)',rr.players[0].resources.rep===repR0+1,`got ${rr.players[0].resources.rep} (before ${repR0})`);
+  ok('rescue count 1/5',rr.meta.rescues===1&&(rr.meta.rescuesByPlayer||{})[0]===1);
+  ok('rescue no all-bonus at 1',!(rr.meta.captiveBonusAwarded||{})[0]);
+  // 경찰이 지키면 구출 보류 (경찰 우선 — state 불변)
+  const guarded={...s4,players:s4.players.map((p,i)=>i===0?{...p,role:'ghost',position:'A1'}:p),meta:{...s4.meta,npcs:[{id:0,type:'police',position:'A1',hp:8,maxHp:8,atk:4},{id:100,type:'captive',position:'A1'}]}};
+  ok('rescue blocked by police on tile (불변)',RCR(guarded,0)===guarded);
+  // 전원 구출 보너스: 4→5번째 구출 시 개별 ★+1 + 전원 ★+10
+  const capPosB=s4caps[1].position;
+  const near5={...s4,players:s4.players.map((p,i)=>i===0?{...p,role:'ghost',position:capPosB}:p),meta:{...s4.meta,rescues:4,rescuesByPlayer:{0:4},captiveBonusAwarded:{},npcs:s4.meta.npcs.filter(n=>!(n.type==='police'&&n.position===capPosB))}};
+  const repB0=near5.players[0].resources.rep;
+  const b5=RCR(near5,0);
+  ok('5th rescue count 5/5',b5.meta.rescues===5&&b5.meta.rescuesByPlayer[0]===5);
+  ok('5th rescue rep +1+10 (개별+전원)',b5.players[0].resources.rep===repB0+11,`got ${b5.players[0].resources.rep} (before ${repB0})`);
+  ok('5th rescue all-bonus awarded',b5.meta.captiveBonusAwarded[0]===true);
+  // 보너스 1회성: 전원 달성 후 재구출은 개별 ★+1 만
+  const capPosC=s4caps[2].position;
+  const after5={...b5,players:b5.players.map((p,i)=>i===0?{...p,position:capPosC}:p),meta:{...b5.meta,npcs:(b5.meta.npcs||[]).filter(n=>!(n.type==='police'&&n.position===capPosC))}};
+  const repC0=after5.players[0].resources.rep;
+  ok('post-전원 재구출 rep +1 only (보너스 1회)',RCR(after5,0).players[0].resources.rep===repC0+1);
+  // 레이드 공권력 +2 (scenRaidHeat)
+  ok('S04 scenRaidHeat(1)=2 (레이드 성공 공권력+2)',SRH(s4,1)===2);
+  ok('S01 scenRaidHeat(1)=1 (기본)',SRH(sg,1)===1);
+  // findRescueTargetZone: 최근접 구금 NPC
+  const frt=FRT(s4,capPos0);
+  ok('findRescueTargetZone dist0 at unguarded captive tile',frt&&frt.dist===0&&frt.coord===capPos0);
+  ok('S01 findRescueTargetZone null (captive 없음)',FRT(sg,sg.players[0].position)===null);
+  // 경찰이 착석(수호)한 구금 NPC 는 봇 구출 목표에서 제외 (자살 우회 방지)
+  const onlyGuarded={...s4,meta:{...s4.meta,npcs:[{id:0,type:'police',position:'A1',hp:8,maxHp:8,atk:4},{id:100,type:'captive',position:'A1'}]}};
+  ok('findRescueTargetZone excludes police-guarded captive',FRT(onlyGuarded,'K11')===null);
+  const mixGuard={...s4,meta:{...s4.meta,npcs:[{id:0,type:'police',position:'A1',hp:8,maxHp:8,atk:4},{id:100,type:'captive',position:'A1'},{id:101,type:'captive',position:'B1'}]}};
+  ok('findRescueTargetZone picks unguarded over guarded',(FRT(mixGuard,'A2')||{}).coord==='B1');
+  // 경찰 우선 순찰(patrolGuard): 경찰이 가장 가까운 구금 NPC 로 접근/착석
+  const patrolS={...s4,players:s4.players.map((p,i)=>i===0?{...p,position:'K11'}:p),meta:{...s4.meta,npcs:[{id:0,type:'police',position:'A2',hp:8,maxHp:8,atk:4},{id:100,type:'captive',position:'A1'}]}};
+  const pr1=UPR(patrolS);
+  ok('patrolGuard: 경찰이 구금 NPC 칸으로 1칸 접근',(pr1.meta.npcs||[]).find(n=>n.type==='police').position==='A1',`got ${(pr1.meta.npcs||[]).find(n=>n.type==='police').position}`);
+  ok('patrolGuard: 구금 NPC 고정(이동 없음)',(pr1.meta.npcs||[]).some(n=>n.type==='captive'&&n.position==='A1'));
+  const campS={...s4,players:s4.players.map((p,i)=>i===0?{...p,position:'K11'}:p),meta:{...s4.meta,npcs:[{id:0,type:'police',position:'A1',hp:8,maxHp:8,atk:4},{id:100,type:'captive',position:'A1'}]}};
+  ok('patrolGuard: 구금칸 착석 경찰은 수호(정지)',(UPR(campS).meta.npcs||[]).find(n=>n.type==='police').position==='A1');
+  // ---- S01 회귀: captive 시스템 미발동 ----
+  ok('S01 no captives in npcs',!(sg.meta.npcs||[]).some(n=>n.type==='captive'));
+  ok('S01 resolveCaptiveRescue no-op (captive 없음 → 불변)',RCR(sg,0)===sg);
+  ok('S01 rescue counters init (rescues 0)',sg.meta.rescues===0);
+  ok('S01 captiveStart/patrolGuard/raidHeatBonus fallback',SR(sg,'captiveStart',0)===0&&SR(sg,'patrolGuard',false)===false&&SR(sg,'raidHeatBonus',0)===0);
   // ---- S05 골드러시 ----
   const s5=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'AXIOM',humans:null,scenario:'S05'});
   const g5=GVG(s5);
