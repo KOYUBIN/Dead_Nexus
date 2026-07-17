@@ -102,8 +102,9 @@ function inPageGame(cfg) {
       npcBlocs: s.players.filter(p => p.isNpc).length,
       p0Zones: Object.keys(s.map).filter(c => s.map[c].owner === 0).length,
       mnaNoCooldown: !!s.meta.mnaNoCooldown,
-      npcStart: (s.meta.npcs || []).length,          // v6.21: 시작 경찰 NPC 수 (S04=3)
+      npcStart: (s.meta.npcs || []).length,          // v6.21: 시작 NPC 수 (S04=3 police +5 captive=8)
       policeSpawned: !!s.meta.policeSpawned,
+      captiveStart: (s.meta.npcs || []).filter(n => n.type === 'captive').length,  // v6.23: 시작 구금 NPC 수 (S04=5)
     };
 
     // suppression grants can't be read from the 150-capped log at the end, so
@@ -215,7 +216,11 @@ function inPageGame(cfg) {
       // v6.21: 모바일 NPC 엔진 계측 (cap-immune meta 카운터)
       policeFights: s.meta.policeFights || 0,       // Ghost×경찰 자동전투(비격파) 누적
       policeKills: s.meta.policeKills || 0,         // 경찰 NPC 격파 누적
-      npcEnd: (s.meta.npcs || []).length,          // 종료 시점 잔존 경찰 수
+      // v6.23: 구출 퀘스트 계측 (docs/14 §S04)
+      rescues: s.meta.rescues || 0,                 // 구금 NPC 구출 누적 (cap-immune meta counter)
+      rescuedAll: Object.values(s.meta.captiveBonusAwarded || {}).some(Boolean),  // 전원(5) 구출 달성 여부
+      captiveEnd: (s.meta.npcs || []).filter(n => n.type === 'captive').length,   // 종료 시 잔존 구금 NPC
+      npcEnd: (s.meta.npcs || []).length,          // 종료 시점 잔존 NPC 수
       gaugeHooks: s.meta.gaugeHooks || 0,          // 카드→게이지 훅 발동 총수 (cap-immune meta counter)
       moleReveals: s.meta.moleReveals || 0,        // MOLE 위장 발각 총수
       rigMilestones: sum(rigByRound),              // RIGGER 함정 발동 ★+2 (euro+훅 합산)
@@ -306,6 +311,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   let woundTot = 0, scandalTot = 0, gamesWithWound = 0, gamesWithScandal = 0;
   let gaugeTot = 0, moleRevTot = 0, rigMs = 0, memo5 = 0, hackTot = 0, disgTot = 0;
   let policeFightsTot = 0, policeKillsTot = 0, gamesWithPolice = 0, gamesWithFight = 0, npcStartSum = 0;
+  let rescuesTot = 0, gamesWithRescue = 0, gamesAllRescued = 0, captiveGames = 0;   // v6.23: 구출 계측
   // TL distribution instrumentation
   const tlSeatDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };   // per-seat final TL histogram
   let tlSeatTotal = 0;
@@ -326,6 +332,13 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       if ((g.scenApplied?.npcStart || 0) > 0 || (g.scenApplied?.policeSpawned)) gamesWithPolice++;
       if (((g.policeFights || 0) + (g.policeKills || 0)) > 0) gamesWithFight++;
       npcStartSum += (g.scenApplied?.npcStart || 0);
+      // v6.23: 구출 계측 — captive 있는 판(S04)만 분모로
+      if ((g.scenApplied?.captiveStart || 0) > 0) {
+        captiveGames++;
+        rescuesTot += (g.rescues || 0);
+        if ((g.rescues || 0) > 0) gamesWithRescue++;
+        if (g.rescuedAll) gamesAllRescued++;
+      }
       gaugeTot += (g.gaugeHooks || 0); moleRevTot += (g.moleReveals || 0);
       rigMs += (g.rigMilestones || 0); memo5 += (g.brokerMemo5 || 0); hackTot += (g.cipherHackNodes || 0); disgTot += (g.moleDisguises || 0);
       // TL distribution
@@ -368,6 +381,11 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       policeFightsTotal: policeFightsTot, policeFightsPerGame: +(policeFightsTot / nOk).toFixed(2),
       policeKillsTotal: policeKillsTot, policeKillsPerGame: +(policeKillsTot / nOk).toFixed(2),
       gamesWithFightPct: +(gamesWithFight / nOk).toFixed(3),
+      // v6.23: 구출 퀘스트 (captive 있는 판 분모)
+      captiveGames,
+      rescuesTotal: rescuesTot, rescuesPerCaptiveGame: +(rescuesTot / (captiveGames || 1)).toFixed(2),
+      rescueOccurRate: +(gamesWithRescue / (captiveGames || 1)).toFixed(3),
+      allRescuedRate: +(gamesAllRescued / (captiveGames || 1)).toFixed(3),
       gaugeHooksTotal: gaugeTot, gaugeHooksPerGame: +(gaugeTot / nOk).toFixed(2),
       moleRevealsTotal: moleRevTot, moleDisguisesTotal: disgTot,
       rigMilestonesTotal: rigMs, rigMilestonesPerGame: +(rigMs / nOk).toFixed(2),
@@ -416,6 +434,13 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   console.log(`    avg start police     ${o.npcStartAvg}  · games w/ police ${(o.gamesWithPolicePct * 100).toFixed(1)}%`);
   console.log(`    police auto-fights   ${o.policeFightsTotal} total  (${o.policeFightsPerGame}/game)  · games w/ fight ${(o.gamesWithFightPct * 100).toFixed(1)}%`);
   console.log(`    police kills         ${o.policeKillsTotal} total  (${o.policeKillsPerGame}/game)`);
+  if (o.captiveGames > 0) {
+    console.log('  ---- rescue quest (v6.23 · S04) ----');
+    console.log(`    captive games        ${o.captiveGames}  (분모)`);
+    console.log(`    rescues              ${o.rescuesTotal} total  (${o.rescuesPerCaptiveGame}/game)`);
+    console.log(`    rescue occur rate    ${(o.rescueOccurRate * 100).toFixed(1)}%  (≥1 구출)`);
+    console.log(`    all-5 rescued rate   ${(o.allRescuedRate * 100).toFixed(1)}%  (렙+10 보너스)`);
+  }
   console.log('  ---- class personality loop (P1-2) ----');
   console.log(`    gauge hooks (card→gauge)  ${o.gaugeHooksTotal} total  (${o.gaugeHooksPerGame}/game)`);
   console.log(`    RIGGER trap-fire ★+2      ${o.rigMilestonesTotal} total  (${o.rigMilestonesPerGame}/game)`);
