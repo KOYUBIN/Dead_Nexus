@@ -1,0 +1,191 @@
+/* ==========================================================================
+   rpg/styles/app.css — 모바일 세로 레이아웃 · 사각 타일 그리드 · 전투 juice [G7]
+   터치 ≥44px, 가로 스크롤 금지, safe-area 대응. 모든 경로 상대.
+   ========================================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+body { min-height: 100dvh; }
+button { font-family: inherit; cursor: pointer; }
+
+#boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--bg); color: var(--cyan); font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
+
+.rpg-app { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  position: relative; }
+
+/* ---- 상단 상태 바 ---- */
+.topbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg2);
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; flex-wrap: wrap; }
+.topbar .brand { font-family: 'Share Tech Mono', monospace; font-weight: 700; letter-spacing: 2px;
+  color: var(--cyan); font-size: 13px; }
+.topbar .stat { font-size: 12px; color: var(--text-dim); }
+.topbar .stat b { color: var(--text); }
+.topbar .spacer { flex: 1; }
+.chip { font-size: 11px; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border);
+  color: var(--text-dim); background: var(--bg3); }
+.chip.karma { color: var(--orange); border-color: var(--orange); }
+.chip.rep { color: var(--cyan); }
+
+/* ---- 배너 ---- */
+.banner { margin: 8px 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+  border: 1px solid var(--border); background: var(--bg3); }
+.banner.rewards { border-color: var(--orange); color: var(--orange); }
+.banner.blocked, .banner.fail { border-color: var(--magenta); color: var(--magenta); }
+.banner.growth { border-color: var(--green); color: var(--green); }
+.banner ul { margin: 4px 0 0; padding-left: 18px; }
+
+/* ---- 허브 ---- */
+.hub { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px 12px 28px; }
+.hub h1 { font-family: 'Share Tech Mono', monospace; color: var(--cyan); font-size: 20px; margin: 6px 0 0;
+  letter-spacing: 1px; }
+.hub .sub { color: var(--text-dim); font-size: 13px; margin: 0; }
+.hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hub-node { min-height: 88px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg2);
+  color: var(--text); display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: 4px; padding: 12px 14px; text-align: left; transition: border-color .15s, background .15s; }
+.hub-node:active { border-color: var(--cyan); background: var(--bg3); }
+.hub-node .ic { font-size: 26px; }
+.hub-node .lb { font-weight: 700; font-size: 14px; }
+.hub-node .nt { font-size: 11px; color: var(--text-dim); }
+.hub-node.stub { opacity: .6; }
+
+.threat { margin-top: 4px; }
+.threat .lab { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+.bar { height: 8px; border-radius: 4px; background: var(--bg3); overflow: hidden; border: 1px solid var(--border); }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--yellow), var(--magenta)); }
+
+.btn { min-height: var(--touch); border-radius: 10px; border: 1.5px solid var(--cyan); background: rgba(0,229,255,0.08);
+  color: var(--cyan); font-weight: 700; font-size: 15px; padding: 10px 16px; width: 100%; letter-spacing: .5px;
+  transition: transform .08s; }
+.btn:active { transform: scale(.98); }
+.btn.ghost { border-color: var(--border); color: var(--text-dim); background: var(--bg2); }
+.btn.danger { border-color: var(--magenta); color: var(--magenta); background: rgba(255,0,60,0.08); }
+.btn-row { display: flex; gap: 8px; }
+
+/* 캐릭터 시트 */
+.sheet { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.statline { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
+  padding: 8px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
+.statline .nm { font-size: 14px; }
+.statline .vl { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); min-width: 44px; text-align: right; }
+.statline button { min-width: var(--touch); min-height: 36px; border-radius: 8px; border: 1px solid var(--orange);
+  background: rgba(255,145,0,0.1); color: var(--orange); font-weight: 700; }
+.statline button:disabled { opacity: .3; border-color: var(--border); color: var(--text-dim); }
+.kit { display: flex; flex-wrap: wrap; gap: 6px; }
+.kit .ab { font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--attr-mesh);
+  color: var(--cyan); background: var(--bg2); }
+
+/* ---- 대화 오버레이 ---- */
+.dialogue { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 12px; }
+.portrait-row { display: flex; align-items: center; gap: 12px; }
+.portrait { width: 72px; height: 72px; border-radius: 12px; border: 2px solid var(--cyan); position: relative;
+  overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 34px;
+  background: linear-gradient(135deg, var(--bg3), var(--bg2)); flex: 0 0 auto; }
+.portrait.bloc { border-color: var(--magenta); }
+.portrait::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg,
+  rgba(0,229,255,0.06) 0, rgba(0,229,255,0.06) 1px, transparent 1px, transparent 3px);
+  animation: flicker 2.4s infinite; pointer-events: none; }
+.portrait.bloc::after { background: repeating-linear-gradient(0deg, rgba(255,0,60,0.06) 0, rgba(255,0,60,0.06) 1px, transparent 1px, transparent 3px); }
+@keyframes flicker { 0%,100% { opacity: .5; } 45% { opacity: .9; } 50% { opacity: .3; } }
+.speaker { font-family: 'Share Tech Mono', monospace; color: var(--cyan); font-size: 15px; letter-spacing: 1px; }
+.speaker.bloc { color: var(--magenta); }
+.speaker small { display: block; color: var(--text-dim); font-size: 11px; letter-spacing: 0; }
+.textbox { flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  font-size: 15px; line-height: 1.7; white-space: pre-wrap; overflow-y: auto; min-height: 120px; }
+.quote-bubble { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--cyan); color: var(--text-dim);
+  font-style: italic; font-size: 13px; }
+.quote-bubble.bloc { border-left-color: var(--magenta); }
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice { min-height: var(--touch); text-align: left; border-radius: 10px; border: 1.5px solid var(--border);
+  background: var(--bg2); color: var(--text); padding: 10px 14px; font-size: 14px; line-height: 1.4; }
+.choice:active { border-color: var(--cyan); }
+.choice .desc { display: block; font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.choice.gate { border-color: var(--attr-mesh); }
+.choice.gray { opacity: .45; border-style: dashed; }
+.choice.gray .desc { color: var(--yellow); }
+
+/* ---- 전투 ---- */
+.combat { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.combat-top { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
+.combat-top .obj { color: var(--green); }
+.combat-top .rnd { color: var(--yellow); }
+.board-wrap { display: flex; justify-content: center; }
+.board { position: relative; --tile: min(15vw, 56px); }
+.tile { position: absolute; width: var(--tile); height: var(--tile); border: 1px solid #202042;
+  background: var(--tile); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.tile.alt { background: var(--tile-alt); }
+.tile.cover { background: var(--tile-cover); }
+.tile.cover.full { box-shadow: inset 0 0 0 3px #6b5325; }
+.tile.wall { background: #05050a; }
+.tile.obj { background: var(--tile-obj); box-shadow: inset 0 0 0 2px var(--green); }
+.tile.move { background: var(--tile-move); cursor: pointer; }
+.tile.threat { box-shadow: inset 0 0 0 3px var(--magenta); }
+.tile.threat-move { box-shadow: inset 0 0 0 2px var(--yellow); }
+.tile.target { box-shadow: inset 0 0 0 3px var(--cyan); cursor: pointer; }
+.tile .cover-ic { opacity: .6; font-size: 16px; }
+.obj-badge { position: absolute; font-size: 9px; color: var(--green); font-family: 'Share Tech Mono', monospace;
+  transform: translateY(-2px); }
+
+.unit { position: absolute; width: var(--tile); height: var(--tile); display: flex; align-items: center;
+  justify-content: center; font-size: 24px; transition: left .28s ease, top .28s ease; z-index: 5; pointer-events: none; }
+.unit .body { width: 82%; height: 82%; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border); background: rgba(10,10,25,0.7); position: relative; }
+.unit.player .body { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,229,255,0.4); }
+.unit.enemy .body { border-color: var(--magenta); }
+.unit.static .body { border-color: var(--attr-shade); border-style: dashed; }
+.unit.stealth .body { opacity: .4; border-style: dotted; }
+.unit .hpbar { position: absolute; bottom: -6px; left: 8%; width: 84%; height: 4px; border-radius: 2px;
+  background: #300; overflow: hidden; }
+.unit .hpbar > i { display: block; height: 100%; background: var(--green); }
+.unit.enemy .hpbar > i { background: var(--magenta); }
+.unit.hit .body { animation: hitflash .35s; }
+@keyframes hitflash { 0%,100% { filter: none; } 30% { filter: brightness(3) drop-shadow(0 0 8px #fff); transform: translateX(-2px); } 60% { transform: translateX(2px); } }
+
+/* 부유 데미지 텍스트 [G7] */
+.floater { position: absolute; z-index: 30; font-family: 'Share Tech Mono', monospace; font-weight: 700;
+  font-size: 15px; pointer-events: none; animation: floatup 1s ease-out forwards; text-shadow: 0 1px 3px #000; }
+.floater.dmg { color: var(--magenta); }
+.floater.hack { color: var(--green); }
+.floater.miss { color: var(--text-dim); }
+.floater.buff { color: var(--cyan); }
+.floater.debuff { color: var(--purple); }
+.floater.crit { font-size: 20px; color: var(--yellow); }
+@keyframes floatup { 0% { opacity: 0; transform: translateY(4px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px); } }
+
+/* HUD */
+.hud { display: flex; flex-direction: column; gap: 8px; }
+.ap-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ap-pips { display: flex; gap: 4px; }
+.ap-pips i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--cyan); }
+.ap-pips i.on { background: var(--cyan); }
+.abilities { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ability { min-height: var(--touch); border-radius: 10px; border: 1.5px solid var(--attr-mesh); background: var(--bg2);
+  color: var(--text); padding: 6px 8px; text-align: left; font-size: 12px; line-height: 1.3; }
+.ability.sel { border-color: var(--cyan); background: rgba(0,229,255,0.12); box-shadow: 0 0 8px rgba(0,229,255,0.3); }
+.ability:disabled { opacity: .4; }
+.ability .an { font-weight: 700; }
+.ability .ameta { color: var(--text-dim); font-size: 10px; }
+.hud-actions { display: flex; gap: 8px; }
+.hud-actions .btn { flex: 1; }
+
+.log { margin-top: 4px; max-height: 92px; overflow-y: auto; font-size: 11px; line-height: 1.6; color: var(--text-dim);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+.log div:first-child { color: var(--text); }
+
+/* 세이브 메뉴 */
+.savemenu { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.savemenu textarea { width: 100%; min-height: 96px; background: #05050c; color: var(--green); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px; font-family: 'Share Tech Mono', monospace; font-size: 11px; resize: vertical; }
+.savemenu .hint { font-size: 12px; color: var(--text-dim); }
+
+/* 데스크톱 회귀 (중앙 정렬, 세로 폭 유지) */
+@media (min-width: 700px) {
+  .rpg-app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .board { --tile: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unit, .floater, .portrait::after { animation: none !important; transition: none !important; }
+}

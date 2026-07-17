@@ -1,0 +1,37 @@
+/* ==========================================================================
+   rpg/styles/palette.css — 팔레트 (simulator/v0.5 색계 독립 복제, docs/25 §6)
+   원본 미참조 — 독립 복제로 경로/버전 결합 0. 애시그리드 톤.
+   ========================================================================== */
+:root {
+  --bg:      #06060e;
+  --bg2:     #0f0f1a;
+  --bg3:     #1a1a2e;
+  --border:  #2d2d4f;
+  --cyan:    #00e5ff;   /* CIPHER / 플레이어 / UI 강조 */
+  --magenta: #ff003c;   /* 적대 / 위험 / 피해 */
+  --yellow:  #ffd700;   /* 경고 / 텔레그래프 */
+  --green:   #b4ff39;   /* 성공 / 오브젝티브 */
+  --orange:  #ff9100;   /* karma / 보상 */
+  --purple:  #a855f7;   /* SHADE / 은신 */
+  --text:    #e0e0e0;
+  --text-dim:#9090a8;
+
+  /* 6+1 속성색 [계승 docs/06 §1] */
+  --attr-mesh:  #185FA5;
+  --attr-iron:  #888780;
+  --attr-volt:  #854F0B;
+  --attr-shade: #534AB7;
+  --attr-bio:   #1D9E75;
+  --attr-ash:   #C04828;
+  --attr-grid:  #888888;
+
+  /* 전투 타일 상태 */
+  --tile:        #12122a;
+  --tile-alt:    #16162e;
+  --tile-move:   rgba(0,229,255,0.22);
+  --tile-threat: rgba(255,0,60,0.28);
+  --tile-cover:  #3a2f1a;
+  --tile-obj:    rgba(180,255,57,0.20);
+
+  --touch: 44px;   /* 최소 터치 타깃 */
+}
