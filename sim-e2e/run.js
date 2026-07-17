@@ -252,8 +252,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const t0 = Date.now();
   for (let k = 0; k < N; k++) {
     // v6.18: allBloc 시나리오(S02)는 P0 를 항상 Bloc 으로 (initGame 이 강제하지만 명시).
+    // v6.19: ghostRising 시나리오(S03)는 P0 를 Ghost 로 (protagonist; initGame 이 강제하지만 명시).
     const allBloc = SCENARIO === 'S02';
-    const role = allBloc ? 'bloc' : (Math.random() < 0.5 ? 'ghost' : 'bloc');
+    const role = allBloc ? 'bloc' : (SCENARIO === 'S03' ? 'ghost' : (Math.random() < 0.5 ? 'ghost' : 'bloc'));
     const specific = pick(role === 'ghost' ? GHOST_CLASSES : BLOC_CLASSES);
     const cfg = { mapSize: MAP, role, specific, roundGuard: ROUND_GUARD, scenario: SCENARIO };
     const startConsole = pg.buf.console.length, startErr = pg.buf.pageerror.length;

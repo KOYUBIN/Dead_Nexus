@@ -48,7 +48,12 @@ function euro_totalShares(state, bloc) {
     sum += (p.stocks && p.stocks[bloc]) || 0;
   }
   const wk = (state && state.meta && state.meta.whiteKnight && state.meta.whiteKnight[bloc]) || 0;
-  return sum + NPC_MNA_FLOAT + wk;
+  // v6.19 (S02 밸런스): 시나리오별 float 오버라이드 (scenarioRule 게이팅). S02(코프 대전)는
+  //   2~3 실참 Bloc + NPC 충원 소규모판 → 기본 float 10은 51% 게이트를 사실상 불가로 만든다
+  //   (측정: 20R 자유주행에도 지분 ~54% 정체). float 하향으로 과반 인수 창을 실효화한다.
+  //   외부 시그니처 불변 — index.html scenarioRule 플래그만 읽음(미지정/미로드 시 NPC_MNA_FLOAT).
+  const float = (typeof scenarioRule === 'function') ? scenarioRule(state, 'mnaFloat', NPC_MNA_FLOAT) : NPC_MNA_FLOAT;
+  return sum + float + wk;
 }
 
 // 특정 플레이어의 블록 지분율(%, 내림)
@@ -1324,7 +1329,10 @@ function euro_declareMnaBots(state) {
   }
   if (!cands.length) return s;
   cands.sort((a, b) => b.eq - a.eq);
-  if (Math.random() >= EURO_MNA_BOT_PROB) return s; // 보수적 cadence
+  // v6.19 (S02 밸런스): 선언 cadence 시나리오 오버라이드 — 단일 pendingMna 슬롯이
+  //   전역 병목(라운드당 인수 ≤1)이라, S02(2곳 인수 승리)는 cadence 를 높여 선두 봇의 연속 인수를 가속.
+  const botProb = (typeof scenarioRule === 'function') ? scenarioRule(s, 'mnaBotProb', EURO_MNA_BOT_PROB) : EURO_MNA_BOT_PROB;
+  if (Math.random() >= botProb) return s; // 보수적 cadence (S02 는 상향)
   const pick = cands[0];
   s = euro_declareMna(s, pick.pi, pick.bloc);
   if (!(s.meta && s.meta.pendingMna)) return s; // 방어적: 선언 거부됐으면 종료
