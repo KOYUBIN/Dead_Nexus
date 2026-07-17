@@ -17,6 +17,16 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.29 — RPG 모드 Stage 1: 챕터 1 "First Blood" 수직 슬라이스 (41차)
+- **rpg/ 신규 트랙 라이브** (dead-nexus.vercel.app/rpg/ · file:// 더블클릭 겸용): docs/25 GHOSTGRID 아키텍처 그대로 — React+Babel 빌드리스, fetch/XHR 0, 전 경로 상대, 모바일 세로 우선
+- **수직 슬라이스 루프 완주**: 허브(미션보드+캐릭터 시트) → 대화 씬(VANTA 디렉터, 명대사 원문 고정) → 6×8 그리드 전투(First Blood: VANTA 서버룸) → 에필로그 → karma 성장 → 세이브
+- **MFU 비트 실증**: 대화 3출구 — 무력 돌파 / `[HACK 4]` 잠금장치 우회(경비 조우 스킵 = 전투 실제 제거, 유닛 증명) / `[VANTA 태그]` 빌드 잠금(슬라이스 CIPHER로는 회색) — "전투 빌드와 사회/해킹 빌드가 같은 문제를 다르게 푼다"
+- **전투 엔진** (systems/combat — React/DOM 참조 0 순수 함수): 결정론 피해 max(0, ATK−DEF−엄폐) · AP 2 · MOV=SPD 파생 · BFS/LoS · **적 의도 텔레그래프**(예측=실행 유닛 일치) · 속성 상성(MESH▶SHADE +1) · 오브젝티브 threshold 누적 차감 · CIPHER 4액션 킷(해킹샷·GLITCH·DATA SPIKE·ZERO TRACE) · juice(부유 데미지·피격 플래시·이동 트윈)
+- **계보 태그**: 계승 30 · 각색 16 · 신규 16 (docs/07 스탯·docs/06 속성 계승, lore 스냅샷 벤더링 — simulator/ 무수정)
+- **세이브**: localStorage + base64 문자열 export/import (version 필드, 라운드트립 유닛)
+- 검증: rpg 유닛 46/46 · babel 0 에러 · node -c 19파일 · Playwright file://+http 양쪽 (허브→대화→전투→공격, 콘솔 에러 0) · vercel.json 무변경(trailingSlash로 /rpg/ 자동 서빙)
+- 정직 이탈 1건: docs/25 §6의 개별 ui/*.js 분리는 file:// XHR 제약과 충돌 — 단일 text/babel 블록에 인라인(README 명시)
+
 ### v6.28 — NEXUS BAR 하단 상태 바 + 전체 검수 39건 정정 + RPG 모드 비전 (38~40차)
 - **NEXUS BAR** (유저 피드백 "내 상태창 하단 고정" — 문명/BG3/토탈워 연구 + 시안 3개 심사 만장일치 civ-ribbon): 화면 최하단 고정 바 — 좌(클래스 초상·코드네임·HP 바) / 중(₵·핵심지표 절대값·수배·시그니처·속성 핍·경제칩) / 우(손패·결정 큐 차단 뱃지·**NEXT 컨텍스트 버튼**). 상단 레이스 HUD(세계/상대) vs 하단 바(나/행동) 2밴드 분리 — 진척률·목표선은 하단에 없음(정직화: 절대값 소스 = 판정 소스, players[0] 하드코딩 없음). 모바일 좌우 핀 + 중앙 스크롤 + 폭 단계별 티어 절단, NEXT 44px 터치 타깃. nextAction 헬퍼는 기존 dispatch/confirmPlan 미러링(신규 게임 로직 0, 정합 유닛 9종). Playwright 1280×800/390×844 실검증
 - **전체 검수 (7차원 감사 + 발견별 적대 검증, 39건 전건 CONFIRMED) 일괄 정정**:

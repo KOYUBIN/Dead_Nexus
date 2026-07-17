@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#06060e" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%91%BB%3C/text%3E%3C/svg%3E" />
+<title>DEAD NEXUS — ASH &amp; SIGNAL (RPG)</title>
+<link rel="stylesheet" href="./styles/palette.css" />
+<link rel="stylesheet" href="./styles/app.css" />
+</head>
+<body>
+<div id="root"><div id="boot">INITIALIZING GHOSTGRID…</div></div>
+
+<!-- ── 콘텐츠/로직 모듈 (fetch/XHR 0 — 전부 <script src> window 전역 로드) ── -->
+<script src="./core/loader.js"></script>
+<script src="./core/projection.js"></script>
+<script src="./data/attributes.js"></script>
+<script src="./data/classes.js"></script>
+<script src="./data/abilities.js"></script>
+<script src="./data/enemies.js"></script>
+<script src="./data/weapons.js"></script>
+<script src="./data/missions/ch01-first-blood.js"></script>
+<script src="./lore/lore_module.snapshot.js"></script>
+<script src="./lore/lore-adapter.js"></script>
+<script src="./systems/combat/grid.js"></script>
+<script src="./systems/combat/resolve.js"></script>
+<script src="./systems/combat/ai.js"></script>
+<script src="./systems/dialogue.js"></script>
+<script src="./systems/character.js"></script>
+<script src="./systems/campaign.js"></script>
+<script src="./state/save.js"></script>
+<script src="./state/store.js"></script>
+
+<!-- ── vendor (CDN 0 — sim-e2e/vendor 복제) ── -->
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
+<script src="./vendor/babel.min.js"></script>
+
+<!-- ── heal 로더 부트스트랩 [G11] — 서브패스 404 시 모듈 재주입, file:// no-op ── -->
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  if (window.rpgHealAll) { try { window.rpgHealAll(); } catch (e) {} }
+});
+</script>
+
+<!-- ── UI (JSX 트랜스파일 표면은 이 text/babel 블록으로 한정 [G4]) ── -->
+<script type="text/babel" data-presets="react">
+'use strict';
+const { useReducer, useState, useEffect, useRef, useMemo } = React;
+const STORE = window.RPG_STORE, CH = window.RPG_CHARACTER, AB = window.RPG_ABILITIES,
+      GRID = window.RPG_GRID, PROJ = window.RPG_PROJECTION, LORE = window.RPG_LORE,
+      SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN,
+      MISSION = window.RPG_MISSION_CH01.MISSION;
+const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ── 타자기 텍스트 (탭하면 즉시 완성, reduced-motion 존중) ──
+function Typewriter({ text, speed = 16 }) {
+  const [n, setN] = useState(reducedMotion ? text.length : 0);
+  useEffect(() => {
+    if (reducedMotion) { setN(text.length); return; }
+    setN(0);
+    let i = 0; const id = setInterval(() => { i += 2; setN(i); if (i >= text.length) clearInterval(id); }, speed);
+    return () => clearInterval(id);
+  }, [text]);
+  return <div className="tw" onClick={() => setN(text.length)}>{text.slice(0, n)}{n < text.length ? <span className="caret">▊</span> : null}</div>;
+}
+
+// ── 초상 (팔레트 CSS 글리치 카드, 아트 0) ──
+function Portrait({ kind }) {
+  return <div className={'portrait ' + (kind === 'bloc' ? 'bloc' : '')}>{kind === 'bloc' ? '🎙' : '🎭'}</div>;
+}
+
+function TopBar({ save, onSave }) {
+  const ch = save.character;
+  return (
+    <div className="topbar">
+      <span className="brand">GHOSTGRID</span>
+      <span className="stat">CIPHER <b>STATIC</b></span>
+      <span className="spacer" />
+      <span className="chip rep">★{ch.rep}</span>
+      <span className="chip karma">karma {ch.karma}</span>
+      <span className="chip">₵{ch.nuyen}</span>
+      <button className="chip" onClick={onSave} style={{cursor:'pointer'}}>💾 세이브</button>
+    </div>
+  );
+}
+
+function Banner({ banner, dispatch }) {
+  if (!banner) return null;
+  return (
+    <div className={'banner ' + banner.kind} onClick={() => dispatch({ type: 'CLEAR_BANNER' })}>
+      {banner.text ? <div>{banner.text}</div> : null}
+      {banner.lines ? <ul>{banner.lines.map((l, i) => <li key={i}>{l}</li>)}</ul> : null}
+    </div>
+  );
+}
+
+// ── 허브 ──
+function Hub({ state, dispatch, openSave }) {
+  const node = state.hub.node;
+  const save = state.save;
+  const threat = CAMP.threatGauge((save.missionsDone || []).length * 3, 0, 10);
+  if (node === 'sheet') return <CharacterSheet state={state} dispatch={dispatch} />;
+  if (node === 'save') return <SaveMenu state={state} dispatch={dispatch} back={() => dispatch({ type: 'HUB_NAV', node: 'root' })} />;
+  const done = (save.missionsDone || []).indexOf('ch01-first-blood') >= 0;
+  return (
+    <div className="hub">
+      <h1>안전가옥 — ASHGRID</h1>
+      <p className="sub">STATIC / LENA GREY · 정보전의 유령</p>
+      <div className="hub-grid">
+        <button className="hub-node" onClick={() => dispatch({ type: 'START_MISSION', missionId: 'ch01-first-blood' })}>
+          <span className="ic">🎯</span><span className="lb">미션 보드</span>
+          <span className="nt">{done ? 'CH01 클리어 · 재입장 가능' : 'CH01 First Blood'}</span>
+        </button>
+        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'sheet' })}>
+          <span className="ic">📋</span><span className="lb">캐릭터 시트</span>
+          <span className="nt">karma {save.character.karma} 지출 가능</span>
+        </button>
+        <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
+          <span className="ic">🛒</span><span className="lb">상점 / 의료</span><span className="nt">HELIX 회복 (Stage 2)</span>
+        </button>
+        <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
+          <span className="ic">👥</span><span className="lb">크루 / 로스터</span><span className="nt">후속 로스터 (Stage 2)</span>
+        </button>
+      </div>
+      <div className="threat">
+        <div className="lab">SIGNAL 추적 / 위협 게이지 {threat.value}/{threat.cap} (표시만)</div>
+        <div className="bar"><i style={{ width: Math.min(100, threat.value / threat.cap * 100) + '%' }} /></div>
+      </div>
+      <button className="btn ghost" onClick={openSave}>💾 세이브 / 문자열 export·import</button>
+    </div>
+  );
+}
+
+// ── 캐릭터 시트 (karma 지출 → 유효 스탯 반영) ──
+function CharacterSheet({ state, dispatch }) {
+  const ch = state.save.character;
+  const eff = CH.effectiveStats(ch);
+  const rows = [
+    { k: 'hp',  nm: '❤ HP (유효)', vl: eff.maxHp, grow: 'hp' },
+    { k: 'atk', nm: '⚔ ATK',       vl: eff.atk,   grow: 'atk' },
+    { k: 'def', nm: '🛡 DEF',       vl: eff.def,   grow: 'def' },
+    { k: 'spd', nm: '⚡ SPD (MOV ' + eff.mov + ')', vl: eff.spd, grow: 'spd' },
+    { k: 'hack','nm': '💻 HACK',    vl: eff.hack,  grow: 'hack' },
+  ];
+  return (
+    <div className="sheet">
+      <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>CIPHER · STATIC</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>karma를 스탯에 직접 지출 (레벨 없음). karma 잔여 <b style={{color:'var(--orange)'}}>{ch.karma}</b></p>
+      {rows.map(r => (
+        <div className="statline" key={r.k}>
+          <span className="nm">{r.nm}</span>
+          <span className="vl">{r.vl}{ch.growth[r.grow] ? <small style={{color:'var(--green)'}}> +{ch.growth[r.grow]}</small> : null}</span>
+          <button disabled={ch.karma < 1} onClick={() => dispatch({ type: 'SPEND_KARMA', stat: r.grow })}>+1</button>
+        </div>
+      ))}
+      <div style={{ marginTop: 8 }}>
+        <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>히어로 킷</div>
+        <div className="kit">{ch.kit.map(k => <span className="ab" key={k}>{AB.ABILITIES[k].icon} {AB.ABILITIES[k].name}</span>)}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── 세이브 메뉴 (localStorage + 문자열 export/import) ──
+function SaveMenu({ state, dispatch, back }) {
+  const [txt, setTxt] = useState('');
+  const [msg, setMsg] = useState('');
+  return (
+    <div className="savemenu">
+      <button className="btn ghost" onClick={back}>← 뒤로</button>
+      <p className="hint">파일:// 오리진에서 localStorage가 비워질 수 있어 문자열 export/import가 안전판입니다 (G11).</p>
+      <div className="btn-row">
+        <button className="btn" onClick={() => { const ok = SAVE.saveLocal(state.save); setMsg(ok ? 'localStorage 저장됨' : 'localStorage 불가 — 문자열 사용'); }}>localStorage 저장</button>
+        <button className="btn ghost" onClick={() => { const s = SAVE.loadLocal(); if (s) { dispatch({ type: 'LOAD_SAVE', save: s }); setMsg('불러옴'); } else setMsg('저장본 없음'); }}>불러오기</button>
+      </div>
+      <button className="btn" onClick={() => { setTxt(SAVE.exportString(state.save)); setMsg('export 문자열 생성 — 복사하세요'); }}>세이브 문자열 export ⬇</button>
+      <textarea value={txt} onChange={e => setTxt(e.target.value)} placeholder="세이브 문자열을 붙여넣고 import" spellCheck="false" />
+      <button className="btn" onClick={() => { const r = SAVE.importString(txt); if (r.ok) { dispatch({ type: 'LOAD_SAVE', save: r.save }); setMsg('import 성공 — 복원됨'); } else setMsg('import 실패: ' + r.error); }}>세이브 문자열 import ⬆</button>
+      {msg ? <p className="hint" style={{ color: 'var(--green)' }}>{msg}</p> : null}
+    </div>
+  );
+}
+
+// ── 대화 오버레이 ──
+function DialogueOverlay({ state, dispatch }) {
+  const node = MISSION.dialogue.nodes[state.dialogue.nodeId];
+  const ctx = STORE.dialogueCtx(state);
+  const isBloc = node.portrait === 'bloc';
+  const q = node.quote ? LORE.quote(node.quote) : null;
+  const speakerLabel = LORE.tag(node.speaker) || node.speaker;
+  return (
+    <div className="dialogue">
+      <div className="portrait-row">
+        <Portrait kind={node.portrait} />
+        <div>
+          <div className={'speaker ' + (isBloc ? 'bloc' : '')}>
+            {isBloc ? 'VANTA' : 'CIPHER'}
+            <small>{isBloc ? 'VERA ASHTON · DIRECTOR' : speakerLabel + ' · LENA GREY'}</small>
+          </div>
+        </div>
+      </div>
+      <div className="textbox">
+        <Typewriter text={node.text} />
+        {q ? <div className={'quote-bubble ' + (isBloc ? 'bloc' : '')}>{q.line}</div> : null}
+      </div>
+      <div className="choices">
+        {node.choices.map((c, i) => {
+          const st = window.RPG_DIALOGUE.choiceState(c, ctx);
+          if (st === 'hidden') return null;
+          const gated = !!c.gate;
+          return (
+            <button key={i} className={'choice ' + (gated ? 'gate ' : '') + (st === 'gray' ? 'gray' : '')}
+              onClick={() => dispatch({ type: 'DIALOGUE_CHOOSE', index: i })}>
+              {c.label}
+              {c.desc ? <span className="desc">{c.desc}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── 전투 ──
+function Combat({ state, dispatch }) {
+  const c = state.combat;
+  const p = STORE.player(c);
+  const sel = AB.ABILITIES[c.selectedAbility];
+  const TILE = 56; // projection.left/top 계산용 논리 픽셀 (CSS var 로 실제 스케일)
+  // 이동 범위
+  const blocked = GRID.buildBlocked(c.field, c.units, 'cipher');
+  const reach = GRID.bfsRange({ x: p.x, y: p.y }, p.mov, blocked, c.field.cols, c.field.rows);
+  // 텔레그래프 셀
+  const threatTiles = {}; const threatMoveTiles = {};
+  c.telegraphs.forEach(t => { if (t.attackTile) threatTiles[t.attackTile.x + ',' + t.attackTile.y] = true;
+    if (t.moveTile) threatMoveTiles[t.moveTile.x + ',' + t.moveTile.y] = true; });
+  // 조준 가능 적
+  function canTarget(u) {
+    if (u.side !== 'enemy' || u.hp <= 0) return false;
+    if (sel.kind === 'ULTIMATE' || sel.kind === 'PASSIVE') return false;
+    if (u.physImmune && !sel.useHack) return false;
+    if (p.ap < sel.ap || (p.cooldowns[c.selectedAbility] || 0) > 0) return false;
+    return GRID.chebyshev(p, u) <= sel.range && GRID.lineOfSight(p, u, c.field);
+  }
+  const adjObj = GRID.chebyshev(p, c.objective) <= 1 && !c.objective.done;
+
+  function tileClass(x, y) {
+    let cls = 'tile' + ((x + y) % 2 ? ' alt' : '');
+    const cov = c.field.cover.find(k => k.x === x && k.y === y);
+    if (cov) cls += ' cover' + (cov.type === 'full' ? ' full' : '');
+    if (c.field.walls.find(w => w.x === x && w.y === y)) cls += ' wall';
+    if (c.objective.x === x && c.objective.y === y) cls += ' obj';
+    if (reach[x + ',' + y] > 0 && !c.field.cover.find(k=>k.x===x&&k.y===y)) cls += ' move';
+    if (threatTiles[x + ',' + y]) cls += ' threat';
+    else if (threatMoveTiles[x + ',' + y]) cls += ' threat-move';
+    const enemyHere = c.units.find(u => u.x === x && u.y === y && u.side === 'enemy' && u.hp > 0);
+    if (enemyHere && canTarget(enemyHere)) cls += ' target';
+    return cls;
+  }
+  function onTile(x, y) {
+    if (c.outcome) return;
+    const enemyHere = c.units.find(u => u.x === x && u.y === y && u.side === 'enemy' && u.hp > 0);
+    if (enemyHere && canTarget(enemyHere)) { dispatch({ type: 'COMBAT_ATTACK', targetId: enemyHere.id, ability: c.selectedAbility }); return; }
+    if (reach[x + ',' + y] > 0 && !c.field.cover.find(k=>k.x===x&&k.y===y)) { dispatch({ type: 'COMBAT_MOVE', tile: { x, y } }); return; }
+  }
+
+  // 자동 floater 정리
+  useEffect(() => {
+    if (c.floaters && c.floaters.length) { const id = setTimeout(() => dispatch({ type: 'COMBAT_CLEAR_FLOATERS' }), 1050); return () => clearTimeout(id); }
+  }, [c.floaters]);
+
+  const tiles = [];
+  for (let y = 0; y < c.field.rows; y++) for (let x = 0; x < c.field.cols; x++) {
+    const proj = PROJ.project(x, y, TILE);
+    const cov = c.field.cover.find(k => k.x === x && k.y === y);
+    tiles.push(<div key={'t' + x + '_' + y} className={tileClass(x, y)} data-tile={x + ',' + y}
+      style={{ left: 'calc(' + x + ' * var(--tile))', top: 'calc(' + y + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
+      {cov ? <span className="cover-ic">{cov.type === 'full' ? '▩' : '▣'}</span> : null}
+      {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge">{c.objective.done ? '✔' : c.objective.threshold}</span> : null}
+    </div>);
+  }
+  const units = c.units.filter(u => u.hp > 0).map(u => {
+    const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && u.status.stealth ? ' stealth' : '');
+    return <div key={u.id} className={cls} style={{ left: 'calc(' + u.x + ' * var(--tile))', top: 'calc(' + u.y + ' * var(--tile))' }}>
+      <div className="body" title={u.name}>{u.icon}
+        <div className="hpbar"><i style={{ width: (u.hp / u.maxHp * 100) + '%' }} /></div>
+      </div>
+    </div>;
+  });
+  const floaters = (c.floaters || []).map((f, i) => (
+    <div key={'f' + i} className={'floater ' + f.kind + (f.crit ? ' crit' : '')}
+      style={{ left: 'calc(' + f.x + ' * var(--tile))', top: 'calc(' + f.y + ' * var(--tile))', width: 'var(--tile)', textAlign: 'center' }}>{f.text}</div>
+  ));
+
+  const boardW = 'calc(' + c.field.cols + ' * var(--tile))';
+  const boardH = 'calc(' + c.field.rows + ' * var(--tile))';
+
+  return (
+    <div className="combat">
+      <div className="combat-top">
+        <span className="rnd">ROUND {c.round}</span>
+        <span className="obj">🎯 서버 랙 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
+        <span>❤ {p.hp}/{p.maxHp}</span>
+        <span className="spacer" />
+        {p.status && p.status.stealth ? <span style={{color:'var(--cyan)'}}>👻 은신</span> : null}
+      </div>
+      <div className="board-wrap">
+        <div className="board" style={{ width: boardW, height: boardH }}>
+          {tiles}{units}{floaters}
+        </div>
+      </div>
+
+      {c.outcome ? (
+        <div className="hud">
+          <div className="banner" style={{ borderColor: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', color: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', margin: 0 }}>
+            {c.outcome === 'win' ? '★ 미션 성공 — 2.7TB 유출' : '미션 실패 — 다운'}
+          </div>
+          <button className="btn" onClick={() => dispatch({ type: 'COMBAT_RESOLVE' })}>계속</button>
+        </div>
+      ) : (
+        <div className="hud">
+          <div className="ap-row">
+            <span>AP</span>
+            <span className="ap-pips">{[0,1].map(i => <i key={i} className={i < p.ap ? 'on' : ''} />)}</span>
+            <span className="spacer" style={{flex:1}} />
+            {adjObj ? <button className="btn" style={{ width: 'auto', padding: '8px 12px' }} onClick={() => dispatch({ type: 'COMBAT_HACK' })} disabled={p.ap < 1}>💻 서버 랙 해킹</button> : null}
+          </div>
+          <div className="abilities">
+            {p.kit.filter(k => AB.ABILITIES[k].kind !== 'PASSIVE').map(k => {
+              const a = AB.ABILITIES[k];
+              const cd = p.cooldowns[k] || 0;
+              const dis = p.ap < a.ap || cd > 0 || (a.oncePerMission && p.ultUsed);
+              return <button key={k} className={'ability' + (c.selectedAbility === k ? ' sel' : '')} disabled={a.kind === 'ULTIMATE' ? dis : false}
+                onClick={() => { if (a.kind === 'ULTIMATE') { if (!dis) dispatch({ type: 'COMBAT_ATTACK', targetId: null, ability: k }); } else dispatch({ type: 'COMBAT_SELECT', ability: k }); }}>
+                <span className="an">{a.icon} {a.name}</span>
+                <span className="ameta">{a.ap}AP{a.cooldown ? ' · cd' + a.cooldown : ''}{cd > 0 ? ' · 대기' + cd : ''}{a.oncePerMission ? (p.ultUsed ? ' · 소진' : ' · 1회') : ''}</span>
+              </button>;
+            })}
+          </div>
+          <div className="hud-actions">
+            <button className="btn ghost" onClick={() => dispatch({ type: 'COMBAT_END_TURN' })}>턴 종료 ▶ 적 행동</button>
+          </div>
+        </div>
+      )}
+      <div className="log">{c.log.slice().reverse().slice(0, 8).map((l, i) => <div key={i}>{l}</div>)}</div>
+    </div>
+  );
+}
+
+// ── 앱 (씬 라우터) ──
+function App() {
+  const [state, dispatch] = useReducer(STORE.rpgReducer, undefined, STORE.rpgInitialState);
+  const [saveOpen, setSaveOpen] = useState(false);
+  // 자동세이브: 허브 귀환 시 localStorage (안전판은 문자열).
+  useEffect(() => { if (state.scene === 'hub') { try { SAVE.saveLocal(state.save); } catch (e) {} } }, [state.scene, state.save]);
+
+  let scene;
+  if (saveOpen) scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />;
+  else if (state.scene === 'combat') scene = <Combat state={state} dispatch={dispatch} />;
+  else if (state.scene === 'dialogue') scene = <DialogueOverlay state={state} dispatch={dispatch} />;
+  else scene = <Hub state={state} dispatch={dispatch} openSave={() => setSaveOpen(true)} />;
+
+  return (
+    <div className="rpg-app">
+      <TopBar save={state.save} onSave={() => setSaveOpen(true)} />
+      <Banner banner={state.banner} dispatch={dispatch} />
+      {scene}
+    </div>
+  );
+}
+
+const boot = document.getElementById('boot'); if (boot) boot.remove();
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<!-- 타자기 캐럿 미세 스타일 -->
+<style>.tw { cursor: pointer; } .caret { color: var(--cyan); animation: blink 1s steps(1) infinite; } @keyframes blink { 50% { opacity: 0; } }</style>
+</body>
+</html>
