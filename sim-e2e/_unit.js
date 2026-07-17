@@ -240,8 +240,10 @@ function tests(){
   const s1=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
   const g1=GVG(s1);
   const nn1=s1.players.filter(p=>!p.isNpc).length;const adj1=(nn1===2?-2:nn1===3?-1:0);
-  ok('S01 blocAsset = base+adj (no bonus)',g1.blocAsset===100+adj1,`got ${g1.blocAsset}`);
-  ok('S01 ghostRepBattle standard (45+adj/2)',g1.ghostRepBattle===45+Math.floor(adj1/2),`got ${g1.ghostRepBattle}`);
+  // v6.25: S01 은 언더독 임계 스케일 적용 대상 (solo=1g3b → Ghost 완화·Bloc 지연). 원시값에 배수 반영.
+  const ud1=window.euro_underdogGoalScale(s1);
+  ok('S01 blocAsset = round((base+adj)*blocMult) [언더독]',g1.blocAsset===Math.round((100+adj1)*ud1.blocMult),`got ${g1.blocAsset} bm ${ud1.blocMult}`);
+  ok('S01 ghostRepBattle = round((45+adj/2)*ghostMult) [언더독]',g1.ghostRepBattle===Math.round((45+Math.floor(adj1/2))*ud1.ghostMult),`got ${g1.ghostRepBattle} gm ${ud1.ghostMult}`);
   ok('S01 euro_totalShares uses float 10',ETS(s1,'VANTA')===s1.players.reduce((a,p)=>a+((p.stocks&&p.stocks.VANTA)||0),0)+10);
   ok('S01 heat=5',s1.heat===5);
   ok('S01 startStock=8',s1.stocks.VANTA===8);
@@ -256,6 +258,44 @@ function tests(){
   const s1r1={...s1,meta:{...s1.meta,round:1},players:s1.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:50}}:p)};
   const s1buy=R(s1r1,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1});
   ok('S01 R1 BUY_STOCK not frozen (works)',s1buy!==s1r1&&(s1buy.players[0].stocks.VANTA||0)===1,`VANTA ${s1buy.players[0].stocks.VANTA}`);
+  // ==== v6.25: 언더독 승리 임계 스케일 (docs/23 갭#1 — 구성 결정론 완화) ====
+  const UDS=window.euro_underdogGoalScale;
+  const mkS=(roles,scen)=>({players:roles.map((r,i)=>({role:r,defeated:false,isNpc:false,id:i})),meta:{scenario:scen||'S01',mapSize:'11x11'}});
+  // (1) 스케일 방향 — 1g3b: Ghost 소수 → 임계 완화(<1) + Bloc 다수 → 임계 지연(>1)
+  const ud13=UDS(mkS(['ghost','bloc','bloc','bloc']));
+  ok('UD 1g3b d=2 / applied',ud13.d===2&&ud13.applied===true);
+  ok('UD 1g3b ghostMult<1 (소수 Ghost 임계 완화)',ud13.ghostMult<1&&ud13.ghostMult>=0.50,`gm ${ud13.ghostMult}`);
+  ok('UD 1g3b blocMult>1 (다수 Bloc 임계 지연)',ud13.blocMult>1&&ud13.blocMult<=1.95,`bm ${ud13.blocMult}`);
+  // (2) 3g1b: Bloc 소수 → 임계 완화(<1) + Ghost 다수 → 임계 지연(>1)
+  const ud31=UDS(mkS(['ghost','ghost','ghost','bloc']));
+  ok('UD 3g1b d=-2',ud31.d===-2&&ud31.applied===true);
+  ok('UD 3g1b blocMult<1 (소수 Bloc 임계 완화)',ud31.blocMult<1&&ud31.blocMult>=0.58,`bm ${ud31.blocMult}`);
+  ok('UD 3g1b ghostMult>1 (다수 Ghost 임계 지연)',ud31.ghostMult>1&&ud31.ghostMult<=1.45,`gm ${ud31.ghostMult}`);
+  // (3) 2:2 동수 — 교차보유 시너지 상쇄 위해 Ghost 쪽 tilt (진단 근거; 실측 baseline bloc 94%)
+  const ud22=UDS(mkS(['ghost','ghost','bloc','bloc']));
+  ok('UD 2:2 d=0 / ghostMult<1 (parity tilt)',ud22.d===0&&ud22.ghostMult<1,`gm ${ud22.ghostMult}`);
+  ok('UD 2:2 blocMult>1 (parity tilt)',ud22.blocMult>1,`bm ${ud22.blocMult}`);
+  // (4) 항등 폴백 — 단일 진영 판(gc·bc 중 0)
+  const udAll=UDS(mkS(['bloc','bloc','bloc','bloc']));
+  ok('UD all-bloc identity (gc=0 → 무보정)',udAll.ghostMult===1&&udAll.blocMult===1&&udAll.applied===false);
+  // (5) 카운트는 NPC·defeated 제외
+  const udNpc=UDS({players:[{role:'ghost',isNpc:false,defeated:false},{role:'bloc',isNpc:false,defeated:false},{role:'bloc',isNpc:true,defeated:false},{role:'ghost',isNpc:false,defeated:true}],meta:{scenario:'S01'}});
+  ok('UD counts exclude NPC+defeated (1g1b → d=0, gc=bc=1)',udNpc.d===0&&udNpc.gc===1&&udNpc.bc===1);
+  // (6) 시나리오 제외 (scenarioRule underdogRelief=false) → 항등
+  ok('UD S02 excluded → identity',(u=>u.applied===false&&u.ghostMult===1&&u.blocMult===1)(UDS(mkS(['ghost','bloc','bloc','bloc'],'S02'))));
+  ok('UD S03 excluded → identity',(u=>u.applied===false&&u.blocMult===1&&u.ghostMult===1)(UDS(mkS(['ghost','ghost','ghost','bloc'],'S03'))));
+  ok('UD S04 excluded → identity',UDS(mkS(['ghost','bloc','bloc','bloc'],'S04')).applied===false);
+  ok('UD S05 excluded → identity',UDS(mkS(['ghost','bloc','bloc','bloc'],'S05')).applied===false);
+  ok('UD S06 excluded → identity',UDS(mkS(['ghost','bloc','bloc','bloc'],'S06')).applied===false);
+  ok('UD S01 included (relief on)',UDS(mkS(['ghost','bloc','bloc','bloc'],'S01')).applied===true);
+  // (7) getVictoryGoals 통합 — 임계에 배수 반영
+  const gv13=GVG(mkS(['ghost','bloc','bloc','bloc']));
+  ok('GVG 1g3b blocAsset raised >100 (Bloc 지연)',gv13.blocAsset>100,`got ${gv13.blocAsset}`);
+  ok('GVG 1g3b ghostRepBattle lowered <45 (Ghost 완화)',gv13.ghostRepBattle<45,`got ${gv13.ghostRepBattle}`);
+  ok('GVG 1g3b underdog meta attached',gv13.underdog&&gv13.underdog.applied===true);
+  const gv31=GVG(mkS(['ghost','ghost','ghost','bloc']));
+  ok('GVG 3g1b blocAsset lowered <100 (Bloc 완화)',gv31.blocAsset<100,`got ${gv31.blocAsset}`);
+  ok('GVG 3g1b ghostRepBattle raised >45 (Ghost 지연)',gv31.ghostRepBattle>45,`got ${gv31.ghostRepBattle}`);
   return out;
 }
 (async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();

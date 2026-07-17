@@ -1,0 +1,4543 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-17T03:48:11.483Z",
+    "games": 150,
+    "comp": "1g3b",
+    "ghost": 1,
+    "bloc": 3,
+    "minorityRole": "ghost",
+    "scenario": "S01",
+    "elapsedMs": 2769
+  },
+  "outcomes": {
+    "completed": 150,
+    "timeouts": 0,
+    "errors": 0,
+    "ghostWins": 59,
+    "blocWins": 91,
+    "noWin": 0,
+    "ghostWinRate": 0.393,
+    "blocWinRate": 0.607,
+    "minorityRole": "ghost",
+    "minorityWins": 59,
+    "minorityWinRate": 0.393,
+    "routes": {
+      "repOnly": 26,
+      "asset": 91,
+      "repBattle": 33
+    },
+    "avgRound": 7.82,
+    "minBestAssetAvg": 0,
+    "minBestRepAvg": 38.2,
+    "majBestAssetAvg": 0,
+    "majBestRepAvg": 6,
+    "goalsSample": {
+      "blocAsset": 166,
+      "ghostRepBattle": 27,
+      "ghostRepOnly": 42
+    }
+  },
+  "errors": [],
+  "games": [
+    {
+      "index": 1,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 46 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 2,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 204 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 3,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 201 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 4,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 207 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 5,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 35/27 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 10,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 6,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 171 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 20,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 7,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 226 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 24,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 8,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 31/27 + 레이드 2 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 9,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 223 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 10,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 30/27 + 레이드 2 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 11,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 47 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 12,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 247 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 48,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 13,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 50/27 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 14,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 42 (≥42) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 15,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 178 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 16,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 183 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 24,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 17,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 190 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 18,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (전투): 렙 44/27 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 44,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 19,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (전투): 렙 39/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 20,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 46 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 21,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 192 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 22,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 199 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 23,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 45 (≥42) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 45,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 24,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 48/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 48,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 25,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 29/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 26,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 192 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 27,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 50 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 10,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 28,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 192 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 29,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 39/27 + 레이드 2 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 30,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 31/27 + 레이드 2 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 31,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 33/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 33,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 32,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 234 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 38,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 33,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 184 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 38,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 34,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 218 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 44,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 35,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 46 (≥42) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 36,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 181 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 37,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 208 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 38,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 269 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 39,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 233 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 36,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 40,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 209 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 41,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 50 (≥42) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 42,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 231 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 43,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 34/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 44,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 214 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 45,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 199 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 6,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 46,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 49 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 49,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 47,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 195 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 48,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 215 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 12,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 49,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 207 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 33,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 50,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 41/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 51,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 50 (≥42) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 52,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 39/27 + 레이드 2 — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 53,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 42/27 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 54,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 190 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 55,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 205 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 19,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 56,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 226 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 57,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 185 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 58,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 50 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 50,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 59,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 196 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 60,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 189 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 61,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 33/27 + 레이드 2 — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 33,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 62,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 51 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 51,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 63,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 193 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 27,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 64,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 32/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 65,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 183 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 66,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 187 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 67,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 176 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R10 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 55,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 68,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 35/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 69,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 175 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 31,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 70,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 35/27 + 레이드 2 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 71,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 210 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 72,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 169 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 73,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 198 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 44,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 74,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 177 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 75,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 29/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 76,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 43/27 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 43,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 77,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 190 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 78,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 219 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 79,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 34/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 1,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 80,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 175 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 36,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 81,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 46/27 + 레이드 4 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 82,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 196 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 83,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 189 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 84,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 209 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 44,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 85,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 259 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 86,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 42/27 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 87,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 224 (≥166, 4인) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 88,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 177 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 33,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 89,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 38/27 + 레이드 3 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 38,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 90,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 215 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 28,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 91,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 48 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 48,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 92,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 42 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 93,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 41/27 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 11,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 94,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 189 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 95,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 215 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 96,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 195 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 24,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 97,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (전투): 렙 37/27 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 98,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 40/27 + 레이드 4 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 99,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 212 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 10,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 100,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 194 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 1,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 101,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 32/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 102,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "DRIFTER",
+      "reason": "Ghost 승리 (전투): 렙 30/27 + 레이드 2 — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 11,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 103,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 51 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 51,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 104,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 51 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 51,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 105,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 234 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 106,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 56 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 56,
+      "majBestAsset": 0,
+      "majBestRep": 10,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 107,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 214 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 48,
+      "majBestAsset": 0,
+      "majBestRep": 11,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 108,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 206 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 109,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 226 (≥166, 4인) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 110,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 231 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 111,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 204 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 29,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 112,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 46 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 113,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 234 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 45,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 114,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 185 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 115,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 42 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 116,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 229 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 43,
+      "majBestAsset": 0,
+      "majBestRep": 6,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 117,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 47 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 47,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 118,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 188 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 119,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 42 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 120,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 42/27 + 레이드 4 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 121,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "RIGGER",
+      "reason": "Ghost 승리 (평판): 렙 49 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 49,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 122,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 220 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 123,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 174 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 124,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 39/27 + 레이드 3 — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 125,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 193 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 126,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 11,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 340 (≥166, 4인) — 종료 선언 확정 (R10 선언 → R11 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 127,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 229 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 40,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 128,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 255 (≥166, 4인) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 129,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 265 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 38,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 130,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 237 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 37,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 131,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 194 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 132,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 200 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 133,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 45 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 45,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 134,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 51 (≥42) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 51,
+      "majBestAsset": 0,
+      "majBestRep": 12,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 135,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 199 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 43,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 136,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 186 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 8,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 137,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 208 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 39,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 138,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 252 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 26,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 139,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 179 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 42,
+      "majBestAsset": 0,
+      "majBestRep": 3,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 140,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 195 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 32,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 141,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "BLADE",
+      "reason": "Ghost 승리 (전투): 렙 33/27 + 레이드 2 — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "repBattle",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 33,
+      "majBestAsset": 0,
+      "majBestRep": 6,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 142,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 184 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 35,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 143,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 234 (≥166, 4인) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 41,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 144,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 9,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "MOLE",
+      "reason": "Ghost 승리 (평판): 렙 52 (≥42) — 종료 선언 확정 (R8 선언 → R9 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 52,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 145,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 0,
+      "winnerRole": "ghost",
+      "winnerClass": "CIPHER",
+      "reason": "Ghost 승리 (평판): 렙 46 (≥42) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "repOnly",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 46,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 146,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 10,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "AXIOM",
+      "reason": "Bloc 승리: 자산 201 (≥166, 4인) — 종료 선언 확정 (R9 선언 → R10 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 34,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 147,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 7,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "HELIX",
+      "reason": "Bloc 승리: 자산 222 (≥166, 4인) — 종료 선언 확정 (R6 선언 → R7 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 38,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 148,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 3,
+      "winnerRole": "bloc",
+      "winnerClass": "VANTA",
+      "reason": "Bloc 승리: 자산 178 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 27,
+      "majBestAsset": 0,
+      "majBestRep": 7,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 149,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 8,
+      "winner": 2,
+      "winnerRole": "bloc",
+      "winnerClass": "IRONWALL",
+      "reason": "Bloc 승리: 자산 209 (≥166, 4인) — 종료 선언 확정 (R7 선언 → R8 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 30,
+      "majBestAsset": 0,
+      "majBestRep": 9,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "index": 150,
+      "status": "ok",
+      "ok": true,
+      "gameOver": true,
+      "round": 6,
+      "winner": 1,
+      "winnerRole": "bloc",
+      "winnerClass": "CARBON",
+      "reason": "Bloc 승리: 자산 259 (≥166, 4인) — 종료 선언 확정 (R5 선언 → R6 유지)",
+      "route": "asset",
+      "field": [
+        "ghost",
+        "bloc",
+        "bloc",
+        "bloc"
+      ],
+      "goals": {
+        "blocAsset": 166,
+        "ghostRepBattle": 27,
+        "ghostRepOnly": 42
+      },
+      "minBestAsset": 0,
+      "minBestRep": 22,
+      "majBestAsset": 0,
+      "majBestRep": 5,
+      "guardHit": false,
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}
