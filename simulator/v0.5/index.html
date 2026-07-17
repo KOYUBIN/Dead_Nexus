@@ -6439,30 +6439,12 @@ function botPickCards(state, playerIdx) {
   }
 }
 
-// v6.27 (B-07, docs/23 갭3 "지켜보는 종결"): 종료 선언 역전 압력 스파이크.
-//   원전(docs/23 fix#3): "봇이 선언자 자산/렙을 유예 R에 실제로 추월 가능하도록 압력 스파이크
-//   (견제 집중·레이드 보너스). 역전율 1.4%→목표 10%+". 새 메커닉 발명 없이 — 기존 레이드
-//   (Bloc 존 점유 → assetValue-5)로 선언자를 끌어내릴 Ghost 봇 '동기'만 강화한다. 활성 Bloc
-//   선언자가 봇 레이드 도달권(findRaidTargetZone→선언자 소유 존)이면 move/atk 카드에 가점 →
-//   유예 라운드에 근방 Ghost 가 "끌어내리기 집중 레이드"로 수렴 (전원이 지켜보는 종결).
-const EURO_DECL_RAID_URGENCY = 0;  // 활성 Bloc 선언 시 Ghost 봇 레이드 동기 가점 (측정 튜닝값)
 function scoreGhostCard(state, pIdx, cid) {
   const c = getCard(cid);
   const p = state.players[pIdx];
   if (!c) return 0;
   if (c.wound) return -1000 + Math.random();  // v6.13.1 (P1-1): 상처 = 최하 점수 → 봇 자연 회피
   let score = 10;
-  // v6.27 (B-07): 활성 Bloc 선언자가 이 봇의 레이드 도달권이면 "끌어내리기" 동기 부여.
-  let declRaidUrgency = 0;
-  const _decl = state.meta.victoryDeclaration;
-  if (_decl && EURO_DECL_RAID_URGENCY > 0 && _decl.idx !== pIdx) {
-    const _dp = state.players[_decl.idx];
-    if (_dp && !_dp.defeated && _dp.role === 'bloc' && p.position && typeof findRaidTargetZone === 'function') {
-      const _coord = findRaidTargetZone(state, p.position);
-      const _cell = _coord && state.map[_coord];
-      if (_cell && _cell.owner === _decl.idx) declRaidUrgency = EURO_DECL_RAID_URGENCY;
-    }
-  }
 
   // TL3~5 해금: 클래스 상위 카드는 TL 도달 전 봇이 회피 (docs/09 §4 고스트 스킬 트리).
   //   블록보다 완화(-16/+8): 고스트 파워 보존. tl 미지정 카드는 상시 사용 가능.
@@ -6547,9 +6529,6 @@ function scoreGhostCard(state, pIdx, cid) {
   if (closeToWin) {
     if (halves.some(h => h.atk || h.move || h.extort)) score += 10;
   }
-
-  // v6.27 (B-07): 종료 선언 역전 압력 — 선언자 레이드 도달권일 때 이동/공격(=레이드 접근) 가점.
-  if (declRaidUrgency && halves.some(h => h.atk || h.atk_x2 || h.atk_x3_retort || h.move)) score += declRaidUrgency;
 
   return score + Math.random() * 3;
 }
