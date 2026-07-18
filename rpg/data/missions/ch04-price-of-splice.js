@@ -56,10 +56,10 @@
     cols: 6, rows: 7,
     playerStart: { x: 3, y: 6 },
     // 오브젝티브 = 시술 코어 파괴(threshold 누적 차감 = objective-reduce).
-    //  effective threshold = 10 + veil 2 = 12 (buildCombat 이 veil 를 가산).
+    //  effective threshold = 10 + veil 0 = 10 (51차 밸런스: 10+2 → 10+0 — RIGGER 오브젝티브 소모전 완화 + 램프 정렬).
     //  dataTB 0 = 추출이 아닌 파괴(로그 표기용, 유출량 없음).
     //  [계승 store applyHackObjective] CIPHER=HACK5 해킹 / BLADE=ATK5 강습 → 양 축 완주.
-    objective: { x: 2, y: 0, threshold: 10, veil: 2, label: 'HELIX 시술 코어', dataTB: 0 },
+    objective: { x: 2, y: 0, threshold: 10, veil: 0, label: 'HELIX 시술 코어', dataTB: 0 },
     // [계승 ch01 · 각색 raidThreshold] 위협 임계 + 증원(폭주 시 1회 스폰) — 페이싱 실동.
     threatCap: 8,
     reinforcement: { key: 'SPLICE_HOUND', x: 5, y: 5 },   // 폭주 증원 (코어가 계속 찍어냄)

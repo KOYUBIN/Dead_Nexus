@@ -78,10 +78,12 @@
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = 제로데이 코어 파괴 겸 수집(threshold 누적 차감 = objective-reduce).
-    //  effective threshold = 14 + veil 2 = 16 (buildCombat 이 veil 를 가산 — 최종·최대 난이도).
+    //  effective threshold = 10 + veil 0 = 10 (51차 밸런스: 14+2 → 10+0 — 저HP 해커(CIPHER 12HP)가
+    //  NEXUS 알파 아래 은신 러시로 코어를 완주할 수 있는 상한. 최종 난이도는 임계가 아니라 적 구성
+    //  (NEXUS_WARDEN HP22/DEF5 = 시리즈 최강, 4클래스 전원 전멸 불가 → 오브젝티브 러시 강제)으로 성립).
     //  dataTB 9.9 = 도시 그 자체(로그 표기). [계승 store applyHackObjective] CIPHER=HACK 해킹 /
     //  BLADE=ATK 강습 → 코어 돌파 자동축으로 양 클래스 완주(파괴/수집 hybrid).
-    objective: { x: 3, y: 0, threshold: 14, veil: 2, label: '제로데이 코어', dataTB: 9.9 },
+    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '제로데이 코어', dataTB: 9.9 },
     // [계승 ch01~06 · 각색 raidThreshold] 위협 임계 + 증원 — 최종 챕터 최대치 12.
     threatCap: 12,
     reinforcement: { key: 'NEXUS_WARDEN', x: 6, y: 1 },   // 코어 증원 (최후 수호 추가 투입)
@@ -102,11 +104,12 @@
     //  SIGNAL_ICE   = static·physImmune·optional → 코어 앞 정적 수호. 물리 무효지만 필수 처치
     //    아님(오브젝티브 차감/전멸 무관하게 승리 가능) → BLADE 하드락 없음(MFU). "코어는 신호의
     //    영역" 테마만 유지 — 물리무효 수호는 오직 static 이 담당.
+    //  51차 밸런스: 정예 2→1 감축 + 위습 우측 이설 — 저HP 해커가 NEXUS 알파 아래 코어 러시 생존
+    //  가능하도록(코어 threshold 도 14→10). 최종 난이도는 NEXUS(hp22/def5, 시리즈 최강)로 유지.
     enemies: [
       { key: 'NEXUS_WARDEN', x: 3, y: 2 },   // 중앙 최종 수호 (코어 정면 저지)
-      { key: 'VANTA_ELITE',  x: 1, y: 3 },   // 좌익 정예
       { key: 'VANTA_ELITE',  x: 5, y: 3 },   // 우익 정예
-      { key: 'MESH_WISP',    x: 2, y: 5 },   // 진입선 순찰 위습 (isMachine)
+      { key: 'MESH_WISP',    x: 5, y: 6 },   // 우측 순찰 위습 (isMachine) — 중앙 진입선(2,5)→우측 이설
       { key: 'SIGNAL_ICE',   x: 3, y: 1 },   // 코어 앞 정적 수호 (physImmune·optional)
     ],
   };

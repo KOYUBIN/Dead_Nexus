@@ -61,8 +61,9 @@
     // 오브젝티브 = 계엄 통제 단말 무력화(threshold 누적 차감 = objective-reduce = CIPHER 대체 승리).
     //  effective threshold = 9 + veil 0 = 9. dataTB 0 = 데이터 탈취가 아닌 '무력화' 표기.
     objective: { x: 2, y: 0, threshold: 9, veil: 0, label: '계엄 통제 단말', dataTB: 0 },
-    // [계승 ch01/02 · 각색 chapter-03 계엄 압박] 위협 임계 낮은 cap → 증원 빠름(계엄 페이싱).
-    threatCap: 6,
+    // [계승 ch01/02 · 각색 chapter-03 계엄 압박] 위협 임계 cap(51차 밸런스: 6→8 — 저HP 클래스
+    //  조기 증원 알파사 완화. 계엄 페이싱은 RIOT·물량으로 유지).
+    threatCap: 8,
     reinforcement: { key: 'POLICE_DRONE', x: 5, y: 1 },
     // [계승 chapter-03 §봉투 C-1 검문소 토큰] 장갑 바리케이드 2개 → 중앙 통로 차단(측면 우회 강제).
     walls: [

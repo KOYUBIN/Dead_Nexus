@@ -48,8 +48,8 @@
     cols: 6, rows: 7,
     playerStart: { x: 2, y: 6 },
     // 오브젝티브 = 이사회 데이터 코어 수집(threshold 누적 차감 = objective-reduce).
-    //  effective threshold = 8 + veil 1 = 9 (buildCombat 이 veil 를 가산).
-    objective: { x: 2, y: 0, threshold: 8, veil: 1, label: 'AXIOM 회의록 코어', dataTB: 3.1 },
+    //  effective threshold = 8 + veil 0 = 8 (51차 밸런스: 8+1 → 8+0 — 초반 챕터 난이도 램프 정렬).
+    objective: { x: 2, y: 0, threshold: 8, veil: 0, label: 'AXIOM 회의록 코어', dataTB: 3.1 },
     // [계승 ch01 · 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 페이싱 실동.
     threatCap: 8,
     reinforcement: { key: 'AXIOM_DRONE', x: 5, y: 1 },

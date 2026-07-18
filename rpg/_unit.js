@@ -572,6 +572,43 @@ ok('123. MOLE ch01 = 위장 우회 경로 (전투 미발생 · forgedPass · fir
   mlBypass.scene === 'dialogue' && mlBypass.combat === null &&
   mlBypass.save.flags.forgedPass === true && mlBypass.save.flags.firstBlood === true);
 
+console.log('\n== 밸런스 하네스 (_balance.js) 스모크 · 결정론 재현 · 밴드 [51차] ==');
+var BAL = require('./_balance.js');
+// 결정론 재현 — 같은 입력 2회 = 완전 동일 결과(JSON). 세이브/리플레이 재현성의 하네스 대응물.
+var d1 = BAL.runEncounter('CIPHER', 'ch08-zero-day', 'objective');
+var d2 = BAL.runEncounter('CIPHER', 'ch08-zero-day', 'objective');
+ok('124. 하네스 결정론 재현 (CIPHER/objective ch08 2회 = 동일)', JSON.stringify(d1) === JSON.stringify(d2));
+var e1 = BAL.runEncounter('BLADE', 'ch03-martial-night', 'combat');
+var e2 = BAL.runEncounter('BLADE', 'ch03-martial-night', 'combat');
+ok('125. 하네스 결정론 재현 (BLADE/combat ch03 2회 = 동일)', JSON.stringify(e1) === JSON.stringify(e2));
+
+// 전수 매트릭스: 64조합 전원 클리어 가능 + 이상치(clearFail·attrition) 0 (밴드 상한 준수).
+var mrx = BAL.runMatrix();
+var nClear = 0, nFail = 0, nAttr = 0, nTotal = 0, worstRush = 0;
+for (var _mi = 0; _mi < mrx.length; _mi++) {
+  for (var _ci = 0; _ci < BAL.CLASSES.length; _ci++) {
+    var _vd = BAL.verdict(mrx[_mi].cells[BAL.CLASSES[_ci]]);
+    nTotal++;
+    if (_vd.clearable) nClear++;
+    if (_vd.flags.indexOf('clearFail') >= 0) nFail++;
+    if (_vd.flags.indexOf('attrition') >= 0) nAttr++;
+    if (_vd.clearable && _vd.rep.rounds > worstRush) worstRush = _vd.rep.rounds;
+  }
+}
+ok('126. 전 64조합 클리어 가능 (clearFail 0)', nClear === 64 && nFail === 0);
+ok('127. 소모전(attrition) 이상치 0', nAttr === 0);
+ok('128. 최속 승리 라운드 밴드 상한 ≤ 9 (전 조합)', worstRush <= 9);
+
+// 보정 수치 핀 고정(51차) — 회귀 시 즉시 실패. missionData 경유로 실제 소비 값 확인.
+function thr(id) { var m = CAMP.missionData(id); return m.combat.objective.threshold + (m.combat.objective.veil || 0); }
+function enemyCount(id) { return CAMP.missionData(id).combat.enemies.length; }
+ok('129. 핀: ch08 유효임계 10 · 적 4기 (NEXUS 러시 상한)', thr('ch08-zero-day') === 10 && enemyCount('ch08-zero-day') === 4);
+ok('130. 핀: ch07 유효임계 11 · 적 3기 (관료 2→1 감축)', thr('ch07-heart-of-city') === 11 && enemyCount('ch07-heart-of-city') === 3);
+ok('131. 핀: 초반 램프 ch02(8) ≤ ch04(10) ≤ ch06(11)', thr('ch02-insider-game') === 8 && thr('ch04-price-of-splice') === 10 && thr('ch06-bloc-acquisition') === 11);
+ok('132. 핀: 트리비얼 방지 사이드 유효임계 11 (side-02·05·08)',
+  thr('side-02-corp-breach') === 11 && thr('side-05-informant-hit') === 11 && thr('side-08-harbor-run') === 11);
+ok('133. 핀: ch03 threatCap 8 (조기 증원 완화)', CAMP.missionData('ch03-martial-night').combat.threatCap === 8);
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);

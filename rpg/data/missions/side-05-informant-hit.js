@@ -75,7 +75,8 @@
     cols: 6, rows: 6,
     playerStart: { x: 2, y: 5 },
     // 오브젝티브 = 밀고자 은신 콘솔(decoy, 상단 SIMPLIFIED 참고) — threshold 누적 차감.
-    objective: { x: 2, y: 0, threshold: 6, veil: 0, label: '밀고 단말', dataTB: 0 },
+    // 51차 밸런스: threshold 6→11 — 무피해 2R 러시(트리비얼) 방지(BLADE 2해킹턴 강제). 갱단 3인 소규모 조우.
+    objective: { x: 2, y: 0, threshold: 11, veil: 0, label: '밀고 단말', dataTB: 0 },
     // [계승 G10] 위협 임계 — 최단편이라 증원 없음(아래 reinforcement 필드 생략).
     threatCap: 6,
     walls: [],
