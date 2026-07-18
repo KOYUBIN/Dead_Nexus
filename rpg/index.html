@@ -98,14 +98,19 @@ function Portrait({ kind }) {
   return <div className={'portrait ' + (kind === 'bloc' ? 'bloc' : '')}>{kind === 'bloc' ? '🎙' : '🎭'}</div>;
 }
 
-function TopBar({ save, onSave }) {
+function TopBar({ save, onSave, view, onToggleView }) {
   const ch = save.character;
+  const iso = view === 'iso';
   return (
     <div className="topbar">
       <a className="home-link" href="../index.html" title="홈으로">⌂</a>
       <span className="brand">GHOSTGRID</span>
       <span className="stat">{ch.icon || '👤'} {ch.classKey} <b>{ch.codename || ''}</b></span>
       <span className="spacer" />
+      <button className={'chip viewtoggle' + (iso ? ' iso' : '')} onClick={onToggleView}
+        title={'전투 뷰: ' + (iso ? '아이소 (탭 시 탑다운)' : '탑다운 (탭 시 아이소)')} style={{cursor:'pointer'}}>
+        {iso ? '◈ ISO' : '▦ TOP'}
+      </button>
       <span className="chip rep">★{ch.rep}</span>
       <span className="chip karma">karma {ch.karma}</span>
       <span className="chip">₵{ch.nuyen}</span>
@@ -413,11 +418,13 @@ function DialogueOverlay({ state, dispatch }) {
 }
 
 // ── 전투 ──
-function Combat({ state, dispatch }) {
+function Combat({ state, dispatch, view }) {
   const c = state.combat;
   const p = STORE.player(c);
   const sel = AB.ABILITIES[c.selectedAbility];
   const TILE = 56; // projection.left/top 계산용 논리 픽셀 (CSS var 로 실제 스케일)
+  const mode = view === 'square' ? 'square' : 'iso'; // 기본 아이소, 폴백 탑다운
+  const dim = { cols: c.field.cols, rows: c.field.rows };
   // 이동 범위
   const blocked = GRID.buildBlocked(c.field, c.units, 'cipher');
   const reach = GRID.bfsRange({ x: p.x, y: p.y }, p.mov, blocked, c.field.cols, c.field.rows);
@@ -465,12 +472,17 @@ function Combat({ state, dispatch }) {
     if (c.floaters && c.floaters.length) { const id = setTimeout(() => dispatch({ type: 'COMBAT_CLEAR_FLOATERS' }), 1050); return () => clearTimeout(id); }
   }, [c.floaters]);
 
+  // 투영 병진 → CSS calc (tx/ty 는 --tile 배수, iso 는 소수 가능). 룰 무관, 표시층만.
+  const posStyle = (px, py, extra) => {
+    const pr = PROJ.project(px, py, TILE, dim, mode);
+    return Object.assign({ left: 'calc(' + pr.tx + ' * var(--tile))', top: 'calc(' + pr.ty + ' * var(--tile))', zIndex: pr.z }, extra || {});
+  };
   const tiles = [];
   for (let y = 0; y < c.field.rows; y++) for (let x = 0; x < c.field.cols; x++) {
-    const proj = PROJ.project(x, y, TILE);
     const cov = c.field.cover.find(k => k.x === x && k.y === y);
+    const pr = PROJ.project(x, y, TILE, dim, mode);
     tiles.push(<div key={'t' + x + '_' + y} className={tileClass(x, y)} data-tile={x + ',' + y}
-      style={{ left: 'calc(' + x + ' * var(--tile))', top: 'calc(' + y + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
+      style={{ left: 'calc(' + pr.tx + ' * var(--tile))', top: 'calc(' + pr.ty + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
       {cov ? <span className="cover-ic">{cov.type === 'full' ? '▩' : '▣'}</span> : null}
       {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge">{c.objective.done ? '✔' : c.objective.threshold}</span> : null}
     </div>);
@@ -478,7 +490,7 @@ function Combat({ state, dispatch }) {
   const units = c.units.filter(u => u.hp > 0).map(u => {
     const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && (u.status.stealth || u.status.invuln) ? ' stealth' : '')
       + (hitTiles[u.x + ',' + u.y] ? ' hit' : '');
-    return <div key={u.id} className={cls} style={{ left: 'calc(' + u.x + ' * var(--tile))', top: 'calc(' + u.y + ' * var(--tile))' }}>
+    return <div key={u.id} className={cls} style={posStyle(u.x, u.y)}>
       <div className="body" title={u.name}>{u.icon}
         <div className="hpbar"><i style={{ width: (u.hp / u.maxHp * 100) + '%' }} /></div>
       </div>
@@ -486,11 +498,12 @@ function Combat({ state, dispatch }) {
   });
   const floaters = (c.floaters || []).map((f, i) => (
     <div key={'f' + i} className={'floater ' + f.kind + (f.crit ? ' crit' : '')}
-      style={{ left: 'calc(' + f.x + ' * var(--tile))', top: 'calc(' + f.y + ' * var(--tile))', width: 'var(--tile)', textAlign: 'center' }}>{f.text}</div>
+      style={posStyle(f.x, f.y, { width: 'var(--tile)', textAlign: 'center', zIndex: 30 })}>{f.text}</div>
   ));
 
-  const boardW = 'calc(' + c.field.cols + ' * var(--tile))';
-  const boardH = 'calc(' + c.field.rows + ' * var(--tile))';
+  const bsz = PROJ.boardSize(c.field.cols, c.field.rows, mode);
+  const boardW = 'calc(' + bsz.w + ' * var(--tile))';
+  const boardH = 'calc(' + bsz.h + ' * var(--tile))';
 
   return (
     <div className="combat">
@@ -508,7 +521,7 @@ function Combat({ state, dispatch }) {
         <div className="tbar"><i style={{ width: Math.min(100, th.value / th.cap * 100) + '%' }} /></div>
       </div>
       <div className="board-wrap">
-        <div className="board" style={{ width: boardW, height: boardH }}>
+        <div className={'board' + (mode === 'iso' ? ' iso' : '')} style={{ width: boardW, height: boardH }}>
           {tiles}{units}{floaters}
         </div>
       </div>
@@ -555,18 +568,28 @@ function Combat({ state, dispatch }) {
 function App() {
   const [state, dispatch] = useReducer(STORE.rpgReducer, undefined, STORE.rpgInitialState);
   const [saveOpen, setSaveOpen] = useState(false);
+  // 전투 투영 뷰: 기본 아이소(섀도우런 룩), 탑다운 폴백. localStorage 영속.
+  const [view, setView] = useState(() => {
+    try { const v = localStorage.getItem('rpg.viewMode'); return (v === 'square' || v === 'iso') ? v : 'iso'; }
+    catch (e) { return 'iso'; }
+  });
+  const toggleView = () => setView(v => {
+    const nv = v === 'iso' ? 'square' : 'iso';
+    try { localStorage.setItem('rpg.viewMode', nv); } catch (e) {}
+    return nv;
+  });
   // 자동세이브: 허브 귀환 시 localStorage (안전판은 문자열).
   useEffect(() => { if (state.scene === 'hub') { try { SAVE.saveLocal(state.save); } catch (e) {} } }, [state.scene, state.save]);
 
   let scene;
   if (saveOpen) scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />;
-  else if (state.scene === 'combat') scene = <Combat state={state} dispatch={dispatch} />;
+  else if (state.scene === 'combat') scene = <Combat state={state} dispatch={dispatch} view={view} />;
   else if (state.scene === 'dialogue') scene = <DialogueOverlay state={state} dispatch={dispatch} />;
   else scene = <Hub state={state} dispatch={dispatch} openSave={() => setSaveOpen(true)} />;
 
   return (
     <div className="rpg-app">
-      <TopBar save={state.save} onSave={() => setSaveOpen(true)} />
+      <TopBar save={state.save} onSave={() => setSaveOpen(true)} view={view} onToggleView={toggleView} />
       <Banner banner={state.banner} dispatch={dispatch} />
       {scene}
     </div>

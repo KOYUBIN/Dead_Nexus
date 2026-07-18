@@ -112,7 +112,7 @@ button { font-family: inherit; cursor: pointer; }
 .combat-top { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
 .combat-top .obj { color: var(--green); }
 .combat-top .rnd { color: var(--yellow); }
-.board-wrap { display: flex; justify-content: center; }
+.board-wrap { display: flex; justify-content: center; overflow-x: auto; }
 .board { position: relative; --tile: min(15vw, 56px); }
 .tile { position: absolute; width: var(--tile); height: var(--tile); border: 1px solid #202042;
   background: var(--tile); display: flex; align-items: center; justify-content: center; font-size: 18px; }
@@ -237,10 +237,28 @@ button { font-family: inherit; cursor: pointer; }
 
 .floater.crit { text-shadow: 0 0 6px var(--yellow); }
 
+/* ---- Stage 3: 아이소메트릭 뷰 (projection.js seam 뒤, 룰 무변경 표시층 G1) ---- */
+/* 2:1 다이아몬드 = W×W 타일 박스에 clip-path. 병진은 projectIso 의 tx/ty(--tile 배수). */
+/* clip-path 는 렌더뿐 아니라 포인터 히트영역도 다이아로 클립 → 타일이 빈틈없이 테셀레이션 */
+/* = 논리 타일별 히트박스 유지(겹침·사각지대 0). 아이콘/텍스트는 정립(회전 0) → 가독 유지. */
+.board.iso { --tile: min(13.5vw, 56px); }
+.board.iso .tile {
+  clip-path: polygon(50% 25%, 100% 50%, 50% 75%, 0 50%);
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(90, 90, 160, 0.22); /* 다이아 격자선(하이라이트 상태가 덮음) */
+}
+/* 하이라이트 inset ring 은 clip 되어 다이아 테두리로 렌더 (이동/텔레그래프/조준 그대로) */
+.board.iso .tile .cover-ic { transform: translateY(-4%); }
+.board.iso .obj-badge { transform: translateY(-2px); }
+/* 유닛 스프라이트: 다이아 위에 서있는 룩 (중심에서 살짝 위로) · z-순서는 인라인(논리 심도) */
+.board.iso .unit .body { transform: translateY(-16%); }
+.board.iso .unit .hpbar { bottom: 2px; }
+
 /* 데스크톱 회귀 (중앙 정렬, 세로 폭 유지) */
 @media (min-width: 700px) {
   .rpg-app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
   .board { --tile: 56px; }
+  .board.iso { --tile: 60px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .unit, .floater, .portrait::after { animation: none !important; transition: none !important; }

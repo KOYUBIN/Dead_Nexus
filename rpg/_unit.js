@@ -609,6 +609,30 @@ ok('132. 핀: 트리비얼 방지 사이드 유효임계 11 (side-02·05·08)',
   thr('side-02-corp-breach') === 11 && thr('side-05-informant-hit') === 11 && thr('side-08-harbor-run') === 11);
 ok('133. 핀: ch03 threatCap 8 (조기 증원 완화)', CAMP.missionData('ch03-martial-night').combat.threatCap === 8);
 
+console.log('\n== Stage 3: 투영 seam (projection.js) — 룰 무관 표시층 [G1] ==');
+var PROJ = require('./core/projection.js');
+// 탑다운(폴백)은 슬라이스와 100% 동일 — 회귀 방어.
+var _sq = PROJ.project(2, 3, 56);
+ok('134. square: tx/ty = 논리좌표 (기존 슬라이스 불변)', _sq.tx === 2 && _sq.ty === 3 && _sq.mode === 'square');
+eq('135. square: left/top = x·tile / y·tile', [_sq.left, _sq.top], [112, 168]);
+// 아이소 2:1 다이아몬드 매핑 검증.
+var _i00 = PROJ.projectIso(0, 0, 56, { cols: 6, rows: 8 });
+var _i10 = PROJ.projectIso(1, 0, 56, { rows: 8 });
+var _i01 = PROJ.projectIso(0, 1, 56, { rows: 8 });
+ok('136. iso: (x+1) → tx +0.5 · ty +0.25 (동→우하 등축)', (_i10.tx - _i00.tx) === 0.5 && (_i10.ty - _i00.ty) === 0.25);
+ok('137. iso: (y+1) → tx −0.5 · ty +0.25 (남→좌하 등축)', (_i01.tx - _i00.tx) === -0.5 && (_i01.ty - _i00.ty) === 0.25);
+ok('138. iso: 좌단(x=0,y=rows−1) tx=0 (음수 오프셋 방지)', PROJ.projectIso(0, 7, 56, { rows: 8 }).tx === 0);
+// z-순서 = 논리 심도(x+y) — painter(뒤→앞).
+ok('139. iso: z = 5 + (x+y) painter 심도 (원거리<근거리)', PROJ.projectIso(1, 1, 56, { rows: 8 }).z === 7 && _i00.z === 5);
+// 보드 크기: 아이소는 세로 압축(모바일 유리), 가로는 (cols+rows)/2.
+eq('140. iso boardSize 6×8 = {w:7,h:4}', PROJ.boardSize(6, 8, 'iso'), { w: 7, h: 4 });
+eq('141. square boardSize 6×8 = {w:6,h:8} (불변)', PROJ.boardSize(6, 8, 'square'), { w: 6, h: 8 });
+// 순수성: project 는 같은 입력 → 같은 출력 (DOM/부수효과 0).
+var _p1 = JSON.stringify(PROJ.project(3, 4, 56, { rows: 8 }, 'iso'));
+var _p2 = JSON.stringify(PROJ.project(3, 4, 56, { rows: 8 }, 'iso'));
+ok('142. project 순수성: 동일 입력 → 동일 출력 (결정론)', _p1 === _p2);
+ok('143. MODES = [square, iso] · 기본 square (seam 계약)', JSON.stringify(PROJ.MODES) === '["square","iso"]' && PROJ.MODE === 'square');
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);
