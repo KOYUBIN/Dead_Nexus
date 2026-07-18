@@ -565,6 +565,72 @@ function tests(){
   ok('LEG4 unlock4 직접: 신규 newly=true·배열에 4', u4a.newly===true&&u4a.state.chaptersUnlocked.indexOf(4)!==-1);
   const u4b=LU4(u4a.state);
   ok('LEG4 unlock4 직접: 멱등 newly=false', u4b.newly===false&&u4b.state.chaptersUnlocked.indexOf(4)!==-1);
+  // ============================================================
+  // v6.35 (레거시 Stage 5): 챕터 5 "Mesh Ghost"(메시 고스트) — CIPHER TL5/해킹노드3 해금·mesh 흉터·하위 호환
+  //   원전 해금 "CIPHER 테크 레벨 5 달성 OR 메시 노드 3개 이상 침입 성공" → 두 분기 모두 실존 신호
+  //   (p.tl≥5 · p.hackNodes≥3) 로 meshTech 파생(옵셔널 필드); 흉터 대상 meshBloc=종가 최저 블록.
+  //   흉터 채널은 여전히 단 하나 — kind 'mesh'(그 블록 시작 주가 -1). 우선순위 mesh>splice>martial>prey>raid.
+  // ============================================================
+  const LU5=window.legacyUnlockChapter5;
+  ok('LEG5 fns exposed (unlockChapter5)', typeof LU5==='function');
+  // (1) CHAPTER_META[5] 원전 메타 — 봉투 E · 제목 · 해금 조건 · 3문장(원문 발췌)
+  const cm5=LCM(5);
+  ok('LEG5 ch5 meta id/envelope/title', !!cm5&&cm5.id===5&&cm5.envelope==='E'&&cm5.title==='Mesh Ghost', JSON.stringify(cm5&&{id:cm5.id,e:cm5.envelope,t:cm5.title}));
+  ok('LEG5 ch5 unlockCond=CIPHER TL5 또는 메시 노드 3개 침입', !!cm5&&cm5.unlockCond==='CIPHER 테크 레벨 5 달성 또는 메시 노드 3개 이상 침입 성공', cm5&&cm5.unlockCond);
+  ok('LEG5 ch5 story 3문장 + 원문 발췌("메시는 단순한 네트워크가 아니다")', !!cm5&&Array.isArray(cm5.story)&&cm5.story.length===3&&cm5.story.some(s=>s.indexOf('메시는 단순한 네트워크가 아니다')!==-1));
+  ok('LEG5 ch1~4 메타 회귀 불변·TOTAL=8', LCM(1).title==='First Blood'&&LCM(2).title==='Insider Game'&&LCM(3).title==='Martial Night'&&LCM(4).title==='Price of Splice'&&LTC()===8);
+  // (2) 미해금: meshTech 없음 → ch5 잠금 (chapter5Newly=false)
+  LRS();
+  const l50=LRG({anyRaid:false, anyMna:false});
+  ok('LEG5 미해금: meshTech 미공급 → ch5 잠금 · chapter5Newly=false', l50.state.chaptersUnlocked.indexOf(5)===-1&&l50.chapter5Newly===false);
+  ok('LEG5 반환에 chapter5Newly(boolean) 존재', typeof l50.chapter5Newly==='boolean');
+  // (3) 해금: CIPHER TL5/해킹노드3(meshTech) → ch5 해금 (chapter5Newly=true) · 다른 챕터 없어도 독립 해금
+  LRS();
+  const l51=LRG({meshTech:true});
+  ok('LEG5 해금: meshTech=true → ch5 해금 + chapter5Newly=true', l51.state.chaptersUnlocked.indexOf(5)!==-1&&l51.chapter5Newly===true);
+  ok('LEG5 해금: ch1·ch2·ch3·ch4 독립(미해금)', l51.state.chaptersUnlocked.indexOf(1)===-1&&l51.state.chaptersUnlocked.indexOf(2)===-1&&l51.state.chaptersUnlocked.indexOf(3)===-1&&l51.state.chaptersUnlocked.indexOf(4)===-1);
+  // (4) 멱등: 이미 해금 후 재달성 → chapter5Newly=false
+  const l52=LRG({meshTech:true});
+  ok('LEG5 멱등: 재달성 chapter5Newly=false (해금 유지)', l52.chapter5Newly===false&&l52.state.chaptersUnlocked.indexOf(5)!==-1);
+  // (5) 영속: ch5 해금 + meshBloc → mesh 흉터 (bloc · kind=mesh · heatDelta=0 = 시작 주가 -1)
+  LRS();
+  LRG({meshTech:true});                       // 해금(표적 블록 없음)
+  LRG({meshTech:true, meshBloc:'AXIOM'});      // 종가 최저 노드 발생
+  const scarMesh=LAS();
+  ok('LEG5 영속: mesh 흉터 kind=mesh · bloc=AXIOM · heatDelta=0', !!scarMesh&&scarMesh.kind==='mesh'&&scarMesh.bloc==='AXIOM'&&scarMesh.heatDelta===0, JSON.stringify(scarMesh));
+  // (6) 우선순위 mesh > splice > martial > prey > raid — 다섯 공존 → 흉터=mesh (챕터 순 최신 상처)
+  LRS();
+  const l53=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true, spliceTech:true, spliceBloc:'CARBON', meshTech:true, meshBloc:'VANTA'});
+  const scarPri5=LAS();
+  ok('LEG5 우선: raid+prey+martial+splice+mesh 공존 → 흉터=mesh(VANTA)', !!scarPri5&&scarPri5.kind==='mesh'&&scarPri5.bloc==='VANTA', JSON.stringify(scarPri5));
+  ok('LEG5 동일판: ch1~5 모두 신규 해금(Newly 5개 true)', l53.chapter1Newly===true&&l53.chapter2Newly===true&&l53.chapter3Newly===true&&l53.chapter4Newly===true&&l53.chapter5Newly===true);
+  // (7) 흉터 폴백: ch5 해금됐지만 이번 판 meshBloc 없음(+ splice 존재) → 흉터=splice (mesh 미발원)
+  LRS();
+  LRG({meshTech:true, spliceTech:true});                     // ch4·ch5 해금
+  LRG({spliceTech:true, spliceBloc:'HELIX'});                // 메시 신호 없는 판 → splice 흉터
+  const scarFb5=LAS();
+  ok('LEG5 폴백: ch5 해금+mesh블록없음 → 흉터=splice(HELIX)', !!scarFb5&&scarFb5.kind==='splice'&&scarFb5.bloc==='HELIX', JSON.stringify(scarFb5));
+  // (8) ch5 단독 해금(ch1~4 없이)도 흉터 활성 — activeScar 게이트 ch1|ch2|ch3|ch4|ch5 확장 검증
+  LRS();
+  const l54=LRG({meshTech:true, meshBloc:'CARBON'});          // ch5 만 해금 + mesh 흉터 동시
+  const scarSolo5=LAS();
+  ok('LEG5 단독: ch5 만 해금 → 흉터 활성(ch1~4 게이트 비의존)', l54.state.chaptersUnlocked.indexOf(1)===-1&&l54.state.chaptersUnlocked.indexOf(4)===-1&&!!scarSolo5&&scarSolo5.kind==='mesh'&&scarSolo5.bloc==='CARBON', JSON.stringify(scarSolo5));
+  // (9) 하위 호환: 챕터 1~4 세이브 로드 — ch5/meshTech 개념 없던 구세이브 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1,2,3,4], chapterProgress:{1:{unlockedAt:1},2:{unlockedAt:2},3:{unlockedAt:3},4:{unlockedAt:4}}, cityScars:[{bloc:'CARBON', kind:'splice'}]});
+  const oldLoad4=LLD();
+  ok('LEG5 하위호환: 챕터1~4 세이브 로드 정규화(ch5 미해금)', oldLoad4.chaptersUnlocked.indexOf(1)!==-1&&oldLoad4.chaptersUnlocked.indexOf(4)!==-1&&oldLoad4.chaptersUnlocked.indexOf(5)===-1);
+  const oldScar4=LAS();
+  ok('LEG5 하위호환: 기존 splice 흉터 로드 유지(bloc=CARBON·heatDelta=0)', !!oldScar4&&oldScar4.kind==='splice'&&oldScar4.bloc==='CARBON'&&oldScar4.heatDelta===0, JSON.stringify(oldScar4));
+  // (10) 하위 호환: meshTech 미공급(구 index.html 시그니처)이면 ch5 미해금 — 신필드 옵셔널
+  LRS();
+  const l55=LRG({anyRaid:true, topRaidBloc:'VANTA'});   // 구 시그니처 그대로
+  ok('LEG5 시그니처 불변: meshTech 미공급 → ch5 미해금·ch1만 해금', l55.state.chaptersUnlocked.indexOf(5)===-1&&l55.state.chaptersUnlocked.indexOf(1)!==-1&&l55.chapter5Newly===false);
+  // (11) legacyUnlockChapter5 직접 멱등 — 이미 해금 배열에 5 있으면 newly=false
+  const u5a=LU5({chaptersUnlocked:[], chapterProgress:{}, cityScars:[]});
+  ok('LEG5 unlock5 직접: 신규 newly=true·배열에 5', u5a.newly===true&&u5a.state.chaptersUnlocked.indexOf(5)!==-1);
+  const u5b=LU5(u5a.state);
+  ok('LEG5 unlock5 직접: 멱등 newly=false', u5b.newly===false&&u5b.state.chaptersUnlocked.indexOf(5)!==-1);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }

@@ -2541,8 +2541,11 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   } else if (_scar && startStocks[_scar.bloc] != null) {
     startStocks[_scar.bloc] = Math.max(1, startStocks[_scar.bloc] - 1);
     // v6.34 (레거시 Ch.4 Stage 4): 'splice' 흉터 — 과잉 개조 블록의 사이버사이코시스 대가.
+    // v6.35 (레거시 Ch.5 Stage 5): 'mesh' 흉터 — SIGNAL 이 강림한 종가 최저(취약) 노드.
     _scarLog = _scar.kind === 'splice'
       ? `🩹 스플라이스의 대가: ${_scar.bloc} 주가 -1`
+      : _scar.kind === 'mesh'
+      ? `🩹 메시 고스트 강림: ${_scar.bloc} 주가 -1`
       : `🩹 지난 전쟁의 흉터: ${_scar.bloc} 주가 -1`;
   }
 
@@ -6942,17 +6945,18 @@ function SetupScreen({ onStart }) {
             {legacyScar
               ? (legacyScar.kind === 'martial'
                   ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 계엄 여파 · 시작 공권력 +{legacyScar.heatDelta || 1}</span>
-                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : legacyScar.kind === 'splice' ? ' (SPLICE)' : ''}</span>)
+                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : legacyScar.kind === 'splice' ? ' (SPLICE)' : legacyScar.kind === 'mesh' ? ' (MESH)' : ''}</span>)
               : <span style={{ color: 'var(--text-dim)' }}>없음</span>}
           </div>
         </div>
-        {/* v6.31·v6.33·v6.34 (레거시 Stage 2·3·4): 챕터 1·2·3·4 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
+        {/* v6.31·v6.33·v6.34·v6.35 (레거시 Stage 2·3·4·5): 챕터 1·2·3·4·5 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { n: 1, hint: '게임 중 최초 레이드 발생 시 해금', effect: '최다 피격 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
             { n: 2, hint: '게임 중 최초 M&A 선언(Bloc→타 Bloc) 시 해금', effect: 'M&A 표적(PREY) 블록 다음 게임 시작 주가 -1 (흉터)' },
             { n: 3, hint: '게임 중 계엄 발생(공권력 최고조·경찰 전개·S04) 시 해금', effect: '계엄 여파 — 다음 게임 시작 공권력 +1 (도시 흉터)' },
             { n: 4, hint: '게임 중 임의 Bloc 테크 레벨(TL) 4 달성 시 해금 (11×11)', effect: '스플라이스의 대가 — 그 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
+            { n: 5, hint: '게임 중 CIPHER 테크 레벨 5 또는 해킹 노드 3개 달성 시 해금 (11×11)', effect: '메시 고스트 — 종가 최저 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
           ].map(row => {
             const meta = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(row.n) : null;
             const unlocked = (legacy.chaptersUnlocked || []).indexOf(row.n) !== -1;
@@ -7262,14 +7266,15 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
-        {/* v6.24/6.31/6.33/6.34 (레거시 Stage 1·2·3·4): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄 · 4 스플라이스)마다 봉투 개봉 배너 */}
-        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly) && (() => {
+        {/* v6.24/6.31/6.33/6.34/6.35 (레거시 Stage 1·2·3·4·5): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄 · 4 스플라이스 · 5 메시)마다 봉투 개봉 배너 */}
+        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly || legacyBanner.chapter5Newly) && (() => {
           const total = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
           const newlyNums = [];
           if (legacyBanner.chapter1Newly) newlyNums.push(1);
           if (legacyBanner.chapter2Newly) newlyNums.push(2);
           if (legacyBanner.chapter3Newly) newlyNums.push(3);
           if (legacyBanner.chapter4Newly) newlyNums.push(4);
+          if (legacyBanner.chapter5Newly) newlyNums.push(5);
           return newlyNums.map(num => {
             const ch = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(num) : null;
             if (!ch) return null;
@@ -9087,6 +9092,7 @@ function App() {
       // v6.31 (레거시 Stage 2): 최초 M&A 선언(Bloc→타 Bloc) → 챕터 2 해금 + M&A 표적(PREY) → 흉터.
       // v6.33 (레거시 Stage 3): 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터.
       // v6.34 (레거시 Stage 4): 임의 Bloc TL 4 달성 → 챕터 4 해금 + 그 과잉 개조 블록 → 'splice' 흉터.
+      // v6.35 (레거시 Stage 5): CIPHER TL5 또는 해킹 노드 ≥3 → 챕터 5 해금 + 종가 최저 블록 → 'mesh' 흉터.
       //   legacy_module 미로드 시 무해(typeof 가드). localStorage 실패는 모듈 내부 try/catch.
       //   모든 신호는 현행 meta·players 집계에서 파생 — 새 카운터 신설 없음(하위 호환·헤드리스 안전).
       if (typeof legacyRecordGame === 'function') {
@@ -9124,8 +9130,26 @@ function App() {
               topTl = p.tl || 1; spliceTech = true; spliceBloc = p.specific;
             }
           }
-          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc });
-          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, chapter4Newly: !!res.chapter4Newly, unlocked: res.state.chaptersUnlocked });
+          // 챕터 5 해금(메시 고스트): 원전 "CIPHER 테크 레벨 5 달성 OR 메시 노드 3개 이상 침입".
+          //   두 분기 모두 현행 실존 신호 — CIPHER 클래스 플레이어(p.specific==='CIPHER')의
+          //   p.tl(엔진 TL 시스템, 11×11 캡=5) ≥ 5  OR  p.hackNodes(CIPHER 시그니처 "해킹 노드"
+          //   게이지, ≥3=해킹 신) ≥ 3. 상시 카운터 신설 없이 기존 필드에서 파생.
+          //   흉터 대상(meshBloc) = 종가(state.stocks) 최저 블록 — SIGNAL/메시 고스트가 가장 취약한
+          //   노드에 강림(원전 "메시 침입") → 그 블록 시작 주가 -1. raid/prey/splice 와 동일 -1 채널.
+          let meshTech = false;
+          for (const p of state.players) {
+            if (p && p.specific === 'CIPHER' && ((p.tl || 1) >= 5 || (p.hackNodes || 0) >= 3)) { meshTech = true; break; }
+          }
+          let meshBloc = null;
+          if (meshTech) {
+            let lowSp = Infinity;
+            for (const b of ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON']) {
+              const sp = (state.stocks && state.stocks[b] != null) ? state.stocks[b] : null;
+              if (sp != null && sp < lowSp) { lowSp = sp; meshBloc = b; }
+            }
+          }
+          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc });
+          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, chapter4Newly: !!res.chapter4Newly, chapter5Newly: !!res.chapter5Newly, unlocked: res.state.chaptersUnlocked });
         } catch (e) { console.warn('[SIM] legacy record failed', e); }
       }
     }
