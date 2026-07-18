@@ -181,6 +181,62 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 8px; padding: 8px; font-family: 'Share Tech Mono', monospace; font-size: 11px; resize: vertical; }
 .savemenu .hint { font-size: 12px; color: var(--text-dim); }
 
+/* ---- Stage 2: 시그널 다이 · 위협 게이지 · 로스터 · 상성표 ---- */
+/* 시그널 다이 상태 알약 [계승 docs/06 §7] */
+.sigpill { font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--border);
+  font-family: 'Share Tech Mono', monospace; letter-spacing: .5px; white-space: nowrap; }
+.sigpill.sig-UP       { color: #6db6ff; border-color: #185FA5; background: rgba(24,95,165,0.18); }
+.sigpill.sig-DOWN     { color: #ff7a52; border-color: #C04828; background: rgba(192,72,40,0.18); }
+.sigpill.sig-SURGE    { color: var(--yellow); border-color: var(--yellow); background: rgba(255,215,0,0.12); animation: surgeGlow 1.1s ease-in-out infinite; }
+.sigpill.sig-BLACKOUT { color: #c3b8ff; border-color: var(--attr-shade); background: rgba(83,74,183,0.22); }
+@keyframes surgeGlow { 0%,100% { box-shadow: 0 0 2px rgba(255,215,0,0.3); } 50% { box-shadow: 0 0 9px rgba(255,215,0,0.7); } }
+
+/* 전투 내 위협/노출 게이지 (실동) [G10] */
+.threat-combat { display: flex; align-items: center; gap: 8px; padding: 2px 2px; }
+.threat-combat .tlab { font-size: 10px; color: var(--text-dim); white-space: nowrap; letter-spacing: .5px; }
+.threat-combat .tbar { flex: 1; height: 6px; border-radius: 3px; background: var(--bg3); overflow: hidden; border: 1px solid var(--border); }
+.threat-combat .tbar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--yellow), var(--magenta)); transition: width .35s ease; }
+.threat-combat.alarm .tlab { color: var(--magenta); }
+.threat-combat.alarm { animation: alarmPulse 0.9s ease-in-out infinite; }
+@keyframes alarmPulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* 무적(LAST STAND) 유닛 강조 */
+.unit.stealth .body { animation: none; }
+
+/* 지난 작전 결과 패널 (분기 영속 반영) */
+.lastop { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--bg2); }
+.lastop .lab { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 5px; }
+.lastop-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.opchip { font-size: 11px; padding: 3px 8px; border-radius: 8px; border: 1px solid var(--border); }
+.opchip.cyan { color: var(--cyan); border-color: var(--cyan); }
+.opchip.magenta { color: var(--magenta); border-color: var(--magenta); }
+.opchip.green { color: var(--green); border-color: var(--green); }
+
+/* 로스터 카드 */
+.rosterCard { border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--bg2);
+  display: flex; flex-direction: column; gap: 6px; }
+.rosterCard.active { border-color: var(--cyan); box-shadow: 0 0 8px rgba(0,229,255,0.2); }
+.rc-head { display: flex; align-items: center; gap: 8px; }
+.rc-ic { font-size: 24px; }
+.rc-nm { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); font-size: 14px; }
+.rc-badge { margin-left: auto; font-size: 10px; color: var(--green); border: 1px solid var(--green); border-radius: 8px; padding: 1px 6px; }
+.rc-stats { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--text); }
+.rc-note { font-size: 11px; color: var(--text-dim); }
+.rc-quote { font-size: 11px; color: var(--text-dim); font-style: italic; border-left: 2px solid var(--border); padding-left: 6px; }
+
+/* 상성 매트릭스 토글 */
+.matrix { margin-top: 6px; }
+.matrix-toggle { background: var(--bg2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px;
+  font-size: 11px; padding: 5px 10px; width: 100%; text-align: left; }
+.matrix-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 6px; }
+.mrow { display: flex; align-items: center; justify-content: center; gap: 3px; font-size: 12px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 4px 2px;
+  font-family: 'Share Tech Mono', monospace; }
+.mrow .arr { color: var(--text-dim); font-size: 10px; }
+.mrow small { color: var(--green); font-size: 10px; }
+
+.floater.crit { text-shadow: 0 0 6px var(--yellow); }
+
 /* 데스크톱 회귀 (중앙 정렬, 세로 폭 유지) */
 @media (min-width: 700px) {
   .rpg-app { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }

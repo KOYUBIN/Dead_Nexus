@@ -16,6 +16,7 @@
 <script src="./core/loader.js"></script>
 <script src="./core/projection.js"></script>
 <script src="./data/attributes.js"></script>
+<script src="./data/signal.js"></script>
 <script src="./data/classes.js"></script>
 <script src="./data/abilities.js"></script>
 <script src="./data/enemies.js"></script>
@@ -77,7 +78,7 @@ function TopBar({ save, onSave }) {
     <div className="topbar">
       <a className="home-link" href="../index.html" title="홈으로">⌂</a>
       <span className="brand">GHOSTGRID</span>
-      <span className="stat">CIPHER <b>STATIC</b></span>
+      <span className="stat">{ch.icon || '👤'} {ch.classKey} <b>{ch.codename || ''}</b></span>
       <span className="spacer" />
       <span className="chip rep">★{ch.rep}</span>
       <span className="chip karma">karma {ch.karma}</span>
@@ -97,18 +98,74 @@ function Banner({ banner, dispatch }) {
   );
 }
 
+// ── 지난 작전 결과 패널 (대화 분기 영속을 허브에 반영) ──
+function LastOpPanel({ flags }) {
+  if (!flags || !flags.firstBlood) return null;
+  const style = flags.extractionStyle;
+  const hero = flags.heroChoice;
+  const chips = [];
+  if (style === 'quiet') chips.push({ t: '🕊 무흔적 추출', c: 'cyan' });
+  else if (style === 'loud') chips.push({ t: '🔊 소란한 강습', c: 'magenta' });
+  if (hero === 'hero') chips.push({ t: '★ 영웅 — 정체 공개 (모든 블록 적대)', c: 'magenta' });
+  else if (hero === 'ghost') chips.push({ t: '👻 유령 — 은폐 (레이드 +50%)', c: 'cyan' });
+  if (flags.plantedBackdoor) chips.push({ t: '🚪 백도어 잠복', c: 'green' });
+  return (
+    <div className="lastop">
+      <div className="lab">지난 작전 · First Blood — 다음 미션에 영속 반영</div>
+      <div className="lastop-chips">{chips.map((k, i) => <span key={i} className={'opchip ' + k.c}>{k.t}</span>)}</div>
+    </div>
+  );
+}
+
+// ── 로스터 (플레이어블 클래스 선택 → 다른 빌드로 같은 미션 재완주) ──
+function Roster({ state, dispatch }) {
+  const cur = state.save.character.classKey;
+  const playable = (window.RPG_CLASSES.PLAYABLE || ['CIPHER', 'BLADE']);
+  return (
+    <div className="sheet">
+      <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>크루 / 로스터</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>운영자를 편성한다. 같은 미션을 다른 빌드로 완주 — CIPHER 해킹 vs BLADE 근접.</p>
+      {playable.map(key => {
+        const cl = window.RPG_CLASSES.CLASSES[key];
+        const active = cur === key;
+        const q = LORE.quote(key);
+        return (
+          <div key={key} className={'rosterCard' + (active ? ' active' : '')}>
+            <div className="rc-head">
+              <span className="rc-ic">{cl.icon}</span>
+              <span className="rc-nm">{cl.key} · {cl.codename}</span>
+              {active ? <span className="rc-badge">편성됨</span> : null}
+            </div>
+            <div className="rc-stats">❤{cl.hp*2} ⚔{cl.atk} 🛡{cl.def} ⚡{cl.spd} 💻{cl.hack} · {ATTRS.ATTRS[cl.primary].sym}/{ATTRS.ATTRS[cl.secondary].sym}</div>
+            <div className="rc-note">{cl.note}{cl.passive ? ' · ' + cl.passive : ''}</div>
+            {q ? <div className="rc-quote">{q.line}</div> : null}
+            <button className="btn" disabled={active} onClick={() => dispatch({ type: 'SELECT_CLASS', classKey: key })}>
+              {active ? '현재 편성' : (cl.key + ' 편성')}
+            </button>
+          </div>
+        );
+      })}
+      <p className="hint" style={{ color: 'var(--text-dim)' }}>편성 전환 시 해당 빌드로 새 운영자를 배치합니다(성장 초기화). 캠페인 진행은 유지됩니다.</p>
+    </div>
+  );
+}
+
 // ── 허브 ──
 function Hub({ state, dispatch, openSave }) {
   const node = state.hub.node;
   const save = state.save;
+  const ch = save.character;
   const threat = CAMP.threatGauge((save.missionsDone || []).length * 3, 0, 10);
   if (node === 'sheet') return <CharacterSheet state={state} dispatch={dispatch} />;
+  if (node === 'roster') return <Roster state={state} dispatch={dispatch} />;
   if (node === 'save') return <SaveMenu state={state} dispatch={dispatch} back={() => dispatch({ type: 'HUB_NAV', node: 'root' })} />;
   const done = (save.missionsDone || []).indexOf('ch01-first-blood') >= 0;
   return (
     <div className="hub">
       <h1>안전가옥 — ASHGRID</h1>
-      <p className="sub">STATIC / LENA GREY · 정보전의 유령</p>
+      <p className="sub">{ch.icon} {ch.classKey} / {ch.codename} · {ch.classKey === 'BLADE' ? '거리의 집행관' : '정보전의 유령'}</p>
+      <LastOpPanel flags={save.flags} />
       <div className="hub-grid">
         <button className="hub-node" onClick={() => dispatch({ type: 'START_MISSION', missionId: 'ch01-first-blood' })}>
           <span className="ic">🎯</span><span className="lb">미션 보드</span>
@@ -116,17 +173,18 @@ function Hub({ state, dispatch, openSave }) {
         </button>
         <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'sheet' })}>
           <span className="ic">📋</span><span className="lb">캐릭터 시트</span>
-          <span className="nt">karma {save.character.karma} 지출 가능</span>
+          <span className="nt">karma {ch.karma} 지출 가능</span>
+        </button>
+        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'roster' })}>
+          <span className="ic">👥</span><span className="lb">크루 / 로스터</span>
+          <span className="nt">CIPHER ↔ BLADE 빌드 전환</span>
         </button>
         <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
-          <span className="ic">🛒</span><span className="lb">상점 / 의료</span><span className="nt">HELIX 회복 (Stage 2)</span>
-        </button>
-        <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
-          <span className="ic">👥</span><span className="lb">크루 / 로스터</span><span className="nt">후속 로스터 (Stage 2)</span>
+          <span className="ic">🛒</span><span className="lb">상점 / 의료</span><span className="nt">HELIX 회복 (Stage 3)</span>
         </button>
       </div>
       <div className="threat">
-        <div className="lab">SIGNAL 추적 / 위협 게이지 {threat.value}/{threat.cap} (표시만)</div>
+        <div className="lab">SIGNAL 추적 / 캠페인 위협 {threat.value}/{threat.cap} · 전투 노출은 미션 내 게이지로 실동</div>
         <div className="bar"><i style={{ width: Math.min(100, threat.value / threat.cap * 100) + '%' }} /></div>
       </div>
       <button className="btn ghost" onClick={openSave}>💾 세이브 / 문자열 export·import</button>
@@ -145,10 +203,15 @@ function CharacterSheet({ state, dispatch }) {
     { k: 'spd', nm: '⚡ SPD (MOV ' + eff.mov + ')', vl: eff.spd, grow: 'spd' },
     { k: 'hack','nm': '💻 HACK',    vl: eff.hack,  grow: 'hack' },
   ];
+  const cl = window.RPG_CLASSES.CLASSES[ch.classKey];
   return (
     <div className="sheet">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
-      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>CIPHER · STATIC</h1>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>{ch.icon} {ch.classKey} · {ch.codename}</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>
+        주{ATTRS.ATTRS[ch.primary].sym} 부{ATTRS.ATTRS[ch.secondary].sym} · 시그널 정렬 {ch.signalFavor === 'iron' ? '🔴DOWN' : '🔵UP'}
+        {ch.passive ? <span> · {ch.passive}</span> : null}
+      </p>
       <p className="sub" style={{ color: 'var(--text-dim)' }}>karma를 스탯에 직접 지출 (레벨 없음). karma 잔여 <b style={{color:'var(--orange)'}}>{ch.karma}</b></p>
       {rows.map(r => (
         <div className="statline" key={r.k}>
@@ -158,9 +221,33 @@ function CharacterSheet({ state, dispatch }) {
         </div>
       ))}
       <div style={{ marginTop: 8 }}>
-        <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>히어로 킷</div>
+        <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>{ch.classKey === 'BLADE' ? '근접 킷' : '히어로 킷'}</div>
         <div className="kit">{ch.kit.map(k => <span className="ab" key={k}>{AB.ABILITIES[k].icon} {AB.ABILITIES[k].name}</span>)}</div>
       </div>
+      <AffinityMatrix />
+    </div>
+  );
+}
+
+// ── 상성 매트릭스 6종 전체 (docs/06 §6 계승) — 표시 체감 확대 ──
+function AffinityMatrix({ compact }) {
+  const [open, setOpen] = useState(false);
+  const mtx = ATTRS.matrix();
+  return (
+    <div className="matrix">
+      <button className="matrix-toggle" onClick={() => setOpen(!open)}>⚔ 속성 상성표 {open ? '▲' : '▼'}</button>
+      {open ? (
+        <div className="matrix-grid">
+          {mtx.map((m, i) => (
+            <span key={i} className="mrow">
+              <b style={{ color: m.atkColor }}>{m.atkSym}</b>
+              <span className="arr">▶</span>
+              <b style={{ color: m.defColor }}>{m.defSym}</b>
+              <small>+1</small>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -185,21 +272,25 @@ function SaveMenu({ state, dispatch, back }) {
   );
 }
 
-// ── 대화 오버레이 ──
+// ── 대화 오버레이 (활성 클래스에 따라 고스트 발화자 전환) ──
 function DialogueOverlay({ state, dispatch }) {
   const node = MISSION.dialogue.nodes[state.dialogue.nodeId];
   const ctx = STORE.dialogueCtx(state);
+  const ch = state.save.character;
   const isBloc = node.portrait === 'bloc';
-  const q = node.quote ? LORE.quote(node.quote) : null;
-  const speakerLabel = LORE.tag(node.speaker) || node.speaker;
+  const person = LORE.person(ch.classKey);
+  const ghostName = (person && person.data.codename) || ch.codename || ch.classKey;
+  const ghostReal = (person && person.data.realName) || '';
+  // 고스트 인용은 활성 클래스 명대사(원문 고정), 블록 인용은 노드 지정 발화자.
+  const q = node.quote ? (isBloc ? LORE.quote(node.quote) : LORE.quote(ch.classKey)) : null;
   return (
     <div className="dialogue">
       <div className="portrait-row">
         <Portrait kind={node.portrait} />
         <div>
           <div className={'speaker ' + (isBloc ? 'bloc' : '')}>
-            {isBloc ? 'VANTA' : 'CIPHER'}
-            <small>{isBloc ? 'VERA ASHTON · DIRECTOR' : speakerLabel + ' · LENA GREY'}</small>
+            {isBloc ? 'VANTA' : ghostName}
+            <small>{isBloc ? 'VERA ASHTON · DIRECTOR' : (ghostReal ? ghostName + ' · ' + ghostReal : ghostName)}</small>
           </div>
         </div>
       </div>
@@ -247,6 +338,11 @@ function Combat({ state, dispatch }) {
     return GRID.chebyshev(p, u) <= sel.range && GRID.lineOfSight(p, u, c.field);
   }
   const adjObj = GRID.chebyshev(p, c.objective) <= 1 && !c.objective.done;
+  const objByForce = p.hack < p.atk; // BLADE 등 물리 축 → 강습
+  const sig = c.signal || { key: 'UP', sym: '🔵', label: 'MESH UP', desc: '' };
+  const th = c.threat || { value: 0, cap: 8, alarm: false };
+  // 피격 플래시: dmg/miss 부유 텍스트가 있는 타일의 유닛을 flash [G7 juice]
+  const hitTiles = {}; (c.floaters || []).forEach(f => { if (f.kind === 'dmg' || f.kind === 'miss') hitTiles[f.x + ',' + f.y] = true; });
 
   function tileClass(x, y) {
     let cls = 'tile' + ((x + y) % 2 ? ' alt' : '');
@@ -284,7 +380,8 @@ function Combat({ state, dispatch }) {
     </div>);
   }
   const units = c.units.filter(u => u.hp > 0).map(u => {
-    const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && u.status.stealth ? ' stealth' : '');
+    const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && (u.status.stealth || u.status.invuln) ? ' stealth' : '')
+      + (hitTiles[u.x + ',' + u.y] ? ' hit' : '');
     return <div key={u.id} className={cls} style={{ left: 'calc(' + u.x + ' * var(--tile))', top: 'calc(' + u.y + ' * var(--tile))' }}>
       <div className="body" title={u.name}>{u.icon}
         <div className="hpbar"><i style={{ width: (u.hp / u.maxHp * 100) + '%' }} /></div>
@@ -303,10 +400,16 @@ function Combat({ state, dispatch }) {
     <div className="combat">
       <div className="combat-top">
         <span className="rnd">ROUND {c.round}</span>
-        <span className="obj">🎯 서버 랙 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
+        <span className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
+        <span className="obj">🎯 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
         <span>❤ {p.hp}/{p.maxHp}</span>
         <span className="spacer" />
         {p.status && p.status.stealth ? <span style={{color:'var(--cyan)'}}>👻 은신</span> : null}
+        {p.status && p.status.invuln ? <span style={{color:'var(--yellow)'}}>🛡 무적</span> : null}
+      </div>
+      <div className={'threat-combat' + (th.alarm ? ' alarm' : '')}>
+        <span className="tlab">위협/노출 {th.value}/{th.cap}{th.alarm ? ' · ⚠ 경보 · 증원' : ''}</span>
+        <div className="tbar"><i style={{ width: Math.min(100, th.value / th.cap * 100) + '%' }} /></div>
       </div>
       <div className="board-wrap">
         <div className="board" style={{ width: boardW, height: boardH }}>
@@ -325,9 +428,9 @@ function Combat({ state, dispatch }) {
         <div className="hud">
           <div className="ap-row">
             <span>AP</span>
-            <span className="ap-pips">{[0,1].map(i => <i key={i} className={i < p.ap ? 'on' : ''} />)}</span>
+            <span className="ap-pips">{Array.from({ length: Math.max(p.ap, p.maxAp) }).map((_, i) => <i key={i} className={i < p.ap ? 'on' : ''} />)}</span>
             <span className="spacer" style={{flex:1}} />
-            {adjObj ? <button className="btn" style={{ width: 'auto', padding: '8px 12px' }} onClick={() => dispatch({ type: 'COMBAT_HACK' })} disabled={p.ap < 1}>💻 서버 랙 해킹</button> : null}
+            {adjObj ? <button className="btn" style={{ width: 'auto', padding: '8px 12px' }} onClick={() => dispatch({ type: 'COMBAT_HACK' })} disabled={p.ap < 1}>{objByForce ? '🗡 서버 랙 강습' : '💻 서버 랙 해킹'}</button> : null}
           </div>
           <div className="abilities">
             {p.kit.filter(k => AB.ABILITIES[k].kind !== 'PASSIVE').map(k => {
@@ -347,6 +450,7 @@ function Combat({ state, dispatch }) {
         </div>
       )}
       <div className="log">{c.log.slice().reverse().slice(0, 8).map((l, i) => <div key={i}>{l}</div>)}</div>
+      <AffinityMatrix />
     </div>
   );
 }

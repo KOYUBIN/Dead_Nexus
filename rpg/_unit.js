@@ -1,10 +1,12 @@
 'use strict';
 // ============================================================================
-// rpg/_unit.js — RPG 모드 Stage 1 순수 로직 유닛 테스트 (node 실행, 의존성 0)
+// rpg/_unit.js — RPG 모드 Stage 1+2 순수 로직 유닛 테스트 (node 실행, 의존성 0)
 //   실행: node rpg/_unit.js
-//   대상: 결정론 피해식 · BFS 이동범위 · AP 소모 · 텔레그래프 예측=실행 일치 ·
-//         스탯 게이트 · 엄폐 · 상성 · 오브젝티브 · 성장 반영 · 세이브 라운드트립 ·
-//         MFU(사회 게이트가 전투 제거) 통합.
+//   Stage 1 (1~46): 결정론 피해식 · BFS 이동범위 · AP 소모 · 텔레그래프 예측=실행 ·
+//         스탯 게이트 · 엄폐 · 상성 · 오브젝티브 · 성장 반영 · 세이브 · MFU 통합.
+//   Stage 2 (47~): 시그널 다이 4상태 · BLADE 근접 킷(POINT BLANK/SUPPRESSION/DOUBLE TAP/
+//         LAST STAND) · 위협/노출 게이지 실동(증원 페이싱) · 대화 분기 영속 · 로스터 선택 ·
+//         오브젝티브 무력 강습 · 상성 매트릭스·SURGE 2배.
 // ============================================================================
 var G    = require('./systems/combat/grid.js');
 var R    = require('./systems/combat/resolve.js');
@@ -15,6 +17,10 @@ var CH   = require('./systems/character.js');
 var CAMP = require('./systems/campaign.js');
 var S    = require('./state/store.js');
 var SAVE = require('./state/save.js');
+var SIG  = require('./data/signal.js');
+var CL   = require('./data/classes.js');
+var AB   = require('./data/abilities.js');
+var MI   = require('./data/missions/ch01-first-blood.js');
 
 var pass = 0, fail = 0, fails = [];
 function ok(name, cond) { if (cond) { pass++; console.log('  PASS  ' + name); } else { fail++; fails.push(name); console.log('  FAIL  ' + name); } }
@@ -135,6 +141,153 @@ ok('44. 우회 시 전투 미발생(combat=null) & skipGuardFight', bypass.scene
 ok('45. 우회로도 firstBlood 달성(대체 결과)', bypass.save.flags.firstBlood === true);
 var lock = S.dialogueChoose(m, 2); // [VANTA tag] 잠김
 ok('46. [VANTA 태그] 선택 차단(노드 유지)', lock.dialogue.nodeId === 'approach' && lock.banner && lock.banner.kind === 'blocked');
+
+// ============================================================================
+// ============================  STAGE 2  ======================================
+// ============================================================================
+
+console.log('\n== 시그널 다이 4상태 전체 [계승 docs/06 §7] ==');
+var sigKeys = {}; for (var sr = 1; sr <= 6; sr++) sigKeys[SIG.rollForRound(sr).key] = true;
+ok('47. 라운드 1~6 파생이 4상태 전체 노출(UP·DOWN·SURGE·BLACKOUT)',
+  sigKeys.UP && sigKeys.DOWN && sigKeys.SURGE && sigKeys.BLACKOUT);
+ok('48. 결정론: rollForRound 재호출 동일', SIG.rollForRound(3).key === SIG.rollForRound(3).key && SIG.rollForRound(3).key === 'DOWN');
+var mUp = SIG.modifiers('UP', { useHack: true, favor: 'mesh' });
+ok('49. 🔵UP + mesh/HACK → dmg+1 & 오브젝티브+1', mUp.dmgBonus === 1 && mUp.objectiveBonus === 1);
+eq('50. 🔴DOWN + iron/물리 → dmg+1', SIG.modifiers('DOWN', { useHack: false, favor: 'iron' }).dmgBonus, 1);
+eq('51. ⚡SURGE → 상성 배율 2배', SIG.modifiers('SURGE', {}).affinityMult, 2);
+var mBk = SIG.modifiers('BLACKOUT', { useHack: true, favor: 'mesh' });
+ok('52. ⚫BLACKOUT → HACK 불가 & mesh AP+1', mBk.hackDisabled === true && mBk.apBonus === 1);
+
+console.log('\n== BLADE 근접 로스터 [계승 docs/07 §2 · cards/ghost/blade.md] ==');
+var blade = CH.makeCharacter('BLADE');
+var beff = CH.effectiveStats(blade);
+ok('53. BLADE 스탯 10/5/3/3/1 → 유효HP20·ATK5·MOV3 [계승 §10/§3.1]',
+  beff.maxHp === 20 && beff.atk === 5 && beff.mov === 3 && beff.hack === 1);
+eq('54. BLADE 킷 = POINT BLANK/SUPPRESSION/DOUBLE TAP/LAST STAND', blade.kit, AB.BLADE_KIT);
+ok('55. BLADE signalFavor=iron (🔴DOWN 정렬) [계승 docs/06 §7]', blade.signalFavor === 'iron');
+// POINT BLANK 근접 기본공격 = ATK 사용
+eq('56. POINT BLANK ATK5 vs DEF1 = 4 [각색 blade.md Card07]', R.computeDamage({ atkValue: 5, def: 1 }).dmg, 4);
+// DOUBLE TAP 2연타, 2번째 DEF 무시
+var dt = R.multiStrike({ atkValue: 5, def: 3, hits: 2, lastHitPierceAll: true });
+ok('57. DOUBLE TAP ATK5 vs DEF3: 2연타 [2,5]=7 (2번째 DEF무시) [각색 blade.md Card06]',
+  dt.dmg === 7 && dt.hits[0] === 2 && dt.hits[1] === 5);
+
+console.log('\n== SUPPRESSION 이동 저지 → AI 페이싱 변화 [각색 blade.md Card02] ==');
+var supField = { cols: 6, rows: 8, walls: [], cover: [] };
+function supEnemy(movDown) {
+  return { field: supField, units: [
+    { id: 'hero', side: 'player', x: 2, y: 7, hp: 20, maxHp: 20, atk: 5, def: 3, attr: 'IRON', status: {} },
+    { id: 'e0', side: 'enemy', x: 2, y: 0, hp: 12, maxHp: 12, atk: 4, def: 3, spd: 3, mov: 4, ap: 2, attr: 'VOLT', range: 3, ai: 'advance', status: movDown ? { movDown: 3 } : {} },
+  ] };
+}
+var planFree = AI.planEnemyTurn(supEnemy(false), 'e0');
+var planSupp = AI.planEnemyTurn(supEnemy(true), 'e0');
+var advFree = planFree.moveTo.y, advSupp = planSupp.moveTo.y; // 위→아래 전진(y 증가)
+ok('58. movDown 없으면 4칸 전진 / SUPPRESSION(−3) 시 1칸만 (페이싱 변화)',
+  advFree === 4 && advSupp === 1);
+
+console.log('\n== LAST STAND 무적 [각색 blade.md Card09] ==');
+var lsCombat = { field: supField, units: [
+    { id: 'hero', side: 'player', x: 2, y: 5, hp: 20, maxHp: 20, atk: 5, def: 3, spd: 3, mov: 3, ap: 2, maxAp: 2, attr: 'IRON', status: { invuln: true, invulnTurns: 2 }, cooldowns: {} },
+    { id: 'e0', side: 'enemy', x: 2, y: 3, hp: 12, maxHp: 12, atk: 6, def: 3, spd: 3, mov: 3, ap: 2, maxAp: 2, attr: 'VOLT', range: 4, ai: 'advance', status: {} },
+  ],
+  objective: { x: 0, y: 0, threshold: 6, done: false }, threat: { value: 0, cap: 8, alarm: false, reinforced: false, reinforcement: null },
+  signal: SIG.rollForRound(1), outcome: null, round: 1, log: [], floaters: [] };
+var lsAfter = S.runEnemyTurn(lsCombat);
+eq('59. 무적(invuln) 중 적 사격 피해 무효 (HP 20 유지)', S.player(lsAfter).hp, 20);
+
+console.log('\n== 위협/노출 게이지 실동 [G10] ==');
+// 노출 판정: 개방 타일 + 적 LoS = 노출 / 엄폐 시 비노출.
+var exField = { cols: 6, rows: 8, walls: [], cover: [{ x: 2, y: 6, type: 'full' }] };
+var exCombatOpen = { field: exField, units: [
+  { id: 'hero', side: 'player', x: 4, y: 7, hp: 20, maxHp: 20, def: 3, attr: 'IRON', status: {} },
+  { id: 'e0', side: 'enemy', x: 4, y: 3, hp: 5, maxHp: 5, atk: 3, def: 1, spd: 4, mov: 4, ap: 2, attr: 'IRON', range: 5, ai: 'coverShooter', status: {} },
+] };
+ok('60. 개방 타일 + 적 LoS → 노출 true', S.exposure(exCombatOpen) === true);
+var exCombatCover = JSON.parse(JSON.stringify(exCombatOpen));
+exCombatCover.units[0].x = 2; exCombatCover.units[0].y = 7; // (2,7) = (2,6) full 엄폐 뒤
+exCombatCover.units[1].x = 2;
+ok('61. 완전 엄폐 뒤 → 비노출 false', S.exposure(exCombatCover) === false);
+eq('62. threatGauge 임계 도달 시 alarm [계승 raidThreshold]', CAMP.threatGauge(8, 0, 8).alarm, true);
+
+// 증원 페이싱: 노출 상태로 라운드 반복 → 임계 → 증원 스폰(전투 유닛 증가).
+var rfCombat = S.buildCombat(MI.MISSION, CH.makeCharacter('BLADE'), 'outro');
+var pRf = S.player(rfCombat); pRf.x = 4; pRf.y = 7;   // 엄폐 밖 개방 타일로 이동(노출 유지)
+var enemyStart = rfCombat.units.filter(function (u) { return u.side === 'enemy'; }).length;
+var guard = 0;
+while (!rfCombat.threat.reinforced && !rfCombat.outcome && guard++ < 15) {
+  var pp = S.player(rfCombat); pp.x = 4; pp.y = 7; pp.hp = 20; // 노출 유지 & 생존 고정(게이지 격리 검증)
+  rfCombat = S.runEnemyTurn(rfCombat);
+}
+var enemyNow = rfCombat.units.filter(function (u) { return u.side === 'enemy'; }).length;
+ok('63. 노출 누적 → 임계 시 VANTA 증원 스폰 (전투 페이싱 변화)',
+  rfCombat.threat.reinforced === true && enemyNow === enemyStart + 1 && !!S.findUnit(rfCombat, 'ereinf'));
+
+console.log('\n== 로스터 선택 [Stage 2 다른 빌드] ==');
+var rosterState = S.rpgInitialState();
+var toBlade = S.selectClass(rosterState, 'BLADE');
+ok('64. 로스터에서 BLADE 편성 → classKey=BLADE & 근접 킷', toBlade.save.character.classKey === 'BLADE' && toBlade.save.character.kit.indexOf('POINT_BLANK') >= 0);
+ok('65. 미해금 클래스 선택 차단(캐릭터 유지)', S.selectClass(rosterState, 'RIGGER').save.character.classKey === 'CIPHER');
+
+console.log('\n== 오브젝티브 무력 강습 vs 해킹 [각색 docs/25 §3.5] ==');
+// BLADE(ATK5/HACK1) 인접 → 강습에 ATK5 사용.
+var brCombat = S.buildCombat(MI.MISSION, CH.makeCharacter('BLADE'), 'outro');
+var bp = S.player(brCombat); bp.x = brCombat.objective.x + 1; bp.y = brCombat.objective.y; // 인접(3,0)
+brCombat.signal = SIG.STATES.DOWN; // BLADE 우호(HACK 미보정), 결정론
+var brAfter = S.applyHackObjective(brCombat);
+ok('66. BLADE 서버랙 강습: ATK5 차감 (thr6→1) & 로그 "강습"',
+  brAfter.objective.threshold === 1 && brAfter.log.join('|').indexOf('강습') >= 0);
+// BLACKOUT: CIPHER(mesh/HACK) 해킹 불가.
+var bkCombat = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+var cp = S.player(bkCombat); cp.x = bkCombat.objective.x + 1; cp.y = bkCombat.objective.y;
+bkCombat.signal = SIG.STATES.BLACKOUT;
+var bkAfter = S.applyHackObjective(bkCombat);
+ok('67. ⚫BLACKOUT: CIPHER 서버 해킹 불가(방어도 무변동)', bkAfter.objective.threshold === bkCombat.objective.threshold);
+
+console.log('\n== 상성 매트릭스 6종 + SURGE 2배 [계승 docs/06 §6 · 각색 §3.3] ==');
+var mtx = ATTR.matrix();
+ok('68. 상성 매트릭스 6쌍 전체 (MESH▶SHADE … BIO▶IRON)',
+  mtx.length === 6 && mtx[0].atk === 'MESH' && mtx[0].def === 'SHADE' && mtx[5].atk === 'BIO' && mtx[5].def === 'IRON');
+// SURGE: CIPHER(MESH) HACK_SHOT vs ICE(SHADE) → 상성 +1 이 ×2 = +2.
+function icAtk(sigState) {
+  var c = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+  var ice = c.units.filter(function (u) { return u.key === 'ICE_NODE'; })[0];
+  var p = S.player(c); p.x = ice.x; p.y = ice.y + 1; // ICE 인접(사거리·LoS OK)
+  c.signal = sigState;
+  return S.applyAttack(c, ice.id, 'HACK_SHOT');
+}
+var upHit = icAtk(SIG.STATES.UP);      // UP: mesh/HACK dmg+1, 상성 +1  → HACK5 −DEF0 +1(sig) +1(aff)=7
+var surgeHit = icAtk(SIG.STATES.SURGE); // SURGE: 상성 ×2 = +2         → HACK5 −DEF0 +0 +2 = 7
+var iceUp = upHit.units.filter(function (u) { return u.key === 'ICE_NODE'; })[0];
+var iceSg = surgeHit.units.filter(function (u) { return u.key === 'ICE_NODE'; })[0];
+ok('69. SURGE 상성 ×2 vs ICE(SHADE): 로그에 [상성+2] 표기',
+  surgeHit.log.join('|').indexOf('[상성+2]') >= 0);
+ok('70. 상성 실제 피해 반영 (ICE HP 감소)', iceSg.hp < 3 && iceUp.hp < 3);
+
+console.log('\n== 대화 분기 영속 [docs/25 §4.2 · 수용기준 3] ==');
+var pm = S.rpgInitialState();
+pm = S.startMission(pm, 'ch01-first-blood');
+pm = S.dialogueChoose(pm, 0);            // approach
+var pbypass = S.dialogueChoose(pm, 1);   // [HACK4] 우회 → outroStealth
+var pquiet = S.dialogueChoose(pbypass, 0); // 탈출 → aftermathQuiet
+ok('71. 우회 경로 후일담 진입(aftermathQuiet)', pquiet.dialogue.nodeId === 'aftermathQuiet');
+// aftermathQuiet 의 flag 게이트 선택지: skipGuardFight 세팅 시에만 available.
+var aqNode = MI.MISSION.dialogue.nodes.aftermathQuiet;
+var ctxQuiet = S.dialogueCtx(pquiet);
+eq('72. [flag skipGuardFight] 선택지 = available (앞선 선택이 뒤 노드를 연다)', DLG.choiceState(aqNode.choices[1], ctxQuiet), 'available');
+var ctxNoFlag = { attrs: {}, tags: [], flags: {} };
+eq('73. 동일 선택지 = gray (flag 미설정 시 잠김 — 분기 영속 증명)', DLG.choiceState(aqNode.choices[1], ctxNoFlag), 'gray');
+var pplant = S.dialogueChoose(pquiet, 1);   // 백도어 심기 → choice
+ok('74. plantedBackdoor·extractionStyle 세이브 영속', pplant.save.flags.plantedBackdoor === true && pplant.save.flags.extractionStyle === 'quiet');
+var phero = S.dialogueChoose(pplant, 0);    // 영웅 선택 → settle(applyRewards)
+// 렙 = 5(영웅 영구) + 3(챕터 귀환 정산) = 8. heroChoice·적대 flag 영속.
+ok('75. 영웅/유령 선택 flag 영속 (heroChoice=hero, 렙 5+3=8, 적대 flag)',
+  phero.save.flags.heroChoice === 'hero' && phero.save.character.rep === 8 && phero.save.flags.allBlocsHostile === true);
+
+console.log('\n== BLADE 보상 해금 = VENDETTA [계승 blade.md 레거시 해금] ==');
+var bladeSave = S.newSave(); bladeSave.character = CH.makeCharacter('BLADE');
+var bladeRew = CAMP.applyRewards(bladeSave, MI.MISSION);
+ok('76. BLADE 귀환 정산 → VENDETTA 해금(BACKDOOR 치환)', bladeRew.character.kit.indexOf('VENDETTA') >= 0 && bladeRew.character.kit.indexOf('BACKDOOR') < 0);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

@@ -22,14 +22,19 @@
 
   function makeCharacter(classKey) {
     var C = getClasses(), K = getAbilities();
-    var base = C.CLASSES[classKey];
+    var base = C.CLASSES[classKey] || C.CLASSES.CIPHER;
+    var kit = (K.KIT_BY_CLASS && K.KIT_BY_CLASS[base.key]) ? K.KIT_BY_CLASS[base.key].slice()
+            : (base.key === 'CIPHER' ? K.CIPHER_KIT.slice() : []);
     return {
-      classKey: classKey,
+      classKey: base.key,
       base: { hp: base.hp, atk: base.atk, def: base.def, spd: base.spd, hack: base.hack },
       growth: { hp: 0, atk: 0, def: 0, spd: 0, hack: 0 }, // karma 지출 누적
       primary: base.primary, secondary: base.secondary,
-      kit: (classKey === 'CIPHER') ? K.CIPHER_KIT.slice() : [],
-      unlocked: [],           // 보상 해금 능력 (BACKDOOR 등)
+      signalFavor: base.signalFavor || 'mesh',    // [계승 docs/06 §7] 시그널 다이 정렬
+      icon: base.icon || '👤', codename: base.codename || base.key,
+      passive: base.passive || '',
+      kit: kit,
+      unlocked: [],           // 보상 해금 능력 (BACKDOOR / VENDETTA 등)
       karma: 0, nuyen: 0, rep: 0,
     };
   }

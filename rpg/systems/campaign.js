@@ -14,6 +14,10 @@
     if (typeof window !== 'undefined' && window.RPG_CHARACTER) return window.RPG_CHARACTER;
     return require('./character.js');
   }
+  function getAbilities() {
+    if (typeof window !== 'undefined' && window.RPG_ABILITIES) return window.RPG_ABILITIES;
+    return require('../data/abilities.js');
+  }
 
   var HUB_NODES = [
     { key: 'missions', icon: '🎯', label: '미션 보드', stub: false },
@@ -34,10 +38,15 @@
     ch.nuyen += r.nuyen; log.push('₵ +' + r.nuyen + ' (→' + ch.nuyen + ')');
     var heatCap = (saveState.heatCap || 10) + (r.heatCapDelta || 0);
     if (r.heatCapDelta) log.push('공권력 트랙 최대치 +' + r.heatCapDelta + ' (→' + heatCap + ')');
+    // 보상 해금은 클래스별 시그니처로 치환 [계승 chapter-01 봉투 A / blade.md 레거시 해금].
+    //   CIPHER → BACKDOOR, BLADE → VENDETTA (KIT/UNLOCK_BY_CLASS 매핑).
     if (r.unlocks) {
+      var AB = getAbilities();
+      var byClass = (AB.UNLOCK_BY_CLASS && AB.UNLOCK_BY_CLASS[ch.classKey]) || null;
       for (var i = 0; i < r.unlocks.length; i++) {
-        ch = CH.unlockAbility(ch, r.unlocks[i]);
-        log.push(r.unlocks[i] + ' 해금');
+        var unlockKey = (r.unlocks[i] === 'BACKDOOR' && byClass) ? byClass : r.unlocks[i];
+        ch = CH.unlockAbility(ch, unlockKey);
+        log.push(unlockKey + ' 해금');
       }
     }
     var md = (saveState.missionsDone || []).slice();

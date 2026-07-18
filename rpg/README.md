@@ -1,7 +1,13 @@
 # DEAD NEXUS — RPG 모드 (GHOSTGRID / hybrid-scene)
 
 **정본 스펙**: `docs/25-rpg-mode.md` (심사 만장일치 확정 아키텍처 + 이식요소 G1~G11).
-이 디렉토리는 **Stage 1 수직 슬라이스** — 챕터 1 "First Blood" 한 바퀴다.
+이 디렉토리는 **Stage 1 수직 슬라이스 + Stage 2 대화 심화·전투 텍스처** — 챕터 1 "First Blood"를
+CIPHER(해킹)·BLADE(근접) 두 빌드로 다르게 완주한다.
+
+**Stage 2 추가**: BLADE 근접 로스터(cards/ghost/blade.md 계승) · 시그널 다이 4상태(🔵UP/🔴DOWN/
+⚡SURGE/⚫BLACKOUT) · 위협/노출 게이지 실동(임계 시 증원 → 페이싱 변화, G10) · 다중 대화 노드·
+분기 영속(추출 방식·영웅/유령 flag가 허브 결과 패널에 반영) · 상성 매트릭스 6종 표시 · 전투 juice(피격
+플래시·부유 텍스트·게이지 연출).
 
 > RPG 모드는 세계관·인물·lore만 공유하고 룰은 독립한다. `simulator/v0.5`·`sim-harness`·
 > `sim-e2e`의 어떤 파일도 수정하지 않는 **신규 트랙**이다 (vendor·lore는 이 디렉토리로 복제).
@@ -15,7 +21,9 @@
 ## 검증
 
 ```
-node rpg/_unit.js      # 순수 로직 유닛 테스트 46건 (결정론 피해·BFS·AP·텔레그래프·게이트·세이브·MFU)
+node rpg/_unit.js      # 순수 로직 유닛 테스트 76건 (Stage 1: 1~46 · Stage 2: 47~76)
+                       #   Stage 2 = 시그널 다이 4상태 · BLADE 킷(POINT BLANK/SUPPRESSION/
+                       #   DOUBLE TAP/LAST STAND) · 위협 게이지 증원 페이싱 · 분기 영속 · 로스터
 ```
 
 빌드 스텝 0. React 18 + Babel Standalone(브라우저 내 JSX 트랜스파일). 상태 = 단일
@@ -26,7 +34,7 @@ node rpg/_unit.js      # 순수 로직 유닛 테스트 46건 (결정론 피해�
 | 층 | 파일 | 순도 |
 |---|---|---|
 | `core/` | `loader.js`(heal 로더 G11) · `projection.js`(좌표→스크린 seam G1) | 순수/DOM(loader만) |
-| `data/` | `attributes·classes·abilities·enemies·weapons` + `missions/ch01-first-blood` | 순수 리터럴 (DOM/리액트 0) |
+| `data/` | `attributes·signal·classes·abilities·enemies·weapons` + `missions/ch01-first-blood` | 순수 리터럴 (DOM/리액트 0) |
 | `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
 | `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) | 순수 함수 |
 | `state/` | `store`(리듀서+전투 오케스트레이션) · `save`(localStorage+base64 export/import G11) | 순수 로직 |

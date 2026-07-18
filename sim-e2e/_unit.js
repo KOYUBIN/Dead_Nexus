@@ -365,6 +365,76 @@ function tests(){
   // (7) 종료 선언 유지 톤 — 내 선언이면 tone=won (meIdx 기준, players[0] 하드코딩 아님)
   ok('NB decl tone=won when decl.idx===meIdx', NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[],victoryDeclaration:{idx:0}}},mkCtx({meIdx:0})).tone==='won');
   ok('NB decl tone≠won when decl.idx≠meIdx', NA({...nbS,meta:{...nbS.meta,phase:0,pendingDecisions:[],victoryDeclaration:{idx:1}}},mkCtx({meIdx:0})).tone!=='won');
+  // ============================================================
+  // v6.31 (레거시 Stage 2): 챕터 2 "Insider Game" — 해금 트리거·PREY 흉터·하위 호환
+  //   legacy_module.js 순수 로직(localStorage 가드). 시나리오 간 legacyReset 로 격리.
+  //   신규 게임 로직 0 — 단일 흉터 채널이 챕터 2 해금 후 M&A 표적으로도 발원함을 검증.
+  // ============================================================
+  const LRG=window.legacyRecordGame, LAS=window.legacyActiveScar, LCM=window.legacyChapterMeta,
+        LRS=window.legacyReset, LLD=window.legacyLoad, LSV=window.legacySave,
+        LTC=window.legacyTotalChapters, LU2=window.legacyUnlockChapter2;
+  ok('LEG fns exposed (record/scar/meta/reset/load/save/total/unlock2)', [LRG,LAS,LCM,LRS,LLD,LSV,LTC,LU2].every(f=>typeof f==='function'));
+  // (1) CHAPTER_META[2] 원전 메타 — 봉투 B · 제목 · 해금 조건 · 3문장 스토리(원문 발췌)
+  const cm2=LCM(2);
+  ok('LEG ch2 meta id/envelope/title', !!cm2&&cm2.id===2&&cm2.envelope==='B'&&cm2.title==='Insider Game', JSON.stringify(cm2&&{id:cm2.id,e:cm2.envelope,t:cm2.title}));
+  ok('LEG ch2 unlockCond=최초 M&A 선언', !!cm2&&cm2.unlockCond==='최초 M&A 선언', cm2&&cm2.unlockCond);
+  ok('LEG ch2 story 3문장 + 원문 발췌("블록끼리도 블록을 먹는다")', !!cm2&&Array.isArray(cm2.story)&&cm2.story.length===3&&cm2.story.some(s=>s.indexOf('블록끼리도 블록을 먹는다')!==-1));
+  ok('LEG ch1 메타·TOTAL_CHAPTERS 회귀 불변(8)', LCM(1)&&LCM(1).title==='First Blood'&&LTC()===8);
+  // (2) 미해금: raid/M&A 없음 → 챕터 2 잠금 (chapter2Newly=false · 흉터 null)
+  LRS();
+  const lr0=LRG({anyRaid:false, anyMna:false});
+  ok('LEG 미해금: anyMna=false → ch2 잠금 · newly=false', lr0.state.chaptersUnlocked.indexOf(2)===-1&&lr0.chapter2Newly===false);
+  ok('LEG 미해금: activeScar null (ch1·ch2 모두 잠금)', LAS()===null);
+  // (3) 해금: 최초 M&A 선언 → 챕터 2 해금 (chapter2Newly=true) · 레이드 없어도 독립 해금
+  LRS();
+  const lr1=LRG({anyMna:true});
+  ok('LEG 해금: anyMna=true → ch2 해금 + chapter2Newly=true', lr1.state.chaptersUnlocked.indexOf(2)!==-1&&lr1.chapter2Newly===true);
+  ok('LEG 해금: ch1 독립(레이드 없음 → ch1 미해금)', lr1.state.chaptersUnlocked.indexOf(1)===-1);
+  ok('LEG 해금: 반환에 chapter1Newly/chapter2Newly 둘 다 존재', typeof lr1.chapter1Newly==='boolean'&&typeof lr1.chapter2Newly==='boolean');
+  // (4) 멱등: 이미 해금 후 재선언 → chapter2Newly=false
+  const lr2=LRG({anyMna:true});
+  ok('LEG 멱등: 재선언 chapter2Newly=false (해금 유지)', lr2.chapter2Newly===false&&lr2.state.chaptersUnlocked.indexOf(2)!==-1);
+  // (5) 영속효과: 챕터 2 해금 후 M&A PREY(표적) → 다음 게임 흉터=PREY 블록 (start stock -1 근거)
+  LRS();
+  LRG({anyMna:true});                        // 해금(표적 없음)
+  LRG({anyMna:true, mnaPreyBloc:'VANTA'});    // PREY 표적 발생
+  const scarP=LAS();
+  ok('LEG 영속: PREY 흉터 bloc=VANTA · kind=prey', !!scarP&&scarP.bloc==='VANTA'&&scarP.kind==='prey', JSON.stringify(scarP));
+  // (6) PREY 우선: 레이드 피해 + M&A 표적 공존 → 흉터=PREY(가장 신선한 상처)
+  LRS();
+  LRG({anyRaid:true, topRaidBloc:'HELIX'});    // ch1 해금 + raid 흉터
+  const lr3=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM'}); // ch2 해금 + 둘 다
+  const scarPr=LAS();
+  ok('LEG PREY 우선: raid+mna 공존 → 흉터=AXIOM(prey)', !!scarPr&&scarPr.bloc==='AXIOM'&&scarPr.kind==='prey', JSON.stringify(scarPr));
+  ok('LEG 동일판: ch1 기해금(newly=false)·ch2 신규(newly=true)', lr3.chapter1Newly===false&&lr3.chapter2Newly===true);
+  // (7) 챕터1 폴백: ch2 미해금 시 raid 흉터만 (PREY 경로 비활성 · Stage 1 동작 불변)
+  LRS();
+  LRG({anyRaid:true, topRaidBloc:'IRONWALL'});
+  const lr4=LRG({anyRaid:true, topRaidBloc:'IRONWALL', anyMna:false});
+  const scarR=LAS();
+  ok('LEG ch1 폴백: raid 흉터 bloc=IRONWALL · kind=raid', !!scarR&&scarR.bloc==='IRONWALL'&&scarR.kind==='raid', JSON.stringify(scarR));
+  ok('LEG ch1 폴백: ch2 미해금 유지', lr4.state.chaptersUnlocked.indexOf(2)===-1);
+  // (8) 선언만(표적 없음): ch2 해금되되 흉터 미기록
+  LRS();
+  const lr5=LRG({anyMna:true});
+  ok('LEG 선언만: ch2 해금 · 흉터 없음(PREY null)', lr5.state.chaptersUnlocked.indexOf(2)!==-1&&LAS()===null);
+  // (9) ch2 단독 해금(ch1 없이)도 흉터 활성 — activeScar 게이트 ch1|ch2 확장 검증
+  LRS();
+  const lr6=LRG({anyMna:true, mnaPreyBloc:'HELIX'}); // ch2 해금 + PREY 흉터 동시(ch1 없음)
+  const scar6=LAS();
+  ok('LEG ch2 단독: 흉터 활성(ch1 게이트 비의존)', lr6.state.chaptersUnlocked.indexOf(1)===-1&&!!scar6&&scar6.bloc==='HELIX'&&scar6.kind==='prey', JSON.stringify(scar6));
+  // (10) 하위 호환: 구버전 세이브({chaptersUnlocked:[1],cityScars:[{bloc}]} — kind/ch2 없음) 로드 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1], chapterProgress:{1:{unlockedAt:1}}, cityScars:[{bloc:'CARBON'}]});
+  const oldLoad=LLD();
+  ok('LEG 하위호환: 구세이브 정규화(ch1만·ch2 없음)', oldLoad.chaptersUnlocked.indexOf(1)!==-1&&oldLoad.chaptersUnlocked.indexOf(2)===-1);
+  const oldScar=LAS();
+  ok('LEG 하위호환: kind 없는 구흉터 → kind 기본 raid', !!oldScar&&oldScar.bloc==='CARBON'&&oldScar.kind==='raid', JSON.stringify(oldScar));
+  // (11) 챕터1 시그니처 불변(하위호환): anyRaid/topRaidBloc 만으로 기존 Stage 1 동작 그대로
+  LRS();
+  const lr7=LRG({anyRaid:true, topRaidBloc:'VANTA'});
+  ok('LEG 시그니처 불변: anyRaid→ch1 해금·chapter1Newly·raid 흉터', lr7.state.chaptersUnlocked.indexOf(1)!==-1&&lr7.chapter1Newly===true&&LAS().bloc==='VANTA'&&LAS().kind==='raid');
+  LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
 (async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();

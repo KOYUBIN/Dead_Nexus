@@ -26,6 +26,24 @@
     return { dmg: dmg, blocked: dmg <= 0 };
   }
 
+  // [각색 blade.md Card06 DOUBLE TAP] 결정론 다연타. hits 회 연속 타격, lastHitPierceAll 이면
+  //   마지막 타격은 DEF 무시(관통). 각 타격은 computeDamage 재사용 → 순수·결정론.
+  //   opts = { atkValue, def, cover, affinity, bonus, crit, hits, lastHitPierceAll }.
+  //   반환 { dmg(합계), hits:[각 타격 dmg], blocked(전타 튕김 여부) }.
+  function multiStrike(opts) {
+    var hits = Math.max(1, opts.hits || 1);
+    var detail = [], total = 0, anyLanded = false;
+    for (var i = 0; i < hits; i++) {
+      var last = (i === hits - 1);
+      var pierce = (last && opts.lastHitPierceAll) ? (opts.def || 0) : (opts.pierce || 0);
+      var res = computeDamage({ atkValue: opts.atkValue, def: opts.def, cover: opts.cover,
+        affinity: opts.affinity, bonus: opts.bonus, pierce: pierce, crit: opts.crit });
+      detail.push(res.dmg); total += res.dmg;
+      if (!res.blocked) anyLanded = true;
+    }
+    return { dmg: total, hits: detail, blocked: !anyLanded };
+  }
+
   // 오브젝티브(서버랙/ICE) threshold 누적 차감. 인접 유닛의 HACK(또는 ATK) 액션.
   //   반환 { threshold(신규), reached(0 도달 여부), delta(실제 차감치) }.
   function objectiveDamage(objective, actorValue, extraBonus) {
@@ -50,6 +68,7 @@
 
   var API = {
     computeDamage: computeDamage,
+    multiStrike: multiStrike,
     objectiveDamage: objectiveDamage,
     bleedingTick: bleedingTick,
     inRange: inRange,
