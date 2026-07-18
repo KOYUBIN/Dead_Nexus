@@ -17,6 +17,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.34 — RPG 4클래스 로스터 + 레거시 챕터 4 (48~49차 병렬)
+- **RPG 클래스 로스터 2→4** (rpg/): RIGGER(설치·제어 — SENTRY GUN·TRAP WIRE·EMP PULSE·OVERLOAD + WORKSHOP 패시브, 최고 DEF 4)·MOLE(위장·침투 — AUTH ABUSE·CLEARANCE·BOARD MANIP·IDENTITY COLLAPSE + TRIPLE AGENT, 위장 신분 태그 3종 + 무소음). 전부 rigger.md/mole.md 원전 카드 각색 + docs/07 스탯 계승, **신규 엔진 메커닉 0** (기존 필드 재활용)
+- **4클래스 × 16미션 완주 가능성 매트릭스 64/64** — 정적 트래버설 검증, 미션 수정 0. MOLE 위장 태그가 인물태그 게이트를, RIGGER DEF4가 def 게이트를 자연 통과. ch01 기준 4가지 상이 경로 (CIPHER 해킹 우회 / BLADE 강습 / RIGGER 전투 돌파 / MOLE 무전투 위장 침투 — Playwright 실증)
+- objBonusAbility 하드코딩 제거 → PASSIVE 일반 탐지 (향후 클래스 자동 지원)
+- **레거시 캠페인 챕터 4 "Price of Splice"** (simulator/): 해금 = 임의 Bloc TL4 (원전 OR 분기 A — 종료 시 1회 파생, 자연 발화 40%), 분기 B(스플라이스 장착 집계) No-op 정직 보고. splice 흉터(과잉 개조 블록 주가 −1), 우선순위 splice>martial>prey>raid. **캠페인 4/8**
+- rpg 유닛 123/123 (신규 26) · 시뮬 유닛 232/232 (신규 20) · 미션 검증기 16/16 · babel 0 에러 · 콘솔/스모크 에러 0
+
 ### v6.33 — RPG 미션 16종 체제 + 레거시 챕터 3 (46~47차 병렬)
 - **RPG 미션 팩토리** (유저 "미션을 왕창만들어" — 19 에이전트 워크플로): 미션 1개 → **16개** (메인 챕터 1~8 + 사이드 계약 8종)
   - 메인 8: 레거시 챕터 원전 아크 압축 (Insider Game·Martial Night·Price of Splice·Mesh Ghost·Bloc Acquisition·Heart of City·Zero Day) — 오프닝 산문 원문 발췌, 챕터 간 플래그 상속(영웅/유령·엔딩 분기)

@@ -74,6 +74,11 @@ function missionOf(state) {
   return (id && CAMP.missionData(id)) || (window.RPG_MISSION_CH01 && window.RPG_MISSION_CH01.MISSION);
 }
 function chLabel(entry) { return entry && entry.chapter ? ('CH' + (entry.chapter < 10 ? '0' + entry.chapter : entry.chapter)) : ''; }
+// [48차] 클래스 정체성 한줄 태그라인 + 킷 라벨 (4클래스 UI 표기 · 하드코딩 분기 제거).
+const CLASS_TAGLINE = { CIPHER: '정보전의 유령', BLADE: '거리의 집행관', RIGGER: '설치/제어의 정비공', MOLE: '위장/침투의 첩자' };
+const CLASS_KITLABEL = { CIPHER: '해킹 킷', BLADE: '근접 킷', RIGGER: '설치·제어 킷', MOLE: '위장·침투 킷' };
+function classTagline(k) { return CLASS_TAGLINE[k] || '운영자'; }
+function classKitLabel(k) { return CLASS_KITLABEL[k] || '히어로 킷'; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ── 타자기 텍스트 (탭하면 즉시 완성, reduced-motion 존중) ──
@@ -146,7 +151,7 @@ function Roster({ state, dispatch }) {
     <div className="sheet">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
       <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>크루 / 로스터</h1>
-      <p className="sub" style={{ color: 'var(--text-dim)' }}>운영자를 편성한다. 같은 미션을 다른 빌드로 완주 — CIPHER 해킹 vs BLADE 근접.</p>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>운영자를 편성한다. 같은 미션을 다른 빌드로 완주 — CIPHER 해킹 · BLADE 근접 · RIGGER 설치/제어 · MOLE 위장/침투.</p>
       {playable.map(key => {
         const cl = window.RPG_CLASSES.CLASSES[key];
         const active = cur === key;
@@ -245,7 +250,7 @@ function Hub({ state, dispatch, openSave }) {
   return (
     <div className="hub">
       <h1>안전가옥 — ASHGRID</h1>
-      <p className="sub">{ch.icon} {ch.classKey} / {ch.codename} · {ch.classKey === 'BLADE' ? '거리의 집행관' : '정보전의 유령'}</p>
+      <p className="sub">{ch.icon} {ch.classKey} / {ch.codename} · {classTagline(ch.classKey)}</p>
       <LastOpPanel flags={save.flags} />
       <div className="hub-grid">
         <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'missions' })}>
@@ -258,7 +263,7 @@ function Hub({ state, dispatch, openSave }) {
         </button>
         <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'roster' })}>
           <span className="ic">👥</span><span className="lb">크루 / 로스터</span>
-          <span className="nt">CIPHER ↔ BLADE 빌드 전환</span>
+          <span className="nt">4클래스 빌드 전환 (해킹·근접·설치·위장)</span>
         </button>
         <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
           <span className="ic">🛒</span><span className="lb">상점 / 의료</span><span className="nt">HELIX 회복 (Stage 3)</span>
@@ -302,7 +307,7 @@ function CharacterSheet({ state, dispatch }) {
         </div>
       ))}
       <div style={{ marginTop: 8 }}>
-        <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>{ch.classKey === 'BLADE' ? '근접 킷' : '히어로 킷'}</div>
+        <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>{classKitLabel(ch.classKey)}</div>
         <div className="kit">{ch.kit.map(k => <span className="ab" key={k}>{AB.ABILITIES[k].icon} {AB.ABILITIES[k].name}</span>)}</div>
       </div>
       <AffinityMatrix />

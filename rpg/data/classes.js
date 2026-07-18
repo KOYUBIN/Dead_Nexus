@@ -12,7 +12,8 @@
   //   [계승 docs/07 §3 STEP B(3항)] BLADE 동점 자동 선공 패시브
   //   [신규 파생 docs/25 §3.1] MOV = SPD 파생 (SPD<=2→2 / 3→3 / >=4→4)
   //   [신규 docs/25 §3.2] AP 단일 풀 기본 2
-  // Stage 2 플레이어블 = CIPHER(해킹) + BLADE(근접). 나머지 4클래스는 후속 로스터 데이터.
+  //   [48차 계보] RIGGER/MOLE passive·tags 추가 → 4클래스 플레이어블 (킷 = data/abilities.js).
+  // 플레이어블 = CIPHER(해킹)·BLADE(근접)·RIGGER(설치/제어)·MOLE(위장/침투). BROKER/DRIFTER 는 후속 로스터 데이터.
   // ==========================================================================
 
   // [계승 docs/07 §2] — 표기 순서 HP/ATK/DEF/SPD/HACK
@@ -21,14 +22,17 @@
   var CLASSES = {
     CIPHER:  { key: 'CIPHER',  hp: 6,  atk: 2, def: 1, spd: 4, hack: 5, primary: 'MESH',  secondary: 'SHADE', signalFavor: 'mesh', icon: '👤', codename: 'STATIC', passive: '베일 판독 — 오브젝티브 해킹 특화', note: 'HACK 특화, 최저 HP' },
     BLADE:   { key: 'BLADE',   hp: 10, atk: 5, def: 3, spd: 3, hack: 1, primary: 'IRON',  secondary: 'ASH',   signalFavor: 'iron', icon: '🗡', codename: 'RUST',   passive: '동점 자동 선공 [계승 docs/07 §3 STEP B]', note: '최고 HP·ATK, 자동 선공' },
-    RIGGER:  { key: 'RIGGER',  hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'VOLT',  secondary: 'IRON',  signalFavor: 'mesh', icon: '🔧', codename: 'PATCH',  note: '최고 DEF, 균형형' },
+    // [48차] RIGGER 설치·제어형 — 최고 DEF(4). 트랩/센트리로 지역 장악·수비 오브젝티브에 강함.
+    RIGGER:  { key: 'RIGGER',  hp: 7,  atk: 3, def: 4, spd: 2, hack: 3, primary: 'VOLT',  secondary: 'IRON',  signalFavor: 'mesh', icon: '🔧', codename: 'PATCH',  passive: '현장 정비 — 설치형 지역 장악·수비 특화', note: '최고 DEF, 균형형' },
     BROKER:  { key: 'BROKER',  hp: 6,  atk: 2, def: 2, spd: 5, hack: 2, primary: 'SHADE', secondary: 'GRID',  signalFavor: 'iron', icon: '🎭', codename: 'SILK',   note: '최고 SPD, 전투 회피형' },
     DRIFTER: { key: 'DRIFTER', hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'ASH',   secondary: 'GRID',  signalFavor: 'iron', icon: '🚗', codename: 'FLINT',  note: '고 HP + 고 SPD, 기동형' },
-    MOLE:    { key: 'MOLE',    hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'SHADE', secondary: 'MESH',  signalFavor: 'mesh', icon: '🕵', codename: 'ECHO',   note: '균형, 유연성' },
+    // [48차] MOLE 위장·침투형 — 위장 신분(tags)으로 블록 인물태그 게이트 통과. 무소음 킷으로 발각 리스크 관리.
+    //   tags: [계승 mole.md Card01 COVER IDENTITY] 블록 소속 위장 → tag 게이트(VANTA/IRONWALL/AXIOM) 통과. SIMPLIFIED(상시 유지).
+    MOLE:    { key: 'MOLE',    hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'SHADE', secondary: 'MESH',  signalFavor: 'mesh', icon: '🕵', codename: 'ECHO',   passive: '위장 신분 — 인물태그 게이트 통과 · 무소음 침투', tags: ['VANTA', 'IRONWALL', 'AXIOM'], note: '균형, 유연성' },
   };
 
-  // Stage 2 플레이어블 로스터 (허브 크루/로스터에서 선택 가능).
-  var PLAYABLE = ['CIPHER', 'BLADE'];
+  // 플레이어블 로스터 (허브 크루/로스터에서 선택 가능). [44차] CIPHER·BLADE → [48차] RIGGER·MOLE 확장 = 4클래스.
+  var PLAYABLE = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'];
 
   // [신규 파생 docs/25 §3.1] SPD → MOV(칸). 1 AP = MOV칸.
   function movFromSpd(spd) {

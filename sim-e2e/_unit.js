@@ -499,6 +499,72 @@ function tests(){
   ok('LEG3 unlock3 직접: 신규 newly=true·배열에 3', u3a.newly===true&&u3a.state.chaptersUnlocked.indexOf(3)!==-1);
   const u3b=LU3(u3a.state);
   ok('LEG3 unlock3 직접: 멱등 newly=false', u3b.newly===false&&u3b.state.chaptersUnlocked.indexOf(3)!==-1);
+  // ============================================================
+  // v6.34 (레거시 Stage 4): 챕터 4 "Price of Splice"(스플라이스의 대가) — TL4 해금·splice 흉터·하위 호환
+  //   원전 해금 "임의 Bloc 테크 레벨(TL) 4 달성 OR Ghost 스플라이스 3개" → 첫 분기(Bloc TL4)만 실존 신호로
+  //   spliceTech/spliceBloc 파생(옵셔널 필드); Ghost 스플라이스 집계는 엔진 부재 → No-op.
+  //   흉터 채널은 여전히 단 하나 — kind 'splice'(그 블록 시작 주가 -1). 우선순위 splice>martial>prey>raid.
+  // ============================================================
+  const LU4=window.legacyUnlockChapter4;
+  ok('LEG4 fns exposed (unlockChapter4)', typeof LU4==='function');
+  // (1) CHAPTER_META[4] 원전 메타 — 봉투 D · 제목 · 해금 조건 · 3문장(원문 발췌)
+  const cm4=LCM(4);
+  ok('LEG4 ch4 meta id/envelope/title', !!cm4&&cm4.id===4&&cm4.envelope==='D'&&cm4.title==='Price of Splice', JSON.stringify(cm4&&{id:cm4.id,e:cm4.envelope,t:cm4.title}));
+  ok('LEG4 ch4 unlockCond=임의 Bloc 테크 레벨(TL) 4 달성', !!cm4&&cm4.unlockCond==='임의 Bloc 테크 레벨(TL) 4 달성', cm4&&cm4.unlockCond);
+  ok('LEG4 ch4 story 3문장 + 원문 발췌("몸이 무기가 되면, 몸도 적이 된다")', !!cm4&&Array.isArray(cm4.story)&&cm4.story.length===3&&cm4.story.some(s=>s.indexOf('몸이 무기가 되면, 몸도 적이 된다')!==-1));
+  ok('LEG4 ch1·ch2·ch3 메타 회귀 불변·TOTAL=8', LCM(1).title==='First Blood'&&LCM(2).title==='Insider Game'&&LCM(3).title==='Martial Night'&&LTC()===8);
+  // (2) 미해금: spliceTech 없음 → ch4 잠금 (chapter4Newly=false)
+  LRS();
+  const l40=LRG({anyRaid:false, anyMna:false});
+  ok('LEG4 미해금: spliceTech 미공급 → ch4 잠금 · chapter4Newly=false', l40.state.chaptersUnlocked.indexOf(4)===-1&&l40.chapter4Newly===false);
+  ok('LEG4 반환에 chapter4Newly(boolean) 존재', typeof l40.chapter4Newly==='boolean');
+  // (3) 해금: 임의 Bloc TL4(spliceTech) → ch4 해금 (chapter4Newly=true) · 레이드·M&A·계엄 없어도 독립 해금
+  LRS();
+  const l41=LRG({spliceTech:true});
+  ok('LEG4 해금: spliceTech=true → ch4 해금 + chapter4Newly=true', l41.state.chaptersUnlocked.indexOf(4)!==-1&&l41.chapter4Newly===true);
+  ok('LEG4 해금: ch1·ch2·ch3 독립(미해금)', l41.state.chaptersUnlocked.indexOf(1)===-1&&l41.state.chaptersUnlocked.indexOf(2)===-1&&l41.state.chaptersUnlocked.indexOf(3)===-1);
+  // (4) 멱등: 이미 해금 후 재달성 → chapter4Newly=false
+  const l42=LRG({spliceTech:true});
+  ok('LEG4 멱등: 재달성 chapter4Newly=false (해금 유지)', l42.chapter4Newly===false&&l42.state.chaptersUnlocked.indexOf(4)!==-1);
+  // (5) 영속: ch4 해금 + spliceBloc → splice 흉터 (bloc · kind=splice · heatDelta=0 = 시작 주가 -1)
+  LRS();
+  LRG({spliceTech:true});                        // 해금(표적 블록 없음)
+  LRG({spliceTech:true, spliceBloc:'HELIX'});    // TL4 과잉 개조 블록 발생
+  const scarS=LAS();
+  ok('LEG4 영속: splice 흉터 kind=splice · bloc=HELIX · heatDelta=0', !!scarS&&scarS.kind==='splice'&&scarS.bloc==='HELIX'&&scarS.heatDelta===0, JSON.stringify(scarS));
+  // (6) 우선순위 splice > martial > prey > raid — 넷 공존 → 흉터=splice (챕터 순 최신 상처)
+  LRS();
+  const l43=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true, spliceTech:true, spliceBloc:'CARBON'});
+  const scarPri4=LAS();
+  ok('LEG4 우선: raid+prey+martial+splice 공존 → 흉터=splice(CARBON)', !!scarPri4&&scarPri4.kind==='splice'&&scarPri4.bloc==='CARBON', JSON.stringify(scarPri4));
+  ok('LEG4 동일판: ch1·ch2·ch3·ch4 모두 신규 해금(Newly 4개 true)', l43.chapter1Newly===true&&l43.chapter2Newly===true&&l43.chapter3Newly===true&&l43.chapter4Newly===true);
+  // (7) 흉터 폴백: ch4 해금됐지만 이번 판 spliceBloc 없음(+ martial 존재) → 흉터=martial (splice 미발원)
+  LRS();
+  LRG({spliceTech:true, martialLaw:true});               // ch3·ch4 해금
+  LRG({martialLaw:true});                                // TL4 블록 없는 판 → martial 흉터
+  const scarFb4=LAS();
+  ok('LEG4 폴백: ch4 해금+splice블록없음 → 흉터=martial', !!scarFb4&&scarFb4.kind==='martial'&&scarFb4.bloc===null, JSON.stringify(scarFb4));
+  // (8) ch4 단독 해금(ch1·ch2·ch3 없이)도 흉터 활성 — activeScar 게이트 ch1|ch2|ch3|ch4 확장 검증
+  LRS();
+  const l44=LRG({spliceTech:true, spliceBloc:'VANTA'});    // ch4 만 해금 + splice 흉터 동시
+  const scarSolo4=LAS();
+  ok('LEG4 단독: ch4 만 해금 → 흉터 활성(ch1·ch2·ch3 게이트 비의존)', l44.state.chaptersUnlocked.indexOf(1)===-1&&l44.state.chaptersUnlocked.indexOf(2)===-1&&l44.state.chaptersUnlocked.indexOf(3)===-1&&!!scarSolo4&&scarSolo4.kind==='splice'&&scarSolo4.bloc==='VANTA', JSON.stringify(scarSolo4));
+  // (9) 하위 호환: 챕터 1~3 세이브 로드 — ch4/spliceTech 개념 없던 구세이브 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1,2,3], chapterProgress:{1:{unlockedAt:1},2:{unlockedAt:2},3:{unlockedAt:3}}, cityScars:[{bloc:null, kind:'martial'}]});
+  const oldLoad3=LLD();
+  ok('LEG4 하위호환: 챕터1~3 세이브 로드 정규화(ch4 미해금)', oldLoad3.chaptersUnlocked.indexOf(1)!==-1&&oldLoad3.chaptersUnlocked.indexOf(3)!==-1&&oldLoad3.chaptersUnlocked.indexOf(4)===-1);
+  const oldScar3=LAS();
+  ok('LEG4 하위호환: 기존 martial 흉터 로드 유지(bloc=null·heatDelta=1)', !!oldScar3&&oldScar3.kind==='martial'&&oldScar3.bloc===null&&oldScar3.heatDelta===1, JSON.stringify(oldScar3));
+  // (10) 하위 호환: spliceTech 미공급(구 index.html 시그니처)이면 ch4 미해금 — 신필드 옵셔널
+  LRS();
+  const l45=LRG({anyRaid:true, topRaidBloc:'VANTA'});   // 구 시그니처 그대로
+  ok('LEG4 시그니처 불변: spliceTech 미공급 → ch4 미해금·ch1만 해금', l45.state.chaptersUnlocked.indexOf(4)===-1&&l45.state.chaptersUnlocked.indexOf(1)!==-1&&l45.chapter4Newly===false);
+  // (11) legacyUnlockChapter4 직접 멱등 — 이미 해금 배열에 4 있으면 newly=false
+  const u4a=LU4({chaptersUnlocked:[], chapterProgress:{}, cityScars:[]});
+  ok('LEG4 unlock4 직접: 신규 newly=true·배열에 4', u4a.newly===true&&u4a.state.chaptersUnlocked.indexOf(4)!==-1);
+  const u4b=LU4(u4a.state);
+  ok('LEG4 unlock4 직접: 멱등 newly=false', u4b.newly===false&&u4b.state.chaptersUnlocked.indexOf(4)!==-1);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
