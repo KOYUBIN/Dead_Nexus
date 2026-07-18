@@ -1,10 +1,11 @@
 'use strict';
 // ============================================================================
-// legacy_module.js — 레거시 캠페인 영속 Stage 1·2 (docs/12 "ASH & SIGNAL")
+// legacy_module.js — 레거시 캠페인 영속 Stage 1·2·3·4 (docs/12 "ASH & SIGNAL")
 //   챕터 진행을 브라우저 localStorage('dn_legacy_v1')에 영속화하고,
 //   Chapter 1 "First Blood"(cards/legacy/chapter-01-first-blood.md) +
 //   Chapter 2 "Insider Game"(cards/legacy/chapter-02-insider-game.md) +
-//   Chapter 3 "Martial Night"(cards/legacy/chapter-03-martial-night.md) 아크를
+//   Chapter 3 "Martial Night"(cards/legacy/chapter-03-martial-night.md) +
+//   Chapter 4 "Price of Splice"(cards/legacy/chapter-04-price-of-splice.md) 아크를
 //   실플레이에 연결한다. euro_module / lore_module 와 동일한 배선 패턴:
 //     · <script src> 로드 + DOMContentLoaded 자가복구 heal 로더 등록(index.html)
 //     · 전역은 window 노출, 소비처는 typeof 가드로 미로드 시 무해
@@ -12,19 +13,21 @@
 //       모드·스토리지 차단 브라우저에서도 예외 없이 기본값으로 되돌아간다.
 //
 //   영속 스키마 dn_legacy_v1 = {
-//     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2,3])
+//     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2,3,4])
 //     chapterProgress:  { [n]: {unlockedAt} },       // 챕터별 진행 메타
 //     cityScars:        [{ bloc, kind, ts }],        // 도시 흉터 기록 (docs/22 정체성)
-//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄)
+//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄) | 'splice'(ch4 과잉 개조 블록)
 //   * 게임 로직 무변경 원칙: 이 모듈은 순수 영속·조회 계층이다. 게임 규칙에
 //     주는 유일한 영향은 단일 흉터 채널(cityScar)로, initGame 이 legacyActiveScar()를
-//     읽어 적용할 때뿐이다. Stage 2·3 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
+//     읽어 적용할 때뿐이다. Stage 2·3·4 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
 //     kind 로 마크 대상만 갈린다:
-//       · 'raid'(ch1 레이드 최다 피격 블록) → 다음 게임 시작 주가 -1
-//       · 'prey'(ch2 M&A 표적 블록)         → 다음 게임 시작 주가 -1
-//       · 'martial'(ch3 계엄 발생, 특정 블록 없음) → 다음 게임 시작 공권력 +1 (도시 전역)
-//     흉터는 ch1|ch2|ch3 중 하나라도 해금돼야 활성. 우선순위 martial > prey > raid
-//     (가장 최근·도시 전역적 상처가 단일 슬롯을 차지; -1급 소규모 1회성 유지).
+//       · 'raid'(ch1 레이드 최다 피격 블록)         → 다음 게임 시작 주가 -1
+//       · 'prey'(ch2 M&A 표적 블록)                 → 다음 게임 시작 주가 -1
+//       · 'martial'(ch3 계엄 발생, 특정 블록 없음)  → 다음 게임 시작 공권력 +1 (도시 전역)
+//       · 'splice'(ch4 임의 Bloc TL 4 달성 → 그 블록) → 다음 게임 시작 주가 -1 (사이버사이코시스 대가)
+//     흉터는 ch1|ch2|ch3|ch4 중 하나라도 해금돼야 활성. 우선순위 splice > martial > prey > raid
+//     (챕터 순 최신 상처가 단일 슬롯을 차지 — 기존 3장이 raid<prey<martial 로 챕터 순을 따랐던 규칙의
+//      확장; ch4 splice 가 가장 최근 챕터라 최상위. martial 은 여전히 유일한 도시 전역 흉터. -1/+1급 소규모 1회성 유지).
 // ============================================================================
 (function (glob) {
 
@@ -111,6 +114,18 @@
         '세 번째로 도시가 배운 사실 — 블록보다 강한 것은 국가다. 아주 가끔, 잠깐 동안만. 이 챕터부터 공권력과의 정면 충돌이 가능해진다.',
       ],
     },
+    4: {
+      id: 4,
+      envelope: 'D',
+      title: 'Price of Splice',
+      titleKo: '스플라이스의 대가',
+      unlockCond: '임의 Bloc 테크 레벨(TL) 4 달성',
+      story: [
+        '2091년 9월 08일, HELIX 사내 광고가 도시를 뒤덮었다 — "당신의 한계는 이제 선택입니다." 스플라이스와 코어텍스 와이어가 지하 시장에서 대중 시장으로 넘어온다.',
+        '같은 날 새벽, B8 불법 시술소에서 시술받던 여성 하나가 수술대에서 일어나 벽을 뜯어내고 걸어나갔다. 그녀의 눈은 — 엄밀히 말하면 그녀의 몸도 — 자신의 것이 아니었다.',
+        '네 번째로 도시가 알게 된 사실 — 몸이 무기가 되면, 몸도 적이 된다. 이 챕터부터 사이버사이코시스의 시대가 시작된다.',
+      ],
+    },
   };
 
   function legacyChapterMeta(n) { return CHAPTER_META[n] || null; }
@@ -150,6 +165,22 @@
     if (st.chaptersUnlocked.indexOf(3) !== -1) return { unlocked: true, newly: false, state: st };
     st.chaptersUnlocked = st.chaptersUnlocked.concat([3]);
     st.chapterProgress = Object.assign({}, st.chapterProgress, { 3: { unlockedAt: Date.now() } });
+    return { unlocked: true, newly: true, state: st };
+  }
+
+  // 챕터 4 해금 (봉투 D). 봉투별 조건은 독립 — 챕터 1·2·3 선행 불필요.
+  //   해금 조건 원전: "임의의 Bloc 테크 레벨(TL) 4 달성 또는 어떤 Ghost가 스플라이스 3개 장착".
+  //   → 엔진 신호: 첫 번째 분기(임의 Bloc TL 4 달성)만 현행 엔진에 실존 — 소비처(index.html)가
+  //     게임 종료 시 role==='bloc' 플레이어의 p.tl(엔진 TL 시스템, R&D 페이즈 파생) 최댓값 ≥ 4 를
+  //     파생해 spliceTech 로 넘긴다(상시 카운터 신설 없음). 두 번째 분기(Ghost 스플라이스 3개 장착)는
+  //     엔진에 개별 스플라이스 장착 집계 시스템이 없어 미배선(No-op 정직 보고) — OR 조건은 실존 신호
+  //     하나로 충족.
+  //   반환 { unlocked, newly, state }.
+  function legacyUnlockChapter4(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (st.chaptersUnlocked.indexOf(4) !== -1) return { unlocked: true, newly: false, state: st };
+    st.chaptersUnlocked = st.chaptersUnlocked.concat([4]);
+    st.chapterProgress = Object.assign({}, st.chapterProgress, { 4: { unlockedAt: Date.now() } });
     return { unlocked: true, newly: true, state: st };
   }
 
