@@ -631,6 +631,79 @@ function tests(){
   ok('LEG5 unlock5 직접: 신규 newly=true·배열에 5', u5a.newly===true&&u5a.state.chaptersUnlocked.indexOf(5)!==-1);
   const u5b=LU5(u5a.state);
   ok('LEG5 unlock5 직접: 멱등 newly=false', u5b.newly===false&&u5b.state.chaptersUnlocked.indexOf(5)!==-1);
+  // ============================================================
+  // v6.36 (레거시 Stage 6): 챕터 6 "Bloc Acquisition"(블록 인수) — M&A 인수 완결 해금·acquired 흉터·하위 호환
+  //   원전 해금 "Bloc 1곳 완전 흡수(지분 51%+ 이사회 3R 장악)" → 엔진 인수 완결(meta.acquisitions 기록/
+  //   피인수 p.acquiredBy 마커)에서 blocAbsorbed 파생(옵셔널 필드); 흉터 대상 absorbedBloc=흡수된 블록.
+  //   흉터 채널은 여전히 단 하나 — kind 'acquired'(그 블록 시작 주가 -1). 우선순위 acquired>mesh>splice>martial>prey>raid.
+  //   챕터 2("최초 M&A 선언"=mnaCount) 와 구분: ch6 은 선언 아닌 인수 완결만 트리거.
+  // ============================================================
+  const LU6=window.legacyUnlockChapter6;
+  ok('LEG6 fns exposed (unlockChapter6)', typeof LU6==='function');
+  // (1) CHAPTER_META[6] 원전 메타 — 봉투 F · 제목 · 해금 조건 · 3문장(원문 발췌)
+  const cm6=LCM(6);
+  ok('LEG6 ch6 meta id/envelope/title', !!cm6&&cm6.id===6&&cm6.envelope==='F'&&cm6.title==='Bloc Acquisition', JSON.stringify(cm6&&{id:cm6.id,e:cm6.envelope,t:cm6.title}));
+  ok('LEG6 ch6 unlockCond=완전 흡수(51%+이사회 3R)', !!cm6&&cm6.unlockCond==='Bloc 1곳 완전 흡수 (지분 51% 이상 + 이사회 3라운드 장악)', cm6&&cm6.unlockCond);
+  ok('LEG6 ch6 story 3문장 + 원문 발췌("블록은 죽지 않는다")', !!cm6&&Array.isArray(cm6.story)&&cm6.story.length===3&&cm6.story.some(s=>s.indexOf('블록은 죽지 않는다')!==-1));
+  ok('LEG6 ch1~5 메타 회귀 불변·TOTAL=8', LCM(1).title==='First Blood'&&LCM(2).title==='Insider Game'&&LCM(3).title==='Martial Night'&&LCM(4).title==='Price of Splice'&&LCM(5).title==='Mesh Ghost'&&LTC()===8);
+  // (2) 미해금: blocAbsorbed 없음 → ch6 잠금 (chapter6Newly=false)
+  LRS();
+  const l60=LRG({anyRaid:false, anyMna:false});
+  ok('LEG6 미해금: blocAbsorbed 미공급 → ch6 잠금 · chapter6Newly=false', l60.state.chaptersUnlocked.indexOf(6)===-1&&l60.chapter6Newly===false);
+  ok('LEG6 반환에 chapter6Newly(boolean) 존재', typeof l60.chapter6Newly==='boolean');
+  // (3) 해금: M&A 인수 완결(blocAbsorbed) → ch6 해금 (chapter6Newly=true) · 다른 챕터 없어도 독립 해금
+  LRS();
+  const l61=LRG({blocAbsorbed:true});
+  ok('LEG6 해금: blocAbsorbed=true → ch6 해금 + chapter6Newly=true', l61.state.chaptersUnlocked.indexOf(6)!==-1&&l61.chapter6Newly===true);
+  ok('LEG6 해금: ch1~5 독립(미해금)', l61.state.chaptersUnlocked.indexOf(1)===-1&&l61.state.chaptersUnlocked.indexOf(2)===-1&&l61.state.chaptersUnlocked.indexOf(5)===-1);
+  // (4) 챕터 2 vs 챕터 6 구분(핵심) — M&A 선언만(anyMna)이고 인수 미완결(blocAbsorbed 없음) → ch2 해금·ch6 미해금
+  LRS();
+  const l6d=LRG({anyMna:true, mnaPreyBloc:'AXIOM'});   // 선언·표적만, 완결 없음
+  ok('LEG6 구분: anyMna(선언)만 → ch2 해금·ch6 미해금', l6d.state.chaptersUnlocked.indexOf(2)!==-1&&l6d.state.chaptersUnlocked.indexOf(6)===-1&&l6d.chapter6Newly===false);
+  // (5) 멱등: 이미 해금 후 재달성 → chapter6Newly=false
+  LRS();
+  LRG({blocAbsorbed:true});                          // 최초 해금(chapter6Newly=true)
+  const l62=LRG({blocAbsorbed:true});                // 재달성
+  ok('LEG6 멱등: 재달성 chapter6Newly=false (해금 유지)', l62.chapter6Newly===false&&l62.state.chaptersUnlocked.indexOf(6)!==-1);
+  // (6) 영속: ch6 해금 + absorbedBloc → acquired 흉터 (bloc · kind=acquired · heatDelta=0 = 시작 주가 -1)
+  LRS();
+  LRG({blocAbsorbed:true});                          // 해금(표적 블록 없음)
+  LRG({blocAbsorbed:true, absorbedBloc:'HELIX'});     // 완전 흡수된 블록 발생
+  const scarAcq=LAS();
+  ok('LEG6 영속: acquired 흉터 kind=acquired · bloc=HELIX · heatDelta=0', !!scarAcq&&scarAcq.kind==='acquired'&&scarAcq.bloc==='HELIX'&&scarAcq.heatDelta===0, JSON.stringify(scarAcq));
+  // (7) 우선순위 acquired > mesh > splice > martial > prey > raid — 여섯 공존 → 흉터=acquired (챕터 순 최신 상처)
+  LRS();
+  const l63=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true, spliceTech:true, spliceBloc:'CARBON', meshTech:true, meshBloc:'VANTA', blocAbsorbed:true, absorbedBloc:'IRONWALL'});
+  const scarPri6=LAS();
+  ok('LEG6 우선: raid+prey+martial+splice+mesh+acquired 공존 → 흉터=acquired(IRONWALL)', !!scarPri6&&scarPri6.kind==='acquired'&&scarPri6.bloc==='IRONWALL', JSON.stringify(scarPri6));
+  ok('LEG6 동일판: ch1~6 모두 신규 해금(Newly 6개 true)', l63.chapter1Newly===true&&l63.chapter2Newly===true&&l63.chapter3Newly===true&&l63.chapter4Newly===true&&l63.chapter5Newly===true&&l63.chapter6Newly===true);
+  // (8) 흉터 폴백: ch6 해금됐지만 이번 판 absorbedBloc 없음(+ mesh 존재) → 흉터=mesh (acquired 미발원)
+  LRS();
+  LRG({blocAbsorbed:true, meshTech:true});                   // ch5·ch6 해금
+  LRG({meshTech:true, meshBloc:'VANTA'});                     // 인수 완결 없는 판 → mesh 흉터
+  const scarFb6=LAS();
+  ok('LEG6 폴백: ch6 해금+흡수블록없음 → 흉터=mesh(VANTA)', !!scarFb6&&scarFb6.kind==='mesh'&&scarFb6.bloc==='VANTA', JSON.stringify(scarFb6));
+  // (9) ch6 단독 해금(ch1~5 없이)도 흉터 활성 — activeScar 게이트 ch1|…|ch6 확장 검증
+  LRS();
+  const l64=LRG({blocAbsorbed:true, absorbedBloc:'AXIOM'});   // ch6 만 해금 + acquired 흉터 동시
+  const scarSolo6=LAS();
+  ok('LEG6 단독: ch6 만 해금 → 흉터 활성(ch1~5 게이트 비의존)', l64.state.chaptersUnlocked.indexOf(1)===-1&&l64.state.chaptersUnlocked.indexOf(5)===-1&&!!scarSolo6&&scarSolo6.kind==='acquired'&&scarSolo6.bloc==='AXIOM', JSON.stringify(scarSolo6));
+  // (10) 하위 호환: 챕터 1~5 세이브 로드 — ch6/blocAbsorbed 개념 없던 구세이브 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1,2,3,4,5], chapterProgress:{1:{unlockedAt:1},5:{unlockedAt:5}}, cityScars:[{bloc:'VANTA', kind:'mesh'}]});
+  const oldLoad5=LLD();
+  ok('LEG6 하위호환: 챕터1~5 세이브 로드 정규화(ch6 미해금)', oldLoad5.chaptersUnlocked.indexOf(1)!==-1&&oldLoad5.chaptersUnlocked.indexOf(5)!==-1&&oldLoad5.chaptersUnlocked.indexOf(6)===-1);
+  const oldScar5=LAS();
+  ok('LEG6 하위호환: 기존 mesh 흉터 로드 유지(bloc=VANTA·heatDelta=0)', !!oldScar5&&oldScar5.kind==='mesh'&&oldScar5.bloc==='VANTA'&&oldScar5.heatDelta===0, JSON.stringify(oldScar5));
+  // (11) 하위 호환: blocAbsorbed 미공급(구 index.html 시그니처)이면 ch6 미해금 — 신필드 옵셔널
+  LRS();
+  const l65=LRG({anyRaid:true, topRaidBloc:'VANTA'});   // 구 시그니처 그대로
+  ok('LEG6 시그니처 불변: blocAbsorbed 미공급 → ch6 미해금·ch1만 해금', l65.state.chaptersUnlocked.indexOf(6)===-1&&l65.state.chaptersUnlocked.indexOf(1)!==-1&&l65.chapter6Newly===false);
+  // (12) legacyUnlockChapter6 직접 멱등 — 이미 해금 배열에 6 있으면 newly=false
+  const u6a=LU6({chaptersUnlocked:[], chapterProgress:{}, cityScars:[]});
+  ok('LEG6 unlock6 직접: 신규 newly=true·배열에 6', u6a.newly===true&&u6a.state.chaptersUnlocked.indexOf(6)!==-1);
+  const u6b=LU6(u6a.state);
+  ok('LEG6 unlock6 직접: 멱등 newly=false', u6b.newly===false&&u6b.state.chaptersUnlocked.indexOf(6)!==-1);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
