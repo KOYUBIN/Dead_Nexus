@@ -21,6 +21,7 @@ var SIG  = require('./data/signal.js');
 var CL   = require('./data/classes.js');
 var AB   = require('./data/abilities.js');
 var MI   = require('./data/missions/ch01-first-blood.js');
+var EN   = require('./data/enemies.js');
 
 var pass = 0, fail = 0, fails = [];
 function ok(name, cond) { if (cond) { pass++; console.log('  PASS  ' + name); } else { fail++; fails.push(name); console.log('  FAIL  ' + name); } }
@@ -288,6 +289,158 @@ console.log('\n== BLADE 보상 해금 = VENDETTA [계승 blade.md 레거시 해�
 var bladeSave = S.newSave(); bladeSave.character = CH.makeCharacter('BLADE');
 var bladeRew = CAMP.applyRewards(bladeSave, MI.MISSION);
 ok('76. BLADE 귀환 정산 → VENDETTA 해금(BACKDOOR 치환)', bladeRew.character.kit.indexOf('VENDETTA') >= 0 && bladeRew.character.kit.indexOf('BACKDOOR') < 0);
+
+// ============================================================================
+// ============================  STAGE 3  ======================================
+//   통합: 미션 레지스트리 · 해금 그래프 · 최초/재클리어 보상 · 세이브 마이그레이션 ·
+//         멀티미션 store 배선 (오프닝 1회 · combat.missionId · 승리 라우팅).
+// ============================================================================
+
+console.log('\n== 미션 레지스트리 무결 [통합 §2] ==');
+var REG = CAMP.MISSIONS;
+var mains = REG.filter(function (e) { return e.kind === 'main'; });
+var sides = REG.filter(function (e) { return e.kind === 'side'; });
+ok('77. 레지스트리 = 16 미션 (메인 8 + 사이드 8)', REG.length === 16 && mains.length === 8 && sides.length === 8);
+// 전 미션 데이터 해석 + id 일치 + 필수 섹션.
+var resolveOk = true, resolveBad = [];
+REG.forEach(function (e) {
+  var m = CAMP.missionData(e.id);
+  if (!m || m.id !== e.id || !m.dialogue || !m.combat || !m.rewards) { resolveOk = false; resolveBad.push(e.id); }
+});
+ok('78. 전 미션 missionData 해석 + id 일치 + dialogue/combat/rewards 존재' + (resolveBad.length ? ' [' + resolveBad.join(',') + ']' : ''), resolveOk);
+// 전 미션 적 key + 증원 key ∈ ENEMIES 화이트리스트.
+var rosterOk = true, rosterBad = [];
+REG.forEach(function (e) {
+  var m = CAMP.missionData(e.id); if (!m || !m.combat) return;
+  (m.combat.enemies || []).forEach(function (en) { if (!EN.ENEMIES[en.key]) { rosterOk = false; rosterBad.push(e.id + ':' + en.key); } });
+  if (m.combat.reinforcement && !EN.ENEMIES[m.combat.reinforcement.key]) { rosterOk = false; rosterBad.push(e.id + ':RF:' + m.combat.reinforcement.key); }
+});
+ok('79. 전 미션 적/증원 key 가 enemies.js 로스터에 존재' + (rosterBad.length ? ' [' + rosterBad.join(',') + ']' : ''), rosterOk);
+
+console.log('\n== 해금 그래프: 순환 없음 + 도달 가능 [통합 §4] ==');
+var byId = {}; REG.forEach(function (e) { byId[e.id] = e; });
+function prereqs(e) { return (e.unlock && e.unlock.missionsDone) ? e.unlock.missionsDone : []; }
+// DFS 순환 탐지.
+var color = {}, cyc = false, prereqMissing = [];
+function dfs(id) {
+  color[id] = 1;
+  var e = byId[id];
+  if (e) prereqs(e).forEach(function (p) {
+    if (!byId[p]) { prereqMissing.push(id + '→' + p); return; }
+    if (color[p] === 1) cyc = true;
+    else if (color[p] !== 2) dfs(p);
+  });
+  color[id] = 2;
+}
+REG.forEach(function (e) { if (!color[e.id]) dfs(e.id); });
+ok('80. 해금 선행(missionsDone) 그래프 순환 없음 + 선행 실존', !cyc && prereqMissing.length === 0);
+// 도달성: 빈 세이브에서 확산(메인 클리어 시 heroChoice 획득 가정 → side-06 flag 조건 충족).
+var rsave = { missionsDone: [], flags: {} };
+var changed = true, guard = 0;
+while (changed && guard++ < 50) {
+  changed = false;
+  REG.forEach(function (e) {
+    if (rsave.missionsDone.indexOf(e.id) >= 0) return;
+    if (CAMP.isUnlocked(e, rsave)) { rsave.missionsDone.push(e.id); rsave.flags.heroChoice = 'hero'; changed = true; }
+  });
+}
+ok('81. 빈 세이브에서 전 16 미션 도달 가능 (해금 확산)', rsave.missionsDone.length === 16);
+
+console.log('\n== 해금 조건 판정 [통합 §3] ==');
+var emptySave = { missionsDone: [], flags: {} };
+ok('82. ch01 상시 개방 (unlock null)', CAMP.isUnlocked(byId['ch01-first-blood'], emptySave) === true);
+ok('83. ch02 빈세이브 잠김 / ch01 클리어 후 해금',
+  CAMP.isUnlocked(byId['ch02-insider-game'], emptySave) === false &&
+  CAMP.isUnlocked(byId['ch02-insider-game'], { missionsDone: ['ch01-first-blood'], flags: {} }) === true);
+// side-06 = ch05 클리어 AND heroChoice flag (둘 다 필요).
+var s6 = byId['side-06-rival-duel'];
+ok('84. side-06 = ch05 클리어 + heroChoice flag 둘 다 필요 (AND)',
+  CAMP.isUnlocked(s6, { missionsDone: ['ch05-mesh-ghost'], flags: {} }) === false &&
+  CAMP.isUnlocked(s6, { missionsDone: [], flags: { heroChoice: 'ghost' } }) === false &&
+  CAMP.isUnlocked(s6, { missionsDone: ['ch05-mesh-ghost'], flags: { heroChoice: 'ghost' } }) === true);
+
+console.log('\n== 최초/재클리어 보상 분기 [통합 §3 핵심 처방] ==');
+var ch01M = CAMP.missionData('ch01-first-blood');
+var freshSave = S.newSave();
+var rFirst = CAMP.applyRewards(freshSave, ch01M);
+ok('85. 최초 클리어 = 전액 + 챕터효과 + 해금 (렙+3·karma+2·heatCap11·BACKDOOR)',
+  rFirst.firstClear === true && rFirst.character.rep === 3 && rFirst.character.karma === 2 &&
+  rFirst.heatCap === 11 && rFirst.character.kit.indexOf('BACKDOOR') >= 0);
+// 재클리어: 동일 미션이 missionsDone 에 이미 있음.
+var reSave = S.newSave();
+reSave.missionsDone = ['ch01-first-blood'];
+reSave.character.rep = 3; reSave.character.karma = 2; reSave.character.nuyen = 8; reSave.heatCap = 11;
+var rRe = CAMP.applyRewards(reSave, ch01M);
+ok('86. 재클리어 = 렙 50%(3→+1)·₵ 50%(8→+4)·karma +0·heatCap 무변동·해금 없음',
+  rRe.firstClear === false &&
+  rRe.character.rep === 4 && rRe.character.karma === 2 && rRe.character.nuyen === 12 &&
+  rRe.heatCap === 11 && rRe.character.kit.indexOf('BACKDOOR') < 0);
+ok('87. firstClear 판정 = missionsDone 포함 여부', rFirst.firstClear === true && rRe.firstClear === false);
+
+console.log('\n== 세이브 마이그레이션 (레거시 무손상) [통합 §3] ==');
+// 레거시(챕터1 전용 시절): firstBlood flag 만, missionsDone/openingsSeen 없음.
+var legacy = { version: 1, character: S.newSave().character, flags: { firstBlood: true, heroChoice: 'ghost' }, heat: 0, heatCap: 11 };
+var legImp = SAVE.importString(SAVE.exportString(legacy));
+ok('88. 레거시 firstBlood → ch01 클리어 추론 (missionsDone 에 ch01 주입)',
+  legImp.ok && legImp.save.missionsDone.indexOf('ch01-first-blood') >= 0);
+ok('89. 클리어 미션의 오프닝 = 열람 완료 병합 (재열람 방지)',
+  legImp.save.openingsSeen.indexOf('ch01-first-blood') >= 0);
+var legImp2 = SAVE.importString(SAVE.exportString(legImp.save));
+ok('90. 마이그레이션 멱등 (재적용 no-op)',
+  JSON.stringify(legImp2.save.missionsDone) === JSON.stringify(legImp.save.missionsDone) &&
+  JSON.stringify(legImp2.save.openingsSeen) === JSON.stringify(legImp.save.openingsSeen));
+ok('91. 마이그레이션 후 ch02 해금 (추론된 ch01 클리어 반영)',
+  CAMP.isUnlocked(byId['ch02-insider-game'], legImp.save) === true);
+
+console.log('\n== 멀티미션 store 배선 [통합 §2·§3] ==');
+// 미해금 미션 진입 차단.
+var st0 = S.rpgInitialState();
+var blocked = S.startMission(st0, 'ch03-martial-night');
+ok('92. 미해금 미션 startMission 차단 (banner blocked · 허브 유지)',
+  blocked.scene === 'hub' && blocked.banner && blocked.banner.kind === 'blocked');
+// 해금된 비-ch01 미션 진입 → 활성 미션 = 해당 미션.
+var st1 = S.rpgInitialState();
+st1.save.missionsDone = ['ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice'];
+var st5 = S.startMission(st1, 'ch05-mesh-ghost');
+ok('93. 해금 미션(ch05) 진입 → dialogue scene · missionId=ch05 · combat null',
+  st5.scene === 'dialogue' && st5.dialogue.missionId === 'ch05-mesh-ghost' && st5.combat === null);
+// 오프닝 1회: 최초 openingSeen=false, 재진입 openingSeen=true.
+var stO1 = S.startMission(S.rpgInitialState(), 'ch01-first-blood');
+var stO2 = S.startMission(stO1, 'ch01-first-blood');
+ok('94. 오프닝 최초=전문(openingSeen false) / 재시작=요약(openingSeen true)',
+  stO1.dialogue.openingSeen === false && stO2.dialogue.openingSeen === true &&
+  stO1.save.openingsSeen.indexOf('ch01-first-blood') >= 0);
+// buildCombat missionId 배선.
+var c08 = S.buildCombat(CAMP.missionData('ch08-zero-day'), CH.makeCharacter('CIPHER'), 'x');
+ok('95. buildCombat 이 combat.missionId 배선 + objective threshold 정상',
+  c08.missionId === 'ch08-zero-day' && typeof c08.objective.threshold === 'number' && c08.objective.threshold > 0);
+// 멀티미션 전투 승리 라우팅: ch02 강행 돌파 → outroLoud 노드 + insiderBreach flag(하드코딩 firstBlood 제거 검증).
+var m2 = S.rpgInitialState(); m2.save.missionsDone = ['ch01-first-blood'];
+m2 = S.startMission(m2, 'ch02-insider-game');
+m2 = S.dialogueChoose(m2, 0);           // intro → approach
+m2 = S.dialogueChoose(m2, 0);           // 강행 돌파 → startCombat onWin outroLoud
+var combatOk = m2.scene === 'combat' && m2.combat.missionId === 'ch02-insider-game';
+m2.combat.outcome = 'win';               // 승리 강제(라우팅 검증)
+var m2win = S.resolveCombat(m2);
+ok('96. ch02 전투 승리 → outroLoud 라우팅 + insiderBreach flag (미션별 flag, 하드코딩 firstBlood 제거)',
+  combatOk && m2win.scene === 'dialogue' && m2win.dialogue.nodeId === 'outroLoud' && m2win.save.flags.insiderBreach === true);
+
+// 서사 선택 렙(+5 영웅)은 최초 완주만 — 재클리어 farming 방지.
+function playCh01Bypass(seed) {
+  var st = seed;
+  st = S.dialogueChoose(S.startMission(st, 'ch01-first-blood'), 0); // intro→approach
+  st = S.dialogueChoose(st, 1); // [HACK4] 우회 → outroStealth
+  st = S.dialogueChoose(st, 0); // 탈출 → aftermathQuiet
+  st = S.dialogueChoose(st, 0); // 신호 안남김 → choice
+  st = S.dialogueChoose(st, 0); // 영웅(+5, effect.rep) → settle(applyRewards)
+  st = S.dialogueChoose(st, 0); // 귀환 → hub
+  return st;
+}
+var run1 = playCh01Bypass(S.rpgInitialState());
+var repA = run1.save.character.rep;                 // 5(영웅) + 3(정산) = 8
+var run2 = playCh01Bypass(run1);
+var gain2 = run2.save.character.rep - repA;          // 재클리어: 영웅 +5 미적용, 정산 렙 50%(3→1)
+ok('97. 재클리어 렙 = 축소만(+1) · 영웅 +5 재적용 안 됨(farming 방지)', repA === 8 && gain2 === 1);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

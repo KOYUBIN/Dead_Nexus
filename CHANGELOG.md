@@ -17,6 +17,16 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.33 — RPG 미션 16종 체제 + 레거시 챕터 3 (46~47차 병렬)
+- **RPG 미션 팩토리** (유저 "미션을 왕창만들어" — 19 에이전트 워크플로): 미션 1개 → **16개** (메인 챕터 1~8 + 사이드 계약 8종)
+  - 메인 8: 레거시 챕터 원전 아크 압축 (Insider Game·Martial Night·Price of Splice·Mesh Ghost·Bloc Acquisition·Heart of City·Zero Day) — 오프닝 산문 원문 발췌, 챕터 간 플래그 상속(영웅/유령·엔딩 분기)
+  - 사이드 8: objectives/events 카드 원전 (Traitor's Contract·Corp Breach·Chemical Raid·Medbay Heist·Informant Hit·Rival Duel·Server Zero·Harbor Run) — 챕터 진행 조건 해금
+  - **미션 보드** (반복감 처방): 챕터 1→8 순차 해금 체인 · 클리어 ✅ · 현재 작전 강조 · 사이드 ??? + 힌트 · **최초 클리어만 전액+챕터 효과+해금, 재클리어 50% 축소·karma 0** (farming 방지 유닛) · 오프닝 산문 최초 1회만
+  - 적 로스터 3→23종 (docs/07 블록 임원 스탯 계승), 미션 스키마 정적 검증기(rpg/_missions_check.js) 신설 — 16/16 PASS, 작성 단계 자가 검증 루프
+  - 세이브 마이그레이션 (구세이브 무손상), rpg 유닛 97/97 (신규 21) · Playwright 진행 실증 (신규 보드→챕터1 완주→✅+챕터2 해금→챕터2 진입, 콘솔 에러 0)
+- **레거시 캠페인 챕터 3 "Martial Night"** (simulator/): 해금 = 계엄 (공권력 10/경찰 전개/S04 — 원전 봉투 C), **S04 마지막 미배선 실배선 전환** (S04 플레이 = 조건 정의상 충족 → 자동 해금), martial 흉터(다음 게임 공권력 +1). 유닛 212/212 (신규 20) · 기능 시뮬 12/12
+- babel 0 에러 (양 트랙) · e2e 스모크 에러 0 · 순수성 0건
+
 ### v6.32 — RPG Stage 2 (BLADE·위협 게이지) + 레거시 챕터 2 (44~45차 병렬)
 - **RPG Stage 2** (rpg/, docs/25 §7 수용 기준 3항 전부 실증):
   - **BLADE 근접 클래스** (blade.md 원전 킷 각색 — POINT BLANK·SUPPRESSION·DOUBLE TAP·LAST STAND + VENDETTA 해금 패시브): 같은 챕터 1을 CIPHER는 해킹 우회(전투 0회), BLADE는 무력 강습으로 완주 — Playwright 양경로 실증

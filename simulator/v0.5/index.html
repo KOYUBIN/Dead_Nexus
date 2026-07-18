@@ -1906,11 +1906,13 @@ const SCENARIOS = {
   //   스폰·매 라운드 랜덤 이동·Ghost 자동전투 HP8/ATK4·격파 렙+2)을 구축해 정체성의 핵심을 배선.
   //   v6.23: 구출 퀘스트 시스템을 police 엔진 재사용(type:'captive' 분기)으로 배선 — 구금 NPC 5체
   //   배치·자동 구출(★+1)·전원 구출 렙+10·경찰 우선 순찰(patrolGuard)·레이드 공권력+2(raidHeatBonus).
-  //   남은 미배선: 레거시 챕터 3 자동 해금 무효 = 캠페인 진행 엔티티 의존 별개 시스템.
+  //   v6.33: 레거시 챕터 3 "Martial Night"(계엄의 밤) 자동 해금 배선 — S04 는 계엄 선포 상태
+  //   (policeStart → policeSpawned=true)로 시작하므로 martialLaw:true 게이트로 챕터 3 원전
+  //   해금 조건("공권력 트랙 최고조/계엄 선포")을 종료 시 충족. 과거 "미배선" No-op 해소.
   S04: {
     id: 'S04', name: '계엄의 밤', tagline: '경찰은 이미 문 앞에 있다.',
     underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
-    desc: '공권력 7 시작 · 경찰 NPC 3체 순찰/자동전투(HP8·ATK4) · 구금 NPC 5 구출(⛓ 전원 렙+10) · 레이드 공권력+2. ⚠ 레거시 챕터 3 미배선(부분 구현).',
+    desc: '공권력 7 시작 · 경찰 NPC 3체 순찰/자동전투(HP8·ATK4) · 구금 NPC 5 구출(⛓ 전원 렙+10) · 레이드 공권력+2 · 레거시 챕터 3(계엄의 밤) 자동 해금.',
     locked: false, maps: ['11x11'],
     startHeat: 7,                          // docs/14 S04: 시작 공권력 7
     startWeaponsAll: -2,                    // docs/14 S04: 시작 자원 표준 + 무기 −2 (압수)
@@ -1918,7 +1920,7 @@ const SCENARIOS = {
     captiveStart: 5,                        // v6.23 (docs/14 §S04): 구금 NPC 5체를 랜덤 구역 배치 (구출 대상)
     patrolGuard: true,                      // v6.23: 경찰이 가장 가까운 구금 NPC 로 순찰·수호 (docs "경찰이 지킨다" 취지)
     raidHeatBonus: 1,                       // v6.23 (docs/14 §S04): 레이드 성공 시 공권력 +2 (기본 +1 + 1)
-    // No-op(부분 구현 보고): 레거시 챕터 3 자동 해금 무효 — 캠페인 진행/챕터 해금은 별개 대형 시스템이라 미배선.
+    martialLaw: true,                       // v6.33 (레거시 Ch.3): 계엄 선포 시나리오 — 종료 시 레거시 챕터 3 자동 해금 (게임 종료 핸들러가 scenarioRule 로 파생)
   },
   // --- S05: 골드러시 (docs/14) — 경제 과열 · 8R 스프린트 (구현) ---
   S05: {
@@ -2532,7 +2534,11 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   const startStocks = { VANTA: _startSp, IRONWALL: _startSp, HELIX: _startSp, AXIOM: _startSp, CARBON: _startSp };
   const _scar = (typeof legacyActiveScar === 'function') ? legacyActiveScar() : null;
   let _scarLog = null;
-  if (_scar && startStocks[_scar.bloc] != null) {
+  let _scarHeat = 0;   // v6.33 (레거시 Ch.3 Stage 3): 'martial' 흉터 — 특정 블록 없이 도시 전역 시작 공권력 가산.
+  if (_scar && _scar.kind === 'martial') {
+    _scarHeat = _scar.heatDelta || 0;
+    if (_scarHeat) _scarLog = `🩹 계엄의 밤 여파: 시작 공권력 +${_scarHeat}`;
+  } else if (_scar && startStocks[_scar.bloc] != null) {
     startStocks[_scar.bloc] = Math.max(1, startStocks[_scar.bloc] - 1);
     _scarLog = `🩹 지난 전쟁의 흉터: ${_scar.bloc} 주가 -1`;
   }
@@ -2615,7 +2621,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     map,
     pool: { M: 0, I: 0, V: 0, S: 0, B: 0, A: 0, GRID: 0 },
     stocks: { ...startStocks },
-    heat: (scen.startHeat != null ? scen.startHeat : 5),  // v6.18: 시나리오 시작 공권력 (S02=3)
+    heat: Math.min(10, (scen.startHeat != null ? scen.startHeat : 5) + _scarHeat),  // v6.18: 시나리오 시작 공권력 (S02=3) · v6.33: 계엄 여파 흉터 가산(≤10 클램프)
     signalDie: rollSignalDie(),
     currentNews: null,
     log: [
@@ -6778,7 +6784,7 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S04' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 공권력 최고조 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전원 무기 {scen.startWeaponsAll} (압수) · 경찰 NPC {POLICE_COUNT}체 순찰·수호(F3·C6·I6·F9 중 3곳 시작) · Ghost 진입 시 자동전투(HP{POLICE_HP}·ATK{POLICE_ATK}, 격파 렙+{POLICE_KILL_REP}) · 구금 NPC {CAPTIVE_COUNT}체 ⛓ 구출(개별 ★+{CAPTIVE_RESCUE_REP}, 전원 ★+{CAPTIVE_ALL_BONUS_REP}) · 레이드 성공 공권력+2. (부분 구현: 레거시 챕터 3 미배선)
+          ⚠ {scen.id} {scen.name}: 공권력 최고조 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전원 무기 {scen.startWeaponsAll} (압수) · 경찰 NPC {POLICE_COUNT}체 순찰·수호(F3·C6·I6·F9 중 3곳 시작) · Ghost 진입 시 자동전투(HP{POLICE_HP}·ATK{POLICE_ATK}, 격파 렙+{POLICE_KILL_REP}) · 구금 NPC {CAPTIVE_COUNT}체 ⛓ 구출(개별 ★+{CAPTIVE_RESCUE_REP}, 전원 ★+{CAPTIVE_ALL_BONUS_REP}) · 레이드 성공 공권력+2 · 레거시 챕터 3 "계엄의 밤" 자동 해금.
         </div>
       )}
       {scen.id === 'S05' && (
@@ -6931,15 +6937,18 @@ function SetupScreen({ onStart }) {
           <div>
             <span style={{ color: 'var(--text-dim)' }}>도시 흉터 </span>
             {legacyScar
-              ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : ''}</span>
+              ? (legacyScar.kind === 'martial'
+                  ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 계엄 여파 · 시작 공권력 +{legacyScar.heatDelta || 1}</span>
+                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : ''}</span>)
               : <span style={{ color: 'var(--text-dim)' }}>없음</span>}
           </div>
         </div>
-        {/* v6.31 (레거시 Stage 2): 챕터 1·2 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
+        {/* v6.31·v6.33 (레거시 Stage 2·3): 챕터 1·2·3 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { n: 1, hint: '게임 중 최초 레이드 발생 시 해금', effect: '최다 피격 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
             { n: 2, hint: '게임 중 최초 M&A 선언(Bloc→타 Bloc) 시 해금', effect: 'M&A 표적(PREY) 블록 다음 게임 시작 주가 -1 (흉터)' },
+            { n: 3, hint: '게임 중 계엄 발생(공권력 최고조·경찰 전개·S04) 시 해금', effect: '계엄 여파 — 다음 게임 시작 공권력 +1 (도시 흉터)' },
           ].map(row => {
             const meta = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(row.n) : null;
             const unlocked = (legacy.chaptersUnlocked || []).indexOf(row.n) !== -1;
@@ -7249,12 +7258,13 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
-        {/* v6.24/6.31 (레거시 Stage 1·2): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A)마다 봉투 개봉 배너 */}
-        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly) && (() => {
+        {/* v6.24/6.31/6.33 (레거시 Stage 1·2·3): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄)마다 봉투 개봉 배너 */}
+        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly) && (() => {
           const total = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
           const newlyNums = [];
           if (legacyBanner.chapter1Newly) newlyNums.push(1);
           if (legacyBanner.chapter2Newly) newlyNums.push(2);
+          if (legacyBanner.chapter3Newly) newlyNums.push(3);
           return newlyNums.map(num => {
             const ch = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(num) : null;
             if (!ch) return null;
@@ -9070,6 +9080,7 @@ function App() {
       saveGameRecord(buildGameRecord(state));
       // v6.24 (레거시 Stage 1): 최초 레이드 발생 → 챕터 1 해금 + 최다 피해 블록 → 도시 흉터.
       // v6.31 (레거시 Stage 2): 최초 M&A 선언(Bloc→타 Bloc) → 챕터 2 해금 + M&A 표적(PREY) → 흉터.
+      // v6.33 (레거시 Stage 3): 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터.
       //   legacy_module 미로드 시 무해(typeof 가드). localStorage 실패는 모듈 내부 try/catch.
       //   모든 신호는 현행 meta 집계에서 파생 — 새 카운터 신설 없음(하위 호환·헤드리스 안전).
       if (typeof legacyRecordGame === 'function') {
@@ -9091,8 +9102,14 @@ function App() {
           const acq = state.meta.acquisitions || {};
           for (const k in acq) { const list = acq[k] || []; if (list.length) mnaPreyBloc = list[list.length - 1]; }
           if (!mnaPreyBloc && state.meta.pendingMna && state.meta.pendingMna.target) mnaPreyBloc = state.meta.pendingMna.target;
-          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc });
-          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, unlocked: res.state.chaptersUnlocked });
+          // 챕터 3 해금(계엄): 원전 "공권력 트랙 10 도달(계엄선포)" → 현행 신호 파생.
+          //   policeSpawned(공권력 9 도달 시 경찰 전개·하락해도 유지, S04 는 시작부터 true) ||
+          //   heat==10(엔진 상한 도달 = 트랙 최고조) || 시나리오 martialLaw(S04 계엄 게이트).
+          const martialLaw = !!state.meta.policeSpawned
+            || (state.heat || 0) >= 10
+            || scenarioRule(state, 'martialLaw', false) === true;
+          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw });
+          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, unlocked: res.state.chaptersUnlocked });
         } catch (e) { console.warn('[SIM] legacy record failed', e); }
       }
     }
