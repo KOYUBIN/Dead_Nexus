@@ -96,9 +96,12 @@
     var players = alivePlayers(state);
     if (!players.length) return plan;
 
+    // [각색 blade.md Card02 SUPPRESSION] 이동 저지: 유효 mov = mov − movDown (0 하한).
+    var effMov = Math.max(0, (enemy.mov || 0) - ((enemy.status && enemy.status.movDown) || 0));
+
     var field = state.field;
     var blocked = G.buildBlocked(field, state.units, enemyId);
-    var reach = G.bfsRange({ x: enemy.x, y: enemy.y }, enemy.mov, blocked, field.cols, field.rows);
+    var reach = G.bfsRange({ x: enemy.x, y: enemy.y }, effMov, blocked, field.cols, field.rows);
 
     // 1~3) 사격 가능한 도달 타일 중 최적 선택.
     var bestTile = null;
@@ -126,8 +129,8 @@
     var target = nearestPlayer({ x: enemy.x, y: enemy.y }, players, deps);
     var path = G.bfsPath({ x: enemy.x, y: enemy.y }, target, blocked, field.cols, field.rows);
     if (path && path.length > 1) {
-      // 목적지 직전(플레이어 타일 제외)까지 mov 칸 전진.
-      var maxIdx = Math.min(enemy.mov, path.length - 2); // path[last]=플레이어 타일
+      // 목적지 직전(플레이어 타일 제외)까지 유효 mov 칸 전진.
+      var maxIdx = Math.min(effMov, path.length - 2); // path[last]=플레이어 타일
       if (maxIdx >= 1) {
         plan.moveTo = { x: path[maxIdx].x, y: path[maxIdx].y };
         plan.path = path.slice(0, maxIdx + 1);

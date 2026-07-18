@@ -23,6 +23,7 @@
   function healAll() {
     heal('core/projection.js', 'RPG_PROJECTION');
     heal('data/attributes.js', 'RPG_ATTRS');
+    heal('data/signal.js', 'RPG_SIGNAL');
     heal('data/classes.js', 'RPG_CLASSES');
     heal('data/abilities.js', 'RPG_ABILITIES');
     heal('data/enemies.js', 'RPG_ENEMIES');

@@ -35,6 +35,9 @@
     cols: 6, rows: 8,
     playerStart: { x: 2, y: 7 },
     objective: { x: 2, y: 0, threshold: 6, veil: 0, label: 'VANTA 서버 랙', dataTB: 2.7 },
+    // [G10, 각색 raidThreshold] 위협/노출 임계 + 증원(경보 시 1회 스폰) — 전투 페이싱 실동.
+    threatCap: 8,
+    reinforcement: { key: 'VANTA_DRONE', x: 5, y: 1 },
     walls: [],
     // [신규 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1, full=DEF+2
     cover: [
@@ -87,12 +90,12 @@
           },
         ],
       },
-      // 전투 승리 후 아웃트로 (오브젝티브 = 전투 중 서버랙 해킹으로 이미 추출)
+      // 전투 승리 후 아웃트로 (오브젝티브 = 전투 중 서버랙 차감으로 이미 추출)
       outro: {
         id: 'outro', speaker: 'CIPHER', portrait: 'ghost',
         text: '방화벽이 무너진다. 2.7테라바이트가 어둠 속으로 흘러나간다.\n' + STORY_CARD + '\n' + REFRAIN,
         onEnter: { setFlags: { firstBlood: true } }, checkpoint: true,
-        choices: [ { label: '탈출한다', goto: 'choice' } ],
+        choices: [ { label: '탈출한다', goto: 'aftermathLoud' } ],
       },
       // 해킹 우회 아웃트로 (전투 없이 잠입 추출)
       outroStealth: {
@@ -100,7 +103,34 @@
         text: '잠금장치가 조용히 열린다. 경비는 아무것도 보지 못했다.\n' +
               '서버 랙에 접속한다 — 2.7테라바이트. 신호 하나 남기지 않고.\n' + STORY_CARD + '\n' + REFRAIN,
         onEnter: { setFlags: { firstBlood: true, ghostedExtraction: true } }, checkpoint: true,
-        choices: [ { label: '탈출한다', goto: 'choice' } ],
+        choices: [ { label: '탈출한다', goto: 'aftermathQuiet' } ],
+      },
+      // ── 후일담 분기 (다중 노드 심화) — 완주 방식이 다음 상태에 영속 반영 ──
+      // 무력 돌파/강습 경로 → 소란한 흔적.
+      aftermathLoud: {
+        id: 'aftermathLoud', speaker: 'CIPHER', portrait: 'ghost',
+        text: '경보가 울렸고, 바닥엔 쓰러진 경비가 남았다. VANTA는 오늘을 잊지 않을 것이다.\n' +
+              '거리는 이런 밤을 "소란"이라 부른다. 그리고 소란은 이름을 만든다.',
+        choices: [
+          { label: '흔적을 남긴 채 빠져나간다',
+            setFlags: { extractionStyle: 'loud' }, goto: 'choice',
+            desc: '위협 상승 · 다음 미션 경계 강화 (영속 flag)' },
+        ],
+      },
+      // 잠입 추출 경로 → 조용한 흔적. skipGuardFight flag 가 후속 선택지를 해금(분기 영속 시연).
+      aftermathQuiet: {
+        id: 'aftermathQuiet', speaker: 'CIPHER', portrait: 'ghost',
+        text: '문은 열린 적도 없던 것처럼 닫혔다. 로그 어디에도 오늘 밤은 없다.\n' +
+              '완벽한 침묵. 하지만 침묵도 하나의 서명이다.',
+        choices: [
+          { label: '신호 하나 남기지 않는다',
+            setFlags: { extractionStyle: 'quiet' }, goto: 'choice',
+            desc: '위협 최소 · 유령 평판 (영속 flag)' },
+          { label: '[flag skipGuardFight] 백도어를 심어둔다',
+            gate: { flag: 'skipGuardFight' }, show: 'gray',
+            setFlags: { extractionStyle: 'quiet', plantedBackdoor: true }, goto: 'choice',
+            desc: '해킹 우회로 진입한 자만 가능 — 앞선 선택이 뒤 노드를 연다(분기 영속)' },
+        ],
       },
       // ★플레이어 선택 [계승 chapter-01 §플레이어 선택] — 15분 안에 "내 선택이 남는다"
       choice: {

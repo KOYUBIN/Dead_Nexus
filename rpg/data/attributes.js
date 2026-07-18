@@ -34,7 +34,20 @@
     return 0;
   }
 
-  var API = { ATTRS: ATTRS, BEATS: BEATS, affinityMod: affinityMod };
+  // [계승 docs/06 §6] 상성 6쌍 전체 매트릭스 (표시용). Stage 2 "6종 전체 체감 확대".
+  //   반환 [{ atk, def, sym }] 6쌍 (MESH▶SHADE, IRON▶ASH, VOLT▶BIO, SHADE▶MESH, ASH▶VOLT, BIO▶IRON).
+  function matrix() {
+    var order = ['MESH', 'IRON', 'VOLT', 'SHADE', 'ASH', 'BIO'];
+    var out = [];
+    for (var i = 0; i < order.length; i++) {
+      var a = order[i], d = BEATS[a];
+      out.push({ atk: a, atkSym: ATTRS[a].sym, atkColor: ATTRS[a].color,
+                 def: d, defSym: ATTRS[d].sym, defColor: ATTRS[d].color });
+    }
+    return out;
+  }
+
+  var API = { ATTRS: ATTRS, BEATS: BEATS, affinityMod: affinityMod, matrix: matrix };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_ATTRS = API;
 })();
