@@ -30,6 +30,16 @@
   // 플레이어 유닛 내부 id (클래스 무관 — CIPHER/BLADE 공통 핸들).
   var PLAYER_ID = 'hero';
 
+  // 미션 레지스트리 해석: id → MISSION 데이터. campaign.missionData 경유(전 미션),
+  //   미해석 시 ch01(D.MI) 폴백 — 레지스트리 미로드 환경 안전판.
+  function missionFor(D, id) {
+    if (D.CAMP && D.CAMP.missionData) {
+      var m = D.CAMP.missionData(id);
+      if (m) return m;
+    }
+    return D.MI && D.MI.MISSION ? D.MI.MISSION : null;
+  }
+
   // ---- 초기 상태 / 새 게임 --------------------------------------------------
   function newSave() {
     var D = deps();
@@ -37,7 +47,7 @@
     return {
       version: 1,
       character: ch,
-      inventory: [], flags: {}, missionsDone: [],
+      inventory: [], flags: {}, missionsDone: [], openingsSeen: [],
       heat: 0, heatCap: 10, crew: [], hubState: { node: 'root' },
       karma: ch.karma, nuyen: ch.nuyen, // §5.3 명시 필드 미러(캐릭터가 정본)
     };
@@ -83,7 +93,9 @@
     // 첫 공격 가능 시그니처를 기본 선택(CIPHER→해킹샷, BLADE→POINT BLANK).
     var firstAtk = kit.filter(function (k) { var a = D.AB.ABILITIES[k]; return a && a.kind !== 'PASSIVE' && a.kind !== 'ULTIMATE'; })[0] || kit[0];
     var sig1 = sigForRound(D, 1);
+    var arena = (c.objective && c.objective.label) || mission.subtitle || mission.title || '전장';
     var combat = {
+      missionId: mission.id,
       field: { cols: c.cols, rows: c.rows, walls: c.walls.slice(), cover: c.cover.slice() },
       units: units,
       objective: { x: c.objective.x, y: c.objective.y,
@@ -96,7 +108,7 @@
       // [G10, 각색 raidThreshold + docs/07 §8] 위협/노출 게이지 (전투 페이싱 실동).
       threat: { value: 0, cap: (c.threatCap || 8), alarm: false, reinforced: false,
         reinforcement: c.reinforcement || null },
-      outcome: null, onWin: onWin, log: ['전투 개시 — VANTA 서버룸  ' + sig1.sym + ' ' + sig1.label],
+      outcome: null, onWin: onWin, log: ['전투 개시 — ' + arena + '  ' + sig1.sym + ' ' + sig1.label],
       floaters: [],
     };
     combat.telegraphs = computeTelegraphs(combat);
@@ -408,10 +420,22 @@
   // ---- 대화 라우팅 ----------------------------------------------------------
   function startMission(state, missionId) {
     var D = deps(); var s = clone(state);
-    var mission = D.MI.MISSION; // 슬라이스: ch01 단일
+    var mission = missionFor(D, missionId);
+    if (!mission) { s.banner = { kind: 'blocked', text: '미션을 찾을 수 없음: ' + missionId }; return s; }
+    // 해금 방어 — 미해금 미션 진입 차단(허브 UI 이중 안전판).
+    var entry = D.CAMP && D.CAMP.missionById ? D.CAMP.missionById(mission.id) : null;
+    if (entry && D.CAMP.isUnlocked && !D.CAMP.isUnlocked(entry, s.save)) {
+      s.banner = { kind: 'blocked', text: '아직 해금되지 않은 미션' };
+      return s;
+    }
     var startNode = mission.dialogue.nodes[mission.dialogue.start];
+    // 오프닝 전문은 미션당 최초 1회만 — 이후 방문은 요약 1줄(UI가 openingSeen 소비).
+    if (!Array.isArray(s.save.openingsSeen)) s.save.openingsSeen = [];
+    var openingSeen = s.save.openingsSeen.indexOf(mission.id) >= 0;
     s.scene = 'dialogue';
-    s.dialogue = { missionId: mission.id, nodeId: startNode.id };
+    s.combat = null;
+    s.dialogue = { missionId: mission.id, nodeId: startNode.id, openingSeen: openingSeen };
+    if (!openingSeen) s.save.openingsSeen.push(mission.id);
     // onEnter 플래그.
     applyOnEnter(s, mission, startNode);
     return s;
@@ -432,7 +456,7 @@
 
   function dialogueChoose(state, choiceIndex) {
     var D = deps(); var s = clone(state);
-    var mission = D.MI.MISSION;
+    var mission = missionFor(D, s.dialogue && s.dialogue.missionId);
     var node = mission.dialogue.nodes[s.dialogue.nodeId];
     var choice = node.choices[choiceIndex];
     if (!choice) return state;
@@ -441,7 +465,12 @@
     if (applied.blocked) { s.banner = { kind: 'blocked', text: '요구 조건 미충족 ' + (applied.reason || '') }; return s; }
     if (applied.setFlags) for (var k in applied.setFlags) s.save.flags[k] = applied.setFlags[k];
     var eff = applied.effect || {};
-    if (typeof eff.rep === 'number') s.save.character.rep += eff.rep;
+    // 서사 선택의 1회성 렙 보너스(예: 영웅 정체 공개 +5)는 최초 완주에만 적용 —
+    //   재클리어 시 farming 방지 (missionsDone 은 settle applyRewards 에서 기록됨).
+    if (typeof eff.rep === 'number') {
+      var firstRun = (s.save.missionsDone || []).indexOf(mission.id) < 0;
+      if (firstRun) s.save.character.rep += eff.rep;
+    }
 
     // 전투 개시.
     if (eff.startCombat) {
@@ -476,12 +505,12 @@
   // 전투 종료 후 대화 재개(승리) 또는 허브 귀환(패배/재시도).
   function resolveCombat(state) {
     var D = deps(); var s = clone(state);
-    var mission = D.MI.MISSION;
+    var mission = missionFor(D, s.combat && s.combat.missionId);
     if (!s.combat) return state;
     if (s.combat.outcome === 'win') {
-      s.save.flags.firstBlood = true;
+      // 승리 후 아웃트로 노드로 라우팅 — 미션별 flag 는 노드 onEnter.setFlags 가 설정.
       s.scene = 'dialogue';
-      s.dialogue = { missionId: mission.id, nodeId: s.combat.onWin };
+      s.dialogue = { missionId: mission.id, nodeId: s.combat.onWin, openingSeen: true };
       applyOnEnter(s, mission, mission.dialogue.nodes[s.combat.onWin]);
       s.combat = null;
     } else {

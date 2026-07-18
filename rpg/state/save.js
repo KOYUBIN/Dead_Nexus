@@ -32,11 +32,25 @@
     } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
   }
 
-  // 스키마 마이그레이션 — 미래 버전 대비 훅.
+  // 스키마 마이그레이션 — 레거시(챕터1 전용 시절) 세이브를 무손실 보정.
+  //   멱등(idempotent): 신 세이브에 재적용해도 no-op. version 유지(v1 스키마 확장).
+  //   ① missionsDone/flags/openingsSeen 필드 보장(누락 시 기본값).
+  //   ② firstBlood 플래그 → ch01 클리어로 추론(챕터1만 있던 시절 missionsDone 미기록 대비).
+  //   ③ 클리어한 미션의 오프닝은 이미 열람한 것으로 간주(openingsSeen 병합).
   function migrate(save) {
     if (!save || typeof save !== 'object') throw new Error('세이브 형식 오류');
     if (save.version == null) save.version = CURRENT_VERSION;
-    // (v1 단일 스키마 — 향후 version < CURRENT 분기 추가 지점)
+    if (!save.flags || typeof save.flags !== 'object') save.flags = {};
+    if (!Array.isArray(save.missionsDone)) save.missionsDone = [];
+    // firstBlood(레거시 챕터1 클리어 플래그) → ch01 클리어 기록으로 추론.
+    if (save.flags.firstBlood && save.missionsDone.indexOf('ch01-first-blood') < 0) {
+      save.missionsDone.push('ch01-first-blood');
+    }
+    // 오프닝 열람 기록 — 클리어한 미션은 이미 오프닝을 본 것으로 병합(중복 열람 방지).
+    if (!Array.isArray(save.openingsSeen)) save.openingsSeen = [];
+    for (var i = 0; i < save.missionsDone.length; i++) {
+      if (save.openingsSeen.indexOf(save.missionsDone[i]) < 0) save.openingsSeen.push(save.missionsDone[i]);
+    }
     return save;
   }
 

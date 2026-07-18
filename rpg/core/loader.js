@@ -28,7 +28,23 @@
     heal('data/abilities.js', 'RPG_ABILITIES');
     heal('data/enemies.js', 'RPG_ENEMIES');
     heal('data/weapons.js', 'RPG_WEAPONS');
+    // 미션 데이터 (메인 8 + 사이드 8 = 16) — 각 전역 마커별 개별 heal.
     heal('data/missions/ch01-first-blood.js', 'RPG_MISSION_CH01');
+    heal('data/missions/ch02-insider-game.js', 'RPG_MISSION_CH02');
+    heal('data/missions/ch03-martial-night.js', 'RPG_MISSION_CH03');
+    heal('data/missions/ch04-price-of-splice.js', 'RPG_MISSION_CH04');
+    heal('data/missions/ch05-mesh-ghost.js', 'RPG_MISSION_CH05');
+    heal('data/missions/ch06-bloc-acquisition.js', 'RPG_MISSION_CH06');
+    heal('data/missions/ch07-heart-of-city.js', 'RPG_MISSION_CH07');
+    heal('data/missions/ch08-zero-day.js', 'RPG_MISSION_CH08');
+    heal('data/missions/side-01-traitor-contract.js', 'RPG_MISSION_SIDE01_TRAITOR_CONTRACT');
+    heal('data/missions/side-02-corp-breach.js', 'RPG_MISSION_SIDE02_CORP_BREACH');
+    heal('data/missions/side-03-chemical-raid.js', 'RPG_MISSION_SIDE03_CHEMICAL_RAID');
+    heal('data/missions/side-04-medbay-heist.js', 'RPG_MISSION_SIDE04_MEDBAY_HEIST');
+    heal('data/missions/side-05-informant-hit.js', 'RPG_MISSION_SIDE05_INFORMANT_HIT');
+    heal('data/missions/side-06-rival-duel.js', 'RPG_MISSION_SIDE06_RIVAL_DUEL');
+    heal('data/missions/side-07-server-zero.js', 'RPG_MISSION_SIDE07_SERVER_ZERO');
+    heal('data/missions/side-08-harbor-run.js', 'RPG_MISSION_SIDE08_HARBOR_RUN');
     heal('systems/combat/grid.js', 'RPG_GRID');
     heal('systems/combat/resolve.js', 'RPG_RESOLVE');
     heal('systems/combat/ai.js', 'RPG_AI');

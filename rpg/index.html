@@ -21,7 +21,23 @@
 <script src="./data/abilities.js"></script>
 <script src="./data/enemies.js"></script>
 <script src="./data/weapons.js"></script>
+<!-- 미션 데이터 (메인 8 + 사이드 8 = 16, campaign 레지스트리가 소비) -->
 <script src="./data/missions/ch01-first-blood.js"></script>
+<script src="./data/missions/ch02-insider-game.js"></script>
+<script src="./data/missions/ch03-martial-night.js"></script>
+<script src="./data/missions/ch04-price-of-splice.js"></script>
+<script src="./data/missions/ch05-mesh-ghost.js"></script>
+<script src="./data/missions/ch06-bloc-acquisition.js"></script>
+<script src="./data/missions/ch07-heart-of-city.js"></script>
+<script src="./data/missions/ch08-zero-day.js"></script>
+<script src="./data/missions/side-01-traitor-contract.js"></script>
+<script src="./data/missions/side-02-corp-breach.js"></script>
+<script src="./data/missions/side-03-chemical-raid.js"></script>
+<script src="./data/missions/side-04-medbay-heist.js"></script>
+<script src="./data/missions/side-05-informant-hit.js"></script>
+<script src="./data/missions/side-06-rival-duel.js"></script>
+<script src="./data/missions/side-07-server-zero.js"></script>
+<script src="./data/missions/side-08-harbor-run.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -51,8 +67,13 @@ window.addEventListener('DOMContentLoaded', function () {
 const { useReducer, useState, useEffect, useRef, useMemo } = React;
 const STORE = window.RPG_STORE, CH = window.RPG_CHARACTER, AB = window.RPG_ABILITIES,
       GRID = window.RPG_GRID, PROJ = window.RPG_PROJECTION, LORE = window.RPG_LORE,
-      SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN,
-      MISSION = window.RPG_MISSION_CH01.MISSION;
+      SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN;
+// 활성 미션 = 진행 중 대화/전투의 missionId 를 레지스트리로 해석 (ch01 폴백).
+function missionOf(state) {
+  const id = (state.dialogue && state.dialogue.missionId) || (state.combat && state.combat.missionId);
+  return (id && CAMP.missionData(id)) || (window.RPG_MISSION_CH01 && window.RPG_MISSION_CH01.MISSION);
+}
+function chLabel(entry) { return entry && entry.chapter ? ('CH' + (entry.chapter < 10 ? '0' + entry.chapter : entry.chapter)) : ''; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ── 타자기 텍스트 (탭하면 즉시 완성, reduced-motion 존중) ──
@@ -151,6 +172,60 @@ function Roster({ state, dispatch }) {
   );
 }
 
+// ── 미션 카드 (메인 체인 / 사이드 보드 공용) ──
+//  row = { id, kind, chapter, unlocked, cleared, hint }  (CAMP.boardState 산출)
+function MissionCard({ row, current, dispatch }) {
+  const entry = CAMP.missionById(row.id);
+  const isCurrent = row.id === current;
+  // 미해금: 메인은 챕터 번호 + 힌트, 사이드는 ??? + 힌트 (미리보기 은폐).
+  if (!row.unlocked) {
+    return (
+      <div className={'mcard locked ' + row.kind}>
+        <span className="mc-ttl">🔒 {row.kind === 'side' ? '??? — 미해금 계약' : chLabel(entry)}</span>
+        <span className="mc-hint">{row.hint}</span>
+      </div>
+    );
+  }
+  const m = CAMP.missionData(row.id);
+  const title = (m && m.title) || row.id;
+  const subtitle = (m && m.subtitle) || '';
+  let tag;
+  if (row.cleared) tag = '✅ 클리어 · 재입장(축소 보상)';
+  else if (isCurrent) tag = '▶ 현재 작전 · 전액 보상';
+  else tag = '신규 · 최초 클리어 전액 보상';
+  return (
+    <button className={'mcard' + (isCurrent ? ' current' : '') + (row.cleared ? ' cleared' : '')}
+      onClick={() => dispatch({ type: 'START_MISSION', missionId: row.id })}>
+      <span className="mc-ttl">{row.cleared ? '✅ ' : (isCurrent ? '▶ ' : '')}{title}</span>
+      <span className="mc-sub">{subtitle}</span>
+      <span className="mc-tag">{tag}</span>
+    </button>
+  );
+}
+
+// ── 미션 보드 (메인 체인 1→8 순차 해금 · 사이드 계약 보드) ──
+function MissionBoard({ state, dispatch }) {
+  const board = CAMP.boardState(state.save);
+  const sideVisible = board.sides.filter(s => s.unlocked).length;
+  return (
+    <div className="sheet mboard">
+      <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>미션 보드</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>
+        메인 캠페인은 챕터 1→8 순차 해금. 사이드 계약은 조건 충족 시 개방. 최초 클리어만 전액·챕터 효과·해금.
+      </p>
+      <div className="board-sec">MAIN — 캠페인 체인 ({board.mains.filter(m => m.cleared).length}/{board.mains.length} 클리어)</div>
+      <div className="mission-list">
+        {board.mains.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+      </div>
+      <div className="board-sec">SIDE — 계약 보드 ({sideVisible}/{board.sides.length} 개방)</div>
+      <div className="mission-list">
+        {board.sides.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+      </div>
+    </div>
+  );
+}
+
 // ── 허브 ──
 function Hub({ state, dispatch, openSave }) {
   const node = state.hub.node;
@@ -160,16 +235,22 @@ function Hub({ state, dispatch, openSave }) {
   if (node === 'sheet') return <CharacterSheet state={state} dispatch={dispatch} />;
   if (node === 'roster') return <Roster state={state} dispatch={dispatch} />;
   if (node === 'save') return <SaveMenu state={state} dispatch={dispatch} back={() => dispatch({ type: 'HUB_NAV', node: 'root' })} />;
-  const done = (save.missionsDone || []).indexOf('ch01-first-blood') >= 0;
+  if (node === 'missions') return <MissionBoard state={state} dispatch={dispatch} />;
+  const board = CAMP.boardState(save);
+  const clearedCount = board.mains.filter(m => m.cleared).length + board.sides.filter(s => s.cleared).length;
+  const curEntry = board.current ? CAMP.missionById(board.current) : null;
+  const missionNote = board.current
+    ? ('▶ ' + chLabel(curEntry) + ' 진행 중 · 클리어 ' + clearedCount + '/' + board.mains.length + '+side')
+    : ('전 챕터 클리어 · 클리어 ' + clearedCount);
   return (
     <div className="hub">
       <h1>안전가옥 — ASHGRID</h1>
       <p className="sub">{ch.icon} {ch.classKey} / {ch.codename} · {ch.classKey === 'BLADE' ? '거리의 집행관' : '정보전의 유령'}</p>
       <LastOpPanel flags={save.flags} />
       <div className="hub-grid">
-        <button className="hub-node" onClick={() => dispatch({ type: 'START_MISSION', missionId: 'ch01-first-blood' })}>
+        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'missions' })}>
           <span className="ic">🎯</span><span className="lb">미션 보드</span>
-          <span className="nt">{done ? 'CH01 클리어 · 재입장 가능' : 'CH01 First Blood'}</span>
+          <span className="nt">{missionNote}</span>
         </button>
         <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'sheet' })}>
           <span className="ic">📋</span><span className="lb">캐릭터 시트</span>
@@ -274,7 +355,8 @@ function SaveMenu({ state, dispatch, back }) {
 
 // ── 대화 오버레이 (활성 클래스에 따라 고스트 발화자 전환) ──
 function DialogueOverlay({ state, dispatch }) {
-  const node = MISSION.dialogue.nodes[state.dialogue.nodeId];
+  const mission = missionOf(state);
+  const node = mission.dialogue.nodes[state.dialogue.nodeId];
   const ctx = STORE.dialogueCtx(state);
   const ch = state.save.character;
   const isBloc = node.portrait === 'bloc';
@@ -283,19 +365,28 @@ function DialogueOverlay({ state, dispatch }) {
   const ghostReal = (person && person.data.realName) || '';
   // 고스트 인용은 활성 클래스 명대사(원문 고정), 블록 인용은 노드 지정 발화자.
   const q = node.quote ? (isBloc ? LORE.quote(node.quote) : LORE.quote(ch.classKey)) : null;
+  // 블록 발화자명은 노드 speaker (미션별: VANTA/AXIOM/IRONWALL…) — 하드코딩 제거.
+  const blocName = node.speaker || 'BLOC';
+  // 오프닝 전문은 미션당 최초 1회만. 재방문(openingSeen) 시 요약 1줄 + 스킵 안내.
+  const isStart = state.dialogue.nodeId === mission.dialogue.start;
+  const collapsedOpening = isStart && state.dialogue.openingSeen;
+  const bodyText = collapsedOpening
+    ? ((mission.refrain || mission.subtitle || node.text.split('\n')[0]))
+    : node.text;
   return (
     <div className="dialogue">
       <div className="portrait-row">
         <Portrait kind={node.portrait} />
         <div>
           <div className={'speaker ' + (isBloc ? 'bloc' : '')}>
-            {isBloc ? 'VANTA' : ghostName}
-            <small>{isBloc ? 'VERA ASHTON · DIRECTOR' : (ghostReal ? ghostName + ' · ' + ghostReal : ghostName)}</small>
+            {isBloc ? blocName : ghostName}
+            <small>{isBloc ? (mission.title || 'BLOC DIRECTIVE') : (ghostReal ? ghostName + ' · ' + ghostReal : ghostName)}</small>
           </div>
         </div>
       </div>
       <div className="textbox">
-        <Typewriter text={node.text} />
+        {collapsedOpening ? <div className="opening-skip">↺ 오프닝 열람 완료 — 요약만 표시</div> : null}
+        <Typewriter text={bodyText} />
         {q ? <div className={'quote-bubble ' + (isBloc ? 'bloc' : '')}>{q.line}</div> : null}
       </div>
       <div className="choices">
@@ -420,7 +511,7 @@ function Combat({ state, dispatch }) {
       {c.outcome ? (
         <div className="hud">
           <div className="banner" style={{ borderColor: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', color: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', margin: 0 }}>
-            {c.outcome === 'win' ? '★ 미션 성공 — 2.7TB 유출' : '미션 실패 — 다운'}
+            {c.outcome === 'win' ? ('★ 미션 성공' + (c.objective && c.objective.dataTB ? ' — ' + c.objective.dataTB + 'TB 유출' : ' — 목표 달성')) : '미션 실패 — 다운'}
           </div>
           <button className="btn" onClick={() => dispatch({ type: 'COMBAT_RESOLVE' })}>계속</button>
         </div>
@@ -484,6 +575,28 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 <!-- 타자기 캐럿 미세 스타일 -->
 <style>.tw { cursor: pointer; } .caret { color: var(--cyan); animation: blink 1s steps(1) infinite; } @keyframes blink { 50% { opacity: 0; } }
 .topbar .home-link { color: var(--text-dim); text-decoration: none; font-size: 16px; line-height: 1; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; }
-.topbar .home-link:hover { color: var(--cyan); border-color: var(--cyan); }</style>
+.topbar .home-link:hover { color: var(--cyan); border-color: var(--cyan); }
+/* ── 미션 보드 (허브 개편) ── */
+.mboard { gap: 6px; }
+.board-sec { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim);
+  margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+.mission-list { display: flex; flex-direction: column; gap: 8px; }
+.mcard { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
+  border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg2);
+  color: var(--text); cursor: pointer; font: inherit; }
+.mcard:active { background: var(--bg3); }
+.mcard.current { border-color: var(--cyan); box-shadow: 0 0 8px rgba(0,229,255,0.22); }
+.mcard.cleared { opacity: .82; }
+.mcard.locked { cursor: default; opacity: .5; background: transparent; border-style: dashed; }
+.mc-ttl { font-family: 'Share Tech Mono', monospace; font-weight: 700; font-size: 14px; color: var(--cyan); }
+.mcard.locked .mc-ttl { color: var(--text-dim); }
+.mcard.current .mc-ttl { color: var(--cyan); }
+.mc-sub { font-size: 11px; color: var(--text-dim); }
+.mc-tag { font-size: 10px; letter-spacing: .5px; color: var(--green); margin-top: 2px; }
+.mcard.cleared .mc-tag { color: var(--text-dim); }
+.mcard.current .mc-tag { color: var(--cyan); }
+.mc-hint { font-size: 11px; color: var(--text-dim); font-style: italic; }
+.opening-skip { font-size: 10px; letter-spacing: .5px; color: var(--text-dim); border: 1px dashed var(--border);
+  border-radius: 6px; padding: 3px 7px; margin-bottom: 6px; display: inline-block; }</style>
 </body>
 </html>
