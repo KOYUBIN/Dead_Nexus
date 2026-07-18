@@ -71,9 +71,14 @@
     var eff = D.CH.effectiveStats(character);
     var c = mission.combat;
     var kit = character.kit.slice();
-    // [계승 chapter-01/blade.md] 보상 해금 시그니처(무력 강습 오브젝티브 보너스).
-    var objBonusAbility = kit.indexOf('BACKDOOR') >= 0 ? 'BACKDOOR'
-                        : (kit.indexOf('VENDETTA') >= 0 ? 'VENDETTA' : null);
+    // [계승 chapter-01/blade.md · 48차 일반화] 보상 해금 시그니처(오브젝티브 차감 보너스).
+    //   클래스별 해금 카드(BACKDOOR/VENDETTA/WORKSHOP/TRIPLE_AGENT)를 킷에서 일반 탐지 —
+    //   objectiveBonus 를 가진 PASSIVE 능력 1개. 클래스 확장 시 하드코딩 불필요.
+    var objBonusAbility = null;
+    for (var ki = 0; ki < kit.length; ki++) {
+      var ka = D.AB.ABILITIES[kit[ki]];
+      if (ka && ka.kind === 'PASSIVE' && ka.objectiveBonus) { objBonusAbility = kit[ki]; break; }
+    }
     var player = {
       id: PLAYER_ID, side: 'player', name: character.classKey, icon: character.icon || '👤',
       classKey: character.classKey, codename: character.codename || character.classKey,
@@ -162,7 +167,7 @@
     var k = tile.x + ',' + tile.y;
     if (reach[k] == null || reach[k] === 0) return combat; // 도달 불가
     p.x = tile.x; p.y = tile.y; p.ap -= 1;
-    c.log.push('CIPHER 이동 → (' + tile.x + ',' + tile.y + ')  [AP ' + p.ap + ']');
+    c.log.push(HERO(p) + ' 이동 → (' + tile.x + ',' + tile.y + ')  [AP ' + p.ap + ']');
     c.telegraphs = computeTelegraphs(c);
     return c;
   }

@@ -33,8 +33,10 @@
       signalFavor: base.signalFavor || 'mesh',    // [계승 docs/06 §7] 시그널 다이 정렬
       icon: base.icon || '👤', codename: base.codename || base.key,
       passive: base.passive || '',
+      // [48차] 클래스 위장 태그(MOLE 등) → dialogueCtx.tags 로 인물태그 게이트 판정. 없으면 [].
+      tags: base.tags ? base.tags.slice() : [],
       kit: kit,
-      unlocked: [],           // 보상 해금 능력 (BACKDOOR / VENDETTA 등)
+      unlocked: [],           // 보상 해금 능력 (BACKDOOR / VENDETTA / WORKSHOP / TRIPLE_AGENT 등)
       karma: 0, nuyen: 0, rep: 0,
     };
   }

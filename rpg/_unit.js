@@ -228,7 +228,8 @@ console.log('\n== 로스터 선택 [Stage 2 다른 빌드] ==');
 var rosterState = S.rpgInitialState();
 var toBlade = S.selectClass(rosterState, 'BLADE');
 ok('64. 로스터에서 BLADE 편성 → classKey=BLADE & 근접 킷', toBlade.save.character.classKey === 'BLADE' && toBlade.save.character.kit.indexOf('POINT_BLANK') >= 0);
-ok('65. 미해금 클래스 선택 차단(캐릭터 유지)', S.selectClass(rosterState, 'RIGGER').save.character.classKey === 'CIPHER');
+// [48차] RIGGER·MOLE 이 플레이어블로 승격 → 미해금 대조군을 BROKER(비플레이어블)로 교체.
+ok('65. 미해금 클래스(BROKER) 선택 차단(캐릭터 유지)', S.selectClass(rosterState, 'BROKER').save.character.classKey === 'CIPHER');
 
 console.log('\n== 오브젝티브 무력 강습 vs 해킹 [각색 docs/25 §3.5] ==');
 // BLADE(ATK5/HACK1) 인접 → 강습에 ATK5 사용.
@@ -441,6 +442,135 @@ var repA = run1.save.character.rep;                 // 5(영웅) + 3(정산) = 8
 var run2 = playCh01Bypass(run1);
 var gain2 = run2.save.character.rep - repA;          // 재클리어: 영웅 +5 미적용, 정산 렙 50%(3→1)
 ok('97. 재클리어 렙 = 축소만(+1) · 영웅 +5 재적용 안 됨(farming 방지)', repA === 8 && gain2 === 1);
+
+// ============================================================================
+// ============================  48차 — RIGGER + MOLE 로스터 확장  ==============
+//   4클래스 플레이어블 무결 · RIGGER 설치/제어 킷 · MOLE 위장/침투 킷 ·
+//   위장 태그 게이트 통과 · 무소음(발각 리스크 관리) · 클래스별 해금 시그니처 일반화.
+// ============================================================================
+
+console.log('\n== 4클래스 플레이어블 로스터 [48차 · docs/07 §2] ==');
+ok('98. PLAYABLE = 4클래스 (CIPHER·BLADE·RIGGER·MOLE)',
+  CL.PLAYABLE.length === 4 && CL.PLAYABLE.indexOf('RIGGER') >= 0 && CL.PLAYABLE.indexOf('MOLE') >= 0 &&
+  CL.PLAYABLE.indexOf('BROKER') < 0 && CL.PLAYABLE.indexOf('DRIFTER') < 0);
+ok('99. RIGGER/MOLE 이 passive 보유(로스터 UI·시트 표기)',
+  !!CL.CLASSES.RIGGER.passive && !!CL.CLASSES.MOLE.passive);
+
+console.log('\n== RIGGER 설치·제어 로스터 [계승 docs/07 §2 7/3/4/2/3 · cards/ghost/rigger.md] ==');
+var rigger = CH.makeCharacter('RIGGER');
+var reff = CH.effectiveStats(rigger);
+ok('100. RIGGER 스탯 7/3/4/2/3 → 유효HP14·ATK3·DEF4·MOV2·HACK3 [계승 §10/§3.1]',
+  reff.maxHp === 14 && reff.atk === 3 && reff.def === 4 && reff.mov === 2 && reff.hack === 3);
+eq('101. RIGGER 킷 = SENTRY GUN/TRAP WIRE/EMP PULSE/OVERLOAD', rigger.kit, AB.RIGGER_KIT);
+ok('102. RIGGER 최고 DEF(4) → [DEF 3] 대화 게이트 통과 (CIPHER DEF1 불가) [수비 정체성]',
+  DLG.evalGate({ attr: 'def', min: 3 }, S.dialogueCtx({ save: { character: rigger, flags: {} } })).ok === true &&
+  DLG.evalGate({ attr: 'def', min: 3 }, S.dialogueCtx({ save: { character: CH.makeCharacter('CIPHER'), flags: {} } })).ok === false);
+// SENTRY GUN 기본공격 = ATK 사용(VOLT 원거리). ATK3 vs DEF1 = 2.
+eq('103. SENTRY GUN ATK3 vs DEF1 = 2 [각색 rigger.md Card08]', R.computeDamage({ atkValue: 3, def: 1 }).dmg, 2);
+// TRAP WIRE 디버프: DEF−1 & 이동 −3칸(강한 고정) — applyAttack DEBUFF 경로.
+var trapCombat = S.buildCombat(MI.MISSION, rigger, 'outro');
+var trapP = S.player(trapCombat); var trapTgt = trapCombat.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+trapP.x = trapTgt.x; trapP.y = trapTgt.y + 1; // 인접(사거리 2 내)
+var afterTrap = S.applyAttack(trapCombat, trapTgt.id, 'TRAP_WIRE');
+var trappedTgt = S.findUnit(afterTrap, trapTgt.id);
+ok('104. TRAP WIRE → 대상 DEF−1 & 이동−3(지역 장악) [각색 rigger.md Card02]',
+  trappedTgt.status.defDown === 1 && trappedTgt.status.movDown === 3 && trappedTgt.status.debuffTurns === 2);
+// EMP PULSE vs 기계(VANTA_DRONE): 관통2 + STUN. dmg = (ATK3+1) − max(0,DEF1−2)=4, 그리고 stunTurns.
+var empCombat = S.buildCombat(MI.MISSION, rigger, 'outro');
+var empP = S.player(empCombat); var drone = empCombat.units.filter(function (u) { return u.key === 'VANTA_DRONE'; })[0];
+empP.x = drone.x; empP.y = drone.y + 1; // 인접(사거리 4)
+empCombat.signal = SIG.STATES.DOWN; // 결정론(HACK 미보정 · RIGGER는 물리축)
+var afterEmp = S.applyAttack(empCombat, drone.id, 'EMP_PULSE');
+var stunnedDrone = S.findUnit(afterEmp, drone.id);
+ok('105. EMP PULSE vs 드론(기계): 관통 피해 + 1턴 STUN [각색 rigger.md Card07]',
+  stunnedDrone.hp < drone.hp && stunnedDrone.status.stunTurns === 1);
+// OVERLOAD 궁극: 2턴 무적 + nextCrit2 (자기 대상 applyStatus).
+var ovCombat = S.buildCombat(MI.MISSION, rigger, 'outro');
+var afterOv = S.applyAttack(ovCombat, null, 'OVERLOAD');
+var ovP = S.player(afterOv);
+ok('106. OVERLOAD 궁극 → 2턴 무적 + 해제 후 크리 ×2 & 1회 소진 [각색 rigger.md Card09 LOSS]',
+  ovP.status.invuln === true && ovP.status.invulnTurns === 2 && ovP.status.nextCrit === 2 && ovP.ultUsed === true);
+
+console.log('\n== MOLE 위장·침투 로스터 [계승 docs/07 §2 7/2/3/3/3 · cards/ghost/mole.md] ==');
+var mole = CH.makeCharacter('MOLE');
+var meff = CH.effectiveStats(mole);
+ok('107. MOLE 스탯 7/2/3/3/3 → 유효HP14·ATK2·DEF3·MOV3·HACK3 [계승 §10/§3.1]',
+  meff.maxHp === 14 && meff.atk === 2 && meff.def === 3 && meff.mov === 3 && meff.hack === 3);
+eq('108. MOLE 킷 = AUTH ABUSE/CLEARANCE/BOARD MANIP/IDENTITY COLLAPSE', mole.kit, AB.MOLE_KIT);
+// 위장 신분 태그 → 인물태그 게이트 통과 (COVER IDENTITY 계승).
+ok('109. MOLE 위장 태그(VANTA/IRONWALL/AXIOM) 보유 → [VANTA 태그] 게이트 통과 [침투 정체성]',
+  DLG.evalGate({ tag: 'VANTA' }, S.dialogueCtx({ save: { character: mole, flags: {} } })).ok === true &&
+  DLG.evalGate({ tag: 'IRONWALL' }, S.dialogueCtx({ save: { character: mole, flags: {} } })).ok === true);
+ok('110. 위장 없는 클래스(BLADE)는 [VANTA 태그] 게이트 잠김 (대조)',
+  DLG.evalGate({ tag: 'VANTA' }, S.dialogueCtx({ save: { character: CH.makeCharacter('BLADE'), flags: {} } })).ok === false);
+// AUTH ABUSE 기본공격 = HACK 사용(무소음). HACK3 vs DEF1 = 2.
+eq('111. AUTH ABUSE HACK3 vs DEF1 = 2 [각색 mole.md Card03]', R.computeDamage({ atkValue: 3, def: 1 }).dmg, 2);
+// BOARD MANIP 강공: (HACK3+2) − (DEF3−pierce2)=5−1=4.
+eq('112. BOARD MANIP HACK3+2 관통2 vs DEF3 = 4 [각색 mole.md Card05]',
+  R.computeDamage({ atkValue: 3, def: 3, bonus: 2, pierce: 2 }).dmg, 4);
+// CLEARANCE 디버프: DEF−2 & 엄폐 무효.
+var clrCombat = S.buildCombat(MI.MISSION, mole, 'outro');
+var clrP = S.player(clrCombat); var clrTgt = clrCombat.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+clrP.x = clrTgt.x; clrP.y = clrTgt.y + 1;
+var afterClr = S.applyAttack(clrCombat, clrTgt.id, 'CLEARANCE');
+var clearedTgt = S.findUnit(afterClr, clrTgt.id);
+ok('113. CLEARANCE → 대상 DEF−2 & 엄폐 무효(베일 무시) [각색 mole.md Card04]',
+  clearedTgt.status.defDown === 2 && clearedTgt.status.coverNull === true);
+// IDENTITY COLLAPSE 궁극: 2턴 은신 + nextCrit3.
+var icCombat = S.buildCombat(MI.MISSION, mole, 'outro');
+var afterIc = S.applyAttack(icCombat, null, 'IDENTITY_COLLAPSE');
+var icP = S.player(afterIc);
+ok('114. IDENTITY COLLAPSE 궁극 → 2턴 은신 + 급습 크리 ×3 & 1회 소진 [각색 mole.md Card09 LOSS]',
+  icP.status.stealth === true && icP.status.stealthTurns === 2 && icP.status.nextCrit === 3 && icP.ultUsed === true);
+// 무소음(loud:false) → 위협/노출 게이지 미가산(발각 리스크 관리). AUTH ABUSE 로 검증.
+var qCombat = S.buildCombat(MI.MISSION, mole, 'outro');
+var qP = S.player(qCombat); var qTgt = qCombat.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+qP.x = qTgt.x; qP.y = qTgt.y + 1;
+var afterQ = S.applyAttack(qCombat, qTgt.id, 'AUTH_ABUSE');
+ok('115. AUTH ABUSE 무소음(loud:false) → threat.noise 미가산 (발각 리스크 관리)',
+  (afterQ.threat.noise || 0) === 0 && S.findUnit(afterQ, qTgt.id).hp < qTgt.hp);
+
+console.log('\n== 클래스 편성 & 해금 시그니처 일반화 [48차] ==');
+var rs = S.rpgInitialState();
+var toRig = S.selectClass(rs, 'RIGGER');
+ok('116. 로스터에서 RIGGER 편성 → classKey=RIGGER & 설치 킷', toRig.save.character.classKey === 'RIGGER' && toRig.save.character.kit.indexOf('SENTRY_GUN') >= 0);
+var toMole = S.selectClass(rs, 'MOLE');
+ok('117. 로스터에서 MOLE 편성 → classKey=MOLE & 침투 킷 & 위장 태그', toMole.save.character.classKey === 'MOLE' && toMole.save.character.kit.indexOf('AUTH_ABUSE') >= 0 && toMole.save.character.tags.indexOf('VANTA') >= 0);
+// 보상 해금: RIGGER→WORKSHOP, MOLE→TRIPLE_AGENT (BACKDOOR 치환, UNLOCK_BY_CLASS 일반화).
+var rigSave = S.newSave(); rigSave.character = CH.makeCharacter('RIGGER');
+var rigRew = CAMP.applyRewards(rigSave, MI.MISSION);
+ok('118. RIGGER 귀환 정산 → WORKSHOP 해금 (BACKDOOR 치환)',
+  rigRew.character.kit.indexOf('WORKSHOP') >= 0 && rigRew.character.kit.indexOf('BACKDOOR') < 0);
+var moleSave = S.newSave(); moleSave.character = CH.makeCharacter('MOLE');
+var moleRew = CAMP.applyRewards(moleSave, MI.MISSION);
+ok('119. MOLE 귀환 정산 → TRIPLE AGENT 해금 (BACKDOOR 치환)',
+  moleRew.character.kit.indexOf('TRIPLE_AGENT') >= 0 && moleRew.character.kit.indexOf('BACKDOOR') < 0);
+// objBonusAbility 일반화: WORKSHOP 장착 시 오브젝티브 차감 +1 (buildCombat 탐지).
+var wsCombat = S.buildCombat(MI.MISSION, rigRew.character, 'outro');
+ok('120. buildCombat objBonusAbility 일반화 → RIGGER WORKSHOP 탐지', wsCombat.units[0].objBonusAbility === 'WORKSHOP');
+var wsP = S.player(wsCombat); wsP.x = wsCombat.objective.x + 1; wsP.y = wsCombat.objective.y; // 인접
+wsCombat.signal = SIG.STATES.DOWN; // 결정론
+var wsAfter = S.applyHackObjective(wsCombat);
+// RIGGER HACK3 == ATK3 → 해킹(useHack), WORKSHOP +1 → 차감 4 (thr6→2).
+ok('121. RIGGER 서버랙 해킹 + WORKSHOP 보너스: 차감 4 (thr6→2)',
+  wsAfter.objective.threshold === 2);
+
+console.log('\n== ch01 4클래스 완주 경로 (RIGGER=전투 / MOLE=위장 우회) [48차 · 미션 호환] ==');
+// RIGGER: 위장/해킹 우회 불가 → 무력 돌파(전투) 경로.
+var rgCh01 = S.rpgInitialState(); rgCh01.save.character = CH.makeCharacter('RIGGER');
+rgCh01 = S.startMission(rgCh01, 'ch01-first-blood');
+rgCh01 = S.dialogueChoose(rgCh01, 0);      // intro → approach
+var rgCombat = S.dialogueChoose(rgCh01, 0); // 무력 돌파 → combat
+ok('122. RIGGER ch01 = 전투 경로 진입 (combat scene · SENTRY GUN 기본선택)',
+  rgCombat.scene === 'combat' && rgCombat.combat.selectedAbility === 'SENTRY_GUN');
+// MOLE: 위장 태그 → [VANTA 태그] 사원증 위조 우회(전투 스킵) → outroStealth.
+var mlCh01 = S.rpgInitialState(); mlCh01.save.character = CH.makeCharacter('MOLE');
+mlCh01 = S.startMission(mlCh01, 'ch01-first-blood');
+mlCh01 = S.dialogueChoose(mlCh01, 0);      // intro → approach
+var mlBypass = S.dialogueChoose(mlCh01, 2); // [VANTA 태그] 위장 우회 → outroStealth
+ok('123. MOLE ch01 = 위장 우회 경로 (전투 미발생 · forgedPass · firstBlood 대체 달성)',
+  mlBypass.scene === 'dialogue' && mlBypass.combat === null &&
+  mlBypass.save.flags.forgedPass === true && mlBypass.save.flags.firstBlood === true);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
