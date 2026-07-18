@@ -264,7 +264,7 @@ function tests(){
   // (1) 스케일 방향 — 1g3b: Ghost 소수 → 임계 완화(<1) + Bloc 다수 → 임계 지연(>1)
   const ud13=UDS(mkS(['ghost','bloc','bloc','bloc']));
   ok('UD 1g3b d=2 / applied',ud13.d===2&&ud13.applied===true);
-  ok('UD 1g3b ghostMult<1 (소수 Ghost 임계 완화)',ud13.ghostMult<1&&ud13.ghostMult>=0.50,`gm ${ud13.ghostMult}`);
+  ok('UD 1g3b ghostMult=0.68 [B-08: GHOST_STEP 0.08→0.04, hp double-dip 상쇄]',ud13.ghostMult<1&&ud13.ghostMult>=0.50&&Math.abs(ud13.ghostMult-0.68)<1e-9,`gm ${ud13.ghostMult}`);
   ok('UD 1g3b blocMult>1 (다수 Bloc 임계 지연)',ud13.blocMult>1&&ud13.blocMult<=1.95,`bm ${ud13.blocMult}`);
   // (2) 3g1b: Bloc 소수 → 임계 완화(<1) + Ghost 다수 → 임계 지연(>1)
   const ud31=UDS(mkS(['ghost','ghost','ghost','bloc']));
@@ -273,7 +273,7 @@ function tests(){
   ok('UD 3g1b ghostMult>1 (다수 Ghost 임계 지연)',ud31.ghostMult>1&&ud31.ghostMult<=1.45,`gm ${ud31.ghostMult}`);
   // (3) 2:2 동수 — 교차보유 시너지 상쇄 위해 Ghost 쪽 tilt (진단 근거; 실측 baseline bloc 94%)
   const ud22=UDS(mkS(['ghost','ghost','bloc','bloc']));
-  ok('UD 2:2 d=0 / ghostMult<1 (parity tilt)',ud22.d===0&&ud22.ghostMult<1,`gm ${ud22.ghostMult}`);
+  ok('UD 2:2 d=0 / ghostMult=0.76 (parity tilt; B-08 불변 — d=0 은 GHOST_STEP*0)',ud22.d===0&&ud22.ghostMult<1&&Math.abs(ud22.ghostMult-0.76)<1e-9,`gm ${ud22.ghostMult}`);
   ok('UD 2:2 blocMult>1 (parity tilt)',ud22.blocMult>1,`bm ${ud22.blocMult}`);
   // (4) 항등 폴백 — 단일 진영 판(gc·bc 중 0)
   const udAll=UDS(mkS(['bloc','bloc','bloc','bloc']));
@@ -290,12 +290,12 @@ function tests(){
   ok('UD S01 included (relief on)',UDS(mkS(['ghost','bloc','bloc','bloc'],'S01')).applied===true);
   // (7) getVictoryGoals 통합 — 임계에 배수 반영
   const gv13=GVG(mkS(['ghost','bloc','bloc','bloc']));
-  ok('GVG 1g3b blocAsset raised >100 (Bloc 지연)',gv13.blocAsset>100,`got ${gv13.blocAsset}`);
-  ok('GVG 1g3b ghostRepBattle lowered <45 (Ghost 완화)',gv13.ghostRepBattle<45,`got ${gv13.ghostRepBattle}`);
+  ok('GVG 1g3b blocAsset=166 (Bloc 지연; B-08 불변 — Ghost 만 재튜닝, Bloc 임계 그대로)',gv13.blocAsset===166,`got ${gv13.blocAsset}`);
+  ok('GVG 1g3b ghostRepBattle=31 & repOnly=48 (B-08 재튜닝 0.68×; hp 채널 상쇄)',gv13.ghostRepBattle===31&&gv13.ghostRepOnly===48,`got ${gv13.ghostRepBattle}/${gv13.ghostRepOnly}`);
   ok('GVG 1g3b underdog meta attached',gv13.underdog&&gv13.underdog.applied===true);
   const gv31=GVG(mkS(['ghost','ghost','ghost','bloc']));
-  ok('GVG 3g1b blocAsset lowered <100 (Bloc 완화)',gv31.blocAsset<100,`got ${gv31.blocAsset}`);
-  ok('GVG 3g1b ghostRepBattle raised >45 (Ghost 지연)',gv31.ghostRepBattle>45,`got ${gv31.ghostRepBattle}`);
+  ok('GVG 3g1b blocAsset=80 (Bloc 완화; B-08 불변 — d<0 는 GHOST_STEP 무관)',gv31.blocAsset===80,`got ${gv31.blocAsset}`);
+  ok('GVG 3g1b ghostRepBattle=52 (Ghost 지연; B-08 불변 — d<0 는 GHOST_STEP 무관)',gv31.ghostRepBattle===52,`got ${gv31.ghostRepBattle}`);
   // ============================================================
   // B-06 (docs/22 P1-6): highlightPoints 승리 환산 — write-only 통화 회생
   //   판정(evalPlayerVictory)·HUD(hudRaceProgress)·표시가 동일 asset_eff/rep_eff 를 읽는지,
