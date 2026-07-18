@@ -63,7 +63,8 @@
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = 화학 저장탱크 파괴(threshold 누적 차감 = objective-reduce, CIPHER/BLADE
     //  중 강한 축(HACK/ATK) 자동 선택 — 이중 승리 경로, 전멸도 별도 승리 조건).
-    objective: { x: 3, y: 0, threshold: 11, veil: 1, label: 'CARBON 저장탱크', dataTB: 0 },
+    // 51차 밸런스: 11+veil1(=12) → 11+0(=11) — 무피해 2R 러시 방지 + CARBON 고DEF 라인에 오브젝티브 완주 여유.
+    objective: { x: 3, y: 0, threshold: 11, veil: 0, label: 'CARBON 저장탱크', dataTB: 0 },
     // [계승 G10] 위협 임계 + 증원(경보 시 1회 스폰) — 장편 페이싱.
     threatCap: 8,
     reinforcement: { key: 'CARBON_DRONE', x: 5, y: 1 },

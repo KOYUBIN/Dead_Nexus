@@ -94,7 +94,8 @@
     // 오브젝티브 = 경쟁자 은신처 표식(decoy, 상단 SIMPLIFIED 참고) — threshold 누적 차감.
     //  [계승 store.js applyHackObjective] 인접 유닛의 max(HACK,ATK) 축 자동 선택으로
     //  CIPHER/BLADE 모두 같은 표식을 다른 축으로 차감 가능(부가 승리 경로).
-    objective: { x: 3, y: 0, threshold: 7, veil: 0, label: '경쟁자 아지트', dataTB: 0 },
+    // 51차 밸런스: threshold 7→6 — RIVAL_GHOST(원거리 hack6) 압박에 저HP 클래스 완주 여유.
+    objective: { x: 3, y: 0, threshold: 6, veil: 0, label: '경쟁자 아지트', dataTB: 0 },
     // [계승 G10, 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 단편 페이싱.
     threatCap: 7,
     reinforcement: { key: 'GANG_THUG', x: 5, y: 1 },

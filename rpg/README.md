@@ -21,10 +21,39 @@ CIPHER(해킹)·BLADE(근접) 두 빌드로 다르게 완주한다.
 ## 검증
 
 ```
-node rpg/_unit.js      # 순수 로직 유닛 테스트 76건 (Stage 1: 1~46 · Stage 2: 47~76)
-                       #   Stage 2 = 시그널 다이 4상태 · BLADE 킷(POINT BLANK/SUPPRESSION/
-                       #   DOUBLE TAP/LAST STAND) · 위협 게이지 증원 페이싱 · 분기 영속 · 로스터
+node rpg/_unit.js          # 순수 로직 유닛 테스트 133건 (Stage 1: 1~46 · Stage 2: 47~76 ·
+                           #   48차 로스터: ~123 · 51차 밸런스 하네스 스모크/핀: 124~133)
+node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (16/16)
+node rpg/_balance.js       # 전투 밸런스 매트릭스 (4클래스 × 16미션 × 2정책) — 아래 §밸런스 하네스
 ```
+
+## 밸런스 하네스 (`_balance.js`) — 전투 난이도 전수 측정 [51차]
+
+전투는 **결정론**(주사위 0, `systems/combat/*` 순수 함수, DOM 참조 0)이므로 브라우저 없이
+순수 엔진(`store.buildCombat` + `applyMove/applyAttack/applyHackObjective/runEnemyTurn`)만으로
+**자동 플레이**가 가능하다. `sim-e2e` 의 측정 규율(매트릭스 + 이상치 플래그)을 RPG 로 이식.
+
+```
+node rpg/_balance.js           # 4클래스 × 16미션 × 2정책 매트릭스 + 이상치 + 챕터 경향 + 요약
+node rpg/_balance.js --json    # 기계 판독 JSON (매트릭스 원본)
+node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 = 같은 결과)
+```
+
+**봇 정책 2종** (결정론 → 정책당 1런이면 충분):
+- `combat` — 전투형: 최대 피해 액션 우선 → 최근접 적 접근(전멸 승리 지향).
+- `objective` — 오브젝티브형: 오브젝티브로 전진 → 인접 시 우선 차감(오브젝티브 승리 지향).
+- 공통: 위협 예측 기반 생존 궁극(HP≤40% 또는 큰 피격 예상 시 은신/무적), 엄폐 인지 이동,
+  관통 피해 0 시 디버프 폴백. 이동/공격 평가는 엔진 실측(피해식 재구현 0).
+
+**셀 표기**: `W5·88% CO` = 승리·5라운드·종료HP88% / 승리 정책 `C`(combat)·`O`(objective).
+`L3`=패(3R) · `T`=timeout. `⚑`=이상치.
+
+**이상치 플래그**: `clearFail`(양 정책 패) · `trivial`(최속 승리 ≤2R 무피해) · `attrition`(최속 승리 ≥10R/timeout).
+종합 판정 = **어느 정책이든 승리면 클리어 가능**, 대표 라운드 = 최속(최적) 승리 정책.
+
+**밴드 목표**(51차 보정 후 충족): 64조합 전원 클리어 가능 · clearFail/attrition 0 · 최속 승리 ≤9R ·
+챕터 순 난이도 상승 경향. 보정은 **미션 파일의 전투 수치만**(적 배치·오브젝티브 임계·증원 임계) —
+`enemies.js`(공유 로스터)·엔진·대화/보상/서사 무편집. 회귀 방어는 `_unit.js` 124~133 이 핀 고정.
 
 빌드 스텝 0. React 18 + Babel Standalone(브라우저 내 JSX 트랜스파일). 상태 = 단일
 `useReducer`(`state/store.js`) + 씬 라우터(hub / dialogue / combat).

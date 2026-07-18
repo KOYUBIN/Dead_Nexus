@@ -63,10 +63,10 @@
     cols: 6, rows: 8,
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = CARBON 봉쇄 게이트 강행 돌파(threshold 누적 차감 = objective-reduce).
-    //  effective threshold = 12 + veil 0 = 12 (buildCombat 이 veil 를 가산).
+    //  effective threshold = 11 + veil 0 = 11 (51차 밸런스: 12→11 — MOLE 오브젝티브 소모전 완화).
     //  dataTB 0 = 추출이 아닌 강행 돌파(로그 표기용, 유출량 없음).
     //  [계승 store applyHackObjective] CIPHER=HACK 해킹 / BLADE=ATK 강습 → 양 축 완주.
-    objective: { x: 3, y: 0, threshold: 12, veil: 0, label: 'CARBON 봉쇄 게이트', dataTB: 0 },
+    objective: { x: 3, y: 0, threshold: 11, veil: 0, label: 'CARBON 봉쇄 게이트', dataTB: 0 },
     // [계승 ch01 · 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 페이싱 실동.
     threatCap: 8,
     reinforcement: { key: 'CARBON_GUARD', x: 5, y: 1 },   // 봉쇄 증원 (통합 경비 추가 투입)

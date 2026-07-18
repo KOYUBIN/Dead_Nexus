@@ -102,9 +102,10 @@
     // 오브젝티브 = 봉쇄된 남항 검문 게이트 강행 돌파(threshold 누적 차감 = objective-reduce
     //  = 탈출-돌파). [계승 store applyHackObjective] CIPHER=HACK 해킹 / BLADE=ATK 강습 →
     //  둘 중 강한 축 자동 선택으로 양 클래스 완주. dataTB 0 = 추출이 아닌 돌파(로그 표기용).
-    objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '남항 검문 게이트', dataTB: 0 },
-    // [계승 G10 · 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 중편 페이싱.
-    threatCap: 7,
+    // 51차 밸런스: threshold 8→11 — 무피해 2R 러시(트리비얼) 방지(BLADE 2해킹턴 강제). 검문 순찰 3기라 위협 낮아 저HP 완주.
+    objective: { x: 3, y: 0, threshold: 11, veil: 0, label: '남항 검문 게이트', dataTB: 0 },
+    // [계승 G10 · 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 중편 페이싱. 51차: 7→8.
+    threatCap: 8,
     reinforcement: { key: 'POLICE_DRONE', x: 0, y: 1 },
     walls: [],
     // [신규 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1, full=DEF+2. 부두 컨테이너 3 + 세관 부스 1(게이트 앞).

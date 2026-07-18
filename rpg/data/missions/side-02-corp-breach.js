@@ -72,7 +72,8 @@
     //  effective threshold = 6 + veil 1 = 7 (buildCombat 이 veil 를 가산).
     //  [계승 store.js applyHackObjective] 인접 유닛의 max(HACK,ATK) 축 자동 선택 —
     //  CIPHER(HACK5>ATK2)는 해킹, BLADE(ATK5>HACK1)는 강습으로 같은 캐시를 차감(MFU).
-    objective: { x: 2, y: 0, threshold: 6, veil: 1, label: 'AXIOM 설계도 캐시', dataTB: 2.2 },
+    // 51차 밸런스: 6+veil1(=7) → 11+veil0(=11) — 무피해 2R 러시(트리비얼) 방지(BLADE 2해킹턴 강제).
+    objective: { x: 2, y: 0, threshold: 11, veil: 0, label: 'AXIOM 설계도 캐시', dataTB: 2.2 },
     // [계승 G10, 각색 raidThreshold] 위협/노출 임계 + 증원(경보 시 1회 스폰).
     threatCap: 8,
     reinforcement: { key: 'AXIOM_DRONE', x: 5, y: 1 },

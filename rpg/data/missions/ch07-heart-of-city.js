@@ -63,10 +63,11 @@
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = 의장실 잠금 단말(대체승리·decoy). threshold 누적 차감 = objective-reduce.
-    //  veil 2 = 넥서스 최강 방어(docs/10 §2 방어 +3) 근사 → 유효 임계 = 12 + 2 = 14.
+    //  유효 임계 = 11 + veil 0 = 11 (51차 밸런스: 12+2 → 11+0 — 저HP 클래스 은신 러시 창 내 완주
+    //  가능 + 관료 2→1 감축. 램프상 ch06(11)≈ch07(11); 실난이도는 KAI 보스(HP20/DEF5)가 최상위).
     //  CIPHER 는 단말 무력화(objective-reduce, HACK)로, BLADE 는 KAI+경비 전멸로 승리 → 양 클래스 완주.
     //  dataTB 0 — 데이터 추출이 아닌 물리 잠금 단말(왕좌 접근)이므로 유출량 0.
-    objective: { x: 3, y: 0, threshold: 12, veil: 2, label: '의장실 단말', dataTB: 0 },
+    objective: { x: 3, y: 0, threshold: 11, veil: 0, label: '의장실 단말', dataTB: 0 },
     // [계승 ch01~05] 위협 임계 + 증원(경보 시 1회 스폰) — 전투 페이싱 실동. 최종 전장이라 여유 10.
     threatCap: 10,
     // [각색 chapter-07 §1] IRONWALL 보스(MARCUS CRANE) '용병 NPC 자동 동반' 특성을 증원 유닛으로 각색.
@@ -85,9 +86,10 @@
     //    물리(BLADE)·해킹(CIPHER) 모두 유효, 필수 처치 대상이자 전멸 MFU 성립. 왕좌 단상 {3,2}.
     //  AXIOM_ANALYST ×2 = 집행부 상주 관료(측면). AXIOM_DRONE = 상단 순찰 드론.
     //  전 적 killable → 전멸(주 경로 제압) 또는 단말 무력화(대체승리) 어느 쪽이든 승리.
+    //  51차 밸런스: 관료 2→1 감축 — 저HP 클래스가 KAI 알파 아래 오브젝티브 러시 생존 가능하도록.
+    //  KAI 보스+관료1+드론1 = 3기로 최종 직전 난이도 유지(전멸=BLADE 주경로, 단말=CIPHER 대체승리).
     enemies: [
       { key: 'KAI_MORROW',    x: 3, y: 2 },   // ★보스 — 왕좌 단상. 물리·해킹 모두 유효(physImmune 아님)
-      { key: 'AXIOM_ANALYST', x: 1, y: 3 },   // 좌 관료
       { key: 'AXIOM_ANALYST', x: 5, y: 3 },   // 우 관료
       { key: 'AXIOM_DRONE',   x: 0, y: 1 },   // 상단 순찰 드론
     ],

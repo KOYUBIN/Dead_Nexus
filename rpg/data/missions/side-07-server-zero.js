@@ -108,7 +108,8 @@
     //  veil 2 = ICE 이중 수호(SIGNAL_ICE ×2)가 코어 방어도에 얹는 베일 값을 서사적으로 반영.
     //  [계승 store.js applyHackObjective] 인접 유닛의 max(HACK,ATK) 축 자동 선택 —
     //  CIPHER(HACK5>ATK2)는 해킹, BLADE(ATK5>HACK1)는 강습으로 같은 코어를 다른 축으로 파괴(MFU).
-    objective: { x: 3, y: 0, threshold: 12, veil: 2, label: '중앙 서버 코어', dataTB: 8.0 },
+    // 51차 밸런스: 12+veil2(=14) → 10+0(=10) — 엘리트+ICE 이중 수호에 저HP 클래스 완주 창 확보.
+    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '중앙 서버 코어', dataTB: 8.0 },
     // [계승 G10, 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 시리즈 최고 threatCap.
     threatCap: 9,
     reinforcement: { key: 'VANTA_ELITE', x: 5, y: 1 },   // 경보 증원 — 상단 우측 통로에서 합류

@@ -52,9 +52,11 @@
   var COMBAT = {
     cols: 6, rows: 6,
     playerStart: { x: 2, y: 5 },
-    objective: { x: 2, y: 0, threshold: 8, veil: 0, label: '표적 신원 콘솔', dataTB: 0 },
-    // [계승 G10] 위협 임계 + 증원(경보 시 1회 스폰).
-    threatCap: 7,
+    // 51차 밸런스: threshold 8→9 + threatCap 7→8 — 무피해 2R 러시(트리비얼) 방지 & 조기 증원 완화.
+    //  IRONWALL 이중 집행관은 저HP 클래스가 은신 러시(objective-reduce)로 우회 완주(전멸 불요).
+    objective: { x: 2, y: 0, threshold: 9, veil: 0, label: '표적 신원 콘솔', dataTB: 0 },
+    // [계승 G10] 위협 임계 + 증원(경보 시 1회 스폰). 51차: 7→8 조기 증원 완화.
+    threatCap: 8,
     reinforcement: { key: 'IRONWALL_ENFORCER', x: 5, y: 1 },
     walls: [],
     // [계승 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1.

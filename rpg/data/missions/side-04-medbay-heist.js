@@ -84,7 +84,8 @@
     //  effective threshold = 8 + veil 1 = 9 (buildCombat 이 veil 를 가산).
     //  [계승 store.js applyHackObjective] 인접 유닛의 max(HACK,ATK) 축 자동 선택 —
     //  CIPHER(HACK5>ATK2)는 해킹, BLADE(ATK5>HACK1)는 강습으로 같은 캐시를 차감(MFU).
-    objective: { x: 2, y: 0, threshold: 8, veil: 1, label: 'HELIX 연구 캐시', dataTB: 3.3 },
+    // 51차 밸런스: 8+veil1(=9) → 7+0(=7) — MOLE 오브젝티브 소모전·CIPHER 완주 완화.
+    objective: { x: 2, y: 0, threshold: 7, veil: 0, label: 'HELIX 연구 캐시', dataTB: 3.3 },
     // [계승 ch01/ch04, 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰).
     threatCap: 8,
     reinforcement: { key: 'SPLICE_HOUND', x: 5, y: 2 },   // 경보 증원 (복도 반대편에서 합류)
