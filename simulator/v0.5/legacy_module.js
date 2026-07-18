@@ -3,7 +3,8 @@
 // legacy_module.js — 레거시 캠페인 영속 Stage 1·2 (docs/12 "ASH & SIGNAL")
 //   챕터 진행을 브라우저 localStorage('dn_legacy_v1')에 영속화하고,
 //   Chapter 1 "First Blood"(cards/legacy/chapter-01-first-blood.md) +
-//   Chapter 2 "Insider Game"(cards/legacy/chapter-02-insider-game.md) 아크를
+//   Chapter 2 "Insider Game"(cards/legacy/chapter-02-insider-game.md) +
+//   Chapter 3 "Martial Night"(cards/legacy/chapter-03-martial-night.md) 아크를
 //   실플레이에 연결한다. euro_module / lore_module 와 동일한 배선 패턴:
 //     · <script src> 로드 + DOMContentLoaded 자가복구 heal 로더 등록(index.html)
 //     · 전역은 window 노출, 소비처는 typeof 가드로 미로드 시 무해
@@ -11,21 +12,25 @@
 //       모드·스토리지 차단 브라우저에서도 예외 없이 기본값으로 되돌아간다.
 //
 //   영속 스키마 dn_legacy_v1 = {
-//     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2])
+//     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2,3])
 //     chapterProgress:  { [n]: {unlockedAt} },       // 챕터별 진행 메타
 //     cityScars:        [{ bloc, kind, ts }],        // 도시 흉터 기록 (docs/22 정체성)
-//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적)
+//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄)
 //   * 게임 로직 무변경 원칙: 이 모듈은 순수 영속·조회 계층이다. 게임 규칙에
 //     주는 유일한 영향은 단일 흉터 채널(cityScar)로, initGame 이 legacyActiveScar()를
-//     읽어 시작 주가 -1 을 적용할 때뿐이다. Stage 2 도 같은 절제 유지 — 흉터를 새로
-//     늘리지 않고, 챕터 2 해금 후엔 같은 -1 흉터를 M&A 표적(PREY) 블록으로도 발원시킨다
-//     (챕터 1 레이드 최다 피격 = 'raid', 챕터 2 M&A 표적 = 'prey'; 흉터는 ch1|ch2 중
-//     하나라도 해금돼야 활성).
+//     읽어 적용할 때뿐이다. Stage 2·3 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
+//     kind 로 마크 대상만 갈린다:
+//       · 'raid'(ch1 레이드 최다 피격 블록) → 다음 게임 시작 주가 -1
+//       · 'prey'(ch2 M&A 표적 블록)         → 다음 게임 시작 주가 -1
+//       · 'martial'(ch3 계엄 발생, 특정 블록 없음) → 다음 게임 시작 공권력 +1 (도시 전역)
+//     흉터는 ch1|ch2|ch3 중 하나라도 해금돼야 활성. 우선순위 martial > prey > raid
+//     (가장 최근·도시 전역적 상처가 단일 슬롯을 차지; -1급 소규모 1회성 유지).
 // ============================================================================
 (function (glob) {
 
   var LEGACY_KEY = 'dn_legacy_v1';
   var TOTAL_CHAPTERS = 8;
+  var MARTIAL_HEAT_DELTA = 1;   // ch3 'martial' 흉터: 다음 게임 시작 공권력 가산 (원전 효과#4 "시작 공권력 +2"의 -1급 절제판)
 
   // localStorage 가용성 — 헤드리스/차단 환경에서 접근 자체가 던질 수 있어 가드.
   function hasStorage() {
@@ -94,6 +99,18 @@
         '두 번째 균열은 내부에서 열린다. 이 챕터부터 금융 전쟁의 시대가 시작된다.',
       ],
     },
+    3: {
+      id: 3,
+      envelope: 'C',
+      title: 'Martial Night',
+      titleKo: '계엄의 밤',
+      unlockCond: '공권력 트랙 최고조(계엄 선포)',
+      story: [
+        '도시 전역의 공공 디스플레이가 동시에 꺼졌다 다시 켜진다. 국장의 얼굴, 국장의 목소리 — "본 시각부로 애시그리드 전역에 계엄을 선포한다."',
+        '거리에는 시민이 없었다. 사이렌과 장갑차와 드론 스웜만 있었다.',
+        '세 번째로 도시가 배운 사실 — 블록보다 강한 것은 국가다. 아주 가끔, 잠깐 동안만. 이 챕터부터 공권력과의 정면 충돌이 가능해진다.',
+      ],
+    },
   };
 
   function legacyChapterMeta(n) { return CHAPTER_META[n] || null; }
@@ -121,18 +138,35 @@
     return { unlocked: true, newly: true, state: st };
   }
 
+  // 챕터 3 해금 (봉투 C). 봉투별 조건은 독립 — 챕터 1·2 선행 불필요.
+  //   해금 조건 원전: "공권력 트랙 10 도달 (계엄선포 트리거)".
+  //   → 엔진 신호: 이번 게임에 계엄이 발생 = 공권력(heat) 최고조. 소비처(index.html)가
+  //     policeSpawned(공권력 9 도달 시 경찰 스폰, S04 는 시작부터 true)·heat==10·시나리오
+  //     martialLaw 게이트에서 martialLaw 를 파생해 넘긴다. 엔진 heat 상한이 10 이라
+  //     원전 "트랙 10 도달"은 곧 트랙 최고조 = 계엄 엔티티(경찰) 전개와 동치.
+  //   반환 { unlocked, newly, state }.
+  function legacyUnlockChapter3(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (st.chaptersUnlocked.indexOf(3) !== -1) return { unlocked: true, newly: false, state: st };
+    st.chaptersUnlocked = st.chaptersUnlocked.concat([3]);
+    st.chapterProgress = Object.assign({}, st.chapterProgress, { 3: { unlockedAt: Date.now() } });
+    return { unlocked: true, newly: true, state: st };
+  }
+
   // 게임 종료 결과를 캠페인에 반영 (영속 저장 포함).
-  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc }
+  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw }
   //     anyRaid     — 레이드 1회 이상 발생 → 챕터 1 해금 트리거          (Stage 1, 시그니처 불변)
   //     topRaidBloc — 최다 레이드 피해 블록 → 챕터 1 흉터(kind 'raid')   (Stage 1, 시그니처 불변)
   //     anyMna      — Bloc 공격자 M&A 선언 1회 이상 → 챕터 2 해금 트리거 (Stage 2, 옵셔널)
   //     mnaPreyBloc — 이번 게임 M&A 표적(PREY·방어자) 블록 → 챕터 2 흉터(kind 'prey') (옵셔널)
-  //   * 하위 호환: anyMna/mnaPreyBloc 미공급(구 index.html·헤드리스)이면 Stage 1 과 동일 동작.
-  //   반환 { state, chapter1Newly, chapter2Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
+  //     martialLaw  — 이번 게임 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터 (Stage 3, 옵셔널)
+  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw 미공급(구 index.html·헤드리스)이면 Stage 1 과 동일 동작.
+  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
   function legacyRecordGame(gameResult) {
     var st = legacyLoad();
     var chapter1Newly = false;
     var chapter2Newly = false;
+    var chapter3Newly = false;
     if (gameResult && gameResult.anyRaid) {
       var r1 = legacyUnlockChapter1(st);
       st = r1.state;
@@ -143,29 +177,45 @@
       st = r2.state;
       chapter2Newly = r2.newly;
     }
-    // 단일 흉터 채널 — 최신 1건만 유지 (다음 게임 시작 주가 -1 의 근거). 해금 판부터 남긴다.
-    //   챕터 2 해금 후 M&A 표적(PREY)이 있으면 그 블록이 가장 신선한 상처 → 우선(kind 'prey').
-    //   아니면 챕터 1 최다 레이드 피해 블록(kind 'raid'). 게임 로직 영향은 여전히 -1 흉터 하나뿐.
+    if (gameResult && gameResult.martialLaw) {
+      var r3 = legacyUnlockChapter3(st);
+      st = r3.state;
+      chapter3Newly = r3.newly;
+    }
+    // 단일 흉터 채널 — 최신 1건만 유지 (다음 게임 시작 조건 보정의 근거). 해금 판부터 남긴다.
+    //   우선순위 martial > prey > raid — 가장 최근·도시 전역적 상처가 단일 슬롯 차지.
+    //     · 챕터 3 해금 후 계엄(martialLaw) 발생 → 도시 전역 흉터(kind 'martial', 특정 블록 없음 → 시작 공권력 +1).
+    //     · 아니면 챕터 2 해금 후 M&A 표적(PREY) → 그 블록 흉터(kind 'prey', 시작 주가 -1).
+    //     · 아니면 챕터 1 최다 레이드 피해 블록(kind 'raid', 시작 주가 -1).
+    //   게임 로직 영향은 여전히 흉터 채널 하나뿐 (kind 로 마크 대상만 갈림; -1급 소규모 1회성).
     var scarBloc = null, scarKind = null;
-    if (st.chaptersUnlocked.indexOf(2) !== -1 && gameResult && gameResult.mnaPreyBloc) {
+    if (st.chaptersUnlocked.indexOf(3) !== -1 && gameResult && gameResult.martialLaw) {
+      scarBloc = null; scarKind = 'martial';
+    } else if (st.chaptersUnlocked.indexOf(2) !== -1 && gameResult && gameResult.mnaPreyBloc) {
       scarBloc = gameResult.mnaPreyBloc; scarKind = 'prey';
     } else if (st.chaptersUnlocked.indexOf(1) !== -1 && gameResult && gameResult.topRaidBloc) {
       scarBloc = gameResult.topRaidBloc; scarKind = 'raid';
     }
-    if (scarBloc) st.cityScars = [{ bloc: scarBloc, kind: scarKind, ts: Date.now() }];
+    if (scarKind) st.cityScars = [{ bloc: scarBloc, kind: scarKind, ts: Date.now() }];
     legacySave(st);
-    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly };
+    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly };
   }
 
-  // 다음 게임 시작 시 적용할 활성 흉터 — { bloc, kind } 또는 null.
-  //   챕터 1·2 둘 다 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
-  //   kind: 'raid'(ch1) | 'prey'(ch2). kind 없는 구버전 흉터는 'raid' 로 정규화.
+  // 다음 게임 시작 시 적용할 활성 흉터 — { bloc, kind, heatDelta } 또는 null.
+  //   챕터 1·2·3 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
+  //   kind: 'raid'(ch1)·'prey'(ch2) → bloc 시작 주가 -1 (heatDelta 0);
+  //         'martial'(ch3) → bloc 없음, 시작 공권력 +heatDelta (도시 전역).
+  //   kind 없는 구버전 흉터는 'raid' 로 정규화(하위 호환).
   function legacyActiveScar() {
     var st = legacyLoad();
-    if (st.chaptersUnlocked.indexOf(1) === -1 && st.chaptersUnlocked.indexOf(2) === -1) return null;
+    if (st.chaptersUnlocked.indexOf(1) === -1 && st.chaptersUnlocked.indexOf(2) === -1
+        && st.chaptersUnlocked.indexOf(3) === -1) return null;
     if (!st.cityScars || !st.cityScars.length) return null;
     var last = st.cityScars[st.cityScars.length - 1];
-    return (last && last.bloc) ? { bloc: last.bloc, kind: last.kind || 'raid' } : null;
+    if (!last) return null;
+    var kind = last.kind || 'raid';
+    if (kind === 'martial') return { bloc: null, kind: 'martial', heatDelta: MARTIAL_HEAT_DELTA };
+    return last.bloc ? { bloc: last.bloc, kind: kind, heatDelta: 0 } : null;
   }
 
   glob.LEGACY_KEY = LEGACY_KEY;
@@ -174,6 +224,7 @@
   glob.legacyReset = legacyReset;
   glob.legacyUnlockChapter1 = legacyUnlockChapter1;
   glob.legacyUnlockChapter2 = legacyUnlockChapter2;
+  glob.legacyUnlockChapter3 = legacyUnlockChapter3;
   glob.legacyRecordGame = legacyRecordGame;
   glob.legacyActiveScar = legacyActiveScar;
   glob.legacyChapterMeta = legacyChapterMeta;

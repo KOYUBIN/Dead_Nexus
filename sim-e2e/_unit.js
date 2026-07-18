@@ -434,6 +434,71 @@ function tests(){
   LRS();
   const lr7=LRG({anyRaid:true, topRaidBloc:'VANTA'});
   ok('LEG 시그니처 불변: anyRaid→ch1 해금·chapter1Newly·raid 흉터', lr7.state.chaptersUnlocked.indexOf(1)!==-1&&lr7.chapter1Newly===true&&LAS().bloc==='VANTA'&&LAS().kind==='raid');
+  // ============================================================
+  // v6.33 (레거시 Stage 3): 챕터 3 "Martial Night"(계엄의 밤) — 계엄 해금·martial 흉터·하위 호환
+  //   원전 해금 "공권력 트랙 10 도달(계엄선포)" → 게임 종료 신호 martialLaw 파생(옵셔널 필드).
+  //   흉터 채널은 여전히 단 하나 — kind 'martial'(특정 블록 없음 → 시작 공권력 +1). 우선순위 martial>prey>raid.
+  // ============================================================
+  const LU3=window.legacyUnlockChapter3;
+  ok('LEG3 fns exposed (unlockChapter3)', typeof LU3==='function');
+  // (1) CHAPTER_META[3] 원전 메타 — 봉투 C · 제목 · 해금 조건 · 3문장(원문 발췌)
+  const cm3=LCM(3);
+  ok('LEG3 ch3 meta id/envelope/title', !!cm3&&cm3.id===3&&cm3.envelope==='C'&&cm3.title==='Martial Night', JSON.stringify(cm3&&{id:cm3.id,e:cm3.envelope,t:cm3.title}));
+  ok('LEG3 ch3 unlockCond=공권력 트랙 최고조(계엄 선포)', !!cm3&&cm3.unlockCond==='공권력 트랙 최고조(계엄 선포)', cm3&&cm3.unlockCond);
+  ok('LEG3 ch3 story 3문장 + 원문 발췌("블록보다 강한 것은 국가다")', !!cm3&&Array.isArray(cm3.story)&&cm3.story.length===3&&cm3.story.some(s=>s.indexOf('블록보다 강한 것은 국가다')!==-1));
+  ok('LEG3 ch1·ch2 메타 회귀 불변·TOTAL=8', LCM(1).title==='First Blood'&&LCM(2).title==='Insider Game'&&LTC()===8);
+  // (2) 미해금: martialLaw 없음 → ch3 잠금 (chapter3Newly=false)
+  LRS();
+  const l30=LRG({anyRaid:false, anyMna:false});
+  ok('LEG3 미해금: martialLaw 미공급 → ch3 잠금 · chapter3Newly=false', l30.state.chaptersUnlocked.indexOf(3)===-1&&l30.chapter3Newly===false);
+  ok('LEG3 반환에 chapter3Newly(boolean) 존재', typeof l30.chapter3Newly==='boolean');
+  // (3) 해금: 계엄(martialLaw) → ch3 해금 (chapter3Newly=true) · 레이드·M&A 없어도 독립 해금
+  LRS();
+  const l31=LRG({martialLaw:true});
+  ok('LEG3 해금: martialLaw=true → ch3 해금 + chapter3Newly=true', l31.state.chaptersUnlocked.indexOf(3)!==-1&&l31.chapter3Newly===true);
+  ok('LEG3 해금: ch1·ch2 독립(미해금)', l31.state.chaptersUnlocked.indexOf(1)===-1&&l31.state.chaptersUnlocked.indexOf(2)===-1);
+  // (4) 멱등: 이미 해금 후 재계엄 → chapter3Newly=false
+  const l32=LRG({martialLaw:true});
+  ok('LEG3 멱등: 재계엄 chapter3Newly=false (해금 유지)', l32.chapter3Newly===false&&l32.state.chaptersUnlocked.indexOf(3)!==-1);
+  // (5) 영속: ch3 해금 + 계엄 → martial 흉터 (bloc=null · kind=martial · heatDelta=1 = 시작 공권력 +1)
+  LRS();
+  LRG({martialLaw:true});           // 해금
+  LRG({martialLaw:true});           // 계엄 흉터 발원
+  const scarM=LAS();
+  ok('LEG3 영속: martial 흉터 kind=martial · bloc=null · heatDelta=1', !!scarM&&scarM.kind==='martial'&&scarM.bloc===null&&scarM.heatDelta===1, JSON.stringify(scarM));
+  // (6) 우선순위 martial > prey > raid — 셋 공존 → 흉터=martial (가장 최근·도시 전역 상처)
+  LRS();
+  const l33=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true});
+  const scarPri=LAS();
+  ok('LEG3 우선: raid+prey+martial 공존 → 흉터=martial', !!scarPri&&scarPri.kind==='martial'&&scarPri.bloc===null, JSON.stringify(scarPri));
+  ok('LEG3 동일판: ch1·ch2·ch3 모두 신규 해금(Newly 3개 true)', l33.chapter1Newly===true&&l33.chapter2Newly===true&&l33.chapter3Newly===true);
+  // (7) 흉터 폴백: ch3 해금됐지만 이번 판 계엄 없음(+ prey 존재) → 흉터=prey (martial 미발원)
+  LRS();
+  LRG({martialLaw:true, anyMna:true});                   // ch2·ch3 해금
+  LRG({anyMna:true, mnaPreyBloc:'VANTA'});               // 계엄 없는 판 → prey 흉터
+  const scarFb=LAS();
+  ok('LEG3 폴백: ch3 해금+계엄없음 → 흉터=prey(VANTA)', !!scarFb&&scarFb.kind==='prey'&&scarFb.bloc==='VANTA', JSON.stringify(scarFb));
+  // (8) ch3 단독 해금(ch1·ch2 없이)도 흉터 활성 — activeScar 게이트 ch1|ch2|ch3 확장 검증
+  LRS();
+  const l34=LRG({martialLaw:true});    // ch3 만 해금 + martial 흉터 동시
+  const scarSolo=LAS();
+  ok('LEG3 단독: ch3 만 해금 → 흉터 활성(ch1·ch2 게이트 비의존)', l34.state.chaptersUnlocked.indexOf(1)===-1&&l34.state.chaptersUnlocked.indexOf(2)===-1&&!!scarSolo&&scarSolo.kind==='martial', JSON.stringify(scarSolo));
+  // (9) 하위 호환: 챕터 1~2 세이브 로드 — ch3/martialLaw 개념 없던 구세이브 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1,2], chapterProgress:{1:{unlockedAt:1},2:{unlockedAt:2}}, cityScars:[{bloc:'CARBON', kind:'prey'}]});
+  const oldLoad2=LLD();
+  ok('LEG3 하위호환: 챕터1~2 세이브 로드 정규화(ch3 미해금)', oldLoad2.chaptersUnlocked.indexOf(1)!==-1&&oldLoad2.chaptersUnlocked.indexOf(2)!==-1&&oldLoad2.chaptersUnlocked.indexOf(3)===-1);
+  const oldScar2=LAS();
+  ok('LEG3 하위호환: 기존 prey 흉터 로드 유지(bloc=CARBON·heatDelta=0)', !!oldScar2&&oldScar2.kind==='prey'&&oldScar2.bloc==='CARBON'&&oldScar2.heatDelta===0, JSON.stringify(oldScar2));
+  // (10) 하위 호환: martialLaw 미공급(구 index.html 시그니처)이면 ch3 미해금 — 신필드 옵셔널
+  LRS();
+  const l35=LRG({anyRaid:true, topRaidBloc:'VANTA'});   // 구 시그니처 그대로
+  ok('LEG3 시그니처 불변: martialLaw 미공급 → ch3 미해금·ch1만 해금', l35.state.chaptersUnlocked.indexOf(3)===-1&&l35.state.chaptersUnlocked.indexOf(1)!==-1&&l35.chapter3Newly===false);
+  // (11) legacyUnlockChapter3 직접 멱등 — 이미 해금 배열에 3 있으면 newly=false
+  const u3a=LU3({chaptersUnlocked:[], chapterProgress:{}, cityScars:[]});
+  ok('LEG3 unlock3 직접: 신규 newly=true·배열에 3', u3a.newly===true&&u3a.state.chaptersUnlocked.indexOf(3)!==-1);
+  const u3b=LU3(u3a.state);
+  ok('LEG3 unlock3 직접: 멱등 newly=false', u3b.newly===false&&u3b.state.chaptersUnlocked.indexOf(3)!==-1);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
