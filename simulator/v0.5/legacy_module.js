@@ -185,19 +185,23 @@
   }
 
   // 게임 종료 결과를 캠페인에 반영 (영속 저장 포함).
-  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw }
+  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc }
   //     anyRaid     — 레이드 1회 이상 발생 → 챕터 1 해금 트리거          (Stage 1, 시그니처 불변)
   //     topRaidBloc — 최다 레이드 피해 블록 → 챕터 1 흉터(kind 'raid')   (Stage 1, 시그니처 불변)
   //     anyMna      — Bloc 공격자 M&A 선언 1회 이상 → 챕터 2 해금 트리거 (Stage 2, 옵셔널)
   //     mnaPreyBloc — 이번 게임 M&A 표적(PREY·방어자) 블록 → 챕터 2 흉터(kind 'prey') (옵셔널)
   //     martialLaw  — 이번 게임 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터 (Stage 3, 옵셔널)
-  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw 미공급(구 index.html·헤드리스)이면 Stage 1 과 동일 동작.
-  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
+  //     spliceTech  — 이번 게임 임의 Bloc 이 TL 4 달성 → 챕터 4 해금 트리거 (Stage 4, 옵셔널)
+  //     spliceBloc  — 그 과잉 개조 블록(TL 최고·≥4) → 챕터 4 흉터(kind 'splice', 시작 주가 -1) (옵셔널)
+  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw/spliceTech/spliceBloc 미공급(구 index.html·헤드리스)이면
+  //     Stage 1 과 동일 동작 (미공급 챕터는 미해금·흉터 미발원).
+  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly, chapter4Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
   function legacyRecordGame(gameResult) {
     var st = legacyLoad();
     var chapter1Newly = false;
     var chapter2Newly = false;
     var chapter3Newly = false;
+    var chapter4Newly = false;
     if (gameResult && gameResult.anyRaid) {
       var r1 = legacyUnlockChapter1(st);
       st = r1.state;
@@ -213,14 +217,23 @@
       st = r3.state;
       chapter3Newly = r3.newly;
     }
+    if (gameResult && gameResult.spliceTech) {
+      var r4 = legacyUnlockChapter4(st);
+      st = r4.state;
+      chapter4Newly = r4.newly;
+    }
     // 단일 흉터 채널 — 최신 1건만 유지 (다음 게임 시작 조건 보정의 근거). 해금 판부터 남긴다.
-    //   우선순위 martial > prey > raid — 가장 최근·도시 전역적 상처가 단일 슬롯 차지.
-    //     · 챕터 3 해금 후 계엄(martialLaw) 발생 → 도시 전역 흉터(kind 'martial', 특정 블록 없음 → 시작 공권력 +1).
+    //   우선순위 splice > martial > prey > raid — 챕터 순 최신 상처가 단일 슬롯 차지
+    //   (기존 raid<prey<martial 챕터 순 규칙의 확장; ch4 splice 가 가장 최근이라 최상위).
+    //     · 챕터 4 해금 후 임의 Bloc TL 4(spliceBloc) → 그 블록 흉터(kind 'splice', 시작 주가 -1).
+    //     · 아니면 챕터 3 해금 후 계엄(martialLaw) → 도시 전역 흉터(kind 'martial', 특정 블록 없음 → 시작 공권력 +1).
     //     · 아니면 챕터 2 해금 후 M&A 표적(PREY) → 그 블록 흉터(kind 'prey', 시작 주가 -1).
     //     · 아니면 챕터 1 최다 레이드 피해 블록(kind 'raid', 시작 주가 -1).
-    //   게임 로직 영향은 여전히 흉터 채널 하나뿐 (kind 로 마크 대상만 갈림; -1급 소규모 1회성).
+    //   게임 로직 영향은 여전히 흉터 채널 하나뿐 (kind 로 마크 대상만 갈림; -1/+1급 소규모 1회성).
     var scarBloc = null, scarKind = null;
-    if (st.chaptersUnlocked.indexOf(3) !== -1 && gameResult && gameResult.martialLaw) {
+    if (st.chaptersUnlocked.indexOf(4) !== -1 && gameResult && gameResult.spliceBloc) {
+      scarBloc = gameResult.spliceBloc; scarKind = 'splice';
+    } else if (st.chaptersUnlocked.indexOf(3) !== -1 && gameResult && gameResult.martialLaw) {
       scarBloc = null; scarKind = 'martial';
     } else if (st.chaptersUnlocked.indexOf(2) !== -1 && gameResult && gameResult.mnaPreyBloc) {
       scarBloc = gameResult.mnaPreyBloc; scarKind = 'prey';
@@ -229,18 +242,18 @@
     }
     if (scarKind) st.cityScars = [{ bloc: scarBloc, kind: scarKind, ts: Date.now() }];
     legacySave(st);
-    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly };
+    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly, chapter4Newly: chapter4Newly };
   }
 
   // 다음 게임 시작 시 적용할 활성 흉터 — { bloc, kind, heatDelta } 또는 null.
-  //   챕터 1·2·3 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
-  //   kind: 'raid'(ch1)·'prey'(ch2) → bloc 시작 주가 -1 (heatDelta 0);
+  //   챕터 1·2·3·4 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
+  //   kind: 'raid'(ch1)·'prey'(ch2)·'splice'(ch4) → bloc 시작 주가 -1 (heatDelta 0);
   //         'martial'(ch3) → bloc 없음, 시작 공권력 +heatDelta (도시 전역).
   //   kind 없는 구버전 흉터는 'raid' 로 정규화(하위 호환).
   function legacyActiveScar() {
     var st = legacyLoad();
     if (st.chaptersUnlocked.indexOf(1) === -1 && st.chaptersUnlocked.indexOf(2) === -1
-        && st.chaptersUnlocked.indexOf(3) === -1) return null;
+        && st.chaptersUnlocked.indexOf(3) === -1 && st.chaptersUnlocked.indexOf(4) === -1) return null;
     if (!st.cityScars || !st.cityScars.length) return null;
     var last = st.cityScars[st.cityScars.length - 1];
     if (!last) return null;
@@ -256,6 +269,7 @@
   glob.legacyUnlockChapter1 = legacyUnlockChapter1;
   glob.legacyUnlockChapter2 = legacyUnlockChapter2;
   glob.legacyUnlockChapter3 = legacyUnlockChapter3;
+  glob.legacyUnlockChapter4 = legacyUnlockChapter4;
   glob.legacyRecordGame = legacyRecordGame;
   glob.legacyActiveScar = legacyActiveScar;
   glob.legacyChapterMeta = legacyChapterMeta;

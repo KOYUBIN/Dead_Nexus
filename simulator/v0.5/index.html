@@ -2540,7 +2540,10 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     if (_scarHeat) _scarLog = `🩹 계엄의 밤 여파: 시작 공권력 +${_scarHeat}`;
   } else if (_scar && startStocks[_scar.bloc] != null) {
     startStocks[_scar.bloc] = Math.max(1, startStocks[_scar.bloc] - 1);
-    _scarLog = `🩹 지난 전쟁의 흉터: ${_scar.bloc} 주가 -1`;
+    // v6.34 (레거시 Ch.4 Stage 4): 'splice' 흉터 — 과잉 개조 블록의 사이버사이코시스 대가.
+    _scarLog = _scar.kind === 'splice'
+      ? `🩹 스플라이스의 대가: ${_scar.bloc} 주가 -1`
+      : `🩹 지난 전쟁의 흉터: ${_scar.bloc} 주가 -1`;
   }
 
   return {
@@ -6939,16 +6942,17 @@ function SetupScreen({ onStart }) {
             {legacyScar
               ? (legacyScar.kind === 'martial'
                   ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 계엄 여파 · 시작 공권력 +{legacyScar.heatDelta || 1}</span>
-                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : ''}</span>)
+                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : legacyScar.kind === 'splice' ? ' (SPLICE)' : ''}</span>)
               : <span style={{ color: 'var(--text-dim)' }}>없음</span>}
           </div>
         </div>
-        {/* v6.31·v6.33 (레거시 Stage 2·3): 챕터 1·2·3 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
+        {/* v6.31·v6.33·v6.34 (레거시 Stage 2·3·4): 챕터 1·2·3·4 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { n: 1, hint: '게임 중 최초 레이드 발생 시 해금', effect: '최다 피격 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
             { n: 2, hint: '게임 중 최초 M&A 선언(Bloc→타 Bloc) 시 해금', effect: 'M&A 표적(PREY) 블록 다음 게임 시작 주가 -1 (흉터)' },
             { n: 3, hint: '게임 중 계엄 발생(공권력 최고조·경찰 전개·S04) 시 해금', effect: '계엄 여파 — 다음 게임 시작 공권력 +1 (도시 흉터)' },
+            { n: 4, hint: '게임 중 임의 Bloc 테크 레벨(TL) 4 달성 시 해금 (11×11)', effect: '스플라이스의 대가 — 그 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
           ].map(row => {
             const meta = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(row.n) : null;
             const unlocked = (legacy.chaptersUnlocked || []).indexOf(row.n) !== -1;
@@ -7258,13 +7262,14 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
-        {/* v6.24/6.31/6.33 (레거시 Stage 1·2·3): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄)마다 봉투 개봉 배너 */}
-        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly) && (() => {
+        {/* v6.24/6.31/6.33/6.34 (레거시 Stage 1·2·3·4): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄 · 4 스플라이스)마다 봉투 개봉 배너 */}
+        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly) && (() => {
           const total = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
           const newlyNums = [];
           if (legacyBanner.chapter1Newly) newlyNums.push(1);
           if (legacyBanner.chapter2Newly) newlyNums.push(2);
           if (legacyBanner.chapter3Newly) newlyNums.push(3);
+          if (legacyBanner.chapter4Newly) newlyNums.push(4);
           return newlyNums.map(num => {
             const ch = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(num) : null;
             if (!ch) return null;
@@ -9081,8 +9086,9 @@ function App() {
       // v6.24 (레거시 Stage 1): 최초 레이드 발생 → 챕터 1 해금 + 최다 피해 블록 → 도시 흉터.
       // v6.31 (레거시 Stage 2): 최초 M&A 선언(Bloc→타 Bloc) → 챕터 2 해금 + M&A 표적(PREY) → 흉터.
       // v6.33 (레거시 Stage 3): 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터.
+      // v6.34 (레거시 Stage 4): 임의 Bloc TL 4 달성 → 챕터 4 해금 + 그 과잉 개조 블록 → 'splice' 흉터.
       //   legacy_module 미로드 시 무해(typeof 가드). localStorage 실패는 모듈 내부 try/catch.
-      //   모든 신호는 현행 meta 집계에서 파생 — 새 카운터 신설 없음(하위 호환·헤드리스 안전).
+      //   모든 신호는 현행 meta·players 집계에서 파생 — 새 카운터 신설 없음(하위 호환·헤드리스 안전).
       if (typeof legacyRecordGame === 'function') {
         try {
           const raids = state.meta.raidsThisGame || {};
@@ -9108,8 +9114,18 @@ function App() {
           const martialLaw = !!state.meta.policeSpawned
             || (state.heat || 0) >= 10
             || scenarioRule(state, 'martialLaw', false) === true;
-          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw });
-          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, unlocked: res.state.chaptersUnlocked });
+          // 챕터 4 해금(스플라이스): 원전 "임의 Bloc TL 4 달성 OR Ghost 스플라이스 3개".
+          //   현행 실존 신호 = 어떤 role==='bloc' 플레이어의 p.tl(엔진 TL 시스템, R&D 파생) ≥ 4.
+          //   TL 최고(≥4) 블록을 흉터 대상(spliceBloc)으로 파생 — raid/prey 와 동일한 블록-주가 흉터.
+          //   Ghost 스플라이스 장착 집계는 엔진 부재 → 미파생(No-op 정직). 상시 카운터 신설 없음.
+          let spliceTech = false, spliceBloc = null, topTl = 0;
+          for (const p of state.players) {
+            if (p && p.role === 'bloc' && (p.tl || 1) >= 4 && (p.tl || 1) > topTl) {
+              topTl = p.tl || 1; spliceTech = true; spliceBloc = p.specific;
+            }
+          }
+          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc });
+          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, chapter4Newly: !!res.chapter4Newly, unlocked: res.state.chaptersUnlocked });
         } catch (e) { console.warn('[SIM] legacy record failed', e); }
       }
     }
