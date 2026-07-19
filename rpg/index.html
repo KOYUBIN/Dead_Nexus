@@ -56,6 +56,7 @@
 <script src="./data/abilities.js"></script>
 <script src="./data/enemies.js"></script>
 <script src="./data/weapons.js"></script>
+<script src="./data/gear.js"></script>
 <!-- 미션 데이터 (메인 8 + 사이드 8 = 16, campaign 레지스트리가 소비) -->
 <script src="./data/missions/ch01-first-blood.js"></script>
 <script src="./data/missions/ch02-insider-game.js"></script>
@@ -102,7 +103,8 @@ window.addEventListener('DOMContentLoaded', function () {
 const { useReducer, useState, useEffect, useRef, useMemo } = React;
 const STORE = window.RPG_STORE, CH = window.RPG_CHARACTER, AB = window.RPG_ABILITIES,
       GRID = window.RPG_GRID, PROJ = window.RPG_PROJECTION, LORE = window.RPG_LORE,
-      SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN;
+      SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN,
+      GEAR = window.RPG_GEAR;
 // 활성 미션 = 진행 중 대화/전투의 missionId 를 레지스트리로 해석 (ch01 폴백).
 function missionOf(state) {
   const id = (state.dialogue && state.dialogue.missionId) || (state.combat && state.combat.missionId);
@@ -115,6 +117,29 @@ const CLASS_KITLABEL = { CIPHER: '해킹 킷', BLADE: '근접 킷', RIGGER: '설
 function classTagline(k) { return CLASS_TAGLINE[k] || '운영자'; }
 function classKitLabel(k) { return CLASS_KITLABEL[k] || '히어로 킷'; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// [과제 G] 미션 무대 팔레트 — 표시 전용 레지스트리 (미션 id → 무대 테마 키).
+//  블록/구역 기반: VANTA 금융가·AXIOM 데이터·IRONWALL 군수·HELIX 바이오·CARBON 공업·NEXUS/메시.
+//  게임 로직/전투 수치 무관 — CSS .stage-<키> 토큰만 선택 (styles/app.css §①).
+const STAGE_THEME = {
+  'ch01-first-blood': 'vanta',       // VANTA 금융가 서버룸 — 심청색
+  'ch02-insider-game': 'axiom',      // AXIOM 이사회 타워 — 데이터 보라
+  'ch03-martial-night': 'martial',   // 미드타운 계엄 검문소 — 경보 호박
+  'ch04-price-of-splice': 'helix',   // HELIX 슬럼 시술소 — 바이오 녹
+  'ch05-mesh-ghost': 'nexus',        // SIGNAL 강림 노드/메시 — 시안
+  'ch06-bloc-acquisition': 'carbon', // CARBON HQ 봉쇄 게이트 — 공업 황동
+  'ch07-heart-of-city': 'nexus',     // NEXUS 중앙 집행부 — 시안
+  'ch08-zero-day': 'zeroday',        // NEXUS 코어 최종 결전 — 결전 마젠타
+  'side-01-traitor-contract': 'ironwall', // IRONWALL 무기고 — 군수 적갈
+  'side-02-corp-breach': 'axiom',    // AXIOM 데이터허브 — 보라
+  'side-03-chemical-raid': 'carbon', // CARBON 공업지구 — 황동
+  'side-04-medbay-heist': 'helix',   // HELIX 의료동 — 녹
+  'side-05-informant-hit': 'nightlife', // 유흥가 뒷골목 — 네온 핫핑크
+  'side-06-rival-duel': 'ash',       // 폐허 라이벌 결투 — 잿빛
+  'side-07-server-zero': 'nexus',    // NEXUS 지하 서버팜 — 시안
+  'side-08-harbor-run': 'harbor',    // 남항 검문 게이트 — 청록
+};
+function stageTheme(id) { return (id && STAGE_THEME[id]) || 'vanta'; }
 
 // ── 타자기 텍스트 (탭하면 즉시 완성, reduced-motion 존중) ──
 function Typewriter({ text, speed = 16 }) {
@@ -271,6 +296,111 @@ function MissionBoard({ state, dispatch }) {
   );
 }
 
+// ── 장비/인텔 허브 요약 헬퍼 ──
+function gearEquippedCount(ch) {
+  const e = ch.equipment || {};
+  return (e.weapon ? 1 : 0) + (e.cyberware ? 1 : 0);
+}
+function intelCount(save) { return Object.keys(save.intel || {}).length; }
+// 장비 mods → 표기 문자열 (+ATK1 · maxHP−2 …). 순서 고정, 0 은 생략.
+const MOD_LABEL = { atk: 'ATK', def: 'DEF', spd: 'SPD', hack: 'HACK', mov: 'MOV', maxHp: 'maxHP', cooldown: '쿨다운' };
+function modsLabel(mods) {
+  return ['atk','def','spd','hack','mov','maxHp','cooldown'].filter(k => mods[k]).map(k => {
+    const v = mods[k];
+    return MOD_LABEL[k] + (v > 0 ? ' +' + v : ' −' + Math.abs(v));
+  }).join(' · ');
+}
+
+// ── 장비 상점 (허브) — 무기 개조 1 슬롯 + 사이버웨어 1 슬롯. ₵ 소비처 (경제 루프 실동) ──
+function GearShop({ state, dispatch }) {
+  const ch = state.save.character;
+  const eq = ch.equipment || { weapon: null, cyberware: null };
+  const owned = ch.gearOwned || [];
+  const SLOT_META = { weapon: { ic: '🔧', lb: '무기 개조' }, cyberware: { ic: '🦿', lb: '사이버웨어' } };
+  return (
+    <div className="sheet">
+      <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>🛒 장비 상점</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>
+        미션 ₵로 장비 구매·장착. 슬롯당 1종 — 소유 장비는 무료 교체. 효과는 유효 스탯에 즉시 반영(캐릭터 시트 확인).
+        <b style={{ color: 'var(--orange)' }}> 보유 ₵{ch.nuyen}</b>
+      </p>
+      {GEAR.SLOTS.map(slot => {
+        const meta = SLOT_META[slot];
+        return (
+          <div key={slot} className="gear-slot">
+            <div className="board-sec">{meta.ic} {meta.lb} — 슬롯 {eq[slot] ? '장착: ' + GEAR.ITEMS[eq[slot]].name : '비어 있음'}</div>
+            {GEAR.BY_SLOT[slot].map(key => {
+              const it = GEAR.ITEMS[key];
+              const isEquipped = eq[slot] === key;
+              const isOwned = owned.indexOf(key) >= 0;
+              const allowed = GEAR.canEquip(it, ch);
+              const canAfford = ch.nuyen >= it.cost;
+              let btnLabel, disabled;
+              if (isEquipped) { btnLabel = '장착됨 ✔'; disabled = true; }
+              else if (!allowed) { btnLabel = '클래스 제한'; disabled = true; }
+              else if (isOwned) { btnLabel = '장착 (무료)'; disabled = false; }
+              else { btnLabel = '구매 ₵' + it.cost; disabled = !canAfford; }
+              return (
+                <div key={key} className={'gearCard' + (isEquipped ? ' equipped' : '') + (!allowed ? ' locked' : '')}>
+                  <div className="gc-head"><span className="gc-ic">{it.icon}</span><span className="gc-nm">{it.name}</span>
+                    <span className="gc-cost">{isOwned ? '보유' : '₵' + it.cost}</span></div>
+                  <div className="gc-mods">{modsLabel(it.mods)}</div>
+                  <div className="gc-desc">{it.desc}</div>
+                  <div className="gc-lin">{it.lineage}</div>
+                  <div className="gc-actions">
+                    <button className="btn" disabled={disabled} onClick={() => dispatch({ type: 'BUY_GEAR', slot, key })}>{btnLabel}</button>
+                    {isEquipped ? <button className="btn ghost" onClick={() => dispatch({ type: 'UNEQUIP_GEAR', slot })}>해제</button> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+      <p className="hint" style={{ color: 'var(--text-dim)' }}>장비는 옵트인 파워입니다 — 미장착 기준 전투 밸런스는 불변(하네스 검증). 클래스 제한은 기본 스탯 기준.</p>
+    </div>
+  );
+}
+
+// ── 정보상 (허브) — ₵로 미션 인텔 구매. 전투 시작 브리핑(적 배치·증원 임계) 공개. 수치 무변경 ──
+function IntelBroker({ state, dispatch }) {
+  const save = state.save;
+  const ch = save.character;
+  const price = GEAR.INTEL_PRICE;
+  const board = CAMP.boardState(save);
+  const rows = board.mains.concat(board.sides).filter(r => r.unlocked);
+  return (
+    <div className="sheet">
+      <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
+      <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>🛰 정보상</h1>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>
+        ₵{price}에 미션 인텔 구매 — 해당 미션 전투 시작 시 <b>적 배치·증원 임계</b>가 브리핑 패널로 공개됩니다.
+        전투 수치는 바뀌지 않습니다(정보만). <b style={{ color: 'var(--orange)' }}>보유 ₵{ch.nuyen}</b>
+      </p>
+      <div className="mission-list">
+        {rows.map(row => {
+          const m = CAMP.missionData(row.id);
+          const has = !!(save.intel && save.intel[row.id]);
+          const disabled = has || ch.nuyen < price;
+          return (
+            <div key={row.id} className={'intelCard' + (has ? ' has' : '')}>
+              <div className="ic-info">
+                <span className="ic-ttl">{(m && m.title) || row.id}</span>
+                <span className="ic-sub">{(m && m.subtitle) || ''} · 적 {m ? m.combat.enemies.length : '?'}기{m && m.combat.reinforcement ? ' + 증원' : ''}</span>
+              </div>
+              <button className="btn" disabled={disabled} onClick={() => dispatch({ type: 'BUY_INTEL', missionId: row.id })}>
+                {has ? '확보됨 ✔' : '인텔 ₵' + price}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="hint" style={{ color: 'var(--text-dim)' }}>인텔은 1회 구매로 영구 보관됩니다. 미해금 미션 인텔은 해금 후 구매 가능.</p>
+    </div>
+  );
+}
+
 // ── 허브 ──
 function Hub({ state, dispatch, openSave }) {
   const node = state.hub.node;
@@ -281,6 +411,8 @@ function Hub({ state, dispatch, openSave }) {
   if (node === 'roster') return <Roster state={state} dispatch={dispatch} />;
   if (node === 'save') return <SaveMenu state={state} dispatch={dispatch} back={() => dispatch({ type: 'HUB_NAV', node: 'root' })} />;
   if (node === 'missions') return <MissionBoard state={state} dispatch={dispatch} />;
+  if (node === 'shop') return <GearShop state={state} dispatch={dispatch} />;
+  if (node === 'intel') return <IntelBroker state={state} dispatch={dispatch} />;
   const board = CAMP.boardState(save);
   const clearedCount = board.mains.filter(m => m.cleared).length + board.sides.filter(s => s.cleared).length;
   const curEntry = board.current ? CAMP.missionById(board.current) : null;
@@ -305,8 +437,13 @@ function Hub({ state, dispatch, openSave }) {
           <span className="ic">👥</span><span className="lb">크루 / 로스터</span>
           <span className="nt">4클래스 빌드 전환 (해킹·근접·설치·위장)</span>
         </button>
-        <button className="hub-node stub" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>
-          <span className="ic">🛒</span><span className="lb">상점 / 의료</span><span className="nt">HELIX 회복 (Stage 3)</span>
+        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'shop' })}>
+          <span className="ic">🛒</span><span className="lb">장비 상점</span>
+          <span className="nt">₵{ch.nuyen} · 무기 개조 + 사이버웨어 {gearEquippedCount(ch)}/2 장착</span>
+        </button>
+        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'intel' })}>
+          <span className="ic">🛰</span><span className="lb">정보상</span>
+          <span className="nt">미션 인텔 {intelCount(save)}건 확보 · 전투 브리핑 공개</span>
         </button>
       </div>
       <div className="threat">
@@ -350,7 +487,32 @@ function CharacterSheet({ state, dispatch }) {
         <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>{classKitLabel(ch.classKey)}</div>
         <div className="kit">{ch.kit.map(k => <span className="ab" key={k}>{AB.ABILITIES[k].icon} {AB.ABILITIES[k].name}</span>)}</div>
       </div>
+      <GearLoadout ch={ch} dispatch={dispatch} />
       <AffinityMatrix />
+    </div>
+  );
+}
+
+// ── 캐릭터 시트 장비 로드아웃 (장착 장비 + 유효 스탯 반영 표기 · 상점 바로가기) ──
+function GearLoadout({ ch, dispatch }) {
+  if (!GEAR) return null;
+  const eq = ch.equipment || { weapon: null, cyberware: null };
+  const rows = [ { slot: 'weapon', ic: '🔧', lb: '무기 개조' }, { slot: 'cyberware', ic: '🦿', lb: '사이버웨어' } ];
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="sub" style={{ color: 'var(--text-dim)', marginBottom: 6 }}>장비 로드아웃 (유효 스탯 반영)</div>
+      {rows.map(r => {
+        const key = eq[r.slot];
+        const it = key ? GEAR.ITEMS[key] : null;
+        return (
+          <div className="loadout-row" key={r.slot}>
+            <span className="lo-slot">{r.ic} {r.lb}</span>
+            {it ? <span className="lo-item">{it.icon} {it.name} <small style={{ color: 'var(--green)' }}>{modsLabel(it.mods)}</small></span>
+                : <span className="lo-empty">— 비어 있음</span>}
+          </div>
+        );
+      })}
+      <button className="btn ghost" style={{ marginTop: 6 }} onClick={() => dispatch({ type: 'HUB_NAV', node: 'shop' })}>🛒 장비 상점으로</button>
     </div>
   );
 }
@@ -418,8 +580,9 @@ function DialogueOverlay({ state, dispatch }) {
   const bodyText = collapsedOpening
     ? ((mission.refrain || mission.subtitle || node.text.split('\n')[0]))
     : node.text;
+  const theme = stageTheme(state.dialogue.missionId); // [G①] 무대 팔레트 (표시 전용)
   return (
-    <div className="dialogue">
+    <div className={'dialogue stage stage-' + theme}>
       <div className="portrait-row">
         <Portrait kind={node.portrait} />
         <div>
@@ -432,6 +595,7 @@ function DialogueOverlay({ state, dispatch }) {
       <div className="textbox">
         {collapsedOpening ? <div className="opening-skip">↺ 오프닝 열람 완료 — 요약만 표시</div> : null}
         <Typewriter text={bodyText} />
+        {!reducedMotion && !collapsedOpening ? <div className="tw-skip">▸ 탭하여 즉시 표시</div> : null}
         {q ? <div className={'quote-bubble ' + (isBloc ? 'bloc' : '')}>{q.line}</div> : null}
       </div>
       <div className="choices">
@@ -459,6 +623,17 @@ function Combat({ state, dispatch, view }) {
   const sel = AB.ABILITIES[c.selectedAbility];
   const TILE = 56; // projection.left/top 계산용 논리 픽셀 (CSS var 로 실제 스케일)
   const mode = view === 'square' ? 'square' : 'iso'; // 기본 아이소, 폴백 탑다운
+  const [briefOpen, setBriefOpen] = useState(true); // [B1] 인텔 브리핑 패널 (구매 시 노출)
+  const theme = stageTheme(c.missionId);            // [G①] 무대 팔레트 (표시 전용)
+  // [G②] 시그니처/궁극 발동 시 풀스크린 플래시 (ultUsed 전이 감지 · 룰 무관 표시).
+  const ultRef = useRef(false);
+  const [flash, setFlash] = useState(0);
+  useEffect(() => {
+    if (p.ultUsed && !ultRef.current) setFlash(f => f + 1);
+    ultRef.current = !!p.ultUsed;
+  }, [p.ultUsed]);
+  // [G②] 크리티컬 피격 프레임엔 보드 미진동 (crit floater 존재 → 1회 shake, reduced-motion 무시).
+  const critShake = !reducedMotion && (c.floaters || []).some(f => f.crit);
   const dim = { cols: c.field.cols, rows: c.field.rows };
   // 이동 범위
   const blocked = GRID.buildBlocked(c.field, c.units, 'cipher');
@@ -535,13 +710,18 @@ function Combat({ state, dispatch, view }) {
     <div key={'f' + i} className={'floater ' + f.kind + (f.crit ? ' crit' : '')}
       style={posStyle(f.x, f.y, { width: 'var(--tile)', textAlign: 'center', zIndex: 30 })}>{f.text}</div>
   ));
+  // [G②] 처치 디졸브 — 전사(hp<=0) 유닛 위치에 글리치 페이드 잔상 (표시 전용, 유닛 배열 무변경).
+  const dissolving = c.units.filter(u => u.hp <= 0).map(u => (
+    <div key={'d' + u.id} className="dissolve" style={posStyle(u.x, u.y)}>{u.icon}</div>
+  ));
 
   const bsz = PROJ.boardSize(c.field.cols, c.field.rows, mode);
   const boardW = 'calc(' + bsz.w + ' * var(--tile))';
   const boardH = 'calc(' + bsz.h + ' * var(--tile))';
 
   return (
-    <div className="combat">
+    <div className={'combat stage stage-' + theme}>
+      {flash ? <div className="ult-flash" key={'uf' + flash} /> : null}
       <div className="combat-top">
         <span className="rnd">ROUND {c.round}</span>
         <span className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
@@ -555,9 +735,30 @@ function Combat({ state, dispatch, view }) {
         <span className="tlab">위협/노출 {th.value}/{th.cap}{th.alarm ? ' · ⚠ 경보 · 증원' : ''}</span>
         <div className="tbar"><i style={{ width: Math.min(100, th.value / th.cap * 100) + '%' }} /></div>
       </div>
+      {c.intel && c.briefing ? (
+        <div className={'intel-brief' + (briefOpen ? '' : ' collapsed')}>
+          <button className="ib-head" onClick={() => setBriefOpen(o => !o)}>
+            🛰 정보상 인텔 — 사전 브리핑 {briefOpen ? '▲' : '▼'}
+          </button>
+          {briefOpen ? (
+            <div className="ib-body">
+              <div className="ib-sec">적 배치 ({c.briefing.enemies.length}기)</div>
+              <div className="ib-list">
+                {c.briefing.enemies.map((e, i) => (
+                  <span key={i} className="ib-enemy">{e.icon} {e.name} <small>({e.x},{e.y}) HP{e.hp}{e.ai === 'static' ? ' · 정적' : ''}</small></span>
+                ))}
+              </div>
+              {c.briefing.reinforcement ? (
+                <div className="ib-reinf">⚠ 증원: {c.briefing.reinforcement.icon} {c.briefing.reinforcement.name} · 위협 {c.briefing.threatCap} 도달 시 ({c.briefing.reinforcement.x},{c.briefing.reinforcement.y}) 투입</div>
+              ) : <div className="ib-reinf">증원 없음</div>}
+              <div className="ib-note">정보만 공개 — 전투 수치 무변경</div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className="board-wrap">
-        <div className={'board' + (mode === 'iso' ? ' iso' : '')} style={{ width: boardW, height: boardH }}>
-          {tiles}{units}{floaters}
+        <div className={'board' + (mode === 'iso' ? ' iso' : '') + (critShake ? ' shake' : '')} style={{ width: boardW, height: boardH }}>
+          {tiles}{dissolving}{units}{floaters}
         </div>
       </div>
 
@@ -616,17 +817,18 @@ function App() {
   // 자동세이브: 허브 귀환 시 localStorage (안전판은 문자열).
   useEffect(() => { if (state.scene === 'hub') { try { SAVE.saveLocal(state.save); } catch (e) {} } }, [state.scene, state.save]);
 
-  let scene;
-  if (saveOpen) scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />;
-  else if (state.scene === 'combat') scene = <Combat state={state} dispatch={dispatch} view={view} />;
-  else if (state.scene === 'dialogue') scene = <DialogueOverlay state={state} dispatch={dispatch} />;
-  else scene = <Hub state={state} dispatch={dispatch} openSave={() => setSaveOpen(true)} />;
+  let scene, sceneKey;
+  if (saveOpen) { scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />; sceneKey = 'save'; }
+  else if (state.scene === 'combat') { scene = <Combat state={state} dispatch={dispatch} view={view} />; sceneKey = 'combat'; }
+  else if (state.scene === 'dialogue') { scene = <DialogueOverlay state={state} dispatch={dispatch} />; sceneKey = 'dialogue'; }
+  else { scene = <Hub state={state} dispatch={dispatch} openSave={() => setSaveOpen(true)} />; sceneKey = 'hub'; }
 
+  // [G⑤] 씬 전환 — 허브↔대화↔전투 페이드/글리치 와이프 (key 변경 시 재마운트 → CSS 애니, <300ms).
   return (
     <div className="rpg-app">
       <TopBar save={state.save} onSave={() => setSaveOpen(true)} view={view} onToggleView={toggleView} />
       <Banner banner={state.banner} dispatch={dispatch} />
-      {scene}
+      <div className="scene-anim" key={sceneKey} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>{scene}</div>
     </div>
   );
 }
@@ -666,6 +868,45 @@ try {
 .mcard.current .mc-tag { color: var(--cyan); }
 .mc-hint { font-size: 11px; color: var(--text-dim); font-style: italic; }
 .opening-skip { font-size: 10px; letter-spacing: .5px; color: var(--text-dim); border: 1px dashed var(--border);
-  border-radius: 6px; padding: 3px 7px; margin-bottom: 6px; display: inline-block; }</style>
+  border-radius: 6px; padding: 3px 7px; margin-bottom: 6px; display: inline-block; }
+/* ── B1 장비 상점 ── */
+.gear-slot { margin-bottom: 10px; }
+.gearCard { border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 11px; background: var(--bg2); margin-bottom: 7px; }
+.gearCard.equipped { border-color: var(--green); box-shadow: 0 0 7px rgba(180,255,57,0.18); }
+.gearCard.locked { opacity: .55; }
+.gc-head { display: flex; align-items: center; gap: 6px; }
+.gc-ic { font-size: 17px; }
+.gc-nm { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); font-size: 13px; }
+.gc-cost { margin-left: auto; font-family: monospace; font-size: 12px; color: var(--orange); }
+.gc-mods { font-family: monospace; font-size: 12px; color: var(--green); margin-top: 3px; }
+.gc-desc { font-size: 11px; color: var(--text); margin-top: 2px; }
+.gc-lin { font-size: 9px; color: var(--text-dim); font-style: italic; margin-top: 2px; }
+.gc-actions { display: flex; gap: 6px; margin-top: 7px; }
+.gc-actions .btn { flex: 1; padding: 7px 8px; }
+/* ── B1 정보상 ── */
+.intelCard { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 9px 11px; background: var(--bg2); }
+.intelCard.has { border-color: var(--cyan); opacity: .82; }
+.ic-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ic-ttl { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); font-size: 13px; }
+.ic-sub { font-size: 10px; color: var(--text-dim); }
+.intelCard .btn { width: auto; padding: 7px 12px; white-space: nowrap; }
+/* ── B1 시트 로드아웃 ── */
+.loadout-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.lo-slot { font-family: monospace; font-size: 11px; color: var(--text-dim); min-width: 96px; }
+.lo-item { font-size: 12px; color: var(--text); }
+.lo-empty { font-size: 12px; color: var(--text-dim); }
+/* ── B1 전투 인텔 브리핑 ── */
+.intel-brief { border: 1.5px solid var(--cyan); border-radius: 8px; background: rgba(0,229,255,0.06); margin: 0 0 6px; }
+.ib-head { width: 100%; text-align: left; background: transparent; border: 0; color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace; font-size: 12px; padding: 7px 10px; cursor: pointer; }
+.ib-body { padding: 0 10px 9px; }
+.ib-sec { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); margin: 2px 0 4px; }
+.ib-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.ib-enemy { font-size: 11px; color: var(--text); background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 6px; }
+.ib-enemy small { color: var(--text-dim); }
+.ib-reinf { font-size: 11px; color: var(--yellow); margin-top: 6px; }
+.ib-note { font-size: 9px; color: var(--text-dim); font-style: italic; margin-top: 5px; }</style>
 </body>
 </html>

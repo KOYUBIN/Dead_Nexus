@@ -15,14 +15,14 @@
       return { G: w.RPG_GRID, R: w.RPG_RESOLVE, AI: w.RPG_AI, ATTR: w.RPG_ATTRS,
         DLG: w.RPG_DIALOGUE, CH: w.RPG_CHARACTER, CAMP: w.RPG_CAMPAIGN,
         AB: w.RPG_ABILITIES, EN: w.RPG_ENEMIES, MI: w.RPG_MISSION_CH01,
-        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES };
+        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES, GEAR: w.RPG_GEAR };
     }
     return { G: require('../systems/combat/grid.js'), R: require('../systems/combat/resolve.js'),
       AI: require('../systems/combat/ai.js'), ATTR: require('../data/attributes.js'),
       DLG: require('../systems/dialogue.js'), CH: require('../systems/character.js'),
       CAMP: require('../systems/campaign.js'), AB: require('../data/abilities.js'),
       EN: require('../data/enemies.js'), MI: require('../data/missions/ch01-first-blood.js'),
-      SIG: require('../data/signal.js'), CL: require('../data/classes.js') };
+      SIG: require('../data/signal.js'), CL: require('../data/classes.js'), GEAR: require('../data/gear.js') };
   }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -49,6 +49,7 @@
       character: ch,
       inventory: [], flags: {}, missionsDone: [], openingsSeen: [],
       heat: 0, heatCap: 10, crew: [], hubState: { node: 'root' },
+      intel: {},                        // [B1] 정보상: 구매한 미션 인텔 { missionId: true } (전투 브리핑 공개)
       karma: ch.karma, nuyen: ch.nuyen, // §5.3 명시 필드 미러(캐릭터가 정본)
     };
   }
@@ -66,7 +67,7 @@
   }
 
   // ---- 전투 빌드 ------------------------------------------------------------
-  function buildCombat(mission, character, onWin) {
+  function buildCombat(mission, character, onWin, opts) {
     var D = deps();
     var eff = D.CH.effectiveStats(character);
     var c = mission.combat;
@@ -87,6 +88,8 @@
       hp: eff.maxHp, maxHp: eff.maxHp,
       atk: eff.atk, def: eff.def, spd: eff.spd, hack: eff.hack,
       mov: eff.mov, ap: eff.ap, maxAp: eff.ap, attr: eff.primary,
+      // [B1] 장비 쿨다운 감소 전파 (0=무장비 → 기존 동작 완전 동일).
+      cdReduction: eff.cdReduction || 0,
       status: {}, cooldowns: {}, ultUsed: false, objBonusAbility: objBonusAbility,
       kit: kit,
     };
@@ -115,9 +118,28 @@
         reinforcement: c.reinforcement || null },
       outcome: null, onWin: onWin, log: ['전투 개시 — ' + arena + '  ' + sig1.sym + ' ' + sig1.label],
       floaters: [],
+      // [B1] 정보상 인텔 플래그 — 구매 시 전투 시작 브리핑 공개(전투 수치 무변경, 표시만).
+      intel: !!(opts && opts.intel),
     };
+    if (combat.intel) combat.briefing = buildBriefing(D, combat);
     combat.telegraphs = computeTelegraphs(combat);
     return combat;
+  }
+
+  // [B1] 인텔 브리핑 — 적 배치 + 증원 임계 사전 공개 (미션 데이터/유닛에서 파생, 수치 무변경).
+  function buildBriefing(D, combat) {
+    var enemies = [];
+    for (var i = 0; i < combat.units.length; i++) {
+      var u = combat.units[i];
+      if (u.side !== 'enemy') continue;
+      enemies.push({ name: u.name, icon: u.icon, x: u.x, y: u.y, hp: u.hp, ai: u.ai });
+    }
+    var rf = combat.threat && combat.threat.reinforcement, rfInfo = null;
+    if (rf) {
+      var t = D.EN.ENEMIES[rf.key];
+      rfInfo = { name: t ? t.name : rf.key, icon: t ? t.icon : '❓', x: rf.x, y: rf.y };
+    }
+    return { enemies: enemies, reinforcement: rfInfo, threatCap: (combat.threat && combat.threat.cap) || 0 };
   }
 
   function spawnEnemy(D, t, x, y, id) {
@@ -179,6 +201,8 @@
     return { dmgBonus: 0, objectiveBonus: 0, affinityMult: 1, apBonus: 0, hackDisabled: false };
   }
   var HERO = function (p) { return p.codename || p.name || 'HERO'; };
+  // [B1] 장비 쿨다운 감소 적용 — cdReduction(HAIR_TRIGGER 등). 무장비(0) → cooldown 원값(byte 불변).
+  function geared(cooldown, p) { return Math.max(0, (cooldown || 0) - (p.cdReduction || 0)); }
 
   // 공격/시그니처. targetId = 적 유닛. ability = 능력 key.
   function applyAttack(combat, targetId, abilityKey) {
@@ -225,7 +249,7 @@
       if (st.coverNull) tgt.status.coverNull = true;
       if (st.movDown)  tgt.status.movDown = (tgt.status.movDown || 0) + st.movDown;
       tgt.status.debuffTurns = st.turns;
-      p.cooldowns[abilityKey] = ab.cooldown; p.ap -= ab.ap;
+      p.cooldowns[abilityKey] = geared(ab.cooldown, p); p.ap -= ab.ap;
       var dparts = [];
       if (st.defDown) dparts.push('DEF−' + st.defDown);
       if (st.coverNull) dparts.push('엄폐 무효');
@@ -258,7 +282,7 @@
     }
     tgt.hp = Math.max(0, tgt.hp - res.dmg);
     if (ab.vsMachine && tgt.isMachine) { tgt.status.stunTurns = ab.vsMachine.stunTurns; }
-    p.cooldowns[abilityKey] = ab.cooldown; p.ap -= ab.ap;
+    p.cooldowns[abilityKey] = geared(ab.cooldown, p); p.ap -= ab.ap;
     var affTag = aff > 0 ? (' [상성+' + aff + ']') : (aff < 0 ? (' [역상성' + aff + ']') : '');
     var msg = HERO(p) + ' ' + ab.name + ' → ' + tgt.name + (res.blocked ? ' — 튕김(0)' : ' −' + res.dmg) + affTag;
     c.log.push(msg + '  (HP ' + tgt.hp + ')');
@@ -477,10 +501,11 @@
       if (firstRun) s.save.character.rep += eff.rep;
     }
 
-    // 전투 개시.
+    // 전투 개시. [B1] 정보상 인텔 구매 미션이면 브리핑 공개(opts.intel).
     if (eff.startCombat) {
       s.scene = 'combat';
-      s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin);
+      var intelOn = !!(s.save.intel && s.save.intel[mission.id]);
+      s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin, { intel: intelOn });
       return s;
     }
     // 귀환.
@@ -552,6 +577,62 @@
     return s;
   }
 
+  // ---- 장비 상점 / 정보상 (B1 경제 루프) ------------------------------------
+  // 구매/장착: 소유(gearOwned) 안 하면 ₵ 차감 후 소유+장착 / 소유했으면 무료 슬롯 교체.
+  //   장비는 옵트인 파워 — effectiveStats 가 반영, buildCombat 이 전파. 밸런스 불변(무장비 기준).
+  function buyGear(state, slot, key) {
+    var D = deps(); var s = clone(state);
+    var GEAR = D.GEAR;
+    if (!GEAR || !GEAR.ITEMS) { s.banner = { kind: 'blocked', text: '장비 데이터 없음' }; return s; }
+    var item = GEAR.ITEMS[key];
+    if (!item || item.slot !== slot || (slot !== 'weapon' && slot !== 'cyberware')) {
+      s.banner = { kind: 'blocked', text: '알 수 없는 장비' }; return s;
+    }
+    var ch = s.save.character;
+    if (!ch.equipment) ch.equipment = { weapon: null, cyberware: null };
+    if (!Array.isArray(ch.gearOwned)) ch.gearOwned = [];
+    if (!GEAR.canEquip(item, ch)) { s.banner = { kind: 'blocked', text: '클래스 제한 — ' + item.name + ' 장착 불가' }; return s; }
+    if (ch.equipment[slot] === key) { s.banner = { kind: 'blocked', text: item.name + ' — 이미 장착됨' }; return s; }
+    var owned = ch.gearOwned.indexOf(key) >= 0;
+    if (!owned) {
+      if ((ch.nuyen || 0) < item.cost) { s.banner = { kind: 'blocked', text: '₵ 부족 — ' + item.name + ' (₵' + item.cost + ')' }; return s; }
+      ch.nuyen -= item.cost;
+      ch.gearOwned.push(key);
+    }
+    ch.equipment[slot] = key;
+    s.save.nuyen = ch.nuyen; // §5.3 미러
+    s.banner = { kind: 'growth', text: (owned ? '장착: ' : '구매·장착: ') + item.icon + ' ' + item.name + (owned ? '' : ' (−₵' + item.cost + ' · 잔여 ₵' + ch.nuyen + ')') };
+    return s;
+  }
+
+  function unequipGear(state, slot) {
+    var s = clone(state); var ch = s.save.character;
+    if (!ch.equipment || !ch.equipment[slot]) { s.banner = { kind: 'blocked', text: '해제할 장비 없음' }; return s; }
+    var D = deps(); var it = D.GEAR && D.GEAR.ITEMS[ch.equipment[slot]];
+    ch.equipment[slot] = null;
+    s.banner = { kind: 'growth', text: '해제: ' + (it ? it.name : slot) + ' (재장착 무료 — 소유 유지)' };
+    return s;
+  }
+
+  // 정보상: ₵로 미션 인텔 구매 → 해당 미션 전투 시작 브리핑 공개(적 배치·증원 임계). 전투 수치 무변경.
+  function buyIntel(state, missionId) {
+    var D = deps(); var s = clone(state);
+    var GEAR = D.GEAR;
+    var price = (GEAR && typeof GEAR.INTEL_PRICE === 'number') ? GEAR.INTEL_PRICE : 6;
+    var entry = D.CAMP && D.CAMP.missionById ? D.CAMP.missionById(missionId) : null;
+    if (!entry) { s.banner = { kind: 'blocked', text: '알 수 없는 미션' }; return s; }
+    if (D.CAMP.isUnlocked && !D.CAMP.isUnlocked(entry, s.save)) { s.banner = { kind: 'blocked', text: '미해금 미션 — 인텔 불가' }; return s; }
+    if (!s.save.intel) s.save.intel = {};
+    if (s.save.intel[missionId]) { s.banner = { kind: 'blocked', text: '이미 확보한 인텔' }; return s; }
+    var ch = s.save.character;
+    if ((ch.nuyen || 0) < price) { s.banner = { kind: 'blocked', text: '₵ 부족 — 인텔 (₵' + price + ')' }; return s; }
+    ch.nuyen -= price;
+    s.save.intel[missionId] = true;
+    s.save.nuyen = ch.nuyen;
+    s.banner = { kind: 'growth', text: '인텔 확보: ' + missionId + ' (−₵' + price + ' · 잔여 ₵' + ch.nuyen + ') — 다음 전투 브리핑 공개' };
+    return s;
+  }
+
   // ---- 리듀서 ---------------------------------------------------------------
   function rpgReducer(state, action) {
     switch (action.type) {
@@ -571,6 +652,9 @@
       case 'COMBAT_RESOLVE': return resolveCombat(state);
       case 'SPEND_KARMA': return spendKarma(state, action.stat);
       case 'SELECT_CLASS': return selectClass(state, action.classKey);
+      case 'BUY_GEAR': return buyGear(state, action.slot, action.key);
+      case 'UNEQUIP_GEAR': return unequipGear(state, action.slot);
+      case 'BUY_INTEL': return buyIntel(state, action.missionId);
       case 'HUB_NAV': return hubNav(state, action.node);
       case 'CLEAR_BANNER': { var s7 = clone(state); s7.banner = null; return s7; }
       default: return state;
@@ -584,6 +668,7 @@
     computeTelegraphs: computeTelegraphs, findUnit: findUnit, player: player,
     startMission: startMission, dialogueChoose: dialogueChoose, resolveCombat: resolveCombat,
     spendKarma: spendKarma, dialogueCtx: dialogueCtx, selectClass: selectClass,
+    buyGear: buyGear, unequipGear: unequipGear, buyIntel: buyIntel,
     PLAYER_ID: PLAYER_ID,
     exposure: function (combat) { return computeExposure(deps(), combat); },
   };

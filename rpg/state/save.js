@@ -37,11 +37,20 @@
   //   ① missionsDone/flags/openingsSeen 필드 보장(누락 시 기본값).
   //   ② firstBlood 플래그 → ch01 클리어로 추론(챕터1만 있던 시절 missionsDone 미기록 대비).
   //   ③ 클리어한 미션의 오프닝은 이미 열람한 것으로 간주(openingsSeen 병합).
+  //   ④ [B1] 장비 경제 필드 보장 — character.equipment/gearOwned · save.intel (구세이브 하위 호환).
   function migrate(save) {
     if (!save || typeof save !== 'object') throw new Error('세이브 형식 오류');
     if (save.version == null) save.version = CURRENT_VERSION;
     if (!save.flags || typeof save.flags !== 'object') save.flags = {};
     if (!Array.isArray(save.missionsDone)) save.missionsDone = [];
+    // [B1] 장비 경제 스키마 백필 (멱등). 구세이브엔 equipment/gearOwned/intel 없음 → 무장비 기본.
+    if (save.character && typeof save.character === 'object') {
+      var eqp = save.character.equipment;
+      if (!eqp || typeof eqp !== 'object') save.character.equipment = { weapon: null, cyberware: null };
+      else { if (!('weapon' in eqp)) eqp.weapon = null; if (!('cyberware' in eqp)) eqp.cyberware = null; }
+      if (!Array.isArray(save.character.gearOwned)) save.character.gearOwned = [];
+    }
+    if (!save.intel || typeof save.intel !== 'object') save.intel = {};
     // firstBlood(레거시 챕터1 클리어 플래그) → ch01 클리어 기록으로 추론.
     if (save.flags.firstBlood && save.missionsDone.indexOf('ch01-first-blood') < 0) {
       save.missionsDone.push('ch01-first-blood');

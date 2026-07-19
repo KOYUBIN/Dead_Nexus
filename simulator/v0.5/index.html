@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DEAD NEXUS · Simulator v0.5</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<!-- 외부 폰트 의존 제거 (CDN 0 · file:// 호환) — 로컬 Share Tech Mono/Rajdhani가 있으면 쓰고, 없으면 시스템 폰트로 폴백. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20fill%3D'%2306060e'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'9'%20fill%3D'none'%20stroke%3D'%2300e5ff'%20stroke-width%3D'1.5'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'3'%20fill%3D'%2300e5ff'%2F%3E%3C%2Fsvg%3E">
 <style>
   * { box-sizing: border-box; }
   html, body, #root { height: 100%; margin: 0; background: #06060e; color: #e0e0e0; }
@@ -232,7 +231,10 @@
   .mkt-ticker .mt-label { color: var(--text-dim); font-size: 9px; letter-spacing: 1px; }
   .mkt-ticker .mt-item { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
   .mkt-ticker .mt-item b { color: var(--text); }
-  .mkt-ticker .mt-up { color: var(--green); } .mkt-ticker .mt-down { color: var(--magenta); } .mkt-ticker .mt-flat { color: var(--text-dim); }
+  .mkt-ticker .mt-up { color: var(--green); animation: tickUp .7s ease-out; } .mkt-ticker .mt-down { color: var(--magenta); animation: tickDown .7s ease-out; } .mkt-ticker .mt-flat { color: var(--text-dim); }
+  /* v6.38 B2: 주가 변동 틱커 상승/하락 컬러 플래시 (배경/텍스트섀도 페이드 — 변동 라운드에 1회) */
+  @keyframes tickUp   { 0% { background: rgba(180,255,57,.32); text-shadow: 0 0 8px var(--green); } 100% { background: transparent; text-shadow: none; } }
+  @keyframes tickDown { 0% { background: rgba(255,0,60,.32); text-shadow: 0 0 8px var(--magenta); } 100% { background: transparent; text-shadow: none; } }
   .mkt-ticker .mt-short { margin-left: auto; color: var(--yellow); font-weight: 700; }
   .threat-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(45,15,30,0.55); border: 1px solid var(--magenta); color: var(--magenta); }
   .threat-strip .ts-lbl { font-size: 9px; letter-spacing: 1px; color: var(--magenta); opacity: 0.8; }
@@ -278,10 +280,32 @@
     align-items: center; justify-content: center; text-align: center;
     font-size: 10px; padding: 4px;
     position: relative; cursor: pointer;
-    transition: all 0.1s;
+    /* v6.38 B2: transform/opacity/box-shadow만 트랜지션 (layout thrash 회피, was: all) */
+    transition: filter .12s ease, box-shadow .16s ease, transform .12s ease;
     font-family: 'Share Tech Mono', monospace;
   }
-  .map-cell:hover { filter: brightness(1.3); outline: 1px solid var(--cyan); z-index: 1; }
+  .map-cell:hover { filter: brightness(1.28) saturate(1.12); outline: 1px solid var(--cyan); z-index: 3; }
+  /* 라벨/코너(빈 셀) 제외 — 실제 구역만 네온 글로우 */
+  .map-cell:not(.label):not(.corner):hover { box-shadow: inset 0 0 10px rgba(0,229,255,.22), 0 0 9px rgba(0,229,255,.28); }
+  /* v6.38 B2: 소유 블록 색 링 (--own 은 셀 인라인 스타일에서 주입) */
+  .map-cell.owned::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 2px; z-index: 3;
+    border: 2px solid var(--own, var(--cyan));
+    box-shadow: inset 0 0 7px -1px var(--own, var(--cyan));
+  }
+  /* v6.38 B2: 레이드 가능 셀 펄스 (opacity만 — 저비용) */
+  .map-cell.raidable::after {
+    content: ''; position: absolute; inset: -1px; pointer-events: none; border-radius: 3px; z-index: 3;
+    border: 1.5px solid var(--magenta);
+    animation: raidPulse 1s ease-in-out infinite;
+  }
+  @keyframes raidPulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  /* v6.38 B2: 레이드 피격 셀 플래시 (내 구역 상실 시) */
+  .map-cell .cell-flash {
+    position: absolute; inset: 0; pointer-events: none; border-radius: 2px; z-index: 4;
+    background: rgba(255,0,60,.55); animation: raidFlash 1.15s ease-out forwards;
+  }
+  @keyframes raidFlash { 0% { opacity: 1; } 65% { opacity: .5; } 100% { opacity: 0; } }
   .map-cell.label { background: transparent; cursor: default; color: var(--text-dim); }
   .map-cell.corner { background: transparent; cursor: default; }
   .map-cell .coord {
@@ -297,19 +321,25 @@
     position: absolute; top: 14px; right: 3px; font-size: 9px;
     background: var(--cyan); color: #000; padding: 1px 3px; font-weight: 700;
   }
-  /* Zone colors */
-  .z-ruin { background: #3a3a2a; color: #999; }
-  .z-home { background: #4a3a5a; color: #fff; }
-  .z-bank { background: #8a6a10; color: #fff; }
-  .z-data { background: #1a4a7a; color: #fff; }
-  .z-heal { background: #2a7a5a; color: #fff; }
-  .z-work { background: #7a5a2a; color: #fff; }
-  .z-arms { background: #5a5a5a; color: #fff; }
-  .z-club { background: #7a2a5a; color: #fff; }
-  .z-port { background: #3a4a7a; color: #fff; }
-  .z-cop  { background: #222; color: #fff; }
-  .z-nex  { background: #ffd700; color: #000; font-weight: 900; }
-  .z-aux  { background: #5a3a3a; color: #fff; }
+  /* Zone colors — v6.38 B2: 공통 명암 오버레이(입체감) + 구역별 상단 네온 액센트 스트립 */
+  .z-ruin { background: linear-gradient(155deg, rgba(255,255,255,.06), rgba(0,0,0,.22)), #3a3a2a; color: #b0b0a0; border-top: 2px solid #6a6a4a; }
+  .z-home { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.22)), #4a3a5a; color: #fff; border-top: 2px solid #a06ac0; }
+  .z-bank { background: linear-gradient(155deg, rgba(255,255,255,.12), rgba(0,0,0,.24)), #8a6a10; color: #fff; border-top: 2px solid #ffd24a; }
+  .z-data { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.24)), #1a4a7a; color: #fff; border-top: 2px solid #3aa0ff; }
+  .z-heal { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.22)), #2a7a5a; color: #fff; border-top: 2px solid #3ad99a; }
+  .z-work { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.24)), #7a5a2a; color: #fff; border-top: 2px solid #e0954a; }
+  .z-arms { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.24)), #5a5a5a; color: #fff; border-top: 2px solid #b7b7b7; }
+  .z-club { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.24)), #7a2a5a; color: #fff; border-top: 2px solid #ff4a9e; }
+  .z-port { background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.24)), #3a4a7a; color: #fff; border-top: 2px solid #5a7aff; }
+  .z-cop  { background: linear-gradient(155deg, rgba(255,255,255,.06), rgba(0,0,0,.30)), #222; color: #fff; border-top: 2px solid #ff3c3c; }
+  .z-nex  { background: linear-gradient(155deg, rgba(255,255,255,.22), rgba(0,0,0,.10)), #ffd700; color: #000; font-weight: 900; border-top: 2px solid #fff3a0; }
+  .z-aux  { background: linear-gradient(155deg, rgba(255,255,255,.08), rgba(0,0,0,.24)), #5a3a3a; color: #fff; border-top: 2px solid #c07a7a; }
+  /* NEXUS 셀 — 승리 구역: 은은한 골드 글로우 펄스 (opacity만 애니 → 저비용, 맵당 1셀) */
+  .z-nex::after {
+    content: ''; position: absolute; inset: -1px; pointer-events: none; border-radius: 2px; z-index: 2;
+    box-shadow: 0 0 11px 1px rgba(255,215,0,.6); animation: nexPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes nexPulse { 0%, 100% { opacity: .3; } 50% { opacity: .9; } }
 
   /* Right panel */
   .right-panel {
@@ -404,16 +434,24 @@
   .hand { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex: 1; align-items: flex-start; }
   .card {
     width: 150px; height: 240px;
-    background: #0a0a18; border: 1.5px solid var(--border);
+    background: linear-gradient(180deg, #10101f 0%, #0a0a16 100%);
+    border: 1.5px solid var(--border);
     border-radius: 4px; padding: 6px;
     flex-shrink: 0;
     font-size: 10px; display: flex; flex-direction: column;
-    cursor: pointer; transition: transform 0.15s, border-color 0.1s;
+    /* v6.38 B2: 리프트/글로우/락페이드 트랜지션 (transform·opacity·box-shadow — layout thrash 회피) */
+    cursor: pointer;
+    transition: transform .16s ease, border-color .12s ease, box-shadow .16s ease, opacity .35s ease, filter .35s ease;
     overflow: hidden;
+    animation: cardDeal .3s ease;   /* 손패 등장 시 딜링 연출 (마운트 1회) */
   }
-  .card:hover { transform: translateY(-4px); border-color: var(--cyan); }
-  .card.selected { border-color: var(--yellow); box-shadow: 0 0 12px rgba(255,215,0,0.4); }
-  .card.disabled { opacity: 0.4; cursor: not-allowed; }
+  @keyframes cardDeal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .card:hover { transform: translateY(-6px); border-color: var(--cyan); box-shadow: 0 6px 18px rgba(0,0,0,.5), 0 0 14px rgba(0,229,255,.34); }
+  .card.selected { border-color: var(--yellow); transform: translateY(-6px);
+    box-shadow: 0 0 0 1px var(--yellow), 0 0 16px rgba(255,215,0,.5), 0 6px 18px rgba(0,0,0,.5); }
+  .card.selected:hover { transform: translateY(-8px); }
+  /* 계획 확정/비계획 페이즈 → 손패 잠금: 페이드+탈채도 (플레이 커밋 연출) */
+  .card.disabled { opacity: 0.4; filter: grayscale(.5); cursor: not-allowed; }
   .card .ch {
     display: flex; justify-content: space-between; align-items: center;
     font-family: 'Share Tech Mono', monospace; font-size: 9px;
@@ -649,6 +687,33 @@
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+  /* ===== v6.38 B2: 그래픽 밀도 — 이벤트 연출 / 패널 질감 (CSS 전용, 표시층) ===== */
+  /* INCOMING 배너(피격 알림)용 pulse 키프레임 — 기존 참조(무정의 no-op)였던 것을 정의 */
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 16px rgba(255,60,140,.4); } 50% { box-shadow: 0 0 30px rgba(255,60,140,.75); } }
+  /* 종료 선언 배너 글로우 강화 — 아군=그린 정적, 적군=마젠타 펄스(단일 fixed 요소, 저비용) */
+  .decl-banner { box-shadow: 0 2px 20px rgba(0,0,0,.5); }
+  .decl-banner.me { box-shadow: 0 0 22px rgba(180,255,57,.32), 0 2px 20px rgba(0,0,0,.5); }
+  .decl-banner.enemy { box-shadow: 0 0 20px rgba(255,0,60,.36), 0 2px 20px rgba(0,0,0,.5); animation: declPulse 1.9s ease-in-out infinite; }
+  @keyframes declPulse { 0%, 100% { box-shadow: 0 0 13px rgba(255,0,60,.28), 0 2px 20px rgba(0,0,0,.5); } 50% { box-shadow: 0 0 27px rgba(255,0,60,.6), 0 2px 20px rgba(0,0,0,.5); } }
+  /* 패널 스캔라인 질감 (정적 — background-image 만 덧입힘, background-color 유지) */
+  .left-panel, .right-panel { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px); }
+  .top-bar   { background-image: repeating-linear-gradient(0deg, rgba(0,229,255,.02) 0 1px, transparent 1px 3px); }
+  .hand-wrap { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px); }
+  /* 지도 CRT 스캔 스윕 (background-position 애니 — 요소 박스 내 클리핑, 오버플로 없음) */
+  .map-board { position: relative; }
+  .map-board::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; border-radius: 2px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,229,255,.06) 50%, transparent 100%);
+    background-size: 100% 220px; background-repeat: no-repeat;
+    animation: mapScan 5.5s linear infinite;
+  }
+  @keyframes mapScan { 0% { background-position: 0 -240px; } 100% { background-position: 0 560px; } }
+  /* prefers-reduced-motion 존중 — 장식 애니 전면 정지 (색/글로우 정적값은 유지) */
+  @media (prefers-reduced-motion: reduce) {
+    .map-board::after, .z-nex::after, .map-cell.raidable::after, .map-cell .cell-flash,
+    .mkt-ticker .mt-up, .mkt-ticker .mt-down, .decl-banner.enemy, .card { animation: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -7817,7 +7882,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         const dp = state.players[d.idx];
         const isMe = d.idx === meIdx;
         return (
-          <div style={{ position: 'fixed', top: 50, left: 0, right: 0, zIndex: 400, padding: '6px 14px', background: isMe ? 'linear-gradient(90deg, rgba(20,40,28,0.97), rgba(20,40,28,0.92))' : 'linear-gradient(90deg, rgba(45,15,30,0.97), rgba(45,15,30,0.92))', borderBottom: `2px solid ${isMe ? 'var(--green)' : 'var(--magenta)'}`, fontFamily: 'Share Tech Mono, monospace', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: isMe ? 'var(--green)' : 'var(--magenta)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className={`decl-banner ${isMe ? 'me' : 'enemy'}`} style={{ position: 'fixed', top: 50, left: 0, right: 0, zIndex: 400, padding: '6px 14px', background: isMe ? 'linear-gradient(90deg, rgba(20,40,28,0.97), rgba(20,40,28,0.92))' : 'linear-gradient(90deg, rgba(45,15,30,0.97), rgba(45,15,30,0.92))', borderBottom: `2px solid ${isMe ? 'var(--green)' : 'var(--magenta)'}`, fontFamily: 'Share Tech Mono, monospace', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: isMe ? 'var(--green)' : 'var(--magenta)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 15 }}>📢</span>
             <span>종료 선언 · P{d.idx} {dp ? dp.specific : ''} — {d.reason}</span>
             <span style={{ marginLeft: 'auto', color: 'var(--text)', fontWeight: 400 }}>
@@ -8187,6 +8252,10 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             const isLarge = state.meta.mapSize === '11x11';
             const cols = isLarge ? ['A','B','C','D','E','F','G','H','I','J','K'] : ['A','B','C','D','E'];
             const rows = isLarge ? [1,2,3,4,5,6,7,8,9,10,11] : [1,2,3,4,5];
+            // v6.38 B2 (표시 전용): 레이드 피격 셀 플래시 — lastTargetedBy.detail 선두 토큰이 좌표.
+            // 게임 상태/판정 무영향(읽기만). 유효 좌표(state.map 존재)일 때만 활성.
+            const _ltb = state.meta.lastTargetedBy;
+            const raidedCoord = (_ltb && (_ltb.effectKey === 'raid' || _ltb.effectKey === 'hire_raid') && typeof _ltb.detail === 'string' && state.map[_ltb.detail.split(' ')[0]]) ? _ltb.detail.split(' ')[0] : null;
             return (
           <div className={`map-board ${isLarge ? 'size-11' : ''}`}>
             <div className="map-cell corner"></div>
@@ -8200,6 +8269,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                   if (!cell) return <div key={cd} className="map-cell"></div>;
                   const z = ZONE_TYPES[cell.zone];
                   const owner = cell.owner !== null && cell.owner !== undefined ? state.players[cell.owner] : null;
+                  const ownColor = owner ? (owner.role === 'bloc' ? (BLOC_SETUP[owner.specific]?.color || '#555') : '#333') : null;
                   const pm = state.players.filter(p => p.position === cd && !p.defeated);
                   const hasMe = pm.some(p => p.id === 0);
                   const isReachable = reachableCells.has(cd);
@@ -8207,6 +8277,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                   // 도착 시 예상 결과 계산
                   let previewTag = null;
                   let previewColor = 'var(--yellow)';
+                  let raidPreview = false;   // v6.38 B2: 레이드 가능 셀 펄스 게이트 (표시 전용)
                   if (isTargeting && isReachable) {
                     const visitedByMe = state.meta.visitedBonusZones?.[0] || {};
                     const ownerP = owner;
@@ -8217,6 +8288,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                       const pct = Math.round(succRolls / 6 * 100);
                       previewTag = `🗡️ ${pct}%`;
                       previewColor = pct >= 66 ? 'var(--green)' : (pct >= 33 ? 'var(--yellow)' : 'var(--magenta)');
+                      raidPreview = true;
                     } else if (ownerP && ownerP.id === 0) {
                       previewTag = '🏠 내 땅';
                       previewColor = 'var(--cyan)';
@@ -8239,10 +8311,11 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                   if (isTargeting && !isReachable && !hasMe) { style.opacity = 0.4; }
                   const onClick = (isTargeting && isReachable) ? () => pickMoveTarget(cd) : undefined;
                   return (
-                    <div key={cd} className={`map-cell ${z.color}`} style={style} onClick={onClick}>
+                    <div key={cd} className={`map-cell ${z.color} ${owner ? 'owned' : ''} ${raidPreview ? 'raidable' : ''}`} style={ownColor ? { ...style, '--own': ownColor } : style} onClick={onClick}>
+                      {cd === raidedCoord && <i className="cell-flash" />}
                       <div className="coord">{cd}</div>
                       <div className="ztype">{z.name}</div>
-                      {owner && <div className="owner" style={{ background: owner.role === 'bloc' ? BLOC_SETUP[owner.specific]?.color || '#555' : '#333' }}>P{cell.owner}</div>}
+                      {owner && <div className="owner" style={{ background: ownColor }}>P{cell.owner}</div>}
                       {/* v0.6.3e: 건물 배지 */}
                       {cell.building && (
                         <div title={`${BUILDINGS[cell.building].name}: ${BUILDINGS[cell.building].desc}`} style={{ position: 'absolute', top: 2, right: 2, fontSize: 10, background: 'rgba(0,0,0,0.7)', color: 'var(--yellow)', padding: '0 2px', borderRadius: 2 }}>

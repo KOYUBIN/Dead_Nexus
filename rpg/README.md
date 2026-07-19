@@ -21,10 +21,12 @@ CIPHER(해킹)·BLADE(근접) 두 빌드로 다르게 완주한다.
 ## 검증
 
 ```
-node rpg/_unit.js          # 순수 로직 유닛 테스트 133건 (Stage 1: 1~46 · Stage 2: 47~76 ·
-                           #   48차 로스터: ~123 · 51차 밸런스 하네스 스모크/핀: 124~133)
+node rpg/_unit.js          # 순수 로직 유닛 테스트 170건 (Stage 1: 1~46 · Stage 2: 47~76 ·
+                           #   48차 로스터: ~123 · 51차 밸런스 하네스 스모크/핀: 124~143 ·
+                           #   B1 경제 루프(장비 상점·정보상): 144~170)
 node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (16/16)
 node rpg/_balance.js       # 전투 밸런스 매트릭스 (4클래스 × 16미션 × 2정책) — 아래 §밸런스 하네스
+                           #   ★ 장비는 옵트인 파워 → 무장비 기준 매트릭스는 B1 전후 byte 동일
 ```
 
 ## 밸런스 하네스 (`_balance.js`) — 전투 난이도 전수 측정 [51차]
@@ -63,7 +65,7 @@ node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 
 | 층 | 파일 | 순도 |
 |---|---|---|
 | `core/` | `loader.js`(heal 로더 G11) · `projection.js`(좌표→스크린 seam G1) | 순수/DOM(loader만) |
-| `data/` | `attributes·signal·classes·abilities·enemies·weapons` + `missions/ch01-first-blood` | 순수 리터럴 (DOM/리액트 0) |
+| `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(B1 장비 상점) + `missions/ch01-first-blood` | 순수 리터럴 (DOM/리액트 0) |
 | `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
 | `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) | 순수 함수 |
 | `state/` | `store`(리듀서+전투 오케스트레이션) · `save`(localStorage+base64 export/import G11) | 순수 로직 |
