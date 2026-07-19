@@ -2665,17 +2665,23 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
   const _scar = (typeof legacyActiveScar === 'function') ? legacyActiveScar() : null;
   let _scarLog = null;
   let _scarHeat = 0;   // v6.33 (레거시 Ch.3 Stage 3): 'martial' 흉터 — 특정 블록 없이 도시 전역 시작 공권력 가산.
-  if (_scar && _scar.kind === 'martial') {
+  // v6.39 (레거시 Ch.8 Stage 8): 'zeroday' 흉터 — 캠페인 완결 여파, martial 과 동일한 도시 전역 공권력 채널.
+  if (_scar && (_scar.kind === 'martial' || _scar.kind === 'zeroday')) {
     _scarHeat = _scar.heatDelta || 0;
-    if (_scarHeat) _scarLog = `🩹 계엄의 밤 여파: 시작 공권력 +${_scarHeat}`;
+    if (_scarHeat) _scarLog = _scar.kind === 'zeroday'
+      ? `🩹 Zero Day 여파: 시작 공권력 +${_scarHeat}`
+      : `🩹 계엄의 밤 여파: 시작 공권력 +${_scarHeat}`;
   } else if (_scar && startStocks[_scar.bloc] != null) {
     startStocks[_scar.bloc] = Math.max(1, startStocks[_scar.bloc] - 1);
     // v6.34 (레거시 Ch.4 Stage 4): 'splice' 흉터 — 과잉 개조 블록의 사이버사이코시스 대가.
     // v6.35 (레거시 Ch.5 Stage 5): 'mesh' 흉터 — SIGNAL 이 강림한 종가 최저(취약) 노드.
+    // v6.39 (레거시 Ch.7 Stage 7): 'nexus' 흉터 — 도시의 심장(NEXUS 의장실)을 장악한 블록.
     _scarLog = _scar.kind === 'splice'
       ? `🩹 스플라이스의 대가: ${_scar.bloc} 주가 -1`
       : _scar.kind === 'mesh'
       ? `🩹 메시 고스트 강림: ${_scar.bloc} 주가 -1`
+      : _scar.kind === 'nexus'
+      ? `🩹 도시의 심장: ${_scar.bloc} 주가 -1`
       : `🩹 지난 전쟁의 흉터: ${_scar.bloc} 주가 -1`;
   }
 
@@ -7073,13 +7079,25 @@ function SetupScreen({ onStart }) {
           <div>
             <span style={{ color: 'var(--text-dim)' }}>도시 흉터 </span>
             {legacyScar
-              ? (legacyScar.kind === 'martial'
-                  ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 계엄 여파 · 시작 공권력 +{legacyScar.heatDelta || 1}</span>
-                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : legacyScar.kind === 'splice' ? ' (SPLICE)' : legacyScar.kind === 'mesh' ? ' (MESH)' : legacyScar.kind === 'acquired' ? ' (ACQUIRED)' : ''}</span>)
+              ? ((legacyScar.kind === 'martial' || legacyScar.kind === 'zeroday')
+                  ? <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.kind === 'zeroday' ? 'Zero Day 여파' : '계엄 여파'} · 시작 공권력 +{legacyScar.heatDelta || 1}</span>
+                  : <span style={{ color: 'var(--magenta)', fontWeight: 700 }}>🩹 {legacyScar.bloc} 주가 -1{legacyScar.kind === 'prey' ? ' (PREY)' : legacyScar.kind === 'splice' ? ' (SPLICE)' : legacyScar.kind === 'mesh' ? ' (MESH)' : legacyScar.kind === 'acquired' ? ' (ACQUIRED)' : legacyScar.kind === 'nexus' ? ' (NEXUS)' : ''}</span>)
               : <span style={{ color: 'var(--text-dim)' }}>없음</span>}
           </div>
         </div>
-        {/* v6.31·v6.33·v6.34·v6.35·v6.36 (레거시 Stage 2·3·4·5·6): 챕터 1~6 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
+        {/* v6.39 (레거시 완주): 8챕터 전부 해금 시 캠페인 완주 배지 + 원전 공통 에필로그 발췌 */}
+        {(typeof legacyCampaignComplete === 'function' ? legacyCampaignComplete(legacy) : (legacy.chaptersUnlocked || []).length >= legacyTotal) && (() => {
+          const fin = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(8) : null;
+          return (
+            <div style={{ marginTop: 12, padding: '12px 14px', background: 'rgba(255, 80, 200, 0.08)', border: '1px solid var(--magenta)', borderLeft: '3px solid var(--magenta)', borderRadius: 4 }}>
+              <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: 'var(--magenta)' }}>🏁 CAMPAIGN COMPLETE · 8/8 · ASH &amp; SIGNAL</div>
+              {fin && fin.epilogue && (
+                <p style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text)', margin: '8px 0 0', lineHeight: 1.7 }}>“{fin.epilogue}”</p>
+              )}
+            </div>
+          );
+        })()}
+        {/* v6.31·v6.33·v6.34·v6.35·v6.36·v6.39 (레거시 Stage 2~8): 챕터 1~8 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { n: 1, hint: '게임 중 최초 레이드 발생 시 해금', effect: '최다 피격 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
@@ -7088,6 +7106,8 @@ function SetupScreen({ onStart }) {
             { n: 4, hint: '게임 중 임의 Bloc 테크 레벨(TL) 4 달성 시 해금 (11×11)', effect: '스플라이스의 대가 — 그 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
             { n: 5, hint: '게임 중 CIPHER 테크 레벨 5 또는 해킹 노드 3개 달성 시 해금 (11×11)', effect: '메시 고스트 — 종가 최저 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
             { n: 6, hint: '게임 중 M&A 인수 완결(Bloc 완전 흡수) 시 해금 (11×11 M&A 맵)', effect: '블록 인수 — 흡수된 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
+            { n: 7, hint: '게임 종료 시 어느 세력이든 NEXUS(F6) 장악 중이면 해금', effect: '도시의 심장 — NEXUS 장악 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
+            { n: 8, hint: '챕터 1~7 전부 해금 시 자동 해금 (캠페인 완결)', effect: 'Zero Day 여파 — 완주 판 다음 게임 시작 공권력 +1 (도시 전역 흉터)' },
           ].map(row => {
             const meta = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(row.n) : null;
             const unlocked = (legacy.chaptersUnlocked || []).indexOf(row.n) !== -1;
@@ -7397,8 +7417,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
-        {/* v6.24/6.31/6.33/6.34/6.35 (레거시 Stage 1·2·3·4·5): 이번 판에 신규 해금된 챕터(1 레이드 · 2 M&A · 3 계엄 · 4 스플라이스 · 5 메시)마다 봉투 개봉 배너 */}
-        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly || legacyBanner.chapter5Newly || legacyBanner.chapter6Newly) && (() => {
+        {/* v6.24/6.31/6.33/6.34/6.35/6.36/6.39 (레거시 Stage 1~8): 이번 판에 신규 해금된 챕터(1 레이드·2 M&A·3 계엄·4 스플라이스·5 메시·6 인수·7 넥서스·8 완결)마다 봉투 개봉 배너 */}
+        {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly || legacyBanner.chapter5Newly || legacyBanner.chapter6Newly || legacyBanner.chapter7Newly || legacyBanner.chapter8Newly) && (() => {
           const total = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
           const newlyNums = [];
           if (legacyBanner.chapter1Newly) newlyNums.push(1);
@@ -7407,20 +7427,26 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           if (legacyBanner.chapter4Newly) newlyNums.push(4);
           if (legacyBanner.chapter5Newly) newlyNums.push(5);
           if (legacyBanner.chapter6Newly) newlyNums.push(6);
+          if (legacyBanner.chapter7Newly) newlyNums.push(7);
+          if (legacyBanner.chapter8Newly) newlyNums.push(8);
           return newlyNums.map(num => {
             const ch = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(num) : null;
             if (!ch) return null;
+            const isFinale = num === 8;
             return (
-              <div key={num} style={{ maxWidth: 640, margin: '0 auto 22px', padding: '18px 22px', background: 'rgba(255, 200, 0, 0.06)', border: '1px solid var(--yellow)', borderLeft: '3px solid var(--yellow)', borderRadius: 4, textAlign: 'left' }}>
-                <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 13, letterSpacing: 1, color: 'var(--yellow)', fontWeight: 700, marginBottom: 6 }}>
-                  📜 레거시 해금: Chapter {ch.id} — {ch.title}
+              <div key={num} style={{ maxWidth: 640, margin: '0 auto 22px', padding: '18px 22px', background: isFinale ? 'rgba(255, 80, 200, 0.07)' : 'rgba(255, 200, 0, 0.06)', border: `1px solid ${isFinale ? 'var(--magenta)' : 'var(--yellow)'}`, borderLeft: `3px solid ${isFinale ? 'var(--magenta)' : 'var(--yellow)'}`, borderRadius: 4, textAlign: 'left' }}>
+                <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 13, letterSpacing: 1, color: isFinale ? 'var(--magenta)' : 'var(--yellow)', fontWeight: 700, marginBottom: 6 }}>
+                  {isFinale ? '🏁 캠페인 완주: ' : '📜 레거시 해금: '}Chapter {ch.id} — {ch.title}
                 </div>
                 <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 10, letterSpacing: 2, color: 'var(--text-dim)', marginBottom: 10 }}>
-                  ASH &amp; SIGNAL · 봉투 {ch.envelope} · 해금 {legacyBanner.unlocked.length}/{total}
+                  ASH &amp; SIGNAL · 봉투 {ch.envelope} · 해금 {legacyBanner.unlocked.length}/{total}{isFinale ? ' · CAMPAIGN COMPLETE' : ''}
                 </div>
                 {ch.story.map((ln, li) => (
                   <p key={li} style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text)', margin: '0 0 6px' }}>{ln}</p>
                 ))}
+                {isFinale && ch.epilogue && (
+                  <p style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--magenta)', margin: '12px 0 2px', lineHeight: 1.7 }}>“{ch.epilogue}”</p>
+                )}
               </div>
             );
           });
@@ -9234,6 +9260,8 @@ function App() {
       // v6.34 (레거시 Stage 4): 임의 Bloc TL 4 달성 → 챕터 4 해금 + 그 과잉 개조 블록 → 'splice' 흉터.
       // v6.35 (레거시 Stage 5): CIPHER TL5 또는 해킹 노드 ≥3 → 챕터 5 해금 + 종가 최저 블록 → 'mesh' 흉터.
       // v6.36 (레거시 Stage 6): M&A 인수 완결(meta.acquisitions) → 챕터 6 해금 + 흡수된 블록 → 'acquired' 흉터.
+      // v6.39 (레거시 Stage 7·8): NEXUS 종료 장악(getNexusController) → 챕터 7 해금 + 장악 블록 → 'nexus' 흉터.
+      //   챕터 8(Zero Day, 완결)은 gameResult 파생 아님 — 챕터 1~7 전부 해금 시 자동 해금(캠페인 완주) + 'zeroday' 도시 전역 흉터(완결 판 1회성).
       //   legacy_module 미로드 시 무해(typeof 가드). localStorage 실패는 모듈 내부 try/catch.
       //   모든 신호는 현행 meta·players 집계에서 파생 — 새 카운터 신설 없음(하위 호환·헤드리스 안전).
       if (typeof legacyRecordGame === 'function') {
@@ -9297,8 +9325,18 @@ function App() {
               if (sp != null && sp < lowSp) { lowSp = sp; meshBloc = b; }
             }
           }
-          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc, blocAbsorbed, absorbedBloc });
-          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, chapter4Newly: !!res.chapter4Newly, chapter5Newly: !!res.chapter5Newly, chapter6Newly: !!res.chapter6Newly, unlocked: res.state.chaptersUnlocked });
+          // v6.39 (레거시 Stage 7): 챕터 7 해금(도시의 심장) — 원전 "어느 세력이든 NEXUS(F6) 3라운드 연속 장악".
+          //   현행 실존 신호 = 게임 종료 시점 NEXUS 셀 소유자(getNexusController) 존재 = 어느 세력이든 심장을 끝까지 장악.
+          //   원전 "3R 연속"의 정밀 연속 카운터는 엔진 meta.nexusStreak/nexusHolder 가 死필드(갱신 안 됨)라 미배선(No-op 정직) —
+          //   "종료 시점 장악 유지"로 근사(끝까지 쥐고 있음 ≈ 지속 장악). 상시 카운터 신설 없이 기존 셀 소유에서 파생.
+          //   흉터 대상(nexusBloc) = 장악자가 Bloc 이면 그 블록(왕관이 있는 자리가 무겁다 → 시작 주가 -1); Ghost 장악 시 NEXUS 중립 → null.
+          let nexusHeld = false, nexusBloc = null;
+          if (typeof getNexusController === 'function') {
+            const nc = getNexusController(state);
+            if (nc) { nexusHeld = true; if (nc.role === 'bloc' && nc.specific) nexusBloc = nc.specific; }
+          }
+          const res = legacyRecordGame({ anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc, blocAbsorbed, absorbedBloc, nexusHeld, nexusBloc });
+          setLegacyBanner({ chapter1Newly: !!res.chapter1Newly, chapter2Newly: !!res.chapter2Newly, chapter3Newly: !!res.chapter3Newly, chapter4Newly: !!res.chapter4Newly, chapter5Newly: !!res.chapter5Newly, chapter6Newly: !!res.chapter6Newly, chapter7Newly: !!res.chapter7Newly, chapter8Newly: !!res.chapter8Newly, campaignComplete: !!res.campaignComplete, unlocked: res.state.chaptersUnlocked });
         } catch (e) { console.warn('[SIM] legacy record failed', e); }
       }
     }
