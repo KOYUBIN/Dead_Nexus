@@ -17,6 +17,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.37 — 접속 안정화: CDN 제거 + 부트 스플래시 (54차, 유저 "접속이 잘 안되는거같아" 대응)
+- **시뮬레이터 unpkg CDN 의존 완전 제거**: react/react-dom/babel 3종을 simulator/v0.5/vendor/ 로컬 사본으로 전환 (sha256 일치 복제) — 외부 서드파티 지연/차단 시 하얀 화면이던 유력 원인 해소. **오프라인(외부 요청 전면 차단) 로드 성공을 Playwright로 실측 증명**
+- **부트 스플래시 + 실패 가시화 (양 트랙)**: 순수 HTML/CSS "SYSTEM BOOT…" 표시 → React 마운트 시 제거. vendor onerror 시 실패 자산명 + 재시도 버튼, 20s 워치독 (트랜스파일 진행 중 오탐 방지 조건 포함), 마운트 try/catch — 조용한 하얀 화면 금지 (v6.11 교훈)
+- vendor 불변 캐시 헤더 (max-age=1y immutable) — babel 2.9MB 재다운로드 차단
+- RPG 미션 스크립트 defer 검토 → 이미 완전 병렬 로드 실측 (median gap 0ms) — 무효 판정, 미적용 보고
+- 유닛 273+143 전수 · e2e 스모크 에러 0 · Playwright 17/17 (오프라인·스플래시·실패 UI·file://)
+
 ### v6.36 — RPG 아이소메트릭 뷰 + 레거시 챕터 6 (52~53차 병렬)
 - **RPG 아이소메트릭 뷰 스킨** (rpg/, docs/25 Stage 3 — projection seam 예약분 회수): per-tile 아이소 매핑 + clip-path 다이아몬드 (아이콘 정립 가독·히트박스 완전 테셀레이션·하이라이트 자동 클립). 기본 아이소 · 탑다운 폴백 토글(localStorage 영속). **룰 무변경 증명**: systems/combat 무수정 + 밸런스 매트릭스 64조합 byte-identical. rpg 유닛 143/143 (+10 뷰)
 - **레거시 캠페인 챕터 6 "Bloc Acquisition"** (simulator/): 해금 = Bloc 완전 흡수 (meta.acquisitions 완결 기록 파생 — **선언(챕터 2)과 완결(챕터 6) 구분** 유닛 검증), acquired 흉터(흡수 블록 주가 −1 — "로고가 지워진 블록"), 우선순위 6단. **캠페인 6/8**. 유닛 273/273 (신규 22) · S02 스모크에서 신호 실발화 3건 확인

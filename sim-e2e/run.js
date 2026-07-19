@@ -71,13 +71,18 @@ function startServer() {
 }
 
 // ---- CDN interception (offline vendor libs) --------------------------------
+// NOTE [54차]: v6.37에서 simulator/v0.5/index.html이 unpkg CDN 대신 ./vendor 로컬
+//   3종(react·react-dom·babel)을 직접 로드하도록 전환됨 → 아래 unpkg 라우트는 이제
+//   실제로 매칭될 요청이 없다(사문화). 무해하므로 유지하되, 로컬 전환의 회귀 방지용
+//   가드로만 남긴다(혹시 CDN 참조가 되살아나면 여전히 오프라인 폴백). fonts 스텁은
+//   index.html이 Google Fonts를 계속 link 하므로 유효 — 유지 필수.
 async function installRoutes(page) {
   await page.route('**/*', (route) => {
     const url = route.request().url();
     const send = (file) => route.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: fs.readFileSync(path.join(VENDOR, file)) });
-    if (url.includes('unpkg.com') && url.includes('react-dom')) return send('react-dom.production.min.js');
-    if (url.includes('unpkg.com') && url.includes('/react@')) return send('react.production.min.js');
-    if (url.includes('unpkg.com') && url.includes('babel')) return send('babel.min.js');
+    if (url.includes('unpkg.com') && url.includes('react-dom')) return send('react-dom.production.min.js'); // dead (로컬 전환)
+    if (url.includes('unpkg.com') && url.includes('/react@')) return send('react.production.min.js');       // dead (로컬 전환)
+    if (url.includes('unpkg.com') && url.includes('babel')) return send('babel.min.js');                    // dead (로컬 전환)
     if (url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')) return route.fulfill({ status: 200, contentType: 'text/css', body: '' });
     return route.continue();
   });

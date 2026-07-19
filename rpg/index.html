@@ -10,7 +10,42 @@
 <link rel="stylesheet" href="./styles/app.css" />
 </head>
 <body>
-<div id="root"><div id="boot">INITIALIZING GHOSTGRID…</div></div>
+<div id="root"><div id="boot">
+  <div class="boot-box">
+    <div class="boot-title">SYSTEM BOOT<span class="boot-dots">…</span></div>
+    <div class="boot-sub">INITIALIZING GHOSTGRID</div>
+    <div class="boot-bar"><span></span></div>
+  </div>
+</div></div>
+
+<!-- ── 부트 실패 핸들러 + 워치독 (vendor 로드 전에 정의) [54차] — 조용한 실패 금지 ── -->
+<script>
+(function () {
+  window.__bootFail = function (asset) {
+    if (window.__bootFailed) return;
+    window.__bootFailed = true;
+    if (window.__bootWatch) { clearTimeout(window.__bootWatch); window.__bootWatch = null; }
+    var b = document.getElementById('boot');
+    if (!b) return;
+    b.className = 'boot-error';
+    b.innerHTML =
+      '<div class="boot-box">' +
+        '<div class="boot-fail-title">SYSTEM BOOT FAILED</div>' +
+        '<div class="boot-asset">자산 로드 실패: ' + String(asset).replace(/[<>&]/g, '') + '</div>' +
+        '<div class="boot-hint">네트워크를 확인한 뒤 재시도하세요</div>' +
+        '<button class="boot-retry" onclick="location.reload()">재시도</button>' +
+      '</div>';
+  };
+  window.__bootWatch = setTimeout(function () {
+    if (!document.getElementById('boot')) return;
+    var miss = [];
+    if (typeof React === 'undefined') miss.push('react');
+    if (typeof ReactDOM === 'undefined') miss.push('react-dom');
+    if (typeof Babel === 'undefined') miss.push('babel');
+    if (miss.length) window.__bootFail(miss.join(', '));
+  }, 20000);
+})();
+</script>
 
 <!-- ── 콘텐츠/로직 모듈 (fetch/XHR 0 — 전부 <script src> window 전역 로드) ── -->
 <script src="./core/loader.js"></script>
@@ -50,9 +85,9 @@
 <script src="./state/store.js"></script>
 
 <!-- ── vendor (CDN 0 — sim-e2e/vendor 복제) ── -->
-<script src="./vendor/react.production.min.js"></script>
-<script src="./vendor/react-dom.production.min.js"></script>
-<script src="./vendor/babel.min.js"></script>
+<script src="./vendor/react.production.min.js" onerror="window.__bootFail('react.production.min.js')"></script>
+<script src="./vendor/react-dom.production.min.js" onerror="window.__bootFail('react-dom.production.min.js')"></script>
+<script src="./vendor/babel.min.js" onerror="window.__bootFail('babel.min.js')"></script>
 
 <!-- ── heal 로더 부트스트랩 [G11] — 서브패스 404 시 모듈 재주입, file:// no-op ── -->
 <script>
@@ -596,8 +631,14 @@ function App() {
   );
 }
 
-const boot = document.getElementById('boot'); if (boot) boot.remove();
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// 마운트 성공 시 부트 스플래시 제거 + 워치독 해제. 실패 시 실패 UI 노출(조용한 실패 금지).
+try {
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  if (window.__bootWatch) { clearTimeout(window.__bootWatch); window.__bootWatch = null; }
+  const boot = document.getElementById('boot'); if (boot) boot.remove();
+} catch (e) {
+  if (window.__bootFail) window.__bootFail('앱 초기화 오류: ' + ((e && e.message) || e));
+}
 </script>
 
 <!-- 타자기 캐럿 미세 스타일 -->
