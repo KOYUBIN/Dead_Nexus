@@ -82,6 +82,7 @@
 <script src="./systems/dialogue.js"></script>
 <script src="./systems/character.js"></script>
 <script src="./systems/campaign.js"></script>
+<script src="./systems/ending.js"></script>
 <script src="./state/save.js"></script>
 <script src="./state/store.js"></script>
 
@@ -104,7 +105,7 @@ const { useReducer, useState, useEffect, useRef, useMemo } = React;
 const STORE = window.RPG_STORE, CH = window.RPG_CHARACTER, AB = window.RPG_ABILITIES,
       GRID = window.RPG_GRID, PROJ = window.RPG_PROJECTION, LORE = window.RPG_LORE,
       SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN,
-      GEAR = window.RPG_GEAR;
+      GEAR = window.RPG_GEAR, ENDING = window.RPG_ENDING;
 // 활성 미션 = 진행 중 대화/전투의 missionId 를 레지스트리로 해석 (ch01 폴백).
 function missionOf(state) {
   const id = (state.dialogue && state.dialogue.missionId) || (state.combat && state.combat.missionId);
@@ -423,6 +424,7 @@ function Hub({ state, dispatch, openSave }) {
     <div className="hub">
       <h1>안전가옥 — ASHGRID</h1>
       <p className="sub">{ch.icon} {ch.classKey} / {ch.codename} · {classTagline(ch.classKey)}</p>
+      <EndingBadges save={save} />
       <LastOpPanel flags={save.flags} />
       <div className="hub-grid">
         <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'missions' })}>
@@ -800,6 +802,111 @@ function Combat({ state, dispatch, view }) {
   );
 }
 
+// ── 에필로그 산문 라인 (무대 페이드 — reduced-motion 시 즉시 표시) ──
+function EpLine({ text, idx }) {
+  const style = reducedMotion ? undefined : { animationDelay: (idx * 0.5 + 0.2) + 's' };
+  // [발췌]/[각색] 태그 분리 — 원전 통제 가시화.
+  const m = /^\[(발췌|각색)\]\s*(.*)$/.exec(text);
+  const tag = m ? m[1] : null;
+  const body = m ? m[2] : text;
+  return (
+    <div className={'ep-line' + (reducedMotion ? ' shown' : '')} style={style}>
+      {tag ? <span className={'ep-tag ' + (tag === '발췌' ? 'src' : 'adapt')}>{tag}</span> : null}
+      <span className="ep-body">{body}</span>
+    </div>
+  );
+}
+
+// ── 통계 타일 ──
+function StatTile({ lb, vl, sub }) {
+  return (
+    <div className="ep-tile">
+      <span className="et-vl">{vl}</span>
+      <span className="et-lb">{lb}</span>
+      {sub ? <span className="et-sub">{sub}</span> : null}
+    </div>
+  );
+}
+
+// ── 허브 엔딩 뱃지 (본 엔딩 영속 표시 — 회차를 넘어 남는다) ──
+function EndingBadges({ save }) {
+  if (!ENDING) return null;
+  const list = ENDING.endingsSeen(save.endings);
+  const anySeen = list.some(e => e.seen);
+  if (!anySeen) return null;
+  const runs = ENDING.migrateEndings(save.endings).runs;
+  return (
+    <div className="ending-badges">
+      <div className="eb-lab">🏁 본 엔딩 {list.filter(e => e.seen).length}/4 · 완주 {runs}회 (엔딩 기록은 회차를 넘어 영속)</div>
+      <div className="eb-row">
+        {list.map(e => (
+          <span key={e.key} className={'eb-chip' + (e.seen ? ' seen' : '')} title={e.title}>
+            {e.icon} {e.seen ? e.title : '???'}{e.count > 1 ? ' ×' + e.count : ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── 에필로그 씬 (ch08 완주 피날레 — 엔딩 분기별 상이 에필로그) ──
+function Epilogue({ state, dispatch }) {
+  const save = state.save;
+  const key = (state.epilogue && state.epilogue.ending) || ENDING.resolveEnding(save);
+  const ep = ENDING.epilogueFor(key);
+  const summary = ENDING.choiceSummary(save.flags);
+  const stats = ENDING.campaignStats(save);
+  return (
+    <div className="epilogue stage stage-zeroday">
+      <div className="ep-hero">
+        <div className="ep-badge">{ep.icon}</div>
+        <div className="ep-titles">
+          <div className="ep-kicker">CAMPAIGN COMPLETE · 8/8 · 캠페인 봉인</div>
+          <h1 className="ep-title">{ep.title}</h1>
+          <div className="ep-sticker">🏷 "{ep.sticker}" · {ep.cond}</div>
+        </div>
+      </div>
+      <div className="ep-prose">
+        {ep.lines.map((l, i) => <EpLine key={i} text={l} idx={i} />)}
+      </div>
+      <div className="ep-signal">
+        <Typewriter text={ENDING.SIGNAL_FINAL.join('\n')} speed={26} />
+      </div>
+      <div className="ep-card">
+        <div className="ep-card-h">🧭 당신의 선택들 — 7챕터의 회고</div>
+        <div className="ep-choices">
+          {summary.length ? summary.map((c, i) => (
+            <div key={i} className="ep-choice">
+              <span className="ep-ch">CH{c.ch < 10 ? '0' + c.ch : c.ch}</span>
+              <span className="ep-ct">{c.text}</span>
+            </div>
+          )) : <div className="ep-empty">기록된 분기 선택 없음</div>}
+        </div>
+      </div>
+      <div className="ep-card">
+        <div className="ep-card-h">📊 캠페인 통계 (세이브 파생)</div>
+        <div className="ep-stats">
+          <StatTile lb="미션 클리어" vl={stats.missionsCleared} sub={'메인 ' + stats.mainCleared + ' · 사이드 ' + stats.sideCleared} />
+          <StatTile lb="karma 총 지출" vl={stats.karmaSpent} sub={'잔여 ' + stats.karmaCurrent} />
+          <StatTile lb="장비 보유" vl={stats.gearOwnedCount} sub={'장착 ' + stats.gearEquipped.length + '/2'} />
+          <StatTile lb="인텔 · 렙" vl={stats.intelCount + ' · ★' + stats.rep} sub={'₵' + stats.nuyen} />
+        </div>
+        <div className="ep-classrow">
+          <span className="ep-clab">클래스별 캠페인 완주</span>
+          {stats.classClears.map(c => (
+            <span key={c.classKey} className={'ep-cls' + (c.done ? ' done' : '')}>{c.done ? '✅' : '—'} {c.classKey}</span>
+          ))}
+        </div>
+        <div className="ep-runs">총 완주 회차 {stats.runs}회 · 이번 엔딩 {ep.title}</div>
+      </div>
+      <div className="ep-actions">
+        <button className="btn" onClick={() => dispatch({ type: 'NEW_GAME_PLUS' })}>↻ 새 회차 (진행 리셋 · 엔딩 기록 보존)</button>
+        <button className="btn ghost" onClick={() => dispatch({ type: 'EPILOGUE_CONTINUE' })}>허브로 (봉인 유지)</button>
+      </div>
+    </div>
+  );
+}
+
 // ── 앱 (씬 라우터) ──
 function App() {
   const [state, dispatch] = useReducer(STORE.rpgReducer, undefined, STORE.rpgInitialState);
@@ -821,6 +928,7 @@ function App() {
   if (saveOpen) { scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />; sceneKey = 'save'; }
   else if (state.scene === 'combat') { scene = <Combat state={state} dispatch={dispatch} view={view} />; sceneKey = 'combat'; }
   else if (state.scene === 'dialogue') { scene = <DialogueOverlay state={state} dispatch={dispatch} />; sceneKey = 'dialogue'; }
+  else if (state.scene === 'epilogue') { scene = <Epilogue state={state} dispatch={dispatch} />; sceneKey = 'epilogue'; }
   else { scene = <Hub state={state} dispatch={dispatch} openSave={() => setSaveOpen(true)} />; sceneKey = 'hub'; }
 
   // [G⑤] 씬 전환 — 허브↔대화↔전투 페이드/글리치 와이프 (key 변경 시 재마운트 → CSS 애니, <300ms).
@@ -907,6 +1015,60 @@ try {
   border-radius: 6px; padding: 2px 6px; }
 .ib-enemy small { color: var(--text-dim); }
 .ib-reinf { font-size: 11px; color: var(--yellow); margin-top: 6px; }
-.ib-note { font-size: 9px; color: var(--text-dim); font-style: italic; margin-top: 5px; }</style>
+.ib-note { font-size: 9px; color: var(--text-dim); font-style: italic; margin-top: 5px; }
+/* ── 57차 허브 엔딩 뱃지 ── */
+.ending-badges { border: 1.5px solid var(--sglow, var(--magenta)); border-radius: 10px; background: rgba(255,42,106,0.06);
+  padding: 8px 10px; margin: 2px 0; }
+.eb-lab { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: .5px; color: var(--magenta); margin-bottom: 6px; }
+.eb-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.eb-chip { font-size: 11px; font-family: monospace; color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 9px; background: var(--bg2); opacity: .6; }
+.eb-chip.seen { color: var(--yellow); border-color: var(--yellow); opacity: 1; box-shadow: 0 0 6px rgba(255,215,0,0.25); }
+/* ── 57차 에필로그 씬 (제로데이 결전 무대 계승) ── */
+.epilogue { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 18px 14px 30px; overflow-y: auto;
+  background: radial-gradient(120% 80% at 50% -10%, var(--sbg1), var(--sbg2)); }
+.ep-hero { display: flex; align-items: center; gap: 14px; }
+.ep-badge { font-size: 46px; filter: drop-shadow(0 0 14px var(--sglow)); animation: portraitGlow 2.8s ease-in-out infinite; }
+.ep-kicker { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--sglow); }
+.ep-title { font-family: 'Share Tech Mono', monospace; font-size: 27px; letter-spacing: 2px; margin: 2px 0;
+  color: var(--text); text-shadow: 0 0 16px var(--sglow); }
+.ep-sticker { font-size: 11px; color: var(--text-dim); font-style: italic; }
+.ep-prose { display: flex; flex-direction: column; gap: 7px; border-left: 3px solid var(--sglow); padding: 4px 0 4px 12px; }
+.ep-line { font-size: 13px; line-height: 1.55; color: var(--text); opacity: 0; transform: translateY(6px);
+  animation: epLineIn .5s ease forwards; }
+.ep-line.shown { opacity: 1; transform: none; animation: none; }
+@keyframes epLineIn { to { opacity: 1; transform: none; } }
+.ep-tag { font-family: monospace; font-size: 9px; letter-spacing: .5px; padding: 1px 5px; border-radius: 4px; margin-right: 6px;
+  vertical-align: middle; }
+.ep-tag.src { color: var(--green); border: 1px solid var(--green); }
+.ep-tag.adapt { color: var(--orange); border: 1px solid var(--orange); }
+.ep-signal { font-family: 'Share Tech Mono', monospace; color: var(--cyan); font-size: 13px; letter-spacing: 1px;
+  border: 1px dashed var(--cyan); border-radius: 8px; padding: 8px 12px; background: rgba(0,229,255,0.05); }
+.ep-card { border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg2); padding: 12px; }
+.ep-card-h { font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 1px; color: var(--cyan);
+  border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 8px; }
+.ep-choices { display: flex; flex-direction: column; gap: 5px; }
+.ep-choice { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.ep-ch { font-family: monospace; font-size: 10px; color: var(--sglow); border: 1px solid var(--border); border-radius: 5px;
+  padding: 1px 6px; min-width: 34px; text-align: center; }
+.ep-ct { color: var(--text); }
+.ep-empty { font-size: 12px; color: var(--text-dim); font-style: italic; }
+.ep-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ep-tile { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; background: var(--bg3); }
+.et-vl { font-family: 'Share Tech Mono', monospace; font-size: 20px; color: var(--green); }
+.et-lb { font-size: 11px; color: var(--text); }
+.et-sub { font-size: 10px; color: var(--text-dim); }
+.ep-classrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
+.ep-clab { font-size: 11px; color: var(--text-dim); margin-right: 2px; }
+.ep-cls { font-family: monospace; font-size: 11px; color: var(--text-dim); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 7px; }
+.ep-cls.done { color: var(--green); border-color: var(--green); }
+.ep-runs { font-size: 10px; color: var(--text-dim); margin-top: 9px; letter-spacing: .5px; }
+.ep-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .ep-badge { animation: none !important; }
+  .ep-line { opacity: 1 !important; transform: none !important; animation: none !important; }
+}</style>
 </body>
 </html>

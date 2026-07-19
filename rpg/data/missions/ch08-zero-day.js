@@ -247,7 +247,9 @@
               REFRAIN + '\n' +
               '캠페인 일지가 마지막으로 갱신되고, 봉인된다.',
         onEnter: { applyRewards: true }, checkpoint: true,
-        choices: [ { label: '캠페인을 봉인한다', effect: { returnHub: true } } ],
+        // [57차] 캠페인 완주 피날레 — epilogue+returnHub 병기. store 는 epilogue 를 먼저 소비해
+        //   전용 에필로그 씬으로 라우팅하고, returnHub 는 검증기 종결(terminal) 계약을 만족시킨다.
+        choices: [ { label: '캠페인을 봉인한다 — 에필로그', effect: { epilogue: true, returnHub: true } } ],
       },
     },
   };
