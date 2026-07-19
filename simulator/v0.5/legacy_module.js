@@ -7,7 +7,9 @@
 //   Chapter 3 "Martial Night"(cards/legacy/chapter-03-martial-night.md) +
 //   Chapter 4 "Price of Splice"(cards/legacy/chapter-04-price-of-splice.md) +
 //   Chapter 5 "Mesh Ghost"(cards/legacy/chapter-05-mesh-ghost.md) +
-//   Chapter 6 "Bloc Acquisition"(cards/legacy/chapter-06-bloc-acquisition.md) 아크를
+//   Chapter 6 "Bloc Acquisition"(cards/legacy/chapter-06-bloc-acquisition.md) +
+//   Chapter 7 "Heart of the City"(cards/legacy/chapter-07-heart-of-city.md) +
+//   Chapter 8 "Zero Day"(cards/legacy/chapter-08-zero-day.md, 캠페인 완결 8/8) 아크를
 //   실플레이에 연결한다. euro_module / lore_module 와 동일한 배선 패턴:
 //     · <script src> 로드 + DOMContentLoaded 자가복구 heal 로더 등록(index.html)
 //     · 전역은 window 노출, 소비처는 typeof 가드로 미로드 시 무해
@@ -18,10 +20,10 @@
 //     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2,3,4,5])
 //     chapterProgress:  { [n]: {unlockedAt} },       // 챕터별 진행 메타
 //     cityScars:        [{ bloc, kind, ts }],        // 도시 흉터 기록 (docs/22 정체성)
-//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄) | 'splice'(ch4 과잉 개조 블록) | 'mesh'(ch5 메시 고스트) | 'acquired'(ch6 완전 흡수된 블록)
+//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄) | 'splice'(ch4 과잉 개조 블록) | 'mesh'(ch5 메시 고스트) | 'acquired'(ch6 완전 흡수된 블록) | 'nexus'(ch7 넥서스 장악 블록) | 'zeroday'(ch8 캠페인 완결 도시 전역)
 //   * 게임 로직 무변경 원칙: 이 모듈은 순수 영속·조회 계층이다. 게임 규칙에
 //     주는 유일한 영향은 단일 흉터 채널(cityScar)로, initGame 이 legacyActiveScar()를
-//     읽어 적용할 때뿐이다. Stage 2·3·4·5·6 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
+//     읽어 적용할 때뿐이다. Stage 2·3·4·5·6·7·8 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
 //     kind 로 마크 대상만 갈린다:
 //       · 'raid'(ch1 레이드 최다 피격 블록)         → 다음 게임 시작 주가 -1
 //       · 'prey'(ch2 M&A 표적 블록)                 → 다음 게임 시작 주가 -1
@@ -29,19 +31,23 @@
 //       · 'splice'(ch4 임의 Bloc TL 4 달성 → 그 블록) → 다음 게임 시작 주가 -1 (사이버사이코시스 대가)
 //       · 'mesh'(ch5 CIPHER TL5/해킹노드3 → 종가 최저 블록) → 다음 게임 시작 주가 -1 (SIGNAL 이 가장 취약한 노드에 강림)
 //       · 'acquired'(ch6 M&A 완전 흡수된 블록)      → 다음 게임 시작 주가 -1 (로고가 지워진 피인수 블록)
-//     흉터는 ch1|ch2|ch3|ch4|ch5|ch6 중 하나라도 해금돼야 활성. 우선순위 acquired > mesh > splice > martial > prey > raid
-//     (챕터 순 최신 상처가 단일 슬롯을 차지 — 기존 mesh<splice<martial<prey<raid 로 챕터 순을 따랐던 규칙의
-//      확장; ch6 acquired 가 가장 최근 챕터라 최상위. martial 은 여전히 유일한 도시 전역 흉터. -1/+1급 소규모 1회성 유지).
-//     ─ 6번째 kind 'acquired' 추가에 따른 규칙 갱신(챕터 6 선례). acquired 는 mesh/splice/prey/raid 와 동일한 블록-주가 -1 채널을 재사용
-//       (새 엔진 메커니즘 신설 없음); 대상 블록만 "M&A 로 완전 흡수돼 NPC 로 전환된 피인수 블록"으로 파생 방식이 다르다.
-//       ch2 'prey'(단순 M&A 선언·표적 = meta.mnaCount) 와 구분: ch6 'acquired' 는 인수 완결(meta.acquisitions 기록/피인수 p.acquiredBy 마커)만 발원 —
-//       euro_completeMnaAcquisition 이 방어 실패 후 남기는 완료 신호로, 단순 선언(ch2)보다 엄격한 조건.
+//       · 'nexus'(ch7 넥서스 의장실 장악 블록)      → 다음 게임 시작 주가 -1 (왕관이 있는 자리가 무겁다 — 심장을 쥔 블록이 피 흘린다)
+//       · 'zeroday'(ch8 캠페인 완결, 특정 블록 없음) → 다음 게임 시작 공권력 +1 (도시 전역, Zero Day 여파 — martial 과 동일한 도시 전역 채널)
+//     흉터는 ch1|ch2|ch3|ch4|ch5|ch6|ch7|ch8 중 하나라도 해금돼야 활성. 우선순위 zeroday > nexus > acquired > mesh > splice > martial > prey > raid
+//     (챕터 순 최신 상처가 단일 슬롯을 차지 — 기존 acquired<mesh<splice<martial<prey<raid 로 챕터 순을 따랐던 규칙의
+//      확장; ch8 zeroday 가 가장 최근(완결) 챕터라 최상위, ch7 nexus 가 그 다음. martial·zeroday 만 도시 전역 흉터. -1/+1급 소규모 1회성 유지).
+//     ─ 7·8번째 kind 'nexus'·'zeroday' 추가에 따른 규칙 갱신(챕터 7·8 선례):
+//       · 'nexus'(ch7) 는 acquired/mesh/splice/prey/raid 와 동일한 블록-주가 -1 채널을 재사용(새 엔진 메커니즘 신설 없음);
+//         대상 블록만 "게임 종료 시 NEXUS(F6) 셀을 장악한 Bloc"(getNexusController)으로 파생 방식이 다르다. Ghost 장악 시엔 NEXUS 중립 → 블록 없음(발원 안 함).
+//       · 'zeroday'(ch8) 는 martial 과 동일한 도시 전역 공권력 +1 채널을 재사용; ch8 은 per-game 엔진 신호가 아니라 "챕터 1~7 전부 해금"에서 파생되는 완결 캡스톤이라,
+//         캠페인 완주(chapter8Newly)하는 그 판에만 1회성으로 도시 전역 흉터를 남긴다(이후 판은 그 판의 ch1~7 신호로 정상 재평가).
 // ============================================================================
 (function (glob) {
 
   var LEGACY_KEY = 'dn_legacy_v1';
   var TOTAL_CHAPTERS = 8;
   var MARTIAL_HEAT_DELTA = 1;   // ch3 'martial' 흉터: 다음 게임 시작 공권력 가산 (원전 효과#4 "시작 공권력 +2"의 -1급 절제판)
+  var ZERODAY_HEAT_DELTA = 1;   // ch8 'zeroday' 흉터: 캠페인 완결 여파 — 다음 게임 시작 공권력 가산 (도시 전역, martial 과 동급 -1/+1 절제)
 
   // localStorage 가용성 — 헤드리스/차단 환경에서 접근 자체가 던질 수 있어 가드.
   function hasStorage() {
@@ -158,6 +164,36 @@
         '여섯 번째로 도시가 깨달은 사실 — 블록은 죽지 않는다, 다른 블록이 될 뿐이다. 5대 블록 체제가 끝나고, 이 챕터부터 첫 번째 흡수 사건과 함께 포식 경쟁이 가속된다.',
       ],
     },
+    7: {
+      id: 7,
+      envelope: 'G',
+      title: 'Heart of the City',
+      titleKo: '도시의 심장',
+      unlockCond: '어느 세력이든 NEXUS (F6) 3라운드 연속 장악 달성',
+      story: [
+        '2092년 3월 22일, F6 넥서스 타워 87층. 평의회 회의실은 원래 5개의 의자를 두고 있었다 — 지금은 셋뿐이다. 하나는 흡수됐고, 하나는 통째로 사라졌다.',
+        '모든 세력이 도시의 심장을 향해 최후의 공세를 펼친다. 넥서스 타워가 최종 전장이 되고, 이 챕터 종료 시 엔딩 분기가 결정된다.',
+        '일곱 번째로 도시가 깨달은 사실 — 중심은 비어 있다, 누군가 앉을 때까지. 왕관은 무겁지 않다, 왕관이 있는 자리가 무겁다.',
+      ],
+    },
+    8: {
+      id: 8,
+      envelope: 'H',
+      title: 'Zero Day',
+      titleKo: '제로 데이',
+      // 원전 카드 해금 조건 문구는 "Chapter 07 완료 (넥서스 점거 결정 후 자동 해금)"이나,
+      //   ch8 은 캠페인 최종 챕터이고 원전 서사가 "선택은 이미 지난 일곱 챕터 동안 이루어졌다"로
+      //   전 여정의 귀결임을 명시하므로(과제 지침: "전 챕터 완료 류면 chaptersUnlocked 길이 파생"),
+      //   구현 매핑은 "챕터 1~7 전부 해금 시 자동 해금 = 캠페인 완결 캡스톤"으로 파생한다.
+      unlockCond: '챕터 1~7 전부 해금 시 자동 해금 (캠페인 완결)',
+      // 캠페인 완주 배지에 노출할 원전 공통 에필로그 발췌(cards/legacy/chapter-08-zero-day.md §6).
+      epilogue: '도시는 원래 이름이 몇 개 있었다. 마지막 이름을 정하는 건 언제나 우리였다. 이번엔 어떻게 정했는가?',
+      story: [
+        '2092년 6월 01일 00:00:00, 도시의 모든 시계가 동시에 정지했다. 3초 후, 메시에 같은 메시지가 떴다 — `[SIGNAL] ZERO DAY. CHOOSE.`',
+        '선택은 이미 지난 일곱 챕터 동안 이루어졌다. 지금 남은 일은 그 선택이 어떤 결과를 낳았는지 보는 것뿐이었다. 캠페인의 최종 챕터, 4가지 엔딩 중 하나로 수렴한다.',
+        '여덟 번째로 도시가 깨달은 사실 — 이 도시의 마지막 이름을 정하는 것은 우리다. `[SIGNAL] THANK YOU FOR PLAYING. THE CITY WILL REMEMBER. ...AND SO WILL I.`',
+      ],
+    },
   };
 
   function legacyChapterMeta(n) { return CHAPTER_META[n] || null; }
@@ -250,8 +286,50 @@
     return { unlocked: true, newly: true, state: st };
   }
 
+  // 챕터 7 해금 (봉투 G). 봉투별 조건은 독립 — 챕터 1~6 선행 불필요.
+  //   해금 조건 원전: "어느 세력이든 NEXUS (F6) 3라운드 연속 장악 달성".
+  //   → 엔진 신호: 소비처(index.html)가 게임 종료 시 getNexusController(state)로 NEXUS(F6·5×5 는 C3)
+  //     셀 소유자를 파생 — 어느 세력이든 게임 종료 시점까지 NEXUS 를 장악 중이면 nexusHeld=true.
+  //     ─ 정직 보고(No-op): 원전 "3라운드 연속"의 정밀 연속 카운터는 엔진에 meta.nexusStreak /
+  //       meta.nexusHolder 필드가 선언만 되고 갱신되지 않는 死필드라 실존하지 않는다. 따라서 "연속 3R"
+  //       정밀 추적은 미배선 — 대신 실존하는 최강 신호 "게임 종료 시점 NEXUS 장악 유지"(끝까지 심장을
+  //       쥐고 있음 ≈ 지속 장악)로 근사한다. 상시 카운터 신설 없이 기존 셀 소유(state.map[F6].owner)에서 파생.
+  //   반환 { unlocked, newly, state }.
+  function legacyUnlockChapter7(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (st.chaptersUnlocked.indexOf(7) !== -1) return { unlocked: true, newly: false, state: st };
+    st.chaptersUnlocked = st.chaptersUnlocked.concat([7]);
+    st.chapterProgress = Object.assign({}, st.chapterProgress, { 7: { unlockedAt: Date.now() } });
+    return { unlocked: true, newly: true, state: st };
+  }
+
+  // 챕터 8 해금 (봉투 H, 최종). ★ 캠페인 완결 캡스톤 — 유일하게 봉투별 독립이 아니라 파생 해금.
+  //   해금 조건 원전: "Chapter 07 완료 (넥서스 점거 결정 후 자동 해금)" + 최종 챕터 서사 "선택은 이미
+  //     지난 일곱 챕터 동안 이루어졌다". → 구현 매핑: per-game 엔진 신호가 아니라 chaptersUnlocked 파생 —
+  //     챕터 1~7 이 전부 해금돼 있으면 자동 해금(전 여정의 귀결 = 캠페인 완결). ch8 해금 = 8/8 = 완주.
+  //   반환 { unlocked, newly, state }. (선행 챕터 미충족이면 unlocked=false·미해금 — 다른 unlock 과 시그니처만 동일)
+  function legacyUnlockChapter8(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (st.chaptersUnlocked.indexOf(8) !== -1) return { unlocked: true, newly: false, state: st };
+    var priorAll = true;
+    for (var n = 1; n <= 7; n++) { if (st.chaptersUnlocked.indexOf(n) === -1) { priorAll = false; break; } }
+    if (!priorAll) return { unlocked: false, newly: false, state: st };
+    st.chaptersUnlocked = st.chaptersUnlocked.concat([8]);
+    st.chapterProgress = Object.assign({}, st.chapterProgress, { 8: { unlockedAt: Date.now() } });
+    return { unlocked: true, newly: true, state: st };
+  }
+
+  // 캠페인 완주 여부 — 8챕터 전부 해금 시 true (조회 전용, 부작용 없음).
+  //   ch8 은 챕터 1~7 전부 해금 시에만 해금되므로, 8 이 해금 목록에 있으면 곧 8/8 완주.
+  function legacyCampaignComplete(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (!st || !Array.isArray(st.chaptersUnlocked)) return false;
+    for (var n = 1; n <= TOTAL_CHAPTERS; n++) { if (st.chaptersUnlocked.indexOf(n) === -1) return false; }
+    return true;
+  }
+
   // 게임 종료 결과를 캠페인에 반영 (영속 저장 포함).
-  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc, blocAbsorbed, absorbedBloc }
+  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc, blocAbsorbed, absorbedBloc, nexusHeld, nexusBloc }
   //     anyRaid     — 레이드 1회 이상 발생 → 챕터 1 해금 트리거          (Stage 1, 시그니처 불변)
   //     topRaidBloc — 최다 레이드 피해 블록 → 챕터 1 흉터(kind 'raid')   (Stage 1, 시그니처 불변)
   //     anyMna      — Bloc 공격자 M&A 선언 1회 이상 → 챕터 2 해금 트리거 (Stage 2, 옵셔널)
@@ -263,9 +341,11 @@
   //     meshBloc    — 종가 최저 블록(SIGNAL 이 강림한 취약 노드) → 챕터 5 흉터(kind 'mesh', 시작 주가 -1) (옵셔널)
   //     blocAbsorbed— 이번 게임 M&A 인수 완결(meta.acquisitions 기록) 1회 이상 → 챕터 6 해금 트리거 (Stage 6, 옵셔널)
   //     absorbedBloc— 완전 흡수돼 NPC 전환된 피인수 블록 → 챕터 6 흉터(kind 'acquired', 시작 주가 -1) (옵셔널)
-  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw/spliceTech/spliceBloc/meshTech/meshBloc/blocAbsorbed/absorbedBloc 미공급(구 index.html·헤드리스)이면
-  //     Stage 1 과 동일 동작 (미공급 챕터는 미해금·흉터 미발원).
-  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly, chapter4Newly, chapter5Newly, chapter6Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
+  //     nexusHeld   — 이번 게임 종료 시 NEXUS(F6) 를 어느 세력이든 장악 중 → 챕터 7 해금 트리거 (Stage 7, 옵셔널)
+  //     nexusBloc   — 그 NEXUS 장악 Bloc(Ghost 장악 시 null=중립) → 챕터 7 흉터(kind 'nexus', 시작 주가 -1) (옵셔널)
+  //   ★ 챕터 8(Zero Day, 완결)은 gameResult 필드가 아니라 chaptersUnlocked 파생 — 챕터 1~7 전부 해금 시 자동 해금(캠페인 완주).
+  //   * 하위 호환: 신필드 전부 미공급(구 index.html·헤드리스)이면 Stage 1 과 동일 동작 (미공급 챕터는 미해금·흉터 미발원).
+  //   반환 { state, chapter1Newly … chapter8Newly, campaignComplete }. *Newly=true 면 이번 판이 해당 챕터 해금 순간. campaignComplete=8/8 여부.
   function legacyRecordGame(gameResult) {
     var st = legacyLoad();
     var chapter1Newly = false;
@@ -274,6 +354,8 @@
     var chapter4Newly = false;
     var chapter5Newly = false;
     var chapter6Newly = false;
+    var chapter7Newly = false;
+    var chapter8Newly = false;
     if (gameResult && gameResult.anyRaid) {
       var r1 = legacyUnlockChapter1(st);
       st = r1.state;
@@ -304,10 +386,22 @@
       st = r6.state;
       chapter6Newly = r6.newly;
     }
+    if (gameResult && gameResult.nexusHeld) {
+      var r7 = legacyUnlockChapter7(st);
+      st = r7.state;
+      chapter7Newly = r7.newly;
+    }
+    // 챕터 8(완결): per-game 신호 없이 챕터 1~7 전부 해금 시 자동 해금. legacyUnlockChapter8 이 선행 충족 검사.
+    //   위 ch1~7 처리 후 조건이 충족됐다면 이 판이 곧 캠페인 완주 순간(chapter8Newly).
+    var r8 = legacyUnlockChapter8(st);
+    st = r8.state;
+    chapter8Newly = r8.newly;
     // 단일 흉터 채널 — 최신 1건만 유지 (다음 게임 시작 조건 보정의 근거). 해금 판부터 남긴다.
-    //   우선순위 acquired > mesh > splice > martial > prey > raid — 챕터 순 최신 상처가 단일 슬롯 차지
-    //   (기존 mesh<splice<martial<prey<raid 챕터 순 규칙의 확장; ch6 acquired 가 가장 최근이라 최상위).
-    //     · 챕터 6 해금 후 M&A 완전 흡수된 블록(absorbedBloc) → 그 블록 흉터(kind 'acquired', 시작 주가 -1).
+    //   우선순위 zeroday > nexus > acquired > mesh > splice > martial > prey > raid — 챕터 순 최신 상처가 단일 슬롯 차지
+    //   (기존 acquired<mesh<splice<martial<prey<raid 챕터 순 규칙의 확장; ch8 zeroday(완결)·ch7 nexus 가 최상위 2개).
+    //     · 이 판이 캠페인 완주 순간(chapter8Newly) → 도시 전역 흉터(kind 'zeroday', 특정 블록 없음 → 시작 공권력 +1). 완결 캡스톤 1회성.
+    //     · 아니면 챕터 7 해금 후 NEXUS 장악 Bloc(nexusBloc) → 그 블록 흉터(kind 'nexus', 시작 주가 -1).
+    //     · 아니면 챕터 6 해금 후 M&A 완전 흡수된 블록(absorbedBloc) → 그 블록 흉터(kind 'acquired', 시작 주가 -1).
     //     · 아니면 챕터 5 해금 후 종가 최저 블록(meshBloc) → 그 블록 흉터(kind 'mesh', 시작 주가 -1).
     //     · 아니면 챕터 4 해금 후 임의 Bloc TL 4(spliceBloc) → 그 블록 흉터(kind 'splice', 시작 주가 -1).
     //     · 아니면 챕터 3 해금 후 계엄(martialLaw) → 도시 전역 흉터(kind 'martial', 특정 블록 없음 → 시작 공권력 +1).
@@ -315,7 +409,11 @@
     //     · 아니면 챕터 1 최다 레이드 피해 블록(kind 'raid', 시작 주가 -1).
     //   게임 로직 영향은 여전히 흉터 채널 하나뿐 (kind 로 마크 대상만 갈림; -1/+1급 소규모 1회성).
     var scarBloc = null, scarKind = null;
-    if (st.chaptersUnlocked.indexOf(6) !== -1 && gameResult && gameResult.absorbedBloc) {
+    if (chapter8Newly) {
+      scarBloc = null; scarKind = 'zeroday';
+    } else if (st.chaptersUnlocked.indexOf(7) !== -1 && gameResult && gameResult.nexusBloc) {
+      scarBloc = gameResult.nexusBloc; scarKind = 'nexus';
+    } else if (st.chaptersUnlocked.indexOf(6) !== -1 && gameResult && gameResult.absorbedBloc) {
       scarBloc = gameResult.absorbedBloc; scarKind = 'acquired';
     } else if (st.chaptersUnlocked.indexOf(5) !== -1 && gameResult && gameResult.meshBloc) {
       scarBloc = gameResult.meshBloc; scarKind = 'mesh';
@@ -330,24 +428,25 @@
     }
     if (scarKind) st.cityScars = [{ bloc: scarBloc, kind: scarKind, ts: Date.now() }];
     legacySave(st);
-    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly, chapter4Newly: chapter4Newly, chapter5Newly: chapter5Newly, chapter6Newly: chapter6Newly };
+    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly, chapter4Newly: chapter4Newly, chapter5Newly: chapter5Newly, chapter6Newly: chapter6Newly, chapter7Newly: chapter7Newly, chapter8Newly: chapter8Newly, campaignComplete: legacyCampaignComplete(st) };
   }
 
   // 다음 게임 시작 시 적용할 활성 흉터 — { bloc, kind, heatDelta } 또는 null.
-  //   챕터 1·2·3·4·5·6 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
-  //   kind: 'raid'(ch1)·'prey'(ch2)·'splice'(ch4)·'mesh'(ch5)·'acquired'(ch6) → bloc 시작 주가 -1 (heatDelta 0);
-  //         'martial'(ch3) → bloc 없음, 시작 공권력 +heatDelta (도시 전역).
+  //   챕터 1·2·3·4·5·6·7·8 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
+  //   kind: 'raid'(ch1)·'prey'(ch2)·'splice'(ch4)·'mesh'(ch5)·'acquired'(ch6)·'nexus'(ch7) → bloc 시작 주가 -1 (heatDelta 0);
+  //         'martial'(ch3)·'zeroday'(ch8) → bloc 없음, 시작 공권력 +heatDelta (도시 전역).
   //   kind 없는 구버전 흉터는 'raid' 로 정규화(하위 호환).
   function legacyActiveScar() {
     var st = legacyLoad();
-    if (st.chaptersUnlocked.indexOf(1) === -1 && st.chaptersUnlocked.indexOf(2) === -1
-        && st.chaptersUnlocked.indexOf(3) === -1 && st.chaptersUnlocked.indexOf(4) === -1
-        && st.chaptersUnlocked.indexOf(5) === -1 && st.chaptersUnlocked.indexOf(6) === -1) return null;
+    var anyUnlocked = false;
+    for (var n = 1; n <= TOTAL_CHAPTERS; n++) { if (st.chaptersUnlocked.indexOf(n) !== -1) { anyUnlocked = true; break; } }
+    if (!anyUnlocked) return null;
     if (!st.cityScars || !st.cityScars.length) return null;
     var last = st.cityScars[st.cityScars.length - 1];
     if (!last) return null;
     var kind = last.kind || 'raid';
     if (kind === 'martial') return { bloc: null, kind: 'martial', heatDelta: MARTIAL_HEAT_DELTA };
+    if (kind === 'zeroday') return { bloc: null, kind: 'zeroday', heatDelta: ZERODAY_HEAT_DELTA };
     return last.bloc ? { bloc: last.bloc, kind: kind, heatDelta: 0 } : null;
   }
 
@@ -361,6 +460,9 @@
   glob.legacyUnlockChapter4 = legacyUnlockChapter4;
   glob.legacyUnlockChapter5 = legacyUnlockChapter5;
   glob.legacyUnlockChapter6 = legacyUnlockChapter6;
+  glob.legacyUnlockChapter7 = legacyUnlockChapter7;
+  glob.legacyUnlockChapter8 = legacyUnlockChapter8;
+  glob.legacyCampaignComplete = legacyCampaignComplete;
   glob.legacyRecordGame = legacyRecordGame;
   glob.legacyActiveScar = legacyActiveScar;
   glob.legacyChapterMeta = legacyChapterMeta;

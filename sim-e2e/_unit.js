@@ -704,6 +704,109 @@ function tests(){
   ok('LEG6 unlock6 직접: 신규 newly=true·배열에 6', u6a.newly===true&&u6a.state.chaptersUnlocked.indexOf(6)!==-1);
   const u6b=LU6(u6a.state);
   ok('LEG6 unlock6 직접: 멱등 newly=false', u6b.newly===false&&u6b.state.chaptersUnlocked.indexOf(6)!==-1);
+  // ============================================================
+  // v6.39 (레거시 Stage 7): 챕터 7 "Heart of the City"(도시의 심장) — NEXUS 종료 장악 해금·nexus 흉터·하위 호환
+  //   원전 해금 "어느 세력이든 NEXUS(F6) 3라운드 연속 장악" → 엔진 실존 신호 = 게임 종료 시점 NEXUS 소유자
+  //   (getNexusController)에서 nexusHeld 파생(옵셔널). "3R 연속" 정밀 카운터는 死필드(No-op) → 종료 장악으로 근사.
+  //   흉터 대상 nexusBloc=장악 Bloc(Ghost 장악 시 null). kind 'nexus'(그 블록 시작 주가 -1). 우선순위 nexus>acquired>…>raid.
+  // ============================================================
+  const LU7=window.legacyUnlockChapter7, LU8=window.legacyUnlockChapter8, LCC=window.legacyCampaignComplete;
+  ok('LEG7/8 fns exposed (unlock7/unlock8/campaignComplete)', typeof LU7==='function'&&typeof LU8==='function'&&typeof LCC==='function');
+  // (1) CHAPTER_META[7] 원전 메타 — 봉투 G · 제목 · 해금 조건 · 3문장(원문 발췌)
+  const cm7=LCM(7);
+  ok('LEG7 ch7 meta id/envelope/title', !!cm7&&cm7.id===7&&cm7.envelope==='G'&&cm7.title==='Heart of the City', JSON.stringify(cm7&&{id:cm7.id,e:cm7.envelope,t:cm7.title}));
+  ok('LEG7 ch7 unlockCond=NEXUS(F6) 3라운드 연속 장악', !!cm7&&cm7.unlockCond==='어느 세력이든 NEXUS (F6) 3라운드 연속 장악 달성', cm7&&cm7.unlockCond);
+  ok('LEG7 ch7 story 3문장 + 원문 발췌("왕관이 있는 자리가 무겁다")', !!cm7&&Array.isArray(cm7.story)&&cm7.story.length===3&&cm7.story.some(s=>s.indexOf('왕관이 있는 자리가 무겁다')!==-1));
+  ok('LEG7 ch1~6 메타 회귀 불변·TOTAL=8', LCM(1).title==='First Blood'&&LCM(4).title==='Price of Splice'&&LCM(6).title==='Bloc Acquisition'&&LTC()===8);
+  // (2) 미해금: nexusHeld 없음 → ch7 잠금 (chapter7Newly=false)
+  LRS();
+  const l70=LRG({anyRaid:false, anyMna:false});
+  ok('LEG7 미해금: nexusHeld 미공급 → ch7 잠금 · chapter7Newly=false', l70.state.chaptersUnlocked.indexOf(7)===-1&&l70.chapter7Newly===false);
+  ok('LEG7 반환에 chapter7Newly/chapter8Newly(boolean) 존재', typeof l70.chapter7Newly==='boolean'&&typeof l70.chapter8Newly==='boolean');
+  // (3) 해금: NEXUS 종료 장악(nexusHeld) → ch7 해금 (chapter7Newly=true) · 다른 챕터 없어도 독립 해금
+  LRS();
+  const l71=LRG({nexusHeld:true});
+  ok('LEG7 해금: nexusHeld=true → ch7 해금 + chapter7Newly=true', l71.state.chaptersUnlocked.indexOf(7)!==-1&&l71.chapter7Newly===true);
+  ok('LEG7 해금: ch1~6 독립(미해금)·ch8 미해금(선행 미충족)', l71.state.chaptersUnlocked.indexOf(1)===-1&&l71.state.chaptersUnlocked.indexOf(6)===-1&&l71.state.chaptersUnlocked.indexOf(8)===-1&&l71.chapter8Newly===false);
+  // (4) 멱등: 이미 해금 후 재장악 → chapter7Newly=false
+  const l72=LRG({nexusHeld:true});
+  ok('LEG7 멱등: 재장악 chapter7Newly=false (해금 유지)', l72.chapter7Newly===false&&l72.state.chaptersUnlocked.indexOf(7)!==-1);
+  // (5) 영속: ch7 해금 + nexusBloc → nexus 흉터 (bloc · kind=nexus · heatDelta=0 = 시작 주가 -1)
+  LRS();
+  LRG({nexusHeld:true});                          // 해금(Bloc 미지정)
+  LRG({nexusHeld:true, nexusBloc:'IRONWALL'});     // NEXUS 장악 Bloc 발생
+  const scarNex=LAS();
+  ok('LEG7 영속: nexus 흉터 kind=nexus · bloc=IRONWALL · heatDelta=0', !!scarNex&&scarNex.kind==='nexus'&&scarNex.bloc==='IRONWALL'&&scarNex.heatDelta===0, JSON.stringify(scarNex));
+  // (6) Ghost 장악(nexusHeld=true·nexusBloc=null=중립) → ch7 해금하되 nexus 흉터 미발원 (흉터 없음)
+  LRS();
+  const l73=LRG({nexusHeld:true, nexusBloc:null});
+  ok('LEG7 Ghost 장악: ch7 해금·nexus 흉터 미발원(NEXUS 중립)', l73.state.chaptersUnlocked.indexOf(7)!==-1&&LAS()===null);
+  // (7) 우선순위 nexus > acquired > mesh > splice > martial > prey > raid — 일곱 공존(ch8 완주 아님) → 흉터=nexus
+  //     ch8 완주를 피하려고 ch1 만 빼고 ch2~7 신호 공급 → chapter8Newly=false → nexus 최상위
+  LRS();
+  const l74=LRG({anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true, spliceTech:true, spliceBloc:'CARBON', meshTech:true, meshBloc:'VANTA', blocAbsorbed:true, absorbedBloc:'IRONWALL', nexusHeld:true, nexusBloc:'HELIX'});
+  const scarPri7=LAS();
+  ok('LEG7 우선: prey+martial+splice+mesh+acquired+nexus 공존(ch1 제외) → 흉터=nexus(HELIX)', !!scarPri7&&scarPri7.kind==='nexus'&&scarPri7.bloc==='HELIX'&&l74.chapter8Newly===false, JSON.stringify(scarPri7));
+  // (8) 흉터 폴백: ch7 해금됐지만 이번 판 nexusBloc 없음(+ acquired 존재) → 흉터=acquired (nexus 미발원)
+  LRS();
+  LRG({nexusHeld:true, blocAbsorbed:true});                   // ch6·ch7 해금
+  LRG({blocAbsorbed:true, absorbedBloc:'CARBON'});            // NEXUS 신호 없는 판 → acquired 흉터
+  const scarFb7=LAS();
+  ok('LEG7 폴백: ch7 해금+NEXUS블록없음 → 흉터=acquired(CARBON)', !!scarFb7&&scarFb7.kind==='acquired'&&scarFb7.bloc==='CARBON', JSON.stringify(scarFb7));
+  // (9) ch7 단독 해금(ch1~6 없이)도 흉터 활성 — activeScar 게이트 ch1|…|ch8 확장 검증
+  LRS();
+  const l75=LRG({nexusHeld:true, nexusBloc:'AXIOM'});         // ch7 만 해금 + nexus 흉터 동시
+  const scarSolo7=LAS();
+  ok('LEG7 단독: ch7 만 해금 → 흉터 활성(ch1~6 게이트 비의존)', l75.state.chaptersUnlocked.indexOf(1)===-1&&l75.state.chaptersUnlocked.indexOf(6)===-1&&!!scarSolo7&&scarSolo7.kind==='nexus'&&scarSolo7.bloc==='AXIOM', JSON.stringify(scarSolo7));
+  // (10) 하위 호환: nexusHeld 미공급(구 index.html 시그니처)이면 ch7 미해금 — 신필드 옵셔널
+  LRS();
+  const l76=LRG({anyRaid:true, topRaidBloc:'VANTA'});   // 구 시그니처 그대로
+  ok('LEG7 시그니처 불변: nexusHeld 미공급 → ch7 미해금·ch1만 해금', l76.state.chaptersUnlocked.indexOf(7)===-1&&l76.state.chaptersUnlocked.indexOf(1)!==-1&&l76.chapter7Newly===false);
+  // (11) legacyUnlockChapter7 직접 멱등
+  const u7a=LU7({chaptersUnlocked:[], chapterProgress:{}, cityScars:[]});
+  ok('LEG7 unlock7 직접: 신규 newly=true·배열에 7', u7a.newly===true&&u7a.state.chaptersUnlocked.indexOf(7)!==-1);
+  ok('LEG7 unlock7 직접: 멱등 newly=false', LU7(u7a.state).newly===false);
+  // ============================================================
+  // v6.39 (레거시 Stage 8): 챕터 8 "Zero Day"(제로 데이, 완결 8/8) — 파생 해금(챕터 1~7 전부)·완주 상태·zeroday 흉터
+  //   원전 해금 "Chapter 07 완료"이나 최종 챕터 서사가 전 여정 귀결 → 구현: 챕터 1~7 전부 해금 시 자동 해금 = 캠페인 완주.
+  //   legacyCampaignComplete()=8/8. kind 'zeroday'(도시 전역 공권력 +1, 완주 판 1회성). 우선순위 zeroday 최상위.
+  // ============================================================
+  // (12) CHAPTER_META[8] 원전 메타 — 봉투 H · 제목 · 해금 조건 · epilogue(원문 발췌) · 3문장
+  const cm8=LCM(8);
+  ok('LEG8 ch8 meta id/envelope/title', !!cm8&&cm8.id===8&&cm8.envelope==='H'&&cm8.title==='Zero Day', JSON.stringify(cm8&&{id:cm8.id,e:cm8.envelope,t:cm8.title}));
+  ok('LEG8 ch8 unlockCond=챕터 1~7 전부 해금 자동(완결)', !!cm8&&cm8.unlockCond==='챕터 1~7 전부 해금 시 자동 해금 (캠페인 완결)', cm8&&cm8.unlockCond);
+  ok('LEG8 ch8 story 3문장 + 원문 발췌("이 도시의 마지막 이름을 정하는 것은 우리다")', !!cm8&&Array.isArray(cm8.story)&&cm8.story.length===3&&cm8.story.some(s=>s.indexOf('이 도시의 마지막 이름을 정하는 것은 우리다')!==-1));
+  ok('LEG8 ch8 epilogue 원문 발췌("마지막 이름을 정하는 건 언제나 우리였다")', !!cm8&&typeof cm8.epilogue==='string'&&cm8.epilogue.indexOf('마지막 이름을 정하는 건 언제나 우리였다')!==-1, cm8&&cm8.epilogue);
+  // (13) 파생 해금: 챕터 1~6 만 해금 → ch8 미해금(선행 ch7 미충족). legacyUnlockChapter8 직접 unlocked=false·newly=false
+  const u8no=LU8({chaptersUnlocked:[1,2,3,4,5,6], chapterProgress:{}, cityScars:[]});
+  ok('LEG8 파생: ch1~6만 → ch8 미해금(unlocked=false·newly=false·8 미추가)', u8no.unlocked===false&&u8no.newly===false&&u8no.state.chaptersUnlocked.indexOf(8)===-1);
+  // (14) 파생 해금: 한 판에 ch1~7 신호 전부 → ch8 자동 해금 chapter8Newly=true + campaignComplete=true
+  LRS();
+  const lFin=LRG({anyRaid:true, topRaidBloc:'HELIX', anyMna:true, mnaPreyBloc:'AXIOM', martialLaw:true, spliceTech:true, spliceBloc:'CARBON', meshTech:true, meshBloc:'VANTA', blocAbsorbed:true, absorbedBloc:'IRONWALL', nexusHeld:true, nexusBloc:'HELIX'});
+  ok('LEG8 파생: ch1~7 신호 전부 → ch8 자동 해금·chapter8Newly=true', lFin.state.chaptersUnlocked.indexOf(8)!==-1&&lFin.chapter8Newly===true);
+  ok('LEG8 완주: 반환 campaignComplete=true (8/8)', lFin.campaignComplete===true&&lFin.state.chaptersUnlocked.length===8);
+  // (15) legacyCampaignComplete: 8/8 → true; 7/8 → false
+  ok('LEG8 완주 헬퍼: 8/8 → true', LCC(lFin.state)===true);
+  ok('LEG8 완주 헬퍼: 7/8(8 제외) → false', LCC({chaptersUnlocked:[1,2,3,4,5,6,7]})===false);
+  // (16) 우선순위 zeroday 최상위: 완주 판(chapter8Newly)에 모든 신호 공존 → 흉터=zeroday (도시 전역·bloc=null·heatDelta=1)
+  const scarZd=LAS();
+  ok('LEG8 우선: 완주 판 모든 신호 공존 → 흉터=zeroday(도시 전역·heatDelta=1·bloc=null)', !!scarZd&&scarZd.kind==='zeroday'&&scarZd.bloc===null&&scarZd.heatDelta===1, JSON.stringify(scarZd));
+  // (17) zeroday 1회성: 완주 다음 판(chapter8Newly=false, nexusBloc 공급) → 흉터=nexus 재평가 (zeroday 미재발원)
+  const lAfter=LRG({nexusHeld:true, nexusBloc:'VANTA'});
+  const scarAfter=LAS();
+  ok('LEG8 1회성: 완주 다음 판 chapter8Newly=false → 흉터=nexus(VANTA) 재평가', lAfter.chapter8Newly===false&&lAfter.campaignComplete===true&&!!scarAfter&&scarAfter.kind==='nexus'&&scarAfter.bloc==='VANTA', JSON.stringify(scarAfter));
+  // (18) legacyUnlockChapter8 직접 멱등 — 이미 8 있으면 newly=false
+  const u8a=LU8({chaptersUnlocked:[1,2,3,4,5,6,7], chapterProgress:{}, cityScars:[]});
+  ok('LEG8 unlock8 직접: 선행 충족 신규 newly=true·배열에 8', u8a.unlocked===true&&u8a.newly===true&&u8a.state.chaptersUnlocked.indexOf(8)!==-1);
+  ok('LEG8 unlock8 직접: 멱등 newly=false', LU8(u8a.state).newly===false);
+  // (19) 하위 호환: 챕터 1~6 세이브 로드 — ch7/ch8/nexus/zeroday 개념 없던 구세이브 무손상
+  LRS();
+  LSV({chaptersUnlocked:[1,2,3,4,5,6], chapterProgress:{1:{unlockedAt:1},6:{unlockedAt:6}}, cityScars:[{bloc:'IRONWALL', kind:'acquired'}]});
+  const oldLoad6=LLD();
+  ok('LEG8 하위호환: 챕터1~6 세이브 로드 정규화(ch7·ch8 미해금)', oldLoad6.chaptersUnlocked.indexOf(6)!==-1&&oldLoad6.chaptersUnlocked.indexOf(7)===-1&&oldLoad6.chaptersUnlocked.indexOf(8)===-1);
+  const oldScar6=LAS();
+  ok('LEG8 하위호환: 기존 acquired 흉터 로드 유지(bloc=IRONWALL·heatDelta=0)', !!oldScar6&&oldScar6.kind==='acquired'&&oldScar6.bloc==='IRONWALL'&&oldScar6.heatDelta===0, JSON.stringify(oldScar6));
+  ok('LEG8 하위호환: ch1~6 세이브 완주 아님(campaignComplete=false)', LCC(oldLoad6)===false);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
