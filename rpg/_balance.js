@@ -24,12 +24,42 @@ var CAMP = require('./systems/campaign.js');
 var CH   = require('./systems/character.js');
 var AB   = require('./data/abilities.js');
 var G    = require('./systems/combat/grid.js');
+var GEAR = require('./data/gear.js');   // [V1] 장비 반영 밸런스 재측정 — 옵트인 파워 밴드.
 
 var CLASSES = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'];
 var POLICIES = ['combat', 'objective'];
 var ROUND_CAP = 30;          // 봇 라운드 상한(무한 소모전 가드). 밴드 목표는 3~9.
 var TRIVIAL_ROUNDS = 2;      // ≤2R + 무피해 = 트리비얼
 var ATTRITION_ROUNDS = 10;   // ≥10R 또는 timeout = 소모전
+
+// ---- 장비 시나리오 [V1] (옵트인 파워 밴드 측정) -----------------------------
+// 전투 결정론 유지: 장비는 effectiveStats 스탯 델타만(신규 메커닉 0). 시나리오 3종:
+//   base = 무장비 — equipment{null,null} → aggregateMods 전부 0 → 기존 64조합 byte 불변(재확인).
+//   mid  = 가격 하위 2종(슬롯당 최저가 · classReq 없음 → 전 클래스 동일):
+//          weapon SMART_LINK(₵22 ATK+1) · cyberware MOOD_CHIP(₵20 maxHp+2).
+//   full = 슬롯당 최고가 장착 가능품(classReq 존중 → 클래스별 상이):
+//          weapon HAIR_TRIGGER(₵40 쿨−1, 전 클래스) ·
+//          cyberware NEURAL_JACK(₵42 HACK+2·maxHp−2, hack≥3 → CIPHER/RIGGER/MOLE) /
+//                    BLADE(hack1)는 장착 불가 → 차순위 IRON_SKIN(₵34 DEF+2·MOV−1).
+// classReq 는 base 스탯 기준(gear.canEquip) — 성장/장비 부트스트랩 순환 회피.
+var GEAR_SCENARIOS = ['base', 'mid', 'full'];
+
+// 슬롯별 최고가 장착 가능품(결정론: 최고가, 동가는 BY_SLOT 삽입순 유지).
+function pickHighestEquippable(slot, ch) {
+  var keys = GEAR.BY_SLOT[slot] || [], best = null, bestCost = -1;
+  for (var i = 0; i < keys.length; i++) {
+    var it = GEAR.ITEMS[keys[i]];
+    if (!GEAR.canEquip(it, ch)) continue;
+    if (it.cost > bestCost) { bestCost = it.cost; best = keys[i]; }
+  }
+  return best;
+}
+
+function equipFor(scenario, ch) {
+  if (scenario === 'mid')  return { weapon: 'SMART_LINK', cyberware: 'MOOD_CHIP' };
+  if (scenario === 'full') return { weapon: pickHighestEquippable('weapon', ch), cyberware: pickHighestEquippable('cyberware', ch) };
+  return { weapon: null, cyberware: null };   // base(무장비)
+}
 
 // ---- 전장 관측 헬퍼 (순수) -------------------------------------------------
 function nonStaticEnemiesAlive(c) {
@@ -221,8 +251,11 @@ function playerTurn(c, policy) {
 }
 
 // ---- 단일 인카운터 자동 플레이 ---------------------------------------------
-function runEncounter(classKey, missionId, policy) {
+function runEncounter(classKey, missionId, policy, scenario) {
   var ch = CH.makeCharacter(classKey);
+  // [V1] 장비 시나리오 반영(기본 base=무장비). base 는 equipment{null,null} → effectiveStats
+  //   델타 0 → 반환 객체 byte 불변(기존 64조합 재확인의 근거). scenario 필드는 미부착(셀 순도 유지).
+  ch.equipment = equipFor(scenario || 'base', ch);
   var mission = CAMP.missionData(missionId);
   if (!mission || !mission.combat) return { error: 'no combat', missionId: missionId };
   var c = S.buildCombat(mission, ch, 'outro');
@@ -259,7 +292,7 @@ function orderedMissions() {
   return ms;
 }
 
-function runMatrix() {
+function runMatrix(scenario) {
   var ms = orderedMissions();
   var rows = [];
   for (var mi = 0; mi < ms.length; mi++) {
@@ -268,9 +301,10 @@ function runMatrix() {
     for (var ci = 0; ci < CLASSES.length; ci++) {
       var cls = CLASSES[ci];
       var byPol = {};
-      for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi]);
+      for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario);
       cells[cls] = byPol;
     }
+    // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
     rows.push({ id: e.id, kind: e.kind, chapter: e.chapter, order: e.order, cells: cells });
   }
   return rows;
@@ -392,9 +426,93 @@ function summarize(rows) {
   return { total: total, clearable: clearable, bandOk: bandOk, fail: fail, trivial: trivial, attrition: attrition };
 }
 
+// ---- 장비 시나리오 비교 [V1] -----------------------------------------------
+// 순수 집계(출력 없음) — base/mid/full 매트릭스를 동일 지표로 요약. verdict 재사용.
+function aggregateScenario(rows) {
+  var s = { total: 0, clearable: 0, bandOk: 0, trivial: 0, attrition: 0, fail: 0, hpSum: 0, repRSum: 0, flagged: [] };
+  for (var i = 0; i < rows.length; i++) {
+    for (var ci = 0; ci < CLASSES.length; ci++) {
+      var vd = verdict(rows[i].cells[CLASSES[ci]]);
+      s.total++;
+      if (vd.clearable) { s.clearable++; s.hpSum += vd.rep.hpPct; s.repRSum += vd.rep.rounds; }
+      if (vd.flags.indexOf('clearFail') >= 0) s.fail++;
+      if (vd.flags.indexOf('trivial') >= 0) s.trivial++;
+      if (vd.flags.indexOf('attrition') >= 0) s.attrition++;
+      if (vd.clearable && vd.flags.length === 0) s.bandOk++;
+      if (vd.flags.length) s.flagged.push({ id: rows[i].id, kind: rows[i].kind, chapter: rows[i].chapter, cls: CLASSES[ci], flags: vd.flags.slice(), rep: vd.rep });
+    }
+  }
+  s.avgHp = s.clearable ? s.hpSum / s.clearable : 0;
+  s.avgRepR = s.clearable ? s.repRSum / s.clearable : 0;
+  return s;
+}
+
+// 후반 챕터(ch06~08) 트리비얼화 가드: 최속승리 라운드 min ≥ 3 & 트리비얼 0 이면 합격.
+//   장비 옵트인 파워가 엔드게임을 무의미화하지 않는지의 판정(표시=판정 규율).
+function lateChapterGuard(rows) {
+  var perCh = {}, trivLate = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (r.kind !== 'main' || r.chapter < 6) continue;
+    for (var ci = 0; ci < CLASSES.length; ci++) {
+      var vd = verdict(r.cells[CLASSES[ci]]);
+      if (!perCh[r.chapter]) perCh[r.chapter] = { min: 99, trivial: 0 };
+      if (vd.clearable && vd.rep.rounds < perCh[r.chapter].min) perCh[r.chapter].min = vd.rep.rounds;
+      if (vd.flags.indexOf('trivial') >= 0) { perCh[r.chapter].trivial++; trivLate++; }
+    }
+  }
+  var pass = trivLate === 0;
+  var chs = Object.keys(perCh).sort();
+  for (var k = 0; k < chs.length; k++) if (perCh[chs[k]].min < 3) pass = false;
+  return { perCh: perCh, chs: chs, trivLate: trivLate, pass: pass };
+}
+
+function printScenarios() {
+  var scn = {};
+  for (var i = 0; i < GEAR_SCENARIOS.length; i++) scn[GEAR_SCENARIOS[i]] = aggregateScenario(runMatrix(GEAR_SCENARIOS[i]));
+  var b = scn.base, m = scn.mid, f = scn.full;
+
+  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×16미션) ================');
+  console.log('base=무장비(불변 재확인) · mid=슬롯당 최저가(SMART_LINK+MOOD_CHIP) · full=슬롯당 최고가(HAIR_TRIGGER+NEURAL_JACK/BLADE는 IRON_SKIN).');
+  console.log(pad('시나리오', 16) + pad('클리어', 9) + pad('밴드무플래그', 14) + pad('트리비얼', 10) + pad('소모전', 8) + pad('clearFail', 11) + pad('평균종료HP%', 13) + '평균최속R');
+  console.log('-'.repeat(94));
+  GEAR_SCENARIOS.forEach(function (key) {
+    var s = scn[key];
+    var label = key === 'base' ? 'base(무장비)' : key === 'mid' ? 'mid(하위2종)' : 'full(최고가)';
+    console.log(pad(label, 16) + pad(s.clearable + '/' + s.total, 9) + padL(String(s.bandOk), 6) + pad('', 8)
+      + padL(String(s.trivial), 5) + pad('', 5) + padL(String(s.attrition), 4) + pad('', 4) + padL(String(s.fail), 6) + pad('', 5)
+      + padL(s.avgHp.toFixed(1), 8) + pad('', 5) + padL(s.avgRepR.toFixed(2), 6));
+  });
+
+  var guard = lateChapterGuard(runMatrix('full'));
+  console.log('\n---- 수용 판정 (docs/25 §8 정직화 · 표시=판정) ----');
+  console.log('  base : 무장비 = 기존 64조합 byte 동일(effectiveStats 델타 0) — ' + (b.clearable === b.total && b.trivial <= 1 ? 'PASS(재확인)' : 'CHECK'));
+  var midMargin = (m.clearable === b.clearable) && (m.avgHp >= b.avgHp);
+  console.log('  mid  : 클리어율 동일(' + m.clearable + '/' + m.total + '=base) · 여유 증가(평균종료HP ' + b.avgHp.toFixed(1) + '→' + m.avgHp.toFixed(1) + '%) — ' + (midMargin ? 'PASS' : 'CHECK'));
+  var chStr = guard.chs.map(function (c) { return 'ch0' + c + ' min=' + guard.perCh[c].min; }).join(' · ');
+  console.log('  full : 후반 챕터 최속승리 라운드 ' + chStr + ' · 후반 트리비얼 ' + guard.trivLate + ' — ' + (guard.pass ? 'PASS(≥3R 유지 · 트리비얼화 없음 → 장비 하향 불요)' : 'FAIL(<3R → 장비 수치 하향 보정 필요)'));
+
+  console.log('\n---- 장비 유발 이상치(신규, base 대비) ----');
+  var baseSet = {};
+  b.flagged.forEach(function (x) { baseSet[x.id + '|' + x.cls] = true; });
+  [['mid', m], ['full', f]].forEach(function (pair) {
+    var key = pair[0], s = pair[1];
+    var news = s.flagged.filter(function (x) { return !baseSet[x.id + '|' + x.cls]; });
+    console.log('  ' + key + ' 신규 이상치 ' + news.length + '건 (후반 ch06~08: ' + news.filter(function (x) { return x.kind === 'main' && x.chapter >= 6; }).length + '건):');
+    news.forEach(function (x) {
+      var loc = (x.kind === 'main' ? 'ch0' + x.chapter : 'side');
+      console.log('    ' + pad(loc + ' ' + x.id, 30) + pad(x.cls, 8) + '[' + x.flags.join(',') + '] rep=' + cellStr(x.rep));
+    });
+  });
+  console.log('  해설: 트리비얼은 전량 초반/사이드(엔드게임 장비의 정상적 하위콘텐츠 파워) · 후반 챕터 0.');
+  console.log('        full CIPHER ch06 attrition = NEURAL_JACK maxHp−2 로 러시 사망→전멸 그라인드(옵트인 글래스캐논 대가, 트리비얼의 반대). 장비 무변경.');
+  return { scn: scn, guard: guard };
+}
+
 function main() {
   var args = process.argv.slice(2);
   if (args.indexOf('--smoke') >= 0) { return smoke(); }
+  if (args.indexOf('--scenarios') >= 0) { printScenarios(); process.exit(0); }
   var rows = runMatrix();
   if (args.indexOf('--json') >= 0) {
     console.log(JSON.stringify(rows, null, 0));
@@ -404,6 +522,7 @@ function main() {
   printOutliers(outliers);
   printTrend(rows);
   var sum = summarize(rows);
+  printScenarios();   // [V1] 장비 3시나리오 비교 + 후반 챕터 트리비얼화 가드.
   process.exit(0);
 }
 
@@ -425,6 +544,9 @@ function smoke() {
 module.exports = {
   runEncounter: runEncounter, runMatrix: runMatrix, verdict: verdict,
   CLASSES: CLASSES, POLICIES: POLICIES, orderedMissions: orderedMissions,
+  // [V1] 장비 시나리오 API (유닛 핀 고정용).
+  GEAR_SCENARIOS: GEAR_SCENARIOS, equipFor: equipFor,
+  aggregateScenario: aggregateScenario, lateChapterGuard: lateChapterGuard,
 };
 
 if (require.main === module) main();

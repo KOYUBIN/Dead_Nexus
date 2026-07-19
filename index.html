@@ -30,7 +30,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); }
     body {
-      min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      /* 세로 중앙 정렬하되, 콘텐츠가 뷰포트보다 크면 상단부터(safe) — 모바일 세로에서 히어로 상단 잘림·스크롤 불가 방지 */
+      justify-content: safe center;
       padding: 40px 20px; position: relative; overflow-x: hidden;
       -webkit-text-size-adjust: 100%;
     }
@@ -47,6 +49,22 @@
       mask-image: radial-gradient(ellipse at 50% 28%, #000 0%, transparent 72%);
       -webkit-mask-image: radial-gradient(ellipse at 50% 28%, #000 0%, transparent 72%);
     }
+    /* [신규] 배경 스캔 스윕 — 순수 CSS, 그리드 위를 저강도 광선이 천천히 종주 */
+    .bg-scan {
+      position: absolute; inset: 0; z-index: 0; overflow: hidden;
+      mask-image: radial-gradient(ellipse at 50% 28%, #000 0%, transparent 72%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 28%, #000 0%, transparent 72%);
+    }
+    .bg-scan::before {
+      content: ''; position: absolute; left: -10%; right: -10%; height: 140px;
+      top: -140px;
+      background: linear-gradient(180deg, transparent 0%, #00e5ff14 45%, #00e5ff22 50%, #00e5ff14 55%, transparent 100%);
+      animation: scan-sweep 7s linear infinite;
+    }
+    @keyframes scan-sweep {
+      0%   { top: -140px; }
+      100% { top: 100%; }
+    }
     .wrap { position: relative; z-index: 1; max-width: 1000px; width: 100%; }
 
     /* ── 히어로 ── */
@@ -56,11 +74,41 @@
       margin-bottom: 14px; text-transform: uppercase;
     }
     h1 {
+      position: relative; display: inline-block;
       font-size: clamp(44px, 9vw, 76px); font-weight: 700; letter-spacing: 6px;
       line-height: 1; margin-bottom: 14px;
       text-shadow: 0 0 40px #ff003c44, 0 0 80px #ff003c1a;
     }
     h1 .accent { color: var(--magenta); }
+    /* [신규] 로고 글리치 버스트 — clip-path 슬라이스 RGB 분리, CSS만 사용 */
+    h1::before,
+    h1::after {
+      content: attr(data-text); position: absolute; left: 0; top: 0;
+      width: 100%; height: 100%; font: inherit; letter-spacing: inherit;
+      text-align: center; white-space: nowrap;
+      background: var(--bg); clip-path: inset(50% 0 50% 0);
+      opacity: 0; pointer-events: none;
+    }
+    h1::before { color: var(--cyan); animation: glitch-slice-1 5s infinite steps(1); }
+    h1::after  { color: var(--magenta); animation: glitch-slice-2 5s infinite steps(1); animation-delay: .12s; }
+    @keyframes glitch-slice-1 {
+      0%, 89%, 100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+      90%   { opacity: .85; clip-path: inset(12% 0 64% 0); transform: translate(-4px, -1px); }
+      91%   { opacity: .85; clip-path: inset(58% 0 6% 0);  transform: translate(3px, 1px); }
+      92%   { opacity: .85; clip-path: inset(30% 0 42% 0); transform: translate(-2px, 0); }
+      93%   { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+    }
+    @keyframes glitch-slice-2 {
+      0%, 89%, 100% { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+      90%   { opacity: .8; clip-path: inset(66% 0 10% 0); transform: translate(4px, 0); }
+      91%   { opacity: .8; clip-path: inset(8% 0 70% 0);  transform: translate(-3px, 1px); }
+      92%   { opacity: .8; clip-path: inset(40% 0 34% 0); transform: translate(2px, -1px); }
+      93%   { opacity: 0; clip-path: inset(50% 0 50% 0); transform: translate(0, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      h1::before, h1::after { animation: none !important; opacity: 0 !important; }
+      .bg-scan::before { animation: none !important; opacity: 0 !important; }
+    }
     .tagline {
       font-size: clamp(13px, 3.4vw, 16px); color: #b8b8d0;
       letter-spacing: 2px; margin-bottom: 12px;
@@ -83,17 +131,31 @@
       background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
       padding: 24px 20px 20px; text-decoration: none; color: inherit;
       display: flex; flex-direction: column; min-height: 200px;
-      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      transition: transform .22s cubic-bezier(.2,.8,.3,1), border-color .22s ease, box-shadow .22s ease, background-color .22s ease;
       position: relative; overflow: hidden;
     }
     .card::before {
       content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
       background: var(--accent, var(--cyan)); opacity: .85;
+      transition: width .22s ease, opacity .22s ease, box-shadow .22s ease;
     }
+    /* [각색] 카드 호버 네온 리프트 강화 — 상승폭 확대 + 이중 글로우 + 좌측 엣지 강조 */
     .card:hover, .card:focus-visible {
-      transform: translateY(-3px); border-color: var(--accent, var(--cyan));
-      box-shadow: 0 0 22px color-mix(in srgb, var(--accent, var(--cyan)) 28%, transparent);
+      transform: translateY(-6px) scale(1.012); border-color: var(--accent, var(--cyan));
+      background-color: color-mix(in srgb, var(--accent, var(--cyan)) 6%, var(--bg2));
+      box-shadow:
+        0 0 26px color-mix(in srgb, var(--accent, var(--cyan)) 38%, transparent),
+        0 14px 34px -14px color-mix(in srgb, var(--accent, var(--cyan)) 55%, transparent),
+        inset 0 0 18px color-mix(in srgb, var(--accent, var(--cyan)) 10%, transparent);
       outline: none;
+    }
+    .card:hover::before, .card:focus-visible::before {
+      width: 4px; opacity: 1;
+      box-shadow: 0 0 12px var(--accent, var(--cyan));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card { transition: border-color .18s ease, box-shadow .18s ease; }
+      .card:hover, .card:focus-visible { transform: none; }
     }
     .card .icon { font-size: 34px; line-height: 1; margin-bottom: 12px; }
     .card .ttl {
@@ -141,13 +203,14 @@
 <body>
   <div class="bg-glow"></div>
   <div class="bg-grid"></div>
+  <div class="bg-scan" aria-hidden="true"></div>
 
   <main class="wrap">
     <section class="hero">
       <div class="label">ASHGRID 2091 · NEXUS PORTAL</div>
-      <h1>DEAD<span class="accent">_</span>NEXUS</h1>
+      <h1 data-text="DEAD_NEXUS">DEAD<span class="accent">_</span>NEXUS</h1>
       <p class="tagline">사이버펑크 <span class="hl">비대칭 시장 전쟁</span> — 레이드가 곧 주가 포지션이 된다</p>
-      <span class="stamp">SIMULATOR <b>v6.30</b> · 3-TRACK BUILD</span>
+      <span class="stamp">SIMULATOR <b>v6.38</b> · 3-TRACK BUILD</span>
     </section>
 
     <nav class="tracks" aria-label="트랙 선택">

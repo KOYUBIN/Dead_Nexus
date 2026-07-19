@@ -28,6 +28,7 @@
     heal('data/abilities.js', 'RPG_ABILITIES');
     heal('data/enemies.js', 'RPG_ENEMIES');
     heal('data/weapons.js', 'RPG_WEAPONS');
+    heal('data/gear.js', 'RPG_GEAR');
     // 미션 데이터 (메인 8 + 사이드 8 = 16) — 각 전역 마커별 개별 heal.
     heal('data/missions/ch01-first-blood.js', 'RPG_MISSION_CH01');
     heal('data/missions/ch02-insider-game.js', 'RPG_MISSION_CH02');

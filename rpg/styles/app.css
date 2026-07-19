@@ -138,8 +138,11 @@ button { font-family: inherit; cursor: pointer; }
 .board-wrap { display: flex; justify-content: center; overflow-x: auto; }
 .board { position: relative; --tile: min(15vw, 56px); }
 .tile { position: absolute; width: var(--tile); height: var(--tile); border: 1px solid #202042;
-  background: var(--tile); display: flex; align-items: center; justify-content: center; font-size: 18px; }
-.tile.alt { background: var(--tile-alt); }
+  background: var(--stile, #12122a);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.045), transparent 42%, rgba(0,0,0,0.16));
+  display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.tile.alt { background: var(--stile-alt, #16162e);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 42%, rgba(0,0,0,0.16)); }
 .tile.cover { background: var(--tile-cover); }
 .tile.cover.full { box-shadow: inset 0 0 0 3px #6b5325; }
 .tile.wall { background: #05050a; }
@@ -285,4 +288,129 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   .unit, .floater, .portrait::after { animation: none !important; transition: none !important; }
+}
+
+/* ==========================================================================
+   [과제 G — RPG 그래픽 대격변] 표시층 전용 (게임 로직·전투 수치 무변경)
+   ① 미션 무대 팔레트  ② 전투 FX  ③ 타일 질감  ④ 대화 폴리시  ⑤ 씬 전환
+   전부 transform/opacity 위주 · reduced-motion 전면 존중 · 캔버스 0 · 아트 0.
+   ========================================================================== */
+
+/* ── ① 미션 무대 팔레트 — 블록/구역별 테마 토큰 (index.html STAGE_THEME 매핑) ──
+   --sbg1/2 : 무대 배경 그라디언트 · --stile/-alt : 타일 상단면 · --sglow : 강조광. */
+.stage { --sbg1: #0a1630; --sbg2: #050a1c; --stile: #101f3e; --stile-alt: #0c1a33; --sglow: #2f7bff; }
+.stage-vanta     { --sbg1:#0a1630; --sbg2:#050a1c; --stile:#101f3e; --stile-alt:#0c1a33; --sglow:#2f7bff; } /* 금융가 심청 */
+.stage-axiom     { --sbg1:#1a0f30; --sbg2:#0b0620; --stile:#221340; --stile-alt:#1a0e33; --sglow:#a855f7; } /* 데이터 보라 */
+.stage-ironwall  { --sbg1:#2a1410; --sbg2:#160a08; --stile:#331a12; --stile-alt:#26140e; --sglow:#ff5a2a; } /* 군수 적갈 */
+.stage-helix     { --sbg1:#082018; --sbg2:#04120d; --stile:#0e2a1e; --stile-alt:#0a2018; --sglow:#1fd98a; } /* 바이오 녹 */
+.stage-carbon    { --sbg1:#241a08; --sbg2:#140e04; --stile:#2e2410; --stile-alt:#241b0c; --sglow:#e0a92e; } /* 공업 황동 */
+.stage-nexus     { --sbg1:#06202a; --sbg2:#04121a; --stile:#0a2833; --stile-alt:#081f28; --sglow:#00e5ff; } /* 메시/NEXUS 시안 */
+.stage-martial   { --sbg1:#2a1210; --sbg2:#14090a; --stile:#2a1616; --stile-alt:#201113; --sglow:#ff8a1e; } /* 계엄 경보 호박 */
+.stage-zeroday   { --sbg1:#1a0824; --sbg2:#0a0414; --stile:#1a1030; --stile-alt:#140a26; --sglow:#ff2a6a; } /* 제로데이 결전 */
+.stage-nightlife { --sbg1:#200820; --sbg2:#100410; --stile:#2a0e28; --stile-alt:#200a20; --sglow:#ff2ba8; } /* 유흥가 네온 */
+.stage-ash       { --sbg1:#16161a; --sbg2:#0a0a0c; --stile:#1c1c22; --stile-alt:#16161c; --sglow:#9aa0b0; } /* 폐허 잿빛 */
+.stage-harbor    { --sbg1:#08201e; --sbg2:#041210; --stile:#0c2a26; --stile-alt:#0a201d; --sglow:#2ad9c0; } /* 남항 청록 */
+
+/* 무대 배경 — 상단 광원 방사 그라디언트. 전투/대화 씬에 은은한 구역감. */
+.combat.stage, .dialogue.stage {
+  background: radial-gradient(130% 78% at 50% -8%, var(--sbg1) 0%, var(--sbg2) 68%, var(--bg) 100%);
+}
+/* 무대 구역 표식 (전투 상단) — 테마광 좌측 악센트 */
+.combat.stage .combat-top { border-left: 3px solid var(--sglow); padding-left: 8px; border-radius: 3px; }
+
+/* ── ③ 타일 질감 — 아이소 의사 3D (상단면 하이라이트 + 측면 음영) ── */
+.board.iso .tile {
+  background-image: linear-gradient(152deg, rgba(255,255,255,0.08) 0%, transparent 44%, rgba(0,0,0,0.26) 100%);
+}
+/* 엄폐물 입체감 — 솟은 블록 (내부 상단 하이라이트 + 하단 음영) */
+.tile.cover { box-shadow: inset 0 3px 5px rgba(255,255,255,0.09), inset 0 -7px 9px rgba(0,0,0,0.42); }
+.tile.cover.full { box-shadow: inset 0 0 0 3px #6b5325, inset 0 4px 5px rgba(255,255,255,0.12), inset 0 -8px 10px rgba(0,0,0,0.5); }
+.tile .cover-ic { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.6)); }
+/* 오브젝티브 펄스 링 — 테마광으로 맥동 (미돌파 시) */
+.tile.obj { position: absolute; }
+.tile.obj::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--sglow, var(--green)), 0 0 10px var(--sglow, var(--green));
+  clip-path: inherit; animation: objPulse 1.7s ease-in-out infinite; }
+@keyframes objPulse { 0%,100% { opacity: .35; } 50% { opacity: .95; } }
+
+/* ── ② 전투 FX ── */
+/* 히트 스파크 — 의사 파티클 (단일 ::after + 다중 box-shadow 위성점, 스케일 버스트) */
+.unit.hit .body::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px;
+  border-radius: 50%; background: #fff; margin: -1.5px 0 0 -1.5px; transform-origin: center; pointer-events: none;
+  box-shadow:
+    0 -15px 0 -0.5px var(--yellow), 0 15px 0 -0.5px var(--yellow),
+    15px 0 0 -0.5px #fff, -15px 0 0 -0.5px #fff,
+    11px -11px 0 -1px var(--yellow), -11px 11px 0 -1px var(--yellow),
+    11px 11px 0 -1px #fff, -11px -11px 0 -1px #fff;
+  animation: sparkBurst .42s ease-out forwards; }
+@keyframes sparkBurst { 0% { opacity: 0; transform: scale(.25); } 20% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
+
+/* 처치 디졸브 — 글리치 페이드 (hp<=0 유닛 위치에 잔상, 1회 재생 후 소멸) */
+.dissolve { position: absolute; width: var(--tile); height: var(--tile); display: flex; align-items: center;
+  justify-content: center; font-size: 24px; pointer-events: none; z-index: 4;
+  color: var(--magenta); animation: dissolveOut .55s steps(6, end) forwards; }
+.board.iso .dissolve { transform: translateY(-16%); }
+@keyframes dissolveOut {
+  0%   { opacity: .9; filter: none; transform: translateX(0) scale(1); }
+  20%  { opacity: .8; filter: hue-rotate(40deg) brightness(1.6); transform: translateX(-3px) scale(1.04); clip-path: inset(0 0 60% 0); }
+  45%  { opacity: .55; transform: translateX(3px) scale(.98); clip-path: inset(40% 0 0 0); }
+  70%  { opacity: .3; filter: brightness(2); transform: translateX(-2px) scale(.92); clip-path: inset(0 30% 0 30%); }
+  100% { opacity: 0; transform: scale(.6); }
+}
+.board.iso .dissolve { animation-name: dissolveOutIso; }
+@keyframes dissolveOutIso {
+  0%   { opacity: .9; transform: translateY(-16%) scale(1); }
+  45%  { opacity: .5; filter: brightness(1.8) hue-rotate(30deg); transform: translateY(-16%) translateX(3px) scale(.98); clip-path: inset(40% 0 0 0); }
+  100% { opacity: 0; transform: translateY(-22%) scale(.6); }
+}
+
+/* 크리티컬 화면 미진동 — 보드 2px shake (1회) */
+.board.shake { animation: boardShake .22s ease-in-out; }
+@keyframes boardShake {
+  0%,100% { transform: translate(0,0); } 20% { transform: translate(-2px,1px); }
+  40% { transform: translate(2px,-1px); } 60% { transform: translate(-2px,0); } 80% { transform: translate(1px,1px); }
+}
+
+/* 시그니처/궁극 발동 — 풀스크린 플래시 틴트 (테마광, 1회 페이드) */
+.ult-flash { position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: radial-gradient(120% 90% at 50% 50%, var(--sglow) 0%, transparent 62%);
+  mix-blend-mode: screen; animation: ultFlash .5s ease-out forwards; }
+@keyframes ultFlash { 0% { opacity: 0; } 12% { opacity: .55; } 100% { opacity: 0; } }
+
+/* ── ④ 대화 씬 폴리시 ── */
+/* 초상 네온 글로우 — 발화자 강조 (테마광 맥동) */
+.dialogue.stage .portrait { box-shadow: 0 0 18px var(--sglow), inset 0 0 12px rgba(0,0,0,0.5);
+  border-color: var(--sglow); animation: portraitGlow 2.4s ease-in-out infinite; }
+.dialogue.stage .portrait.bloc { box-shadow: 0 0 18px var(--magenta), inset 0 0 12px rgba(0,0,0,0.5); border-color: var(--magenta); }
+@keyframes portraitGlow { 0%,100% { box-shadow: 0 0 12px var(--sglow), inset 0 0 12px rgba(0,0,0,0.5); } 50% { box-shadow: 0 0 24px var(--sglow), inset 0 0 12px rgba(0,0,0,0.5); } }
+.dialogue.stage .textbox { border-color: var(--sglow); box-shadow: inset 0 0 22px rgba(0,0,0,0.35); }
+/* 선택지 호버/게이트 연출 강화 */
+.choice { transition: border-color .14s, transform .1s, box-shadow .14s; }
+.choice:hover { border-color: var(--cyan); transform: translateX(3px); box-shadow: -3px 0 0 var(--cyan); }
+.choice.gate { animation: gateShimmer 2.6s ease-in-out infinite; }
+@keyframes gateShimmer { 0%,100% { box-shadow: -2px 0 0 rgba(24,95,165,0.4); } 50% { box-shadow: -2px 0 6px rgba(24,95,165,0.9); } }
+.choice.gray:hover { transform: none; box-shadow: none; }
+.tw-skip { font-size: 9px; letter-spacing: .5px; color: var(--text-dim); opacity: .7; margin-top: 4px; }
+
+/* ── ⑤ 씬 전환 — 페이드 + 글리치 와이프 (<300ms) ── */
+.scene-anim { animation: sceneIn .28s cubic-bezier(.4,0,.2,1); }
+@keyframes sceneIn {
+  0%   { opacity: 0; transform: translateY(8px); clip-path: inset(0 0 100% 0); }
+  40%  { opacity: 1; clip-path: inset(0 0 0 0); }
+  55%  { transform: translateX(-2px); }
+  70%  { transform: translateX(2px); }
+  100% { opacity: 1; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+}
+
+/* ── ⑥ 성능/접근성 — reduced-motion 전면 존중 ── */
+@media (prefers-reduced-motion: reduce) {
+  .tile.obj::after, .unit.hit .body::after, .dissolve, .board.shake,
+  .ult-flash, .dialogue.stage .portrait, .choice.gate, .scene-anim {
+    animation: none !important;
+  }
+  .tile.obj::after { opacity: .7; }
+  .dissolve { opacity: 0; }           /* 즉시 소멸 (연출 없이 정직하게 제거) */
+  .ult-flash { display: none; }
+  .scene-anim { opacity: 1; transform: none; clip-path: none; }
+  .choice { transition: none; }
 }

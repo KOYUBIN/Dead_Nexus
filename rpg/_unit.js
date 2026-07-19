@@ -22,6 +22,7 @@ var CL   = require('./data/classes.js');
 var AB   = require('./data/abilities.js');
 var MI   = require('./data/missions/ch01-first-blood.js');
 var EN   = require('./data/enemies.js');
+var GEAR = require('./data/gear.js');
 
 var pass = 0, fail = 0, fails = [];
 function ok(name, cond) { if (cond) { pass++; console.log('  PASS  ' + name); } else { fail++; fails.push(name); console.log('  FAIL  ' + name); } }
@@ -632,6 +633,197 @@ var _p1 = JSON.stringify(PROJ.project(3, 4, 56, { rows: 8 }, 'iso'));
 var _p2 = JSON.stringify(PROJ.project(3, 4, 56, { rows: 8 }, 'iso'));
 ok('142. project 순수성: 동일 입력 → 동일 출력 (결정론)', _p1 === _p2);
 ok('143. MODES = [square, iso] · 기본 square (seam 계약)', JSON.stringify(PROJ.MODES) === '["square","iso"]' && PROJ.MODE === 'square');
+
+// ============================================================================
+// ============================  B1 — RPG 경제 루프 실동화 (장비 상점 + 정보상)  ===
+//   장비 스탯 반영(effectiveStats 확장) · 구매 차감 · 슬롯 교체 · 클래스 제한 ·
+//   쿨다운 감소 전파 · 세이브 라운드트립/마이그레이션 · 정보상 인텔 표시 플래그.
+//   ★ 장비는 옵트인 파워: 무장비 기준 밸런스 불변(_balance.js byte 동일 별도 검증).
+// ============================================================================
+
+console.log('\n== 장비 데이터 무결 [B1 gear.js] ==');
+ok('144. gear.js = 10종 (무기 개조 4 + 사이버웨어 6)',
+  Object.keys(GEAR.ITEMS).length === 10 && GEAR.BY_SLOT.weapon.length === 4 && GEAR.BY_SLOT.cyberware.length === 6);
+ok('145. 사이버웨어 6종 = simulator v1.1.2 계승 (REFLEX/IRON_SKIN/NEURAL_JACK/MYOMER/OCULAR/MOOD)',
+  ['REFLEX_BOOSTER','IRON_SKIN','NEURAL_JACK','MYOMER_LEGS','OCULAR_IMPLANT','MOOD_CHIP'].every(function (k) { return GEAR.ITEMS[k] && GEAR.ITEMS[k].slot === 'cyberware'; }));
+// 전 품목: slot 유효 · mods 는 허용 스탯 필드만(신규 메커닉 0) · cost>0 · lineage 존재.
+var ALLOWED_MODS = { atk: 1, def: 1, spd: 1, hack: 1, mov: 1, maxHp: 1, cooldown: 1 };
+var gearShapeOk = true, gearBad = [];
+Object.keys(GEAR.ITEMS).forEach(function (k) {
+  var it = GEAR.ITEMS[k];
+  if (it.slot !== 'weapon' && it.slot !== 'cyberware') { gearShapeOk = false; gearBad.push(k + ':slot'); }
+  if (!it.cost || it.cost <= 0) { gearShapeOk = false; gearBad.push(k + ':cost'); }
+  if (!it.lineage) { gearShapeOk = false; gearBad.push(k + ':lineage'); }
+  for (var f in it.mods) { if (!ALLOWED_MODS[f]) { gearShapeOk = false; gearBad.push(k + ':mod:' + f); } }
+});
+ok('146. 전 품목 효과 = 허용 스탯 보정만(atk/def/spd/hack/mov/maxHp/cooldown) · cost>0 · 계보 태그' + (gearBad.length ? ' [' + gearBad.join(',') + ']' : ''), gearShapeOk);
+
+console.log('\n== 장비 스탯 반영 [B1 effectiveStats 확장 · karma 선례] ==');
+// 무장비 기준 불변 핀 — CIPHER 2/1/4/5/12/4 · cdReduction 0 (밸런스 불변의 근거).
+var g0 = CH.makeCharacter('CIPHER'); var e0g = CH.effectiveStats(g0);
+ok('147. 무장비 CIPHER 유효 스탯 불변 (atk2/def1/spd4/hack5/maxHp12/mov4 · cdReduction0)',
+  e0g.atk === 2 && e0g.def === 1 && e0g.spd === 4 && e0g.hack === 5 && e0g.maxHp === 12 && e0g.mov === 4 && e0g.cdReduction === 0);
+ok('148. 무장비 초기 equipment/gearOwned 스키마 (weapon/cyberware null · owned [])',
+  g0.equipment.weapon === null && g0.equipment.cyberware === null && Array.isArray(g0.gearOwned) && g0.gearOwned.length === 0);
+// SMART_LINK(atk+1) 무기 + NEURAL_JACK(hack+2, maxHp-2) 사이버 → atk3/hack7/maxHp10.
+var g1 = CH.makeCharacter('CIPHER'); g1.equipment = { weapon: 'SMART_LINK', cyberware: 'NEURAL_JACK' };
+var e1g = CH.effectiveStats(g1);
+ok('149. SMART_LINK(ATK+1)+NEURAL_JACK(HACK+2·maxHp−2) → atk3·hack7·maxHp10',
+  e1g.atk === 3 && e1g.hack === 7 && e1g.maxHp === 10);
+// MYOMER_LEGS(spd+2, mov+1): BLADE spd3→5, movFromSpd(5)=4 +1 = 5.
+var g2 = CH.makeCharacter('BLADE'); g2.equipment = { weapon: null, cyberware: 'MYOMER_LEGS' };
+var e2g = CH.effectiveStats(g2);
+ok('150. MYOMER_LEGS(SPD+2·MOV+1) BLADE → spd5·mov5 (SPD→MOV 파생 정합)', e2g.spd === 5 && e2g.mov === 5);
+// HAIR_TRIGGER(cooldown-1) → cdReduction 1.
+var g3 = CH.makeCharacter('CIPHER'); g3.equipment = { weapon: 'HAIR_TRIGGER', cyberware: null };
+ok('151. HAIR_TRIGGER(쿨다운−1) → effectiveStats.cdReduction = 1', CH.effectiveStats(g3).cdReduction === 1);
+
+console.log('\n== 쿨다운 감소 전투 전파 [B1 buildCombat → applyAttack] ==');
+// HAIR_TRIGGER 장착 → GLITCH(cd3) 사용 후 쿨다운 3−1=2. 무장비 대조 = 3.
+function glitchCd(character) {
+  var c = S.buildCombat(MI.MISSION, character, 'outro');
+  var p = S.player(c); var tgt = c.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+  p.x = tgt.x; p.y = tgt.y + 1; c.signal = SIG.STATES.DOWN; // 인접·결정론
+  var after = S.applyAttack(c, tgt.id, 'GLITCH');
+  return S.player(after).cooldowns.GLITCH;
+}
+var hgChar = CH.makeCharacter('CIPHER'); hgChar.equipment = { weapon: 'HAIR_TRIGGER', cyberware: null };
+ok('152. buildCombat cdReduction 전파 + GLITCH 쿨다운 3→2 (무장비 대조 3)',
+  glitchCd(hgChar) === 2 && glitchCd(CH.makeCharacter('CIPHER')) === 3);
+// buildCombat 이 player.cdReduction 을 실제로 실음.
+var hgCombat = S.buildCombat(MI.MISSION, hgChar, 'outro');
+ok('153. buildCombat player.cdReduction = 1 (무장비면 0)',
+  S.player(hgCombat).cdReduction === 1 && S.player(S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro')).cdReduction === 0);
+
+console.log('\n== 장비 구매 차감 · 슬롯 교체 · 소유 무료 재장착 [B1 store.buyGear] ==');
+var shop0 = S.rpgInitialState(); shop0.save.character.nuyen = 60;
+var shopBuy = S.buyGear(shop0, 'weapon', 'SMART_LINK');
+ok('154. 구매 → ₵ 차감(60−22=38) · equipment.weapon=SMART_LINK · gearOwned 기록',
+  shopBuy.save.character.nuyen === 38 && shopBuy.save.character.equipment.weapon === 'SMART_LINK' &&
+  shopBuy.save.character.gearOwned.indexOf('SMART_LINK') >= 0 && shopBuy.save.nuyen === 38);
+// 슬롯 교체: 다른 무기 구매 → 슬롯 교체(소유 2종).
+var shopSwap = S.buyGear(shopBuy, 'weapon', 'ICE_BREAKER');
+ok('155. 슬롯 교체: ICE_BREAKER 구매 → weapon 교체(₵16) · 소유 2종',
+  shopSwap.save.character.equipment.weapon === 'ICE_BREAKER' && shopSwap.save.character.nuyen === 16 &&
+  shopSwap.save.character.gearOwned.length === 2);
+// 소유 재장착 무료: SMART_LINK 재장착 → ₵ 무변동.
+var shopReeq = S.buyGear(shopSwap, 'weapon', 'SMART_LINK');
+ok('156. 소유 장비 재장착 무료 (₵ 무변동 16) · 슬롯 = SMART_LINK',
+  shopReeq.save.character.nuyen === 16 && shopReeq.save.character.equipment.weapon === 'SMART_LINK');
+// 이미 장착 중 재구매 차단.
+ok('157. 이미 장착된 장비 재선택 차단 (₵ 무변동)',
+  S.buyGear(shopReeq, 'weapon', 'SMART_LINK').banner.kind === 'blocked' &&
+  S.buyGear(shopReeq, 'weapon', 'SMART_LINK').save.character.nuyen === 16);
+
+console.log('\n== 장비 클래스 제한 · ₵ 부족 · 해제 [B1] ==');
+// MONO_EDGE (atk>=4): CIPHER 차단 / BLADE 허용. NEURAL_JACK (hack>=3): BLADE 차단 / CIPHER 허용.
+var cipherShop = S.rpgInitialState(); cipherShop.save.character.nuyen = 99;
+var bladeShop = S.rpgInitialState(); bladeShop.save.character = CH.makeCharacter('BLADE'); bladeShop.save.character.nuyen = 99;
+ok('158. classReq atk≥4: MONO_EDGE CIPHER 차단 / BLADE 허용',
+  S.buyGear(cipherShop, 'weapon', 'MONO_EDGE').banner.kind === 'blocked' &&
+  S.buyGear(bladeShop, 'weapon', 'MONO_EDGE').save.character.equipment.weapon === 'MONO_EDGE');
+ok('159. classReq hack≥3: NEURAL_JACK BLADE 차단 / CIPHER 허용',
+  S.buyGear(bladeShop, 'cyberware', 'NEURAL_JACK').banner.kind === 'blocked' &&
+  S.buyGear(cipherShop, 'cyberware', 'NEURAL_JACK').save.character.equipment.cyberware === 'NEURAL_JACK');
+// ₵ 부족 차단 (미소유 · 잔액 부족).
+var poor = S.rpgInitialState(); poor.save.character.nuyen = 5;
+var poorTry = S.buyGear(poor, 'cyberware', 'NEURAL_JACK'); // ₵42 필요
+ok('160. ₵ 부족 시 구매 차단 (₵ 무변동 5 · 미장착)',
+  poorTry.banner.kind === 'blocked' && poorTry.save.character.nuyen === 5 && poorTry.save.character.equipment.cyberware === null);
+// 해제: 슬롯 비움 · 소유 유지.
+var uneq = S.unequipGear(shopReeq, 'weapon');
+ok('161. 장비 해제 → 슬롯 null · 소유(gearOwned) 유지',
+  uneq.save.character.equipment.weapon === null && uneq.save.character.gearOwned.indexOf('SMART_LINK') >= 0);
+
+console.log('\n== 세이브 라운드트립 · 마이그레이션 (장비 경제) [B1 하위 호환] ==');
+// 라운드트립: 장비·소유·인텔 무손실.
+var rtState = S.rpgInitialState(); rtState.save.character.nuyen = 80;
+rtState = S.buyGear(rtState, 'cyberware', 'MOOD_CHIP');
+rtState = S.buyIntel(rtState, 'ch01-first-blood');
+var rtImp = SAVE.importString(SAVE.exportString(rtState.save));
+ok('162. 세이브 라운드트립: equipment/gearOwned/intel 무손실',
+  rtImp.ok && rtImp.save.character.equipment.cyberware === 'MOOD_CHIP' &&
+  rtImp.save.character.gearOwned.indexOf('MOOD_CHIP') >= 0 && rtImp.save.intel['ch01-first-blood'] === true);
+// 마이그레이션: 구세이브(장비 필드 없음) → 무장비 기본 백필(멱등).
+var legacyChar = CH.makeCharacter('CIPHER'); delete legacyChar.equipment; delete legacyChar.gearOwned;
+var legacyGear = { version: 1, character: legacyChar, flags: {}, heat: 0, heatCap: 10, missionsDone: [] };
+var legGImp = SAVE.importString(SAVE.exportString(legacyGear));
+ok('163. 구세이브 마이그레이션 → equipment{weapon:null,cyberware:null}·gearOwned[]·intel{} 백필',
+  legGImp.ok && legGImp.save.character.equipment.weapon === null && legGImp.save.character.equipment.cyberware === null &&
+  Array.isArray(legGImp.save.character.gearOwned) && typeof legGImp.save.intel === 'object');
+var legGImp2 = SAVE.importString(SAVE.exportString(legGImp.save));
+ok('164. 장비 마이그레이션 멱등 (재적용 no-op)',
+  JSON.stringify(legGImp2.save.character.equipment) === JSON.stringify(legGImp.save.character.equipment));
+
+console.log('\n== 정보상 인텔: 구매 · 표시 플래그 · 전투 수치 무변경 [B1] ==');
+var itState = S.rpgInitialState(); itState.save.character.nuyen = 20;
+var itBuy = S.buyIntel(itState, 'ch01-first-blood');
+ok('165. 인텔 구매 → ₵ 차감(20−6=14) · save.intel[ch01]=true',
+  itBuy.save.character.nuyen === 14 && itBuy.save.intel['ch01-first-blood'] === true && itBuy.save.nuyen === 14);
+ok('166. 인텔 재구매 차단 (이미 확보 · ₵ 무변동)',
+  S.buyIntel(itBuy, 'ch01-first-blood').banner.kind === 'blocked' && S.buyIntel(itBuy, 'ch01-first-blood').save.character.nuyen === 14);
+ok('167. 미해금 미션 인텔 차단 (ch03 잠김)',
+  S.buyIntel(itState, 'ch03-martial-night').banner.kind === 'blocked' && S.buyIntel(itState, 'ch03-martial-night').save.character.nuyen === 20);
+// 인텔 구매 미션 진입 → 전투 브리핑 공개 플래그 + 브리핑 패널 데이터.
+var itPlay = S.startMission(itBuy, 'ch01-first-blood');
+itPlay = S.dialogueChoose(itPlay, 0);          // intro → approach
+itPlay = S.dialogueChoose(itPlay, 0);          // 무력 돌파 → combat(intel 전파)
+var itEnemyCount = MI.MISSION.combat.enemies.length;
+ok('168. 인텔 구매 미션 전투 → combat.intel=true · 브리핑(적 배치 + 증원) 공개',
+  itPlay.combat.intel === true && !!itPlay.combat.briefing &&
+  itPlay.combat.briefing.enemies.length === itEnemyCount &&
+  itPlay.combat.briefing.reinforcement && itPlay.combat.briefing.reinforcement.name.length > 0 &&
+  itPlay.combat.briefing.threatCap === MI.MISSION.combat.threatCap);
+// 인텔 미구매 미션 진입 → 브리핑 없음(플래그 false).
+var noIt = S.startMission(S.rpgInitialState(), 'ch01-first-blood');
+noIt = S.dialogueChoose(noIt, 0); noIt = S.dialogueChoose(noIt, 0);
+ok('169. 인텔 미구매 → combat.intel=false · 브리핑 미생성', noIt.combat.intel === false && !noIt.combat.briefing);
+// ★전투 수치 무변경: 인텔 유무로 유닛 스탯/오브젝티브 동일 (정보만, 수치 무개입).
+var cWith = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro', { intel: true });
+var cNo   = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro', { intel: false });
+ok('170. 인텔 전투 수치 무변경 (유닛·오브젝티브 byte 동일 — 정보만 공개)',
+  JSON.stringify(cWith.units) === JSON.stringify(cNo.units) &&
+  JSON.stringify(cWith.objective) === JSON.stringify(cNo.objective) &&
+  JSON.stringify(cWith.threat) === JSON.stringify(cNo.threat));
+
+// ============================================================================
+// ==============  V1 — 장비 반영 밸런스 재측정 (_balance.js 장비 시나리오)  ====
+//   장비는 옵트인 파워: base(무장비)=기존 64조합 불변 · mid=클리어율 동일+여유↑ ·
+//   full=후반 챕터(ch06~08) ≥3R 유지(트리비얼화 없음). 시나리오 핀 고정(회귀 즉시 실패).
+// ============================================================================
+console.log('\n== 장비 시나리오 핀 [V1 _balance.js 확장] ==');
+// equipFor 결정론 — base 무장비 · mid 슬롯당 최저가(전 클래스 동일 · classReq 없음).
+var scnCipher = CH.makeCharacter('CIPHER'), scnBlade = CH.makeCharacter('BLADE');
+ok('171. equipFor base=무장비{null,null} · mid=SMART_LINK+MOOD_CHIP (전 클래스 동일)',
+  JSON.stringify(BAL.equipFor('base', scnCipher)) === '{"weapon":null,"cyberware":null}' &&
+  BAL.equipFor('mid', scnCipher).weapon === 'SMART_LINK' && BAL.equipFor('mid', scnCipher).cyberware === 'MOOD_CHIP' &&
+  BAL.equipFor('mid', scnBlade).weapon === 'SMART_LINK' && BAL.equipFor('mid', scnBlade).cyberware === 'MOOD_CHIP');
+// full 슬롯당 최고가 장착 가능품 — classReq(hack≥3) 존중: BLADE(hack1)는 NEURAL_JACK 불가 → IRON_SKIN.
+var fCip = BAL.equipFor('full', scnCipher), fBla = BAL.equipFor('full', scnBlade);
+ok('172. equipFor full: 최고가 · classReq 존중 (CIPHER=HAIR_TRIGGER+NEURAL_JACK / BLADE=HAIR_TRIGGER+IRON_SKIN)',
+  fCip.weapon === 'HAIR_TRIGGER' && fCip.cyberware === 'NEURAL_JACK' &&
+  fBla.weapon === 'HAIR_TRIGGER' && fBla.cyberware === 'IRON_SKIN' &&
+  BAL.equipFor('full', CH.makeCharacter('RIGGER')).cyberware === 'NEURAL_JACK' &&
+  BAL.equipFor('full', CH.makeCharacter('MOLE')).cyberware === 'NEURAL_JACK');
+// base 시나리오 = 무인자 실행 byte 동일(무장비 델타 0 → effectiveStats 불변의 근거).
+var sc0 = BAL.runEncounter('CIPHER', 'ch08-zero-day', 'objective');
+var scB = BAL.runEncounter('CIPHER', 'ch08-zero-day', 'objective', 'base');
+ok('173. base 시나리오 = 무인자 runEncounter byte 동일 (기존 64조합 불변 재확인)',
+  JSON.stringify(sc0) === JSON.stringify(scB));
+// 시나리오 매트릭스 집계 — mid 클리어율 = base(64/64) & 여유(평균종료HP) 증가.
+var aggBase = BAL.aggregateScenario(BAL.runMatrix('base'));
+var aggMid  = BAL.aggregateScenario(BAL.runMatrix('mid'));
+var aggFull = BAL.aggregateScenario(BAL.runMatrix('full'));
+ok('174. base 64/64 클리어 · trivial ≤1 (무장비 기준 밴드 재확인)',
+  aggBase.clearable === 64 && aggBase.total === 64 && aggBase.trivial <= 1 && aggBase.fail === 0);
+ok('175. mid: 클리어율 동일(64/64=base) · 여유 증가(평균종료HP mid≥base)',
+  aggMid.clearable === aggBase.clearable && aggMid.clearable === 64 && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
+// ★full 후반 챕터 트리비얼화 가드 — ch06~08 최속승리 min ≥3R & 후반 트리비얼 0 = 합격(장비 하향 불요).
+var guardFull = BAL.lateChapterGuard(BAL.runMatrix('full'));
+ok('176. full: 후반 챕터(ch06~08) ≥3R 유지 & 트리비얼 0 — 트리비얼화 없음(가드 PASS)',
+  guardFull.pass === true && guardFull.trivLate === 0 &&
+  guardFull.perCh[6].min >= 3 && guardFull.perCh[7].min >= 3 && guardFull.perCh[8].min >= 3 &&
+  aggFull.clearable === 64 && aggFull.fail === 0);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
