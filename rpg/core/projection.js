@@ -5,31 +5,67 @@
   // ──────────────────────────────────────────────────────────────────────────
   // combat/grid/ai 는 사각 논리좌표만 다룬다. 논리(x,y)→스크린 매핑은 이 seam 에만
   // 격리 → 슬라이스는 사각 탑다운으로 출하하고, Stage 3 에서 룰 무변경으로 이 파일만
-  // 아이소 투영으로 교체(docs/25 §7 Stage 3). 리액트/DOM 참조 0.
-  //   projectSquare : CSS Grid 탑다운 (기본, 슬라이스).
-  //   MODE 는 향후 'iso' 확장 지점. 지금은 'square' 고정.
+  // 아이소 투영으로 교체(docs/25 §7 Stage 3, §8). 리액트/DOM 참조 0 (순수 함수).
+  //   projectSquare : 탑다운(기존 슬라이스, 폴백 뷰).
+  //   projectIso    : 2:1 다이아몬드 아이소(기본 뷰, 섀도우런 룩). 표시층 CSS 는 clip-path.
+  // 반환 tx/ty 는 '타일 단위'(--tile 배수) 병진 → CSS 가 var(--tile) 로 실제 스케일
+  //   (반응형 유지, 라이브러리 0·캔버스 0·DOM 유지). z 는 painter 심도(뒤→앞).
   // ==========================================================================
 
-  var MODE = 'square';
+  var MODES = ['square', 'iso'];
+  var MODE = 'square'; // seam 기본값(순수 관점). 활성 뷰는 UI 가 project(...,mode) 로 명시.
 
-  // 논리 타일 (col x, row y) → CSS Grid 배치 { col, row } (1-index) + 픽셀 오프셋.
-  function projectSquare(x, y, tile) {
+  // 논리 (col x, row y) → 탑다운 배치.
+  //   tx/ty : var(--tile) 배수 병진 (반응형).  left/top/cx/cy : tile 픽셀 인자 기반.
+  function projectSquare(x, y, tile, dim) {
     return {
-      gridColumn: x + 1,
-      gridRow: y + 1,
-      left: x * tile,
-      top: y * tile,
-      cx: x * tile + tile / 2,
-      cy: y * tile + tile / 2,
+      mode: 'square',
+      tx: x, ty: y,
+      gridColumn: x + 1, gridRow: y + 1,
+      left: x * tile, top: y * tile,
+      cx: x * tile + tile / 2, cy: y * tile + tile / 2,
+      z: 5,
     };
   }
 
-  function project(x, y, tile) {
-    // seam: MODE 분기점. 아이소 스킨은 여기서만 교체.
-    return projectSquare(x, y, tile);
+  // 논리 (x,y) → 아이소 2:1 다이아몬드 (타일 폭 W=tile, 다이아 높이 H=W/2).
+  //   화면 중심:  cxT = (x−y)/2 + (rows−1)/2 ,  cyT = (x+y)/4   (타일 단위)
+  //   요소는 W×W 박스로 배치하고 표시층에서 다이아 clip → 박스 좌상단 = 중심 − (0.5,0.5)W.
+  //   음수 방지 오프셋으로 좌단(x=0,y=rows−1)이 tx=0. z-순서 = 논리 심도(x+y) painter.
+  function projectIso(x, y, tile, dim) {
+    var rows = (dim && dim.rows) || 1;
+    var tx = (x - y) * 0.5 + (rows - 1) * 0.5; // 요소 박스 좌(타일 단위)
+    var ty = (x + y) * 0.25;                    // 요소 박스 상(타일 단위)
+    return {
+      mode: 'iso',
+      tx: tx, ty: ty,
+      gridColumn: x + 1, gridRow: y + 1,
+      left: tx * tile, top: ty * tile,
+      cx: (tx + 0.5) * tile, cy: (ty + 0.5) * tile, // 다이아 중심 픽셀
+      z: 5 + x + y,
+    };
   }
 
-  var API = { MODE: MODE, project: project, projectSquare: projectSquare };
+  // seam 분기점: 아이소 스킨은 여기서만 교체. mode 미지정 시 MODE(기본 square).
+  function project(x, y, tile, dim, mode) {
+    var m = mode || MODE;
+    return m === 'iso' ? projectIso(x, y, tile, dim) : projectSquare(x, y, tile, dim);
+  }
+
+  // 보드 논리 크기(타일 단위) — 래퍼 width/height 계산용.
+  //   iso: 가로 (cols+rows)/2, 세로 (cols+rows)/4 + 0.5 (박스 여백 포함).
+  function boardSize(cols, rows, mode) {
+    if (mode === 'iso') return { w: (cols + rows) / 2, h: (cols + rows) / 4 + 0.5 };
+    return { w: cols, h: rows };
+  }
+
+  function setMode(m) { if (MODES.indexOf(m) >= 0) MODE = m; return MODE; }
+
+  var API = {
+    MODE: MODE, MODES: MODES,
+    project: project, projectSquare: projectSquare, projectIso: projectIso,
+    boardSize: boardSize, setMode: setMode,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_PROJECTION = API;
 })();

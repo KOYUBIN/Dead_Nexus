@@ -5,7 +5,9 @@
 //   Chapter 1 "First Blood"(cards/legacy/chapter-01-first-blood.md) +
 //   Chapter 2 "Insider Game"(cards/legacy/chapter-02-insider-game.md) +
 //   Chapter 3 "Martial Night"(cards/legacy/chapter-03-martial-night.md) +
-//   Chapter 4 "Price of Splice"(cards/legacy/chapter-04-price-of-splice.md) 아크를
+//   Chapter 4 "Price of Splice"(cards/legacy/chapter-04-price-of-splice.md) +
+//   Chapter 5 "Mesh Ghost"(cards/legacy/chapter-05-mesh-ghost.md) +
+//   Chapter 6 "Bloc Acquisition"(cards/legacy/chapter-06-bloc-acquisition.md) 아크를
 //   실플레이에 연결한다. euro_module / lore_module 와 동일한 배선 패턴:
 //     · <script src> 로드 + DOMContentLoaded 자가복구 heal 로더 등록(index.html)
 //     · 전역은 window 노출, 소비처는 typeof 가드로 미로드 시 무해
@@ -16,21 +18,24 @@
 //     chaptersUnlocked: number[],                    // 해금된 챕터 번호 (예: [1,2,3,4,5])
 //     chapterProgress:  { [n]: {unlockedAt} },       // 챕터별 진행 메타
 //     cityScars:        [{ bloc, kind, ts }],        // 도시 흉터 기록 (docs/22 정체성)
-//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄) | 'splice'(ch4 과잉 개조 블록) | 'mesh'(ch5 메시 고스트)
+//   }                                                //   kind: 'raid'(ch1) | 'prey'(ch2 M&A 표적) | 'martial'(ch3 계엄) | 'splice'(ch4 과잉 개조 블록) | 'mesh'(ch5 메시 고스트) | 'acquired'(ch6 완전 흡수된 블록)
 //   * 게임 로직 무변경 원칙: 이 모듈은 순수 영속·조회 계층이다. 게임 규칙에
 //     주는 유일한 영향은 단일 흉터 채널(cityScar)로, initGame 이 legacyActiveScar()를
-//     읽어 적용할 때뿐이다. Stage 2·3·4·5 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
+//     읽어 적용할 때뿐이다. Stage 2·3·4·5·6 도 같은 절제 유지 — 흉터 채널은 여전히 단 하나,
 //     kind 로 마크 대상만 갈린다:
 //       · 'raid'(ch1 레이드 최다 피격 블록)         → 다음 게임 시작 주가 -1
 //       · 'prey'(ch2 M&A 표적 블록)                 → 다음 게임 시작 주가 -1
 //       · 'martial'(ch3 계엄 발생, 특정 블록 없음)  → 다음 게임 시작 공권력 +1 (도시 전역)
 //       · 'splice'(ch4 임의 Bloc TL 4 달성 → 그 블록) → 다음 게임 시작 주가 -1 (사이버사이코시스 대가)
 //       · 'mesh'(ch5 CIPHER TL5/해킹노드3 → 종가 최저 블록) → 다음 게임 시작 주가 -1 (SIGNAL 이 가장 취약한 노드에 강림)
-//     흉터는 ch1|ch2|ch3|ch4|ch5 중 하나라도 해금돼야 활성. 우선순위 mesh > splice > martial > prey > raid
-//     (챕터 순 최신 상처가 단일 슬롯을 차지 — 기존 raid<prey<martial<splice 로 챕터 순을 따랐던 규칙의
-//      확장; ch5 mesh 가 가장 최근 챕터라 최상위. martial 은 여전히 유일한 도시 전역 흉터. -1/+1급 소규모 1회성 유지).
-//     ─ 5번째 kind 'mesh' 추가에 따른 규칙 갱신(챕터 5 선례). mesh 는 splice/prey/raid 와 동일한 블록-주가 -1 채널을 재사용
-//       (새 엔진 메커니즘 신설 없음); 대상 블록만 "메시 고스트가 강림한 종가 최저 노드"로 파생 방식이 다르다.
+//       · 'acquired'(ch6 M&A 완전 흡수된 블록)      → 다음 게임 시작 주가 -1 (로고가 지워진 피인수 블록)
+//     흉터는 ch1|ch2|ch3|ch4|ch5|ch6 중 하나라도 해금돼야 활성. 우선순위 acquired > mesh > splice > martial > prey > raid
+//     (챕터 순 최신 상처가 단일 슬롯을 차지 — 기존 mesh<splice<martial<prey<raid 로 챕터 순을 따랐던 규칙의
+//      확장; ch6 acquired 가 가장 최근 챕터라 최상위. martial 은 여전히 유일한 도시 전역 흉터. -1/+1급 소규모 1회성 유지).
+//     ─ 6번째 kind 'acquired' 추가에 따른 규칙 갱신(챕터 6 선례). acquired 는 mesh/splice/prey/raid 와 동일한 블록-주가 -1 채널을 재사용
+//       (새 엔진 메커니즘 신설 없음); 대상 블록만 "M&A 로 완전 흡수돼 NPC 로 전환된 피인수 블록"으로 파생 방식이 다르다.
+//       ch2 'prey'(단순 M&A 선언·표적 = meta.mnaCount) 와 구분: ch6 'acquired' 는 인수 완결(meta.acquisitions 기록/피인수 p.acquiredBy 마커)만 발원 —
+//       euro_completeMnaAcquisition 이 방어 실패 후 남기는 완료 신호로, 단순 선언(ch2)보다 엄격한 조건.
 // ============================================================================
 (function (glob) {
 
@@ -141,6 +146,18 @@
         '다섯 번째로 도시가 깨달은 사실 — 메시는 단순한 네트워크가 아니다. 누군가가, 혹은 무언가가, 그 안에서 살고 있다. 이 챕터부터 메시가 또 하나의 전장이 된다.',
       ],
     },
+    6: {
+      id: 6,
+      envelope: 'F',
+      title: 'Bloc Acquisition',
+      titleKo: '블록 인수',
+      unlockCond: 'Bloc 1곳 완전 흡수 (지분 51% 이상 + 이사회 3라운드 장악)',
+      story: [
+        '2092년 1월 04일, 5대 블록 중 한 곳의 로고가 도시 전역에서 사라지기 시작했다 — 건물 외벽, 광고판, 직원 유니폼, 심지어 자판기의 결제 인터페이스까지. 관료는 그것을 "브랜딩 통합 작업"이라고 불렀다.',
+        '3일 뒤, 그 블록의 전직 수장은 자신의 이름을 잊었다. 의학적 소견은 기억 시술, 가족적 소견은 그가 자발적으로 선택했다는 것 — 완벽하게 합리적인 결정이었다고.',
+        '여섯 번째로 도시가 깨달은 사실 — 블록은 죽지 않는다, 다른 블록이 될 뿐이다. 5대 블록 체제가 끝나고, 이 챕터부터 첫 번째 흡수 사건과 함께 포식 경쟁이 가속된다.',
+      ],
+    },
   };
 
   function legacyChapterMeta(n) { return CHAPTER_META[n] || null; }
@@ -216,8 +233,25 @@
     return { unlocked: true, newly: true, state: st };
   }
 
+  // 챕터 6 해금 (봉투 F). 봉투별 조건은 독립 — 챕터 1·2·3·4·5 선행 불필요.
+  //   해금 조건 원전: "Bloc 1곳 완전 흡수 (지분 51% 이상 + 이사회 3라운드 장악)".
+  //   → 엔진 신호: 이번 게임에 M&A 인수 완결이 1회 이상 발생 = euro_completeMnaAcquisition 이
+  //     방어 실패 후 남기는 완료 기록(meta.acquisitions 에 피인수 블록 push + 피인수 플레이어 p.acquiredBy 마커).
+  //     엔진 M&A 임계 51%(EURO_MNA_THRESHOLD)가 원전 "지분 51% 이상"을, 완결(방어 실패 판정)이
+  //     "이사회 장악"을 각각 대응 — 소비처(index.html)가 게임 종료 시 blocAbsorbed 로 파생.
+  //   → 챕터 2("최초 M&A 선언" = meta.mnaCount 선언 1회)와 명확히 구분: ch6 은 선언이 아니라 인수 완결만
+  //     트리거 (선언했지만 방어 성공/미완결 판이면 ch2 만 해금·ch6 미해금). 상시 카운터 신설 없음.
+  //   반환 { unlocked, newly, state }.
+  function legacyUnlockChapter6(stateObj) {
+    var st = stateObj || legacyLoad();
+    if (st.chaptersUnlocked.indexOf(6) !== -1) return { unlocked: true, newly: false, state: st };
+    st.chaptersUnlocked = st.chaptersUnlocked.concat([6]);
+    st.chapterProgress = Object.assign({}, st.chapterProgress, { 6: { unlockedAt: Date.now() } });
+    return { unlocked: true, newly: true, state: st };
+  }
+
   // 게임 종료 결과를 캠페인에 반영 (영속 저장 포함).
-  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc }
+  //   gameResult = { anyRaid, topRaidBloc, anyMna, mnaPreyBloc, martialLaw, spliceTech, spliceBloc, meshTech, meshBloc, blocAbsorbed, absorbedBloc }
   //     anyRaid     — 레이드 1회 이상 발생 → 챕터 1 해금 트리거          (Stage 1, 시그니처 불변)
   //     topRaidBloc — 최다 레이드 피해 블록 → 챕터 1 흉터(kind 'raid')   (Stage 1, 시그니처 불변)
   //     anyMna      — Bloc 공격자 M&A 선언 1회 이상 → 챕터 2 해금 트리거 (Stage 2, 옵셔널)
@@ -227,9 +261,11 @@
   //     spliceBloc  — 그 과잉 개조 블록(TL 최고·≥4) → 챕터 4 흉터(kind 'splice', 시작 주가 -1) (옵셔널)
   //     meshTech    — 이번 게임 CIPHER 가 TL 5 또는 해킹 노드 ≥3 달성 → 챕터 5 해금 트리거 (Stage 5, 옵셔널)
   //     meshBloc    — 종가 최저 블록(SIGNAL 이 강림한 취약 노드) → 챕터 5 흉터(kind 'mesh', 시작 주가 -1) (옵셔널)
-  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw/spliceTech/spliceBloc/meshTech/meshBloc 미공급(구 index.html·헤드리스)이면
+  //     blocAbsorbed— 이번 게임 M&A 인수 완결(meta.acquisitions 기록) 1회 이상 → 챕터 6 해금 트리거 (Stage 6, 옵셔널)
+  //     absorbedBloc— 완전 흡수돼 NPC 전환된 피인수 블록 → 챕터 6 흉터(kind 'acquired', 시작 주가 -1) (옵셔널)
+  //   * 하위 호환: anyMna/mnaPreyBloc/martialLaw/spliceTech/spliceBloc/meshTech/meshBloc/blocAbsorbed/absorbedBloc 미공급(구 index.html·헤드리스)이면
   //     Stage 1 과 동일 동작 (미공급 챕터는 미해금·흉터 미발원).
-  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly, chapter4Newly, chapter5Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
+  //   반환 { state, chapter1Newly, chapter2Newly, chapter3Newly, chapter4Newly, chapter5Newly, chapter6Newly }. *Newly=true 면 이번 판이 해당 챕터 해금 순간.
   function legacyRecordGame(gameResult) {
     var st = legacyLoad();
     var chapter1Newly = false;
@@ -237,6 +273,7 @@
     var chapter3Newly = false;
     var chapter4Newly = false;
     var chapter5Newly = false;
+    var chapter6Newly = false;
     if (gameResult && gameResult.anyRaid) {
       var r1 = legacyUnlockChapter1(st);
       st = r1.state;
@@ -262,17 +299,25 @@
       st = r5.state;
       chapter5Newly = r5.newly;
     }
+    if (gameResult && gameResult.blocAbsorbed) {
+      var r6 = legacyUnlockChapter6(st);
+      st = r6.state;
+      chapter6Newly = r6.newly;
+    }
     // 단일 흉터 채널 — 최신 1건만 유지 (다음 게임 시작 조건 보정의 근거). 해금 판부터 남긴다.
-    //   우선순위 mesh > splice > martial > prey > raid — 챕터 순 최신 상처가 단일 슬롯 차지
-    //   (기존 raid<prey<martial<splice 챕터 순 규칙의 확장; ch5 mesh 가 가장 최근이라 최상위).
-    //     · 챕터 5 해금 후 종가 최저 블록(meshBloc) → 그 블록 흉터(kind 'mesh', 시작 주가 -1).
+    //   우선순위 acquired > mesh > splice > martial > prey > raid — 챕터 순 최신 상처가 단일 슬롯 차지
+    //   (기존 mesh<splice<martial<prey<raid 챕터 순 규칙의 확장; ch6 acquired 가 가장 최근이라 최상위).
+    //     · 챕터 6 해금 후 M&A 완전 흡수된 블록(absorbedBloc) → 그 블록 흉터(kind 'acquired', 시작 주가 -1).
+    //     · 아니면 챕터 5 해금 후 종가 최저 블록(meshBloc) → 그 블록 흉터(kind 'mesh', 시작 주가 -1).
     //     · 아니면 챕터 4 해금 후 임의 Bloc TL 4(spliceBloc) → 그 블록 흉터(kind 'splice', 시작 주가 -1).
     //     · 아니면 챕터 3 해금 후 계엄(martialLaw) → 도시 전역 흉터(kind 'martial', 특정 블록 없음 → 시작 공권력 +1).
     //     · 아니면 챕터 2 해금 후 M&A 표적(PREY) → 그 블록 흉터(kind 'prey', 시작 주가 -1).
     //     · 아니면 챕터 1 최다 레이드 피해 블록(kind 'raid', 시작 주가 -1).
     //   게임 로직 영향은 여전히 흉터 채널 하나뿐 (kind 로 마크 대상만 갈림; -1/+1급 소규모 1회성).
     var scarBloc = null, scarKind = null;
-    if (st.chaptersUnlocked.indexOf(5) !== -1 && gameResult && gameResult.meshBloc) {
+    if (st.chaptersUnlocked.indexOf(6) !== -1 && gameResult && gameResult.absorbedBloc) {
+      scarBloc = gameResult.absorbedBloc; scarKind = 'acquired';
+    } else if (st.chaptersUnlocked.indexOf(5) !== -1 && gameResult && gameResult.meshBloc) {
       scarBloc = gameResult.meshBloc; scarKind = 'mesh';
     } else if (st.chaptersUnlocked.indexOf(4) !== -1 && gameResult && gameResult.spliceBloc) {
       scarBloc = gameResult.spliceBloc; scarKind = 'splice';
@@ -285,19 +330,19 @@
     }
     if (scarKind) st.cityScars = [{ bloc: scarBloc, kind: scarKind, ts: Date.now() }];
     legacySave(st);
-    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly, chapter4Newly: chapter4Newly, chapter5Newly: chapter5Newly };
+    return { state: st, chapter1Newly: chapter1Newly, chapter2Newly: chapter2Newly, chapter3Newly: chapter3Newly, chapter4Newly: chapter4Newly, chapter5Newly: chapter5Newly, chapter6Newly: chapter6Newly };
   }
 
   // 다음 게임 시작 시 적용할 활성 흉터 — { bloc, kind, heatDelta } 또는 null.
-  //   챕터 1·2·3·4·5 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
-  //   kind: 'raid'(ch1)·'prey'(ch2)·'splice'(ch4)·'mesh'(ch5) → bloc 시작 주가 -1 (heatDelta 0);
+  //   챕터 1·2·3·4·5·6 모두 미해금이면 항상 null (흉터 미발동) — 헤드리스에서도 안전.
+  //   kind: 'raid'(ch1)·'prey'(ch2)·'splice'(ch4)·'mesh'(ch5)·'acquired'(ch6) → bloc 시작 주가 -1 (heatDelta 0);
   //         'martial'(ch3) → bloc 없음, 시작 공권력 +heatDelta (도시 전역).
   //   kind 없는 구버전 흉터는 'raid' 로 정규화(하위 호환).
   function legacyActiveScar() {
     var st = legacyLoad();
     if (st.chaptersUnlocked.indexOf(1) === -1 && st.chaptersUnlocked.indexOf(2) === -1
         && st.chaptersUnlocked.indexOf(3) === -1 && st.chaptersUnlocked.indexOf(4) === -1
-        && st.chaptersUnlocked.indexOf(5) === -1) return null;
+        && st.chaptersUnlocked.indexOf(5) === -1 && st.chaptersUnlocked.indexOf(6) === -1) return null;
     if (!st.cityScars || !st.cityScars.length) return null;
     var last = st.cityScars[st.cityScars.length - 1];
     if (!last) return null;
@@ -315,6 +360,7 @@
   glob.legacyUnlockChapter3 = legacyUnlockChapter3;
   glob.legacyUnlockChapter4 = legacyUnlockChapter4;
   glob.legacyUnlockChapter5 = legacyUnlockChapter5;
+  glob.legacyUnlockChapter6 = legacyUnlockChapter6;
   glob.legacyRecordGame = legacyRecordGame;
   glob.legacyActiveScar = legacyActiveScar;
   glob.legacyChapterMeta = legacyChapterMeta;
