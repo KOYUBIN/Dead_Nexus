@@ -1,13 +1,21 @@
 # DEAD NEXUS — RPG 모드 (GHOSTGRID / hybrid-scene)
 
-**정본 스펙**: `docs/25-rpg-mode.md` (심사 만장일치 확정 아키텍처 + 이식요소 G1~G11).
-이 디렉토리는 **Stage 1 수직 슬라이스 + Stage 2 대화 심화·전투 텍스처** — 챕터 1 "First Blood"를
-CIPHER(해킹)·BLADE(근접) 두 빌드로 다르게 완주한다.
+**정본 스펙**: `docs/25-rpg-mode.md` (심사 만장일치 확정 아키텍처 + 이식요소 G1~G11, §7 로드맵
+Stage 1~3 전부 완료 현행화).
+이 디렉토리는 **Stage 1~3 전부 완료**(v6.29~v6.40) — 챕터 1~8 + 사이드 8종(총 16미션)을
+CIPHER(해킹)·BLADE(근접)·RIGGER(설치)·MOLE(위장) 4클래스로 다르게 완주하고, 챕터 8 클리어 시
+4엔딩 + New Game+(회차 플레이)로 이어진다.
 
-**Stage 2 추가**: BLADE 근접 로스터(cards/ghost/blade.md 계승) · 시그널 다이 4상태(🔵UP/🔴DOWN/
+**Stage 2 추가** (v6.32): BLADE 근접 로스터(cards/ghost/blade.md 계승) · 시그널 다이 4상태(🔵UP/🔴DOWN/
 ⚡SURGE/⚫BLACKOUT) · 위협/노출 게이지 실동(임계 시 증원 → 페이싱 변화, G10) · 다중 대화 노드·
 분기 영속(추출 방식·영웅/유령 flag가 허브 결과 패널에 반영) · 상성 매트릭스 6종 표시 · 전투 juice(피격
 플래시·부유 텍스트·게이지 연출).
+
+**Stage 3 추가** (v6.33~v6.40, docs/25 §7 각주에 계획 대비 이탈·초과분 상술): 미션 1→**16종**(메인
+챕터 1~8 + 사이드 8종, 미션 보드 UI, v6.33) · 클래스 2→**4종**(RIGGER·MOLE 추가, v6.34, 로드맵
+미기술 확장) · 밸런스 하네스 64조합 전수 측정·보정(v6.35) · `projection.js` seam 아이소메트릭 뷰
+스킨(룰 무변경 증명, v6.36) · 장비 상점 10종 + 정보상 경제 루프(v6.38, §8 Non-goal 대비 부분 해소) ·
+4엔딩(🏙️/🔥/🕊️/💀) + New Game+(v6.40).
 
 > RPG 모드는 세계관·인물·lore만 공유하고 룰은 독립한다. `simulator/v0.5`·`sim-harness`·
 > `sim-e2e`의 어떤 파일도 수정하지 않는 **신규 트랙**이다 (vendor·lore는 이 디렉토리로 복제).
@@ -21,11 +29,14 @@ CIPHER(해킹)·BLADE(근접) 두 빌드로 다르게 완주한다.
 ## 검증
 
 ```
-node rpg/_unit.js          # 순수 로직 유닛 테스트 170건 (Stage 1: 1~46 · Stage 2: 47~76 ·
-                           #   48차 로스터: ~123 · 51차 밸런스 하네스 스모크/핀: 124~143 ·
-                           #   B1 경제 루프(장비 상점·정보상): 144~170)
-node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (16/16)
-node rpg/_balance.js       # 전투 밸런스 매트릭스 (4클래스 × 16미션 × 2정책) — 아래 §밸런스 하네스
+node rpg/_unit.js          # 순수 로직 유닛 테스트 200건 (Stage 1: 1~46 · Stage 2: 47~76 ·
+                           #   46~47차 미션 16종 체제: 77~97 · 48차 4클래스 로스터: 98~123 ·
+                           #   51차 밸런스 하네스 스모크/핀: 124~143(140~143 아이소 projection seam) ·
+                           #   55차 B1 경제 루프(장비 상점·정보상): 144~170 ·
+                           #   55차 장비 밸런스 게이트(base/mid/full 64/64): 171~176 ·
+                           #   57차 4엔딩+New Game+: 177~200)
+node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (16/16, 16개 파일)
+node rpg/_balance.js       # 전투 밸런스 매트릭스 (4클래스 × 16미션 × 2정책 = 64조합) — 아래 §밸런스 하네스
                            #   ★ 장비는 옵트인 파워 → 무장비 기준 매트릭스는 B1 전후 byte 동일
 ```
 
@@ -65,9 +76,9 @@ node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 
 | 층 | 파일 | 순도 |
 |---|---|---|
 | `core/` | `loader.js`(heal 로더 G11) · `projection.js`(좌표→스크린 seam G1) | 순수/DOM(loader만) |
-| `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(B1 장비 상점) + `missions/ch01-first-blood` | 순수 리터럴 (DOM/리액트 0) |
+| `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(장비 10종, B1) + `missions/`(ch01~ch08 + side-01~08, 16개) | 순수 리터럴 (DOM/리액트 0) |
 | `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
-| `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) | 순수 함수 |
+| `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) · `ending`(4엔딩 판정·에필로그·New Game+, 57차) | 순수 함수 |
 | `state/` | `store`(리듀서+전투 오케스트레이션) · `save`(localStorage+base64 export/import G11) | 순수 로직 |
 | `lore/` | `lore_module.snapshot.js`(read-only 벤더링 G3) · `lore-adapter.js`(`window.RPG_LORE` 유일 seam) | 어댑터 |
 | `ui` | `index.html`의 단일 `text/babel` 블록 (App/Hub/Dialogue/Combat/Sheet/SaveMenu) | JSX (트랜스파일 표면 한정 G4) |
@@ -84,7 +95,12 @@ node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 
 `data/missions/ch01-first-blood.js`의 `approach` 노드가 3출구를 연다:
 1. **무력 돌파** → VANTA 서버룸 전투 (Drone×2 + Corp Security + ICE Node, 서버랙 오브젝티브).
 2. **`[HACK 4]` 우회** → CIPHER HACK5로 잠금 개방 → 전투 **완전 제거**, 잠입 추출(대체 결과).
-3. **`[VANTA 태그]`** → 슬라이스 CIPHER로는 잠김(회색) — 미래 빌드 축 광고.
+3. **`[VANTA 태그]`** → 슬라이스 CIPHER로는 잠김(회색) — 미래 빌드 축 광고(48차 RIGGER/MOLE 편입 이후
+   `[VANTA 태그]` 계열 인물태그 게이트는 MOLE 위장 신분으로 통과 가능해짐).
+
+4클래스 편입(v6.34) 이후 챕터 1을 완주하는 경로가 4가지로 갈린다 — CIPHER 해킹 우회 / BLADE 강습 /
+RIGGER 전투 돌파(DEF4 활용) / MOLE 무전투 위장 침투(인물태그 게이트 자연 통과) — Playwright로 4경로
+전부 실증됨(v6.34).
 
 ## UI 인라인 결정 (정직 보고)
 
