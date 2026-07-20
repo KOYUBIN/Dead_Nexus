@@ -82,6 +82,55 @@
     { id: 'side-07-server-zero',      kind: 'side', chapter: null, order: 18,
       global: 'RPG_MISSION_SIDE07_SERVER_ZERO', module: '../data/missions/side-07-server-zero.js',
       unlock: { missionsDone: ['ch06-bloc-acquisition'] } },
+
+    // ── [61차] ACT 2 보드 (kind 'act2' — boardState 별도 그룹) ──
+    //   a2-00 프레이밍 = 엔딩 무관, ch08 완주만으로 해금(Act2 도입 · SILK 의뢰인 허브).
+    //   62차에서 엔딩 게이트 갈래 8 + 클래스 사이드 4가 이 kind 로 추가 등록된다.
+    { id: 'a2-00-framing',            kind: 'act2', chapter: null, order: 20, branch: 'framing',
+      global: 'RPG_MISSION_A2_00_FRAMING', module: '../data/missions/a2-00-framing.js',
+      unlock: { missionsDone: ['ch08-zero-day'] } },
+
+    // ── [62차] ACT 2 4갈래 메인 8 (kind 'act2' · 엔딩 게이트) ──
+    //   갈래 1번 = ch08 완주 + 해당 엔딩 열람(endingSeen). 갈래 2번 = + 직전 미션 체인.
+    //   endingSeen 은 회차(NG+) 누적 → 다른 엔딩 플레이로 타 갈래 개방(회차 완성 설계). branch=A/B/C/D.
+    { id: 'a2-a1-crown-breach',    kind: 'act2', chapter: null, order: 21, branch: 'A',
+      global: 'RPG_MISSION_A2_A1_CROWN_BREACH', module: '../data/missions/a2-a1-crown-breach.js',
+      unlock: { missionsDone: ['ch08-zero-day'], endingSeen: ['corporate-eternal'] } },
+    { id: 'a2-a2-crown-throne',    kind: 'act2', chapter: null, order: 22, branch: 'A',
+      global: 'RPG_MISSION_A2_A2_CROWN_THRONE', module: '../data/missions/a2-a2-crown-throne.js',
+      unlock: { missionsDone: ['ch08-zero-day', 'a2-a1-crown-breach'], endingSeen: ['corporate-eternal'] } },
+    { id: 'a2-b1-barricade',       kind: 'act2', chapter: null, order: 23, branch: 'B',
+      global: 'RPG_MISSION_A2_B1_BARRICADE', module: '../data/missions/a2-b1-barricade.js',
+      unlock: { missionsDone: ['ch08-zero-day'], endingSeen: ['street-rising'] } },
+    { id: 'a2-b2-freeport',        kind: 'act2', chapter: null, order: 24, branch: 'B',
+      global: 'RPG_MISSION_A2_B2_FREEPORT', module: '../data/missions/a2-b2-freeport.js',
+      unlock: { missionsDone: ['ch08-zero-day', 'a2-b1-barricade'], endingSeen: ['street-rising'] } },
+    { id: 'a2-c1-first-contact',   kind: 'act2', chapter: null, order: 25, branch: 'C',
+      global: 'RPG_MISSION_A2_C1_FIRST_CONTACT', module: '../data/missions/a2-c1-first-contact.js',
+      unlock: { missionsDone: ['ch08-zero-day'], endingSeen: ['nexus-reborn'] } },
+    { id: 'a2-c2-signal-war',      kind: 'act2', chapter: null, order: 26, branch: 'C',
+      global: 'RPG_MISSION_A2_C2_SIGNAL_WAR', module: '../data/missions/a2-c2-signal-war.js',
+      unlock: { missionsDone: ['ch08-zero-day', 'a2-c1-first-contact'], endingSeen: ['nexus-reborn'] } },
+    { id: 'a2-d1-scavenge',        kind: 'act2', chapter: null, order: 27, branch: 'D',
+      global: 'RPG_MISSION_A2_D1_SCAVENGE', module: '../data/missions/a2-d1-scavenge.js',
+      unlock: { missionsDone: ['ch08-zero-day'], endingSeen: ['dead-nexus'] } },
+    { id: 'a2-d2-last-signal',     kind: 'act2', chapter: null, order: 28, branch: 'D',
+      global: 'RPG_MISSION_A2_D2_LAST_SIGNAL', module: '../data/missions/a2-d2-last-signal.js',
+      unlock: { missionsDone: ['ch08-zero-day', 'a2-d1-scavenge'], endingSeen: ['dead-nexus'] } },
+
+    // ── [62차] ACT 2 클래스 전용 사이드 4 (kind 'act2' · classKey 게이트 · branch 'class') ──
+    { id: 'a2-side-cipher-static',  kind: 'act2', chapter: null, order: 29, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_CIPHER_STATIC', module: '../data/missions/a2-side-cipher-static.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'CIPHER' } },
+    { id: 'a2-side-blade-vendetta', kind: 'act2', chapter: null, order: 30, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_BLADE_VENDETTA', module: '../data/missions/a2-side-blade-vendetta.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'BLADE' } },
+    { id: 'a2-side-rigger-build',   kind: 'act2', chapter: null, order: 31, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_RIGGER_BUILD', module: '../data/missions/a2-side-rigger-build.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'RIGGER' } },
+    { id: 'a2-side-mole-whoami',    kind: 'act2', chapter: null, order: 32, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_MOLE_WHOAMI', module: '../data/missions/a2-side-mole-whoami.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'MOLE' } },
   ];
 
   var BY_ID = {};
@@ -116,6 +165,18 @@
     if (u.flagsSet) for (i = 0; i < u.flagsSet.length; i++) {
       if (!flags[u.flagsSet[i]]) return false;
     }
+    // [61차 §3.2] 엔딩 게이트 — endings.seen[key] > 0 (열람 1회 이상, AND). 회차(NG+)를 넘어
+    //   누적되는 endings 에 걸어 Act2 갈래가 회차 플레이로 개방(flag 리셋 무관).
+    if (u.endingSeen) {
+      var seen = (save && save.endings && save.endings.seen) || {};
+      for (i = 0; i < u.endingSeen.length; i++) if (!(seen[u.endingSeen[i]] > 0)) return false;
+    }
+    // [61차 §3.2] 클래스 게이트 — 현재 편성 클래스가 want 목록에 있어야 노출(클래스 사이드).
+    if (u.classKey) {
+      var ck = (save && save.character && save.character.classKey);
+      var want = [].concat(u.classKey);
+      if (want.indexOf(ck) < 0) return false;
+    }
     return true;
   }
 
@@ -136,9 +197,24 @@
       var fl = u.flagsSet.map(function (f) { return FLAG_HINT[f] || ('플래그 ' + f); });
       parts.push(fl.join(' · '));
     }
+    // [61차 §3.2] 엔딩 게이트 힌트 — 잠금 Act2 갈래는 "??? (엔딩 X 필요)" 서술.
+    if (u.endingSeen) {
+      var eh = u.endingSeen.map(function (k) { return (ENDING_HINT[k] || k) + ' 엔딩 열람'; });
+      parts.push(eh.join(' · '));
+    }
+    // [61차 §3.2] 클래스 게이트 힌트 — 해당 클래스로 편성 시 노출(클래스 사이드).
+    if (u.classKey) {
+      var cks = [].concat(u.classKey);
+      parts.push(cks.join('/') + ' 클래스 편성');
+    }
     return '요구: ' + parts.join(' + ');
   }
   var FLAG_HINT = { heroChoice: '영웅/유령 선택 완료' };
+  // [61차] 엔딩 키 → 한글 라벨(잠금 카드 힌트). ending.js ENDINGS 와 정합.
+  var ENDING_HINT = {
+    'corporate-eternal': '🏙️ CORPORATE ETERNAL', 'street-rising': '🔥 STREET RISING',
+    'nexus-reborn': '🕊️ NEXUS REBORN', 'dead-nexus': '💀 DEAD NEXUS',
+  };
   function shortTitle(entry) {
     if (entry.chapter) return 'CH' + (entry.chapter < 10 ? '0' + entry.chapter : entry.chapter);
     return entry.id;
@@ -146,19 +222,22 @@
 
   // 진행 상태 요약 — 허브/유닛 테스트가 소비. mains/sides 정렬 + 해금·클리어 플래그.
   function boardState(save) {
-    var mains = [], sides = [];
+    var mains = [], sides = [], act2 = [];
     for (var i = 0; i < MISSIONS.length; i++) {
       var e = MISSIONS[i];
-      var row = { id: e.id, kind: e.kind, chapter: e.chapter, order: e.order,
+      var row = { id: e.id, kind: e.kind, chapter: e.chapter, order: e.order, branch: e.branch || null,
         unlocked: isUnlocked(e, save), cleared: isCleared(e.id, save), hint: unlockHint(e) };
-      if (e.kind === 'main') mains.push(row); else sides.push(row);
+      if (e.kind === 'main') mains.push(row);
+      else if (e.kind === 'act2') act2.push(row);   // [61차] Act2 별도 그룹(보드 ACT 2 섹션)
+      else sides.push(row);
     }
     mains.sort(function (a, b) { return a.order - b.order; });
     sides.sort(function (a, b) { return a.order - b.order; });
+    act2.sort(function (a, b) { return a.order - b.order; });
     // 현재 진행 챕터 = 첫 미클리어 메인 (강조용).
     var current = null;
     for (var j = 0; j < mains.length; j++) { if (mains[j].unlocked && !mains[j].cleared) { current = mains[j].id; break; } }
-    return { mains: mains, sides: sides, current: current };
+    return { mains: mains, sides: sides, act2: act2, current: current };
   }
 
   var HUB_NODES = [

@@ -74,6 +74,20 @@
 <script src="./data/missions/side-06-rival-duel.js"></script>
 <script src="./data/missions/side-07-server-zero.js"></script>
 <script src="./data/missions/side-08-harbor-run.js"></script>
+<script src="./data/missions/a2-00-framing.js"></script>
+<!-- [62차] ACT 2 본편 — 4갈래 메인 8 (2연전) + 클래스 사이드 4 -->
+<script src="./data/missions/a2-a1-crown-breach.js"></script>
+<script src="./data/missions/a2-a2-crown-throne.js"></script>
+<script src="./data/missions/a2-b1-barricade.js"></script>
+<script src="./data/missions/a2-b2-freeport.js"></script>
+<script src="./data/missions/a2-c1-first-contact.js"></script>
+<script src="./data/missions/a2-c2-signal-war.js"></script>
+<script src="./data/missions/a2-d1-scavenge.js"></script>
+<script src="./data/missions/a2-d2-last-signal.js"></script>
+<script src="./data/missions/a2-side-cipher-static.js"></script>
+<script src="./data/missions/a2-side-blade-vendetta.js"></script>
+<script src="./data/missions/a2-side-rigger-build.js"></script>
+<script src="./data/missions/a2-side-mole-whoami.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -119,6 +133,37 @@ function classTagline(k) { return CLASS_TAGLINE[k] || '운영자'; }
 function classKitLabel(k) { return CLASS_KITLABEL[k] || '히어로 킷'; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// [59차] 오픈소스 픽셀 스프라이트 (Kenney 1-Bit Pack · CC0 · rpg/assets/LICENSE.md).
+//   표시층 전용 — 룰/밸런스 무관. 모노크롬 흰색 → CSS 진영색 글로우로 염색.
+//   키 매핑: 플레이어=classKey, 적=enemy key. 미매핑/로드실패 시 조용히 이모지 폴백.
+const SPRITE_BASE = './assets/sprites/';
+const CLASS_SPRITE = { CIPHER: 'px-cipher', BLADE: 'px-blade', RIGGER: 'px-rigger', MOLE: 'px-mole' };
+const ENEMY_SPRITE = {
+  VANTA_DRONE: 'px-drone', AXIOM_DRONE: 'px-drone', POLICE_DRONE: 'px-drone', CARBON_DRONE: 'px-drone',
+  VANTA_SECURITY: 'px-guard', POLICE_OFFICER: 'px-guard', CARBON_GUARD: 'px-guard', HELIX_MEDIC: 'px-guard', AXIOM_ANALYST: 'px-guard',
+  VANTA_ELITE: 'px-elite', IRONWALL_ENFORCER: 'px-elite', RIOT_ENFORCER: 'px-elite',
+  IRONWALL_TURRET: 'px-turret', SPLICE_HOUND: 'px-hound', MESH_WISP: 'px-wisp', GANG_THUG: 'px-thug',
+  ICE_NODE: 'px-ice', SIGNAL_ICE: 'px-ice',
+  RIVAL_GHOST: 'px-boss', KAI_MORROW: 'px-boss', MARCUS_CRANE: 'px-boss', VERA_ASHTON: 'px-boss', NEXUS_WARDEN: 'px-boss',
+  // [61차 Act2] MERIDIAN 외부 세력 + lore 보스 — 기존 17장 재활용(신규 다운로드 0).
+  MERIDIAN_VANGUARD: 'px-elite', MERIDIAN_STALKER: 'px-wisp', MERIDIAN_DRONE: 'px-drone',
+  MERIDIAN_WARLORD: 'px-boss', WARD_NODE: 'px-ice', ELIA_VOSS: 'px-boss', HARLAN_VOSS: 'px-boss',
+};
+function spriteForUnit(u) {
+  if (!u) return null;
+  if (u.side === 'player') return CLASS_SPRITE[u.classKey] || null;
+  return ENEMY_SPRITE[u.key] || null;
+}
+// 스프라이트 <img> + 이모지 폴백. onError(404·file://·오프라인 안전판) 시 이모지 렌더.
+function Glyph({ sprite, emoji, cls }) {
+  const [broken, setBroken] = useState(false);
+  if (sprite && !broken) {
+    return <img className={'uspr' + (cls ? ' ' + cls : '')} src={SPRITE_BASE + sprite + '.png'}
+      alt="" draggable={false} onError={() => setBroken(true)} />;
+  }
+  return <span className={'uemoji' + (cls ? ' ' + cls : '')}>{emoji}</span>;
+}
+
 // [과제 G] 미션 무대 팔레트 — 표시 전용 레지스트리 (미션 id → 무대 테마 키).
 //  블록/구역 기반: VANTA 금융가·AXIOM 데이터·IRONWALL 군수·HELIX 바이오·CARBON 공업·NEXUS/메시.
 //  게임 로직/전투 수치 무관 — CSS .stage-<키> 토큰만 선택 (styles/app.css §①).
@@ -139,6 +184,20 @@ const STAGE_THEME = {
   'side-06-rival-duel': 'ash',       // 폐허 라이벌 결투 — 잿빛
   'side-07-server-zero': 'nexus',    // NEXUS 지하 서버팜 — 시안
   'side-08-harbor-run': 'harbor',    // 남항 검문 게이트 — 청록
+  // [62차] ACT 2 — 미사용 무대 팔레트 재활용(표시 전용).
+  'a2-00-framing': 'nexus',              // SILK 의뢰인 허브 — 시안
+  'a2-a1-crown-breach': 'axiom',         // 넥서스 상층 의장실 — 데이터 보라
+  'a2-a2-crown-throne': 'axiom',         // 조세·데이터 볼트 — 보라
+  'a2-b1-barricade': 'ash',              // 다운타운 폐허 바리케이드 — 잿빛
+  'a2-b2-freeport': 'harbor',            // 비통제구역 항구 — 청록
+  'a2-c1-first-contact': 'nexus',        // 재건된 넥서스 관제층 — 시안
+  'a2-c2-signal-war': 'nexus',           // 메시 심층 레이어 — 시안
+  'a2-d1-scavenge': 'zeroday',           // 무너진 넥서스 잔해 — 결전 마젠타
+  'a2-d2-last-signal': 'ash',            // 접경 무법지대 — 잿빛
+  'a2-side-cipher-static': 'vanta',      // VANTA 심층 아카이브 — 심청
+  'a2-side-blade-vendetta': 'ironwall',  // IRONWALL 무기고 심부 — 군수 적갈
+  'a2-side-rigger-build': 'carbon',      // CARBON E6 공장 심부 — 황동
+  'a2-side-mole-whoami': 'helix',        // HELIX G6 HQ 양성시설 — 바이오 녹
 };
 function stageTheme(id) { return (id && STAGE_THEME[id]) || 'vanta'; }
 
@@ -243,16 +302,32 @@ function Roster({ state, dispatch }) {
   );
 }
 
+// [62차] ACT 2 갈래 그룹 메타 — 엔딩 아이콘 + 잠금 게이트 힌트(보드 4갈래 표시).
+//   endingSeen 게이트로 갈래 개방(NG+ 누적) · class 그룹은 classKey 게이트.
+const ACT2_BRANCHES = [
+  { key: 'framing', icon: '🌆', label: 'PROLOGUE — FRAMING (SILK 의뢰인 허브)', gateHint: 'CH08 완주 필요' },
+  { key: 'A', icon: '🏙️', label: 'IRON CROWN (기업 영속)',   gateHint: '🏙️ CORPORATE ETERNAL 엔딩 열람 필요' },
+  { key: 'B', icon: '🔥', label: 'ASH REPUBLIC (거리 봉기)',  gateHint: '🔥 STREET RISING 엔딩 열람 필요' },
+  { key: 'C', icon: '🕊️', label: 'COUNCIL OF ASH (넥서스 재건)', gateHint: '🕊️ NEXUS REBORN 엔딩 열람 필요' },
+  { key: 'D', icon: '💀', label: 'RUIN SURVIVORS (폐허 생존)', gateHint: '💀 DEAD NEXUS 엔딩 열람 필요' },
+  { key: 'class', icon: '🧬', label: '클래스 전용 사이드', gateHint: '해당 클래스로 편성 필요' },
+];
+
 // ── 미션 카드 (메인 체인 / 사이드 보드 공용) ──
-//  row = { id, kind, chapter, unlocked, cleared, hint }  (CAMP.boardState 산출)
+//  row = { id, kind, chapter, branch, unlocked, cleared, hint }  (CAMP.boardState 산출)
 function MissionCard({ row, current, dispatch }) {
   const entry = CAMP.missionById(row.id);
   const isCurrent = row.id === current;
   // 미해금: 메인은 챕터 번호 + 힌트, 사이드는 ??? + 힌트 (미리보기 은폐).
   if (!row.unlocked) {
+    // 미해금 표기: 메인=챕터 번호, 사이드=???, act2=??? (엔딩/클래스 게이트 힌트).
+    let lockedTtl;
+    if (row.kind === 'side') lockedTtl = '??? — 미해금 계약';
+    else if (row.kind === 'act2') lockedTtl = '??? — ACT 2 미개방';
+    else lockedTtl = chLabel(entry);
     return (
       <div className={'mcard locked ' + row.kind}>
-        <span className="mc-ttl">🔒 {row.kind === 'side' ? '??? — 미해금 계약' : chLabel(entry)}</span>
+        <span className="mc-ttl">🔒 {lockedTtl}</span>
         <span className="mc-hint">{row.hint}</span>
       </div>
     );
@@ -278,6 +353,8 @@ function MissionCard({ row, current, dispatch }) {
 function MissionBoard({ state, dispatch }) {
   const board = CAMP.boardState(state.save);
   const sideVisible = board.sides.filter(s => s.unlocked).length;
+  const act2 = board.act2 || [];
+  const act2Visible = act2.filter(a => a.unlocked).length;
   return (
     <div className="sheet mboard">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
@@ -293,6 +370,32 @@ function MissionBoard({ state, dispatch }) {
       <div className="mission-list">
         {board.sides.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
       </div>
+      {act2.length ? (
+        <React.Fragment>
+          <div className="board-sec act2-sec">🌆 ACT 2 — AFTER ZERO DAY ({act2Visible}/{act2.length} 개방){" "}
+            <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>· 제로데이 이후 · MERIDIAN 외부 위협 · 엔딩 열람으로 갈래 개방(NG+ 누적)</span>
+          </div>
+          {ACT2_BRANCHES.map(br => {
+            const rows = act2.filter(r => (r.branch || 'framing') === br.key);
+            if (!rows.length) return null;
+            const grpVisible = rows.filter(r => r.unlocked).length;
+            const allLocked = grpVisible === 0;
+            return (
+              <React.Fragment key={br.key}>
+                <div className={'board-sec act2-branch' + (allLocked ? ' locked' : '')}>
+                  {br.icon} {br.label}{" "}
+                  <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>
+                    ({grpVisible}/{rows.length}){allLocked ? ' · 🔒 ' + br.gateHint : ''}
+                  </span>
+                </div>
+                <div className="mission-list">
+                  {rows.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </React.Fragment>
+      ) : null}
     </div>
   );
 }
@@ -452,6 +555,13 @@ function Hub({ state, dispatch, openSave }) {
         <div className="lab">SIGNAL 추적 / 캠페인 위협 {threat.value}/{threat.cap} · 전투 노출은 미션 내 게이지로 실동</div>
         <div className="bar"><i style={{ width: Math.min(100, threat.value / threat.cap * 100) + '%' }} /></div>
       </div>
+      {/* [61차 §3.4] 하드 모드 토글 — NG+ 회차(runs>0)부터 노출. 켜짐 시 이후 전투의 적 스탯 +25%(hp/atk). */}
+      {(ENDING && ENDING.migrateEndings(save.endings).runs > 0) ? (
+        <button className={'btn ghost hardmode-btn' + (save.flags && save.flags.hardMode ? ' on' : '')}
+          onClick={() => dispatch({ type: 'TOGGLE_HARD_MODE' })}>
+          {save.flags && save.flags.hardMode ? '🔥 하드 모드 ON — 적 스탯 +25% (다음 전투부터)' : '🔥 하드 모드 OFF — 표준 밸런스 (탭해서 상향)'}
+        </button>
+      ) : null}
       <button className="btn ghost" onClick={openSave}>💾 세이브 / 문자열 export·import</button>
     </div>
   );
@@ -695,7 +805,8 @@ function Combat({ state, dispatch, view }) {
     const pr = PROJ.project(x, y, TILE, dim, mode);
     tiles.push(<div key={'t' + x + '_' + y} className={tileClass(x, y)} data-tile={x + ',' + y}
       style={{ left: 'calc(' + pr.tx + ' * var(--tile))', top: 'calc(' + pr.ty + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
-      {cov ? <span className="cover-ic">{cov.type === 'full' ? '▩' : '▣'}</span> : null}
+      {cov ? <span className="cover-ic"><Glyph sprite={cov.type === 'full' ? 'px-barrel' : 'px-crate'} emoji={cov.type === 'full' ? '▩' : '▣'} cls="prop-spr" /></span> : null}
+      {(c.objective.x === x && c.objective.y === y) ? <span className="obj-ic"><Glyph sprite="px-server" emoji="🖥" cls="prop-spr" /></span> : null}
       {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge">{c.objective.done ? '✔' : c.objective.threshold}</span> : null}
     </div>);
   }
@@ -703,7 +814,8 @@ function Combat({ state, dispatch, view }) {
     const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && (u.status.stealth || u.status.invuln) ? ' stealth' : '')
       + (hitTiles[u.x + ',' + u.y] ? ' hit' : '');
     return <div key={u.id} className={cls} style={posStyle(u.x, u.y)}>
-      <div className="body" title={u.name}>{u.icon}
+      <div className="body" title={u.name}>
+        <Glyph sprite={spriteForUnit(u)} emoji={u.icon} />
         <div className="hpbar"><i style={{ width: (u.hp / u.maxHp * 100) + '%' }} /></div>
       </div>
     </div>;
@@ -714,7 +826,7 @@ function Combat({ state, dispatch, view }) {
   ));
   // [G②] 처치 디졸브 — 전사(hp<=0) 유닛 위치에 글리치 페이드 잔상 (표시 전용, 유닛 배열 무변경).
   const dissolving = c.units.filter(u => u.hp <= 0).map(u => (
-    <div key={'d' + u.id} className="dissolve" style={posStyle(u.x, u.y)}>{u.icon}</div>
+    <div key={'d' + u.id} className="dissolve" style={posStyle(u.x, u.y)}><Glyph sprite={spriteForUnit(u)} emoji={u.icon} /></div>
   ));
 
   const bsz = PROJ.boardSize(c.field.cols, c.field.rows, mode);
@@ -959,6 +1071,12 @@ try {
 .mboard { gap: 6px; }
 .board-sec { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim);
   margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+.board-sec.act2-sec { color: var(--orange); border-bottom-color: var(--orange); }
+.board-sec.act2-branch { color: var(--orange); font-size: 10px; margin: 8px 0 3px; padding-left: 8px;
+  border-bottom: 1px dashed var(--border); opacity: .95; }
+.board-sec.act2-branch.locked { opacity: .55; border-bottom-style: dotted; }
+.mcard.locked.act2 { border-left: 2px solid var(--orange); opacity: .72; }
+.hardmode-btn.on { color: var(--orange); border-color: var(--orange); }
 .mission-list { display: flex; flex-direction: column; gap: 8px; }
 .mcard { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
   border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg2);

@@ -74,7 +74,11 @@
   function buildCombat(mission, character, onWin, opts) {
     var D = deps();
     var eff = D.CH.effectiveStats(character);
-    var c = mission.combat;
+    // [61차 §3.1 멀티 인카운터] opts.combat 오버라이드 — mission.encounters[key] 을 enc②로 소비.
+    //   미지정(opts 없음/opts.combat null) 시 mission.combat → 하위호환 100% 불변.
+    var c = (opts && opts.combat) || mission.combat;
+    // [61차 §3.4 하드모드] 적 스탯 스케일(hp/maxHp/atk × ceil, def 원값). 1=무변경(기본).
+    var enemyScale = (opts && opts.enemyScale) || 1;
     var kit = character.kit.slice();
     // [계승 chapter-01/blade.md · 48차 일반화] 보상 해금 시그니처(오브젝티브 차감 보너스).
     //   클래스별 해금 카드(BACKDOOR/VENDETTA/WORKSHOP/TRIPLE_AGENT)를 킷에서 일반 탐지 —
@@ -100,7 +104,7 @@
     var units = [player];
     for (var i = 0; i < c.enemies.length; i++) {
       var t = D.EN.ENEMIES[c.enemies[i].key];
-      units.push(spawnEnemy(D, t, c.enemies[i].x, c.enemies[i].y, 'e' + i));
+      units.push(spawnEnemy(D, t, c.enemies[i].x, c.enemies[i].y, 'e' + i, enemyScale));
     }
     // 첫 공격 가능 시그니처를 기본 선택(CIPHER→해킹샷, BLADE→POINT BLANK).
     var firstAtk = kit.filter(function (k) { var a = D.AB.ABILITIES[k]; return a && a.kind !== 'PASSIVE' && a.kind !== 'ULTIMATE'; })[0] || kit[0];
@@ -122,6 +126,8 @@
         reinforcement: c.reinforcement || null },
       outcome: null, onWin: onWin, log: ['전투 개시 — ' + arena + '  ' + sig1.sym + ' ' + sig1.label],
       floaters: [],
+      // [61차 §3.4] 하드모드 스케일 — 증원 스폰(accrueThreat)이 동일 배율 적용하도록 이월(1=무변경).
+      enemyScale: enemyScale,
       // [B1] 정보상 인텔 플래그 — 구매 시 전투 시작 브리핑 공개(전투 수치 무변경, 표시만).
       intel: !!(opts && opts.intel),
     };
@@ -146,11 +152,15 @@
     return { enemies: enemies, reinforcement: rfInfo, threatCap: (combat.threat && combat.threat.cap) || 0 };
   }
 
-  function spawnEnemy(D, t, x, y, id) {
+  // [61차 §3.4] scale = 하드모드 배율(기본 1). hp/maxHp/atk 만 ceil(base×scale) — def 는
+  //   원값 유지(딜 체감 우선, 스펙 권장). scale=1 이면 Math.ceil(x*1)=x → byte 불변(하위호환).
+  function spawnEnemy(D, t, x, y, id, scale) {
+    var s = scale || 1;
     return {
       id: id, side: 'enemy', key: t.key, name: t.name, icon: t.icon,
       x: x, y: y,
-      hp: t.hp, maxHp: t.hp, atk: t.atk, def: t.def, spd: t.spd, hack: t.hack,
+      hp: Math.ceil(t.hp * s), maxHp: Math.ceil(t.hp * s), atk: Math.ceil(t.atk * s),
+      def: t.def, spd: t.spd, hack: t.hack,
       mov: t.mov, ap: t.ap, maxAp: t.ap, attr: t.attr, range: t.range, ai: t.ai,
       isMachine: !!t.isMachine, physImmune: !!t.physImmune, hackOnly: !!t.hackOnly,
       status: {},
@@ -399,7 +409,7 @@
       if (t) {
         var occupied = c.units.some(function (u) { return u.hp > 0 && u.x === rf.x && u.y === rf.y; });
         if (!occupied) {
-          c.units.push(spawnEnemy(D, t, rf.x, rf.y, 'ereinf'));
+          c.units.push(spawnEnemy(D, t, rf.x, rf.y, 'ereinf', c.enemyScale || 1));
           c.log.push('★ VANTA 증원 도착 — ' + t.name + ' (' + rf.x + ',' + rf.y + ')');
           c.floaters.push({ x: rf.x, y: rf.y, text: 'REINFORCE', kind: 'debuff' });
         }
@@ -509,7 +519,12 @@
     if (eff.startCombat) {
       s.scene = 'combat';
       var intelOn = !!(s.save.intel && s.save.intel[mission.id]);
-      s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin, { intel: intelOn });
+      // [61차 §3.1] 멀티 인카운터 라우팅 — startCombat.encounter 문자열이 있으면
+      //   mission.encounters[key] 를 enc② 오버라이드로 소비(없으면 null → mission.combat, 하위호환).
+      var encCfg = (eff.startCombat.encounter && mission.encounters) ? mission.encounters[eff.startCombat.encounter] : null;
+      // [61차 §3.4] 하드모드 토글 — save.flags.hardMode 시 적 스탯 +25%(scale 1.25).
+      var scale = (s.save.flags && s.save.flags.hardMode) ? 1.25 : 1;
+      s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin, { intel: intelOn, combat: encCfg, enemyScale: scale });
       return s;
     }
     // [57차] 캠페인 완주 에필로그 — ch08 settle 이 epilogue+returnHub 를 함께 보유.
@@ -576,6 +591,16 @@
   }
 
   function hubNav(state, node) { var s = clone(state); s.hub = { node: node }; s.banner = null; return s; }
+
+  // [61차 §3.4] 하드모드 토글 — save.flags.hardMode 반전. 켜짐 시 이후 개시하는 전투의
+  //   적 스탯 +25%(hp/maxHp/atk). def 원값. 진행 중 전투에는 소급 미적용(다음 buildCombat부터).
+  function toggleHardMode(state) {
+    var s = clone(state);
+    if (!s.save.flags) s.save.flags = {};
+    s.save.flags.hardMode = !s.save.flags.hardMode;
+    s.banner = { kind: 'growth', text: '하드 모드 ' + (s.save.flags.hardMode ? 'ON — 적 스탯 +25% (다음 전투부터)' : 'OFF — 표준 밸런스') };
+    return s;
+  }
 
   // [57차] 회차 플레이 — 캠페인 진행 리셋하되 엔딩 기록(endings) 영속.
   //   신규 진행(newSave)에 이전 세이브의 endings 만 이월 → "어느 엔딩 봤는지"는 회차를 넘어 남는다.
@@ -681,6 +706,7 @@
       case 'UNEQUIP_GEAR': return unequipGear(state, action.slot);
       case 'BUY_INTEL': return buyIntel(state, action.missionId);
       case 'HUB_NAV': return hubNav(state, action.node);
+      case 'TOGGLE_HARD_MODE': return toggleHardMode(state);
       case 'EPILOGUE_CONTINUE': { var se = clone(state); se.scene = 'hub'; se.epilogue = null; se.hub = { node: 'root' }; se.banner = null; return se; }
       case 'NEW_GAME_PLUS': return newGamePlus(state);
       case 'CLEAR_BANNER': { var s7 = clone(state); s7.banner = null; return s7; }
@@ -696,7 +722,7 @@
     startMission: startMission, dialogueChoose: dialogueChoose, resolveCombat: resolveCombat,
     spendKarma: spendKarma, dialogueCtx: dialogueCtx, selectClass: selectClass,
     buyGear: buyGear, unequipGear: unequipGear, buyIntel: buyIntel,
-    newGamePlus: newGamePlus,
+    newGamePlus: newGamePlus, toggleHardMode: toggleHardMode,
     PLAYER_ID: PLAYER_ID,
     exposure: function (combat) { return computeExposure(deps(), combat); },
   };
