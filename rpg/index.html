@@ -119,6 +119,34 @@ function classTagline(k) { return CLASS_TAGLINE[k] || '운영자'; }
 function classKitLabel(k) { return CLASS_KITLABEL[k] || '히어로 킷'; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// [59차] 오픈소스 픽셀 스프라이트 (Kenney 1-Bit Pack · CC0 · rpg/assets/LICENSE.md).
+//   표시층 전용 — 룰/밸런스 무관. 모노크롬 흰색 → CSS 진영색 글로우로 염색.
+//   키 매핑: 플레이어=classKey, 적=enemy key. 미매핑/로드실패 시 조용히 이모지 폴백.
+const SPRITE_BASE = './assets/sprites/';
+const CLASS_SPRITE = { CIPHER: 'px-cipher', BLADE: 'px-blade', RIGGER: 'px-rigger', MOLE: 'px-mole' };
+const ENEMY_SPRITE = {
+  VANTA_DRONE: 'px-drone', AXIOM_DRONE: 'px-drone', POLICE_DRONE: 'px-drone', CARBON_DRONE: 'px-drone',
+  VANTA_SECURITY: 'px-guard', POLICE_OFFICER: 'px-guard', CARBON_GUARD: 'px-guard', HELIX_MEDIC: 'px-guard', AXIOM_ANALYST: 'px-guard',
+  VANTA_ELITE: 'px-elite', IRONWALL_ENFORCER: 'px-elite', RIOT_ENFORCER: 'px-elite',
+  IRONWALL_TURRET: 'px-turret', SPLICE_HOUND: 'px-hound', MESH_WISP: 'px-wisp', GANG_THUG: 'px-thug',
+  ICE_NODE: 'px-ice', SIGNAL_ICE: 'px-ice',
+  RIVAL_GHOST: 'px-boss', KAI_MORROW: 'px-boss', MARCUS_CRANE: 'px-boss', VERA_ASHTON: 'px-boss', NEXUS_WARDEN: 'px-boss',
+};
+function spriteForUnit(u) {
+  if (!u) return null;
+  if (u.side === 'player') return CLASS_SPRITE[u.classKey] || null;
+  return ENEMY_SPRITE[u.key] || null;
+}
+// 스프라이트 <img> + 이모지 폴백. onError(404·file://·오프라인 안전판) 시 이모지 렌더.
+function Glyph({ sprite, emoji, cls }) {
+  const [broken, setBroken] = useState(false);
+  if (sprite && !broken) {
+    return <img className={'uspr' + (cls ? ' ' + cls : '')} src={SPRITE_BASE + sprite + '.png'}
+      alt="" draggable={false} onError={() => setBroken(true)} />;
+  }
+  return <span className={'uemoji' + (cls ? ' ' + cls : '')}>{emoji}</span>;
+}
+
 // [과제 G] 미션 무대 팔레트 — 표시 전용 레지스트리 (미션 id → 무대 테마 키).
 //  블록/구역 기반: VANTA 금융가·AXIOM 데이터·IRONWALL 군수·HELIX 바이오·CARBON 공업·NEXUS/메시.
 //  게임 로직/전투 수치 무관 — CSS .stage-<키> 토큰만 선택 (styles/app.css §①).
@@ -695,7 +723,8 @@ function Combat({ state, dispatch, view }) {
     const pr = PROJ.project(x, y, TILE, dim, mode);
     tiles.push(<div key={'t' + x + '_' + y} className={tileClass(x, y)} data-tile={x + ',' + y}
       style={{ left: 'calc(' + pr.tx + ' * var(--tile))', top: 'calc(' + pr.ty + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
-      {cov ? <span className="cover-ic">{cov.type === 'full' ? '▩' : '▣'}</span> : null}
+      {cov ? <span className="cover-ic"><Glyph sprite={cov.type === 'full' ? 'px-barrel' : 'px-crate'} emoji={cov.type === 'full' ? '▩' : '▣'} cls="prop-spr" /></span> : null}
+      {(c.objective.x === x && c.objective.y === y) ? <span className="obj-ic"><Glyph sprite="px-server" emoji="🖥" cls="prop-spr" /></span> : null}
       {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge">{c.objective.done ? '✔' : c.objective.threshold}</span> : null}
     </div>);
   }
@@ -703,7 +732,8 @@ function Combat({ state, dispatch, view }) {
     const cls = 'unit ' + u.side + (u.ai === 'static' ? ' static' : '') + (u.status && (u.status.stealth || u.status.invuln) ? ' stealth' : '')
       + (hitTiles[u.x + ',' + u.y] ? ' hit' : '');
     return <div key={u.id} className={cls} style={posStyle(u.x, u.y)}>
-      <div className="body" title={u.name}>{u.icon}
+      <div className="body" title={u.name}>
+        <Glyph sprite={spriteForUnit(u)} emoji={u.icon} />
         <div className="hpbar"><i style={{ width: (u.hp / u.maxHp * 100) + '%' }} /></div>
       </div>
     </div>;
@@ -714,7 +744,7 @@ function Combat({ state, dispatch, view }) {
   ));
   // [G②] 처치 디졸브 — 전사(hp<=0) 유닛 위치에 글리치 페이드 잔상 (표시 전용, 유닛 배열 무변경).
   const dissolving = c.units.filter(u => u.hp <= 0).map(u => (
-    <div key={'d' + u.id} className="dissolve" style={posStyle(u.x, u.y)}>{u.icon}</div>
+    <div key={'d' + u.id} className="dissolve" style={posStyle(u.x, u.y)}><Glyph sprite={spriteForUnit(u)} emoji={u.icon} /></div>
   ));
 
   const bsz = PROJ.boardSize(c.field.cols, c.field.rows, mode);

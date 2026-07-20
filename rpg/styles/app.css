@@ -170,6 +170,26 @@ button { font-family: inherit; cursor: pointer; }
 .unit.hit .body { animation: hitflash .35s; }
 @keyframes hitflash { 0%,100% { filter: none; } 30% { filter: brightness(3) drop-shadow(0 0 8px #fff); transform: translateX(-2px); } 60% { transform: translateX(2px); } }
 
+/* [59차] 오픈소스 픽셀 스프라이트 (Kenney 1-Bit Pack · CC0) — 표시층 전용.
+   모노크롬 흰색 → image-rendering:pixelated + 진영색 drop-shadow 글로우로 염색. 폴백=.uemoji(이모지). */
+.uspr { display: block; width: 100%; height: 100%; object-fit: contain;
+  image-rendering: pixelated; image-rendering: crisp-edges; pointer-events: none; }
+.unit .body .uspr { filter: drop-shadow(0 0 2px rgba(255,255,255,0.35)); }
+.unit.player .body .uspr { filter: drop-shadow(0 0 2px var(--cyan)) drop-shadow(0 0 5px rgba(0,229,255,0.55)); }
+.unit.enemy .body .uspr { filter: drop-shadow(0 0 2px var(--magenta)) drop-shadow(0 0 5px rgba(255,0,160,0.5)); }
+.unit.static .body .uspr { filter: drop-shadow(0 0 2px var(--attr-shade)) drop-shadow(0 0 4px rgba(155,120,255,0.5)); }
+.unit.stealth .body .uspr { opacity: .85; }
+.dissolve .uspr { width: 78%; height: 78%; margin: 0 auto; filter: drop-shadow(0 0 3px var(--magenta)); }
+/* 엄폐물·오브젝티브 프롭 스프라이트 */
+.tile .cover-ic { display: flex; align-items: center; justify-content: center; }
+.cover-ic .prop-spr.uspr { width: 74%; height: 74%; opacity: .82; filter: drop-shadow(0 0 1px rgba(0,0,0,0.7)); }
+.obj-ic { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.obj-ic .prop-spr.uspr { width: 66%; height: 66%; opacity: .92; filter: drop-shadow(0 0 3px var(--green)); }
+.obj-badge { z-index: 2; }
+/* 바닥 변주 텍스처 — 교차 타일에 매우 옅은 픽셀 질감 (표시 전용) */
+.tile.alt::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: url(../assets/sprites/px-floor.png) center/76% no-repeat; image-rendering: pixelated; opacity: .06; }
+
 /* 부유 데미지 텍스트 [G7] */
 .floater { position: absolute; z-index: 30; font-family: 'Share Tech Mono', monospace; font-weight: 700;
   font-size: 15px; pointer-events: none; animation: floatup 1s ease-out forwards; text-shadow: 0 1px 3px #000; }
