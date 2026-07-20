@@ -64,7 +64,7 @@
   var STAGE2 = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
-    objective: { x: 3, y: 0, threshold: 12, veil: 0, label: '약탈 기함 코어', dataTB: 0 },
+    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '약탈 기함 코어', dataTB: 0 },   // [62차 밸런스] 12→10 (저HP 해커 1 해킹턴 완주 · WARLORD 로 난이도 유지)
     threatCap: 10,
     reinforcement: { key: 'MERIDIAN_DRONE', x: 0, y: 1 },   // 증원(경보 1회) — 카탈로그 지정
     walls: [
@@ -75,11 +75,11 @@
       { x: 3, y: 6, type: 'full'  },   // 부두 크레인 잔해(진입 엄폐)
     ],
     // ★보스 MERIDIAN_WARLORD(ASH hp24) + MERIDIAN_STALKER×2(SHADE 저격 호위).
-    //   보스전 밀도 — enc①보다 threshold·HP 총량 상향(2연전 클라이맥스).
+    //   [62차 밸런스] 저격 호위 y4 하향 배치 — 진입 압박(러시 클래스 R1 은신 대응 유도) · 보스는 코어 수호.
     enemies: [
       { key: 'MERIDIAN_WARLORD', x: 3, y: 1 },   // ★전쟁군주 — 성벽 밖 첫 우두머리
-      { key: 'MERIDIAN_STALKER', x: 1, y: 2 },
-      { key: 'MERIDIAN_STALKER', x: 5, y: 2 },
+      { key: 'MERIDIAN_STALKER', x: 2, y: 4 },
+      { key: 'MERIDIAN_STALKER', x: 4, y: 4 },
     ],
   };
 

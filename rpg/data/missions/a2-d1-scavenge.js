@@ -81,21 +81,22 @@
       cols: 6, rows: 8,
       playerStart: { x: 3, y: 7 },
       // enc② 오브젝티브 = 잔해 코어 발굴(threshold 11, enc② 높은 밴드 — 카탈로그 §2 D1 ②).
-      objective: { x: 3, y: 0, threshold: 11, veil: 0, label: '잔해 코어 발굴', dataTB: 0 },
+      objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '잔해 코어 발굴', dataTB: 0 },   // [62차 밸런스] 11→10 (저HP 해커 1 해킹턴 완주)
       threatCap: 9,
       reinforcement: { key: 'GANG_THUG', x: 5, y: 1 },   // 카탈로그 §2 D1 enc② 증원 GANG_THUG
+      // [62차 밸런스] 중앙 차단 벽 → 측면으로 이설(x=3 러시 레인 개방 · 저기동 완주 확보).
       walls: [
-        { x: 2, y: 4 }, { x: 3, y: 4 },   // 코어실 격벽 잔해 — 중앙 정면 차단
+        { x: 1, y: 4 }, { x: 5, y: 4 },   // 코어실 격벽 잔해 — 측면 차단
       ],
       cover: [
         { x: 1, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
       ],
       // 카탈로그 §2 D1 enc②: MERIDIAN_VANGUARD×2 + MERIDIAN_STALKER (증원 GANG_THUG).
-      //   VANGUARD = IRON 중장 돌격(저속 고DEF), STALKER = SHADE 저격(코어 압박).
+      //   [62차 밸런스] 중장 전위 y4 하향 배치(진입 압박 · 러시 은신 대응) · 저격은 코어 압박 유지.
       enemies: [
-        { key: 'MERIDIAN_VANGUARD', x: 2, y: 3 },
-        { key: 'MERIDIAN_VANGUARD', x: 4, y: 3 },
-        { key: 'MERIDIAN_STALKER',  x: 3, y: 1 },
+        { key: 'MERIDIAN_VANGUARD', x: 2, y: 5 },
+        { key: 'MERIDIAN_VANGUARD', x: 4, y: 5 },
+        { key: 'MERIDIAN_STALKER',  x: 3, y: 2 },
       ],
     },
   };

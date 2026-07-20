@@ -52,19 +52,18 @@
     objective: { x: 2, y: 0, threshold: 8, veil: 0, label: '바리케이드 관제', dataTB: 0 },
     threatCap: 8,
     reinforcement: { key: 'GANG_THUG', x: 5, y: 1 },   // 거리 자경/약탈 잔당 재활용(경보 1회)
-    walls: [
-      { x: 1, y: 4 },   // 무너진 방벽(좌측 통로 차단 → 우회 유도)
-    ],
+    // [62차 밸런스] 좌측 차단 벽 제거 — 저기동(mole/rigger) 러시 레인 확보(코너 유폐/소모전 회피).
+    walls: [],
     cover: [
       { x: 1, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
       { x: 2, y: 5, type: 'light' }, { x: 3, y: 5, type: 'light' },
     ],
     // 적 배치 — MERIDIAN_STALKER×2(SHADE 저격) + GANG_THUG(거리 갱 재활용).
-    //   전 적 killable → 전멸/오브젝티브 이중 승리(MFU). 소~중형 구성으로 4클래스 완주 여유.
+    //   [62차 밸런스] y4 하향 배치 — 진입 벨트 압박(저격 카이팅 완화 · 러시 클래스 은신 대응 유도).
     enemies: [
-      { key: 'MERIDIAN_STALKER', x: 1, y: 2 },
-      { key: 'MERIDIAN_STALKER', x: 4, y: 2 },
-      { key: 'GANG_THUG',        x: 2, y: 3 },
+      { key: 'MERIDIAN_STALKER', x: 1, y: 4 },
+      { key: 'MERIDIAN_STALKER', x: 4, y: 4 },
+      { key: 'GANG_THUG',        x: 2, y: 4 },
     ],
   };
 
@@ -73,22 +72,21 @@
   var STAGE2 = {
     cols: 6, rows: 8,
     playerStart: { x: 2, y: 7 },
-    objective: { x: 3, y: 0, threshold: 11, veil: 0, label: '약탈대 신호탑', dataTB: 0 },
+    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '약탈대 신호탑', dataTB: 0 },   // [62차 밸런스] 11→10 (저HP 해커 1 해킹턴 완주)
     threatCap: 9,
     reinforcement: { key: 'MERIDIAN_STALKER', x: 0, y: 1 },   // 증원(경보 1회) — 카탈로그 지정
-    walls: [
-      { x: 4, y: 4 },   // 무너진 방벽(우측 차단 → 좌측 압박 레인)
-    ],
+    // [62차 밸런스] 우측 차단 벽 제거 — 저기동 러시 레인 확보.
+    walls: [],
     cover: [
       { x: 2, y: 3, type: 'light' }, { x: 3, y: 3, type: 'light' },
       { x: 1, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' },
     ],
     // MERIDIAN_VANGUARD×2(IRON 중장 전위) + MERIDIAN_DRONE(VOLT 기계, DATA SPIKE 대상 ·
-    //   BLADE 물리 완주 보장). enc①보다 threshold·중장 밀도 상향(2연전 페이싱).
+    //   BLADE 물리 완주 보장). [62차 밸런스] 전위 y4 하향 배치(진입 압박 · 러시 은신 대응).
     enemies: [
-      { key: 'MERIDIAN_VANGUARD', x: 1, y: 2 },
-      { key: 'MERIDIAN_VANGUARD', x: 4, y: 2 },
-      { key: 'MERIDIAN_DRONE',    x: 2, y: 1 },
+      { key: 'MERIDIAN_VANGUARD', x: 1, y: 4 },
+      { key: 'MERIDIAN_VANGUARD', x: 4, y: 4 },
+      { key: 'MERIDIAN_DRONE',    x: 2, y: 3 },
     ],
   };
 

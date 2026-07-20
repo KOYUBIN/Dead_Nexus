@@ -57,9 +57,9 @@
     ],
     // enc① — VANGUARD×1(IRON 중장 전위) + STALKER×2(SHADE 저격, 격벽 압박). 전 적 killable(MFU).
     enemies: [
-      { key: 'MERIDIAN_VANGUARD', x: 3, y: 2 },
-      { key: 'MERIDIAN_STALKER',  x: 1, y: 2 },
-      { key: 'MERIDIAN_STALKER',  x: 5, y: 2 },
+      { key: 'MERIDIAN_VANGUARD', x: 3, y: 4 },   // [62차 밸런스] 전위·저격 하향 배치(진입 압박 → 러시 클래스 은신 대응 유도)
+      { key: 'MERIDIAN_STALKER',  x: 1, y: 4 },
+      { key: 'MERIDIAN_STALKER',  x: 5, y: 4 },
     ],
   };
 
@@ -68,22 +68,26 @@
   var ENC2 = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
-    objective: { x: 3, y: 0, threshold: 13, veil: 0, label: '국부 원장 코어', dataTB: 3.0 },
+    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '국부 원장 코어', dataTB: 3.0 },   // [62차 밸런스] 13→10 (저HP 해커 1 해킹턴 완주 · 보스는 잔존 난이도)
     threatCap: 11,  // 보스전 상향 페이싱 + 증원.
     reinforcement: { key: 'MERIDIAN_VANGUARD', x: 0, y: 1 },  // [계승 §2 A2 증원 MERIDIAN_VANGUARD]
     walls: [
       { x: 2, y: 4 }, { x: 4, y: 4 },
     ],
+    // [62차 밸런스] 진입 정면 full 엄폐 제거 — 측면 사격 노출로 러시 클래스 R1 은신 대응 유도
+    //   (정면 full 엄폐는 은신 트리거를 차단해 저HP 해커 과확장사 유발 → 오프셋 light 로 대체).
     cover: [
-      { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
+      { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
+      { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
       { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
     ],
     // enc② — MERIDIAN_WARLORD(ASH hp24 보스, 중앙 전진) + DRONE×2(VOLT 기계, DATA SPIKE 대상 ·
     //   측면 사격). 보스 killable · 오브젝티브 코어 차감으로도 승리 가능(MFU 이중 경로).
+    //   [62차 밸런스] DRONE 을 y5 중앙寄 배치 — 진입 압박으로 러시 클래스 R1 은신 대응 유도.
     enemies: [
       { key: 'MERIDIAN_WARLORD', x: 3, y: 2 },
-      { key: 'MERIDIAN_DRONE',   x: 1, y: 3 },
-      { key: 'MERIDIAN_DRONE',   x: 5, y: 3 },
+      { key: 'MERIDIAN_DRONE',   x: 2, y: 5 },
+      { key: 'MERIDIAN_DRONE',   x: 4, y: 5 },
     ],
   };
 

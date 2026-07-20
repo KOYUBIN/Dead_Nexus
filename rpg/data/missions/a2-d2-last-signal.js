@@ -68,7 +68,7 @@
       cols: 7, rows: 8,
       playerStart: { x: 3, y: 7 },
       // enc② 오브젝티브 = MERIDIAN 수확기 코어(threshold 12, enc② 높은 밴드 — 카탈로그 §2 D2 ②).
-      objective: { x: 3, y: 0, threshold: 12, veil: 0, label: 'MERIDIAN 수확기 코어', dataTB: 0 },
+      objective: { x: 3, y: 0, threshold: 10, veil: 0, label: 'MERIDIAN 수확기 코어', dataTB: 0 },   // [62차 밸런스] 12→10 (저HP 해커 1 해킹턴 완주 · WARLORD 로 난이도 유지)
       threatCap: 9,
       reinforcement: { key: 'MERIDIAN_DRONE', x: 6, y: 1 },   // 카탈로그 §2 D2 enc② 증원 MERIDIAN_DRONE
       walls: [
@@ -78,11 +78,11 @@
         { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
       ],
       // 카탈로그 §2 D2 enc②: MERIDIAN_WARLORD(보스) + MERIDIAN_VANGUARD×2 (증원 MERIDIAN_DRONE).
-      //   WARLORD = ASH 전쟁군주 보스(hp24), VANGUARD×2 = IRON 중장 호위.
+      //   [62차 밸런스] 중장 호위 y5 하향 배치(진입 압박 · 러시 R1 은신 대응) · 보스는 코어 수호.
       enemies: [
         { key: 'MERIDIAN_WARLORD',  x: 3, y: 1 },   // ★보스 — 코어 수호
-        { key: 'MERIDIAN_VANGUARD', x: 2, y: 3 },
-        { key: 'MERIDIAN_VANGUARD', x: 4, y: 3 },
+        { key: 'MERIDIAN_VANGUARD', x: 2, y: 5 },
+        { key: 'MERIDIAN_VANGUARD', x: 4, y: 5 },
       ],
     },
   };

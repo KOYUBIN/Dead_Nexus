@@ -251,14 +251,18 @@ function playerTurn(c, policy) {
 }
 
 // ---- 단일 인카운터 자동 플레이 ---------------------------------------------
-function runEncounter(classKey, missionId, policy, scenario) {
+// [62차] encKey 옵션 — 지정 시 mission.encounters[encKey] 을 buildCombat 오버라이드(enc②/2연전).
+//   미지정 시 mission.combat(enc①) — 하위호환 100%. 엔진 무변경(buildCombat opts.combat 소비).
+function runEncounter(classKey, missionId, policy, scenario, encKey) {
   var ch = CH.makeCharacter(classKey);
   // [V1] 장비 시나리오 반영(기본 base=무장비). base 는 equipment{null,null} → effectiveStats
   //   델타 0 → 반환 객체 byte 불변(기존 64조합 재확인의 근거). scenario 필드는 미부착(셀 순도 유지).
   ch.equipment = equipFor(scenario || 'base', ch);
   var mission = CAMP.missionData(missionId);
   if (!mission || !mission.combat) return { error: 'no combat', missionId: missionId };
-  var c = S.buildCombat(mission, ch, 'outro');
+  var encCfg = encKey ? (mission.encounters && mission.encounters[encKey]) : null;
+  if (encKey && !encCfg) return { error: 'no encounter ' + encKey, missionId: missionId };
+  var c = S.buildCombat(mission, ch, 'outro', encCfg ? { combat: encCfg } : undefined);
   var startEnemyHp = totalEnemyHp(c);
   var reinforcedEver = false, rounds = 0, guard = 0;
   while (!c.outcome && rounds < ROUND_CAP && guard++ < 400) {
@@ -292,20 +296,38 @@ function orderedMissions() {
   return ms;
 }
 
+// [62차] 미션 → 측정 인카운터 목록. enc①(mission.combat) + 각 encounters 키(2연전 enc②).
+//   각 인카운터가 개별 행이 되어 전 조합(29미션 · 8미션은 enc①+enc②)이 매트릭스에 노출된다.
+function encountersOf(e) {
+  var m = CAMP.missionData(e.id);
+  var list = [{ id: e.id, encKey: null, encLabel: '' }];
+  if (m && m.encounters) {
+    var keys = Object.keys(m.encounters);
+    for (var k = 0; k < keys.length; k++) list.push({ id: e.id, encKey: keys[k], encLabel: '#' + keys[k] });
+  }
+  return list;
+}
+
 function runMatrix(scenario) {
   var ms = orderedMissions();
   var rows = [];
   for (var mi = 0; mi < ms.length; mi++) {
     var e = ms[mi];
-    var cells = {};
-    for (var ci = 0; ci < CLASSES.length; ci++) {
-      var cls = CLASSES[ci];
-      var byPol = {};
-      for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario);
-      cells[cls] = byPol;
+    var encs = encountersOf(e);
+    for (var ei = 0; ei < encs.length; ei++) {
+      var enc = encs[ei];
+      var cells = {};
+      for (var ci = 0; ci < CLASSES.length; ci++) {
+        var cls = CLASSES[ci];
+        var byPol = {};
+        for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario, enc.encKey);
+        cells[cls] = byPol;
+      }
+      // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
+      //   enc② 행은 order 를 +0.5 하여 enc① 직후에 정렬(id 에 #encKey 접미).
+      rows.push({ id: e.id + enc.encLabel, baseId: e.id, encKey: enc.encKey,
+        kind: e.kind, chapter: e.chapter, order: e.order + (enc.encKey ? 0.5 : 0), cells: cells });
     }
-    // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
-    rows.push({ id: e.id, kind: e.kind, chapter: e.chapter, order: e.order, cells: cells });
   }
   return rows;
 }
@@ -344,8 +366,8 @@ function cellStr(v) {
 
 function printMatrix(rows) {
   var line = '';
-  console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 16미션) ================');
-  console.log('셀 = 종합판정(승리 정책 대표). W=승 L=패 T=timeout · R수 · 종료HP%. ⚑=이상치.');
+  console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 29미션 · 2연전 enc①+enc②=37 인카운터) ================');
+  console.log('셀 = 종합판정(승리 정책 대표). W=승 L=패 T=timeout · R수 · 종료HP%. ⚑=이상치. #stage2=2연전 enc②.');
   console.log('C=combat정책 승 / O=objective정책 승 (승리 경로 표기).\n');
   console.log(pad('MISSION', 26) + CLASSES.map(function (c) { return pad(c, 14); }).join('') + '  FLAGS');
   console.log('-'.repeat(26 + 14 * 4 + 12));
@@ -472,7 +494,7 @@ function printScenarios() {
   for (var i = 0; i < GEAR_SCENARIOS.length; i++) scn[GEAR_SCENARIOS[i]] = aggregateScenario(runMatrix(GEAR_SCENARIOS[i]));
   var b = scn.base, m = scn.mid, f = scn.full;
 
-  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×16미션) ================');
+  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×37 인카운터[29미션·2연전 enc①+enc②]) ================');
   console.log('base=무장비(불변 재확인) · mid=슬롯당 최저가(SMART_LINK+MOOD_CHIP) · full=슬롯당 최고가(HAIR_TRIGGER+NEURAL_JACK/BLADE는 IRON_SKIN).');
   console.log(pad('시나리오', 16) + pad('클리어', 9) + pad('밴드무플래그', 14) + pad('트리비얼', 10) + pad('소모전', 8) + pad('clearFail', 11) + pad('평균종료HP%', 13) + '평균최속R');
   console.log('-'.repeat(94));
@@ -486,7 +508,10 @@ function printScenarios() {
 
   var guard = lateChapterGuard(runMatrix('full'));
   console.log('\n---- 수용 판정 (docs/25 §8 정직화 · 표시=판정) ----');
-  console.log('  base : 무장비 = 기존 64조합 byte 동일(effectiveStats 델타 0) — ' + (b.clearable === b.total && b.trivial <= 1 ? 'PASS(재확인)' : 'CHECK'));
+  // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식). 트리비얼은
+  //   전량 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) — 문서화 허용(51차 선례).
+  console.log('  base : 무장비 전 조합 클리어(' + b.clearable + '/' + b.total + ') · clearFail ' + b.fail
+    + ' · 트리비얼 ' + b.trivial + '(enc① 워밍업/ch02 계승 · 허용) — ' + (b.clearable === b.total && b.fail === 0 ? 'PASS' : 'CHECK'));
   var midMargin = (m.clearable === b.clearable) && (m.avgHp >= b.avgHp);
   console.log('  mid  : 클리어율 동일(' + m.clearable + '/' + m.total + '=base) · 여유 증가(평균종료HP ' + b.avgHp.toFixed(1) + '→' + m.avgHp.toFixed(1) + '%) — ' + (midMargin ? 'PASS' : 'CHECK'));
   var chStr = guard.chs.map(function (c) { return 'ch0' + c + ' min=' + guard.perCh[c].min; }).join(' · ');
@@ -542,7 +567,8 @@ function smoke() {
 }
 
 module.exports = {
-  runEncounter: runEncounter, runMatrix: runMatrix, verdict: verdict,
+  runEncounter: runEncounter, runMatrix: runMatrix, verdict: verdict, playerTurn: playerTurn,
+  encountersOf: encountersOf,
   CLASSES: CLASSES, POLICIES: POLICIES, orderedMissions: orderedMissions,
   // [V1] 장비 시나리오 API (유닛 핀 고정용).
   GEAR_SCENARIOS: GEAR_SCENARIOS, equipFor: equipFor,

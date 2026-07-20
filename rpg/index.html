@@ -75,6 +75,19 @@
 <script src="./data/missions/side-07-server-zero.js"></script>
 <script src="./data/missions/side-08-harbor-run.js"></script>
 <script src="./data/missions/a2-00-framing.js"></script>
+<!-- [62차] ACT 2 본편 — 4갈래 메인 8 (2연전) + 클래스 사이드 4 -->
+<script src="./data/missions/a2-a1-crown-breach.js"></script>
+<script src="./data/missions/a2-a2-crown-throne.js"></script>
+<script src="./data/missions/a2-b1-barricade.js"></script>
+<script src="./data/missions/a2-b2-freeport.js"></script>
+<script src="./data/missions/a2-c1-first-contact.js"></script>
+<script src="./data/missions/a2-c2-signal-war.js"></script>
+<script src="./data/missions/a2-d1-scavenge.js"></script>
+<script src="./data/missions/a2-d2-last-signal.js"></script>
+<script src="./data/missions/a2-side-cipher-static.js"></script>
+<script src="./data/missions/a2-side-blade-vendetta.js"></script>
+<script src="./data/missions/a2-side-rigger-build.js"></script>
+<script src="./data/missions/a2-side-mole-whoami.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -171,6 +184,20 @@ const STAGE_THEME = {
   'side-06-rival-duel': 'ash',       // 폐허 라이벌 결투 — 잿빛
   'side-07-server-zero': 'nexus',    // NEXUS 지하 서버팜 — 시안
   'side-08-harbor-run': 'harbor',    // 남항 검문 게이트 — 청록
+  // [62차] ACT 2 — 미사용 무대 팔레트 재활용(표시 전용).
+  'a2-00-framing': 'nexus',              // SILK 의뢰인 허브 — 시안
+  'a2-a1-crown-breach': 'axiom',         // 넥서스 상층 의장실 — 데이터 보라
+  'a2-a2-crown-throne': 'axiom',         // 조세·데이터 볼트 — 보라
+  'a2-b1-barricade': 'ash',              // 다운타운 폐허 바리케이드 — 잿빛
+  'a2-b2-freeport': 'harbor',            // 비통제구역 항구 — 청록
+  'a2-c1-first-contact': 'nexus',        // 재건된 넥서스 관제층 — 시안
+  'a2-c2-signal-war': 'nexus',           // 메시 심층 레이어 — 시안
+  'a2-d1-scavenge': 'zeroday',           // 무너진 넥서스 잔해 — 결전 마젠타
+  'a2-d2-last-signal': 'ash',            // 접경 무법지대 — 잿빛
+  'a2-side-cipher-static': 'vanta',      // VANTA 심층 아카이브 — 심청
+  'a2-side-blade-vendetta': 'ironwall',  // IRONWALL 무기고 심부 — 군수 적갈
+  'a2-side-rigger-build': 'carbon',      // CARBON E6 공장 심부 — 황동
+  'a2-side-mole-whoami': 'helix',        // HELIX G6 HQ 양성시설 — 바이오 녹
 };
 function stageTheme(id) { return (id && STAGE_THEME[id]) || 'vanta'; }
 
@@ -275,8 +302,19 @@ function Roster({ state, dispatch }) {
   );
 }
 
+// [62차] ACT 2 갈래 그룹 메타 — 엔딩 아이콘 + 잠금 게이트 힌트(보드 4갈래 표시).
+//   endingSeen 게이트로 갈래 개방(NG+ 누적) · class 그룹은 classKey 게이트.
+const ACT2_BRANCHES = [
+  { key: 'framing', icon: '🌆', label: 'PROLOGUE — FRAMING (SILK 의뢰인 허브)', gateHint: 'CH08 완주 필요' },
+  { key: 'A', icon: '🏙️', label: 'IRON CROWN (기업 영속)',   gateHint: '🏙️ CORPORATE ETERNAL 엔딩 열람 필요' },
+  { key: 'B', icon: '🔥', label: 'ASH REPUBLIC (거리 봉기)',  gateHint: '🔥 STREET RISING 엔딩 열람 필요' },
+  { key: 'C', icon: '🕊️', label: 'COUNCIL OF ASH (넥서스 재건)', gateHint: '🕊️ NEXUS REBORN 엔딩 열람 필요' },
+  { key: 'D', icon: '💀', label: 'RUIN SURVIVORS (폐허 생존)', gateHint: '💀 DEAD NEXUS 엔딩 열람 필요' },
+  { key: 'class', icon: '🧬', label: '클래스 전용 사이드', gateHint: '해당 클래스로 편성 필요' },
+];
+
 // ── 미션 카드 (메인 체인 / 사이드 보드 공용) ──
-//  row = { id, kind, chapter, unlocked, cleared, hint }  (CAMP.boardState 산출)
+//  row = { id, kind, chapter, branch, unlocked, cleared, hint }  (CAMP.boardState 산출)
 function MissionCard({ row, current, dispatch }) {
   const entry = CAMP.missionById(row.id);
   const isCurrent = row.id === current;
@@ -335,11 +373,27 @@ function MissionBoard({ state, dispatch }) {
       {act2.length ? (
         <React.Fragment>
           <div className="board-sec act2-sec">🌆 ACT 2 — AFTER ZERO DAY ({act2Visible}/{act2.length} 개방){" "}
-            <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>· 제로데이 이후 · MERIDIAN 외부 위협</span>
+            <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>· 제로데이 이후 · MERIDIAN 외부 위협 · 엔딩 열람으로 갈래 개방(NG+ 누적)</span>
           </div>
-          <div className="mission-list">
-            {act2.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
-          </div>
+          {ACT2_BRANCHES.map(br => {
+            const rows = act2.filter(r => (r.branch || 'framing') === br.key);
+            if (!rows.length) return null;
+            const grpVisible = rows.filter(r => r.unlocked).length;
+            const allLocked = grpVisible === 0;
+            return (
+              <React.Fragment key={br.key}>
+                <div className={'board-sec act2-branch' + (allLocked ? ' locked' : '')}>
+                  {br.icon} {br.label}{" "}
+                  <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>
+                    ({grpVisible}/{rows.length}){allLocked ? ' · 🔒 ' + br.gateHint : ''}
+                  </span>
+                </div>
+                <div className="mission-list">
+                  {rows.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+                </div>
+              </React.Fragment>
+            );
+          })}
         </React.Fragment>
       ) : null}
     </div>
@@ -1018,6 +1072,9 @@ try {
 .board-sec { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim);
   margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
 .board-sec.act2-sec { color: var(--orange); border-bottom-color: var(--orange); }
+.board-sec.act2-branch { color: var(--orange); font-size: 10px; margin: 8px 0 3px; padding-left: 8px;
+  border-bottom: 1px dashed var(--border); opacity: .95; }
+.board-sec.act2-branch.locked { opacity: .55; border-bottom-style: dotted; }
 .mcard.locked.act2 { border-left: 2px solid var(--orange); opacity: .72; }
 .hardmode-btn.on { color: var(--orange); border-color: var(--orange); }
 .mission-list { display: flex; flex-direction: column; gap: 8px; }

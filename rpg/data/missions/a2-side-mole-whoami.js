@@ -57,21 +57,25 @@
     objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '정체성 원본 서버', dataTB: 0 },
     threatCap: 8,
     reinforcement: { key: 'SPLICE_HOUND', x: 6, y: 1 },    // 시설 경비 산물 증원(페이싱 · HELIX 로스터 정합)
+    // [62차 밸런스] 측면 격벽(중앙 x=3 러시 레인 개방).
     walls: [
-      { x: 2, y: 4 }, { x: 4, y: 4 },   // 시술실 격벽 — 서버 정면 접근 통제
+      { x: 1, y: 4 }, { x: 5, y: 4 },   // 시술실 격벽 — 측면 접근 통제
     ],
     // [신규 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1, full=DEF+2. 검체 캡슐/장비.
+    //   [62차 밸런스] 진입 정면 full 엄폐 제거 — 시술병 진입 압박 노출(러시 클래스 R1 은신 대응 유도).
     cover: [
-      { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
+      { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
+      { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
     ],
     // 카탈로그 §2 S-MOLE 로스터: ELIA_VOSS(보스) + HELIX_MEDIC×2 + SPLICE_HOUND.
     //   ELIA_VOSS = BIO 보스(hp18, ECHO 를 만든 박사), HELIX_MEDIC×2 = 시술병,
     //   SPLICE_HOUND = 고속 근접 야수. 전 적 killable → 전멸/오브젝티브 이중 승리(MFU).
+    //   [62차 밸런스] 시술병·야수 y4~5 하향 배치(진입 압박 · 러시 은신 대응) · 보스는 서버 수호.
     enemies: [
       { key: 'ELIA_VOSS',    x: 3, y: 1 },   // ★숙적 보스 — ECHO 를 설계한 손
-      { key: 'HELIX_MEDIC',  x: 2, y: 3 },
-      { key: 'HELIX_MEDIC',  x: 4, y: 3 },
-      { key: 'SPLICE_HOUND', x: 3, y: 3 },
+      { key: 'HELIX_MEDIC',  x: 2, y: 5 },
+      { key: 'HELIX_MEDIC',  x: 4, y: 5 },
+      { key: 'SPLICE_HOUND', x: 3, y: 4 },
     ],
   };
 

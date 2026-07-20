@@ -66,9 +66,9 @@
     //   DRONE×1 = VOLT 기계(DATA SPIKE 대상 · BLADE 물리 완주 보장). 전 적 killable → 전멸/
     //   오브젝티브 이중 승리(MFU).
     enemies: [
-      { key: 'MERIDIAN_VANGUARD', x: 2, y: 2 },
-      { key: 'MERIDIAN_VANGUARD', x: 4, y: 2 },
-      { key: 'MERIDIAN_DRONE',    x: 3, y: 3 },
+      { key: 'MERIDIAN_VANGUARD', x: 2, y: 4 },   // [62차 밸런스] 전위 하향 배치 — 진입 벨트 압박(러시 클래스 R1 노출 → 은신 대응 유도)
+      { key: 'MERIDIAN_VANGUARD', x: 4, y: 4 },
+      { key: 'MERIDIAN_DRONE',    x: 3, y: 5 },
     ],
   };
 
@@ -78,7 +78,7 @@
   var ENC2 = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
-    objective: { x: 3, y: 0, threshold: 12, veil: 1, label: '상층 관제 단말', dataTB: 2.1 },
+    objective: { x: 3, y: 0, threshold: 9, veil: 1, label: '상층 관제 단말', dataTB: 2.1 },   // [62차 밸런스] eff 13→10 (저HP 해커 1 해킹턴 완주 · 51차 ch08 선례)
     threatCap: 10,  // enc② 상향 페이싱 + 증원.
     reinforcement: { key: 'MERIDIAN_DRONE', x: 6, y: 1 },  // [계승 §2 A1 증원 MERIDIAN_DRONE]
     walls: [

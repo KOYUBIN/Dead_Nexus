@@ -46,6 +46,20 @@
     heal('data/missions/side-06-rival-duel.js', 'RPG_MISSION_SIDE06_RIVAL_DUEL');
     heal('data/missions/side-07-server-zero.js', 'RPG_MISSION_SIDE07_SERVER_ZERO');
     heal('data/missions/side-08-harbor-run.js', 'RPG_MISSION_SIDE08_HARBOR_RUN');
+    // [61/62차] ACT 2 (프레이밍 1 + 4갈래 메인 8 + 클래스 사이드 4 = 13) — 각 전역 마커별 heal.
+    heal('data/missions/a2-00-framing.js', 'RPG_MISSION_A2_00_FRAMING');
+    heal('data/missions/a2-a1-crown-breach.js', 'RPG_MISSION_A2_A1_CROWN_BREACH');
+    heal('data/missions/a2-a2-crown-throne.js', 'RPG_MISSION_A2_A2_CROWN_THRONE');
+    heal('data/missions/a2-b1-barricade.js', 'RPG_MISSION_A2_B1_BARRICADE');
+    heal('data/missions/a2-b2-freeport.js', 'RPG_MISSION_A2_B2_FREEPORT');
+    heal('data/missions/a2-c1-first-contact.js', 'RPG_MISSION_A2_C1_FIRST_CONTACT');
+    heal('data/missions/a2-c2-signal-war.js', 'RPG_MISSION_A2_C2_SIGNAL_WAR');
+    heal('data/missions/a2-d1-scavenge.js', 'RPG_MISSION_A2_D1_SCAVENGE');
+    heal('data/missions/a2-d2-last-signal.js', 'RPG_MISSION_A2_D2_LAST_SIGNAL');
+    heal('data/missions/a2-side-cipher-static.js', 'RPG_MISSION_A2_SIDE_CIPHER_STATIC');
+    heal('data/missions/a2-side-blade-vendetta.js', 'RPG_MISSION_A2_SIDE_BLADE_VENDETTA');
+    heal('data/missions/a2-side-rigger-build.js', 'RPG_MISSION_A2_SIDE_RIGGER_BUILD');
+    heal('data/missions/a2-side-mole-whoami.js', 'RPG_MISSION_A2_SIDE_MOLE_WHOAMI');
     heal('systems/combat/grid.js', 'RPG_GRID');
     heal('systems/combat/resolve.js', 'RPG_RESOLVE');
     heal('systems/combat/ai.js', 'RPG_AI');
