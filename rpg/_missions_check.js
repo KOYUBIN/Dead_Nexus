@@ -41,6 +41,9 @@ var PLANNED_ROSTER = [
   'HELIX_MEDIC', 'SPLICE_HOUND', 'IRONWALL_ENFORCER', 'IRONWALL_TURRET', 'CARBON_GUARD',
   'CARBON_DRONE', 'VANTA_ELITE', 'MESH_WISP', 'SIGNAL_ICE', 'GANG_THUG',
   'RIVAL_GHOST', 'KAI_MORROW', 'MARCUS_CRANE', 'VERA_ASHTON', 'NEXUS_WARDEN',
+  // [61차 Act2] MERIDIAN 외부 세력 + lore 보스 신규 7종 (data/enemies.js 통합됨).
+  'MERIDIAN_VANGUARD', 'MERIDIAN_STALKER', 'MERIDIAN_DRONE', 'MERIDIAN_WARLORD',
+  'WARD_NODE', 'ELIA_VOSS', 'HARLAN_VOSS',
 ];
 
 // ---- 결과 수집기 -----------------------------------------------------------
@@ -198,6 +201,17 @@ function checkDialogue(M, R) {
           edgeMap[nid].push(eff.startCombat.onWin);
           routes++;
         }
+        // [61차 §3.5] startCombat.encounter(문자열)를 엣지처럼 참조 검증 — M.encounters[key] 실존 필수.
+        //   store.dialogueChoose: encCfg = mission.encounters[encounter]. 오타/미정의 시 buildCombat 이
+        //   mission.combat 폴백(enc② 소실) → 조용한 버그. 참조 무결을 정적 검증한다.
+        if (eff.startCombat.encounter != null) {
+          if (!isStr(eff.startCombat.encounter)) {
+            R.err('dialogue', where + ' 의 startCombat.encounter 가 문자열이 아님.');
+          } else if (!isObj(M.encounters) || !isObj(M.encounters[eff.startCombat.encounter])) {
+            R.err('dialogue', where + ' 의 startCombat.encounter "' + eff.startCombat.encounter +
+              '" 가 MISSION.encounters 에 정의되지 않음 — buildCombat 이 mission.combat 로 조용히 폴백(enc② 소실).');
+          }
+        }
         if (ch.goto) {
           R.warn('dialogue', where + ' 가 startCombat 과 goto 를 동시 보유 — store 는 startCombat 후 return, goto 무시.');
         }
@@ -309,63 +323,83 @@ function checkGate(gate, where, flagsSet, R) {
 // ⑤ 인카운터 필수 필드
 // ============================================================================
 function checkCombat(M, R, roster, startCombatSeen) {
+  // enc① = MISSION.combat (기존 스키마 · startCombat→M.combat 필수 계약 유지).
   var c = M.combat;
   if (!isObj(c)) {
     if (startCombatSeen) R.err('combat', 'startCombat 선택지가 있으나 MISSION.combat 이 없음 — buildCombat 크래시.');
     else R.info('combat', 'MISSION.combat 없음(전투 없는 미션으로 간주).');
-    return;
+  } else {
+    checkEncounterConfig(c, 'combat', R, roster);
   }
 
+  // [61차 §3.5] enc② 이상 — MISSION.encounters 맵의 각 값에 동일 인카운터 검증 재귀 적용.
+  //   store.buildCombat 은 opts.combat 오버라이드로 이 config 를 combat 과 동일 스키마로 소비.
+  if (M.encounters != null) {
+    if (!isObj(M.encounters)) {
+      R.err('combat', 'MISSION.encounters 가 객체(맵)가 아님 — buildCombat 이 mission.encounters[key] 참조.');
+    } else {
+      Object.keys(M.encounters).forEach(function (k) {
+        var ec = M.encounters[k];
+        if (!isObj(ec)) { R.err('combat', 'encounters["' + k + '"] 가 객체가 아님(combat 동일 스키마 필요).'); return; }
+        checkEncounterConfig(ec, 'encounters.' + k, R, roster);
+      });
+    }
+  }
+}
+
+// 단일 인카운터 config 검증 (enc①=combat · enc②=encounters[key] 공용 · buildCombat 소비 스키마).
+function checkEncounterConfig(c, prefix, R, roster) {
   // 그리드 크기
+  var P = prefix + '.';
   var cols = c.cols, rows = c.rows;
-  if (!isInt(cols) || cols < 1) R.err('combat', 'combat.cols 가 양의 정수가 아님.');
-  if (!isInt(rows) || rows < 1) R.err('combat', 'combat.rows 가 양의 정수가 아님.');
+  if (!isInt(cols) || cols < 1) R.err('combat', P + 'cols 가 양의 정수가 아님.');
+  if (!isInt(rows) || rows < 1) R.err('combat', P + 'rows 가 양의 정수가 아님.');
   var gridOk = isInt(cols) && cols >= 1 && isInt(rows) && rows >= 1;
 
   function inGrid(pt, label) {
-    if (!isObj(pt) || !isInt(pt.x) || !isInt(pt.y)) { R.err('combat', label + ' 좌표 {x,y} 정수 아님.'); return false; }
+    if (!isObj(pt) || !isInt(pt.x) || !isInt(pt.y)) { R.err('combat', P + label + ' 좌표 {x,y} 정수 아님.'); return false; }
     if (!gridOk) return false;
     if (pt.x < 0 || pt.x >= cols || pt.y < 0 || pt.y >= rows) {
-      R.err('combat', label + ' 좌표 (' + pt.x + ',' + pt.y + ') 가 그리드 ' + cols + '×' + rows + ' 범위 밖.');
+      R.err('combat', P + label + ' 좌표 (' + pt.x + ',' + pt.y + ') 가 그리드 ' + cols + '×' + rows + ' 범위 밖.');
       return false;
     }
     return true;
   }
 
   // playerStart (필수)
-  if (!isObj(c.playerStart)) R.err('combat', 'combat.playerStart {x,y} 없음.');
+  if (!isObj(c.playerStart)) R.err('combat', P + 'playerStart {x,y} 없음.');
   else inGrid(c.playerStart, 'playerStart');
 
   // objective (필수 — 없으면 buildCombat 참조 크래시)
   var o = c.objective;
   if (!isObj(o)) {
-    R.err('combat', 'combat.objective 없음 — buildCombat 이 c.objective.threshold 참조로 크래시(★필수).');
+    R.err('combat', P + 'objective 없음 — buildCombat 이 c.objective.threshold 참조로 크래시(★필수).');
   } else {
     inGrid(o, 'objective');
-    if (!isNum(o.threshold)) R.err('combat', 'objective.threshold 수치 없음.');
-    else if (o.threshold < 0) R.err('combat', 'objective.threshold 가 음수.');
-    if (o.veil != null && !isNum(o.veil)) R.err('combat', 'objective.veil 이 수치가 아님.');
-    if (o.label != null && !isStr(o.label)) R.warn('combat', 'objective.label 이 문자열이 아님(UI/로그 표기).');
-    if (o.dataTB != null && !isNum(o.dataTB)) R.warn('combat', 'objective.dataTB 가 수치가 아님(로그 표기).');
+    if (!isNum(o.threshold)) R.err('combat', P + 'objective.threshold 수치 없음.');
+    else if (o.threshold < 0) R.err('combat', P + 'objective.threshold 가 음수.');
+    if (o.veil != null && !isNum(o.veil)) R.err('combat', P + 'objective.veil 이 수치가 아님.');
+    if (o.label != null && !isStr(o.label)) R.warn('combat', P + 'objective.label 이 문자열이 아님(UI/로그 표기).');
+    if (o.dataTB != null && !isNum(o.dataTB)) R.warn('combat', P + 'objective.dataTB 가 수치가 아님(로그 표기).');
   }
 
   // walls (필수 배열 — buildCombat: c.walls.slice())
-  checkTileArray(c.walls, 'walls', R, inGrid, false);
+  checkTileArray(c.walls, 'walls', R, inGrid, false, P);
   // cover (필수 배열 — buildCombat: c.cover.slice())
-  checkTileArray(c.cover, 'cover', R, inGrid, true);
+  checkTileArray(c.cover, 'cover', R, inGrid, true, P);
 
   // threatCap (선택 — 기본 8)
   if (c.threatCap != null && (!isNum(c.threatCap) || c.threatCap < 1)) {
-    R.err('combat', 'combat.threatCap 이 양수가 아님.');
+    R.err('combat', P + 'threatCap 이 양수가 아님.');
   }
 
   // enemies (필수 배열)
   if (!isArr(c.enemies)) {
-    R.err('combat', 'combat.enemies 배열 없음 — buildCombat 이 c.enemies.length 참조.');
+    R.err('combat', P + 'enemies 배열 없음 — buildCombat 이 c.enemies.length 참조.');
   } else {
     var occupancy = {};
     c.enemies.forEach(function (e, i) {
-      var w = 'enemies[' + i + ']';
+      var w = P + 'enemies[' + i + ']';
       if (!isObj(e)) { R.err('combat', w + ' 가 객체가 아님.'); return; }
       if (!isStr(e.key)) R.err('combat', w + ' 의 key(문자열) 없음.');
       else if (roster.set.indexOf(e.key) < 0) {
@@ -382,24 +416,25 @@ function checkCombat(M, R, roster, startCombatSeen) {
   // reinforcement (선택 — {key,x,y})
   if (c.reinforcement != null) {
     var rf = c.reinforcement;
-    if (!isObj(rf)) R.err('combat', 'combat.reinforcement 이 객체가 아님.');
+    if (!isObj(rf)) R.err('combat', P + 'reinforcement 이 객체가 아님.');
     else {
-      if (!isStr(rf.key)) R.err('combat', 'reinforcement.key(문자열) 없음.');
+      if (!isStr(rf.key)) R.err('combat', P + 'reinforcement.key(문자열) 없음.');
       else if (roster.set.indexOf(rf.key) < 0) {
-        R.err('combat', 'reinforcement 적 key "' + rf.key + '" 가 로스터 화이트리스트에 없음 (--roster 로 추가 가능).');
+        R.err('combat', P + 'reinforcement 적 key "' + rf.key + '" 가 로스터 화이트리스트에 없음 (--roster 로 추가 가능).');
       }
       inGrid(rf, 'reinforcement');
     }
   }
 }
 
-function checkTileArray(arr, name, R, inGrid, isCover) {
+function checkTileArray(arr, name, R, inGrid, isCover, prefix) {
+  var P = prefix || 'combat.';
   if (!isArr(arr)) {
-    R.err('combat', 'combat.' + name + ' 배열 없음 — buildCombat: c.' + name + '.slice() (빈 배열이라도 필수).');
+    R.err('combat', P + name + ' 배열 없음 — buildCombat: c.' + name + '.slice() (빈 배열이라도 필수).');
     return;
   }
   arr.forEach(function (t, i) {
-    var w = name + '[' + i + ']';
+    var w = P + name + '[' + i + ']';
     if (!isObj(t)) { R.err('combat', w + ' 가 객체가 아님.'); return; }
     inGrid(t, w);
     if (isCover) {

@@ -303,7 +303,9 @@ console.log('\n== 미션 레지스트리 무결 [통합 §2] ==');
 var REG = CAMP.MISSIONS;
 var mains = REG.filter(function (e) { return e.kind === 'main'; });
 var sides = REG.filter(function (e) { return e.kind === 'side'; });
-ok('77. 레지스트리 = 16 미션 (메인 8 + 사이드 8)', REG.length === 16 && mains.length === 8 && sides.length === 8);
+var act2 = REG.filter(function (e) { return e.kind === 'act2'; });
+// [61차] Act2 프레이밍(a2-00) 추가 → 레지스트리 17(메인 8 + 사이드 8 + act2 1). 메인/사이드 불변.
+ok('77. 레지스트리 = 17 미션 (메인 8 + 사이드 8 + act2 1)', REG.length === 17 && mains.length === 8 && sides.length === 8 && act2.length === 1);
 // 전 미션 데이터 해석 + id 일치 + 필수 섹션.
 var resolveOk = true, resolveBad = [];
 REG.forEach(function (e) {
@@ -347,7 +349,7 @@ while (changed && guard++ < 50) {
     if (CAMP.isUnlocked(e, rsave)) { rsave.missionsDone.push(e.id); rsave.flags.heroChoice = 'hero'; changed = true; }
   });
 }
-ok('81. 빈 세이브에서 전 16 미션 도달 가능 (해금 확산)', rsave.missionsDone.length === 16);
+ok('81. 빈 세이브에서 전 17 미션 도달 가능 (해금 확산 · a2-00=ch08 done 게이트)', rsave.missionsDone.length === 17);
 
 console.log('\n== 해금 조건 판정 [통합 §3] ==');
 var emptySave = { missionsDone: [], flags: {} };
@@ -597,7 +599,8 @@ for (var _mi = 0; _mi < mrx.length; _mi++) {
     if (_vd.clearable && _vd.rep.rounds > worstRush) worstRush = _vd.rep.rounds;
   }
 }
-ok('126. 전 64조합 클리어 가능 (clearFail 0)', nClear === 64 && nFail === 0);
+// [61차] a2-00 등록으로 매트릭스 = 17미션×4 = 68조합(기존 64 + a2-00 4). 전원 클리어 유지.
+ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0)', nClear === nTotal && nTotal === REG.length * 4 && nFail === 0);
 ok('127. 소모전(attrition) 이상치 0', nAttr === 0);
 ok('128. 최속 승리 라운드 밴드 상한 ≤ 9 (전 조합)', worstRush <= 9);
 
@@ -815,16 +818,17 @@ ok('173. base 시나리오 = 무인자 runEncounter byte 동일 (기존 64조합
 var aggBase = BAL.aggregateScenario(BAL.runMatrix('base'));
 var aggMid  = BAL.aggregateScenario(BAL.runMatrix('mid'));
 var aggFull = BAL.aggregateScenario(BAL.runMatrix('full'));
-ok('174. base 64/64 클리어 · trivial ≤1 (무장비 기준 밴드 재확인)',
-  aggBase.clearable === 64 && aggBase.total === 64 && aggBase.trivial <= 1 && aggBase.fail === 0);
-ok('175. mid: 클리어율 동일(64/64=base) · 여유 증가(평균종료HP mid≥base)',
-  aggMid.clearable === aggBase.clearable && aggMid.clearable === 64 && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
+var AGG_N = REG.length * 4;   // [61차] 17미션×4 = 68(기존 64 + a2-00 4). 시나리오 집계 총량.
+ok('174. base ' + AGG_N + '/' + AGG_N + ' 클리어 · trivial ≤1 (무장비 기준 밴드 재확인)',
+  aggBase.clearable === AGG_N && aggBase.total === AGG_N && aggBase.trivial <= 1 && aggBase.fail === 0);
+ok('175. mid: 클리어율 동일(' + AGG_N + '/' + AGG_N + '=base) · 여유 증가(평균종료HP mid≥base)',
+  aggMid.clearable === aggBase.clearable && aggMid.clearable === AGG_N && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
 // ★full 후반 챕터 트리비얼화 가드 — ch06~08 최속승리 min ≥3R & 후반 트리비얼 0 = 합격(장비 하향 불요).
 var guardFull = BAL.lateChapterGuard(BAL.runMatrix('full'));
 ok('176. full: 후반 챕터(ch06~08) ≥3R 유지 & 트리비얼 0 — 트리비얼화 없음(가드 PASS)',
   guardFull.pass === true && guardFull.trivLate === 0 &&
   guardFull.perCh[6].min >= 3 && guardFull.perCh[7].min >= 3 && guardFull.perCh[8].min >= 3 &&
-  aggFull.clearable === 64 && aggFull.fail === 0);
+  aggFull.clearable === AGG_N && aggFull.fail === 0);
 
 // ============================================================================
 // ============  57차 — 챕터 8 완주 피날레 (엔딩 씬 · 통계 · 회차 플레이)  ======
@@ -957,6 +961,166 @@ epD = S.dialogueChoose(epD, 0);             // endDead → settle
 var epDFinal = S.dialogueChoose(epD, 0);    // → epilogue
 ok('200. 폴백 경로(누적 flag 없음) → dead-nexus 엔딩 기록 (endingSplit ungated 폴백)',
   epDFinal.epilogue.ending === 'dead-nexus' && epDFinal.save.endings.seen['dead-nexus'] === 1);
+
+// ============================================================================
+// [61차] Act 2 엔진 확장 — 멀티 인카운터 · 게이트 확장 · 하드모드 · 신규 적 · a2-00
+// ============================================================================
+
+console.log('\n== [61차] 신규 적 7종 스키마 (data/enemies.js §2 스탯표) ==');
+var A2_NEW = ['MERIDIAN_VANGUARD', 'MERIDIAN_STALKER', 'MERIDIAN_DRONE', 'MERIDIAN_WARLORD', 'WARD_NODE', 'ELIA_VOSS', 'HARLAN_VOSS'];
+var newSchemaOk = A2_NEW.every(function (k) {
+  var t = EN.ENEMIES[k];
+  return t && t.key === k && numFin(t.hp) && numFin(t.atk) && numFin(t.def) &&
+    numFin(t.spd) && numFin(t.hack) && numFin(t.mov) && numFin(t.range) &&
+    typeof t.attr === 'string' && typeof t.ai === 'string' && typeof t.name === 'string';
+});
+function numFin(v) { return typeof v === 'number' && Number.isFinite(v); }
+ok('201. 신규 7종 전부 존재 + spawnEnemy 소비 스키마 완비', newSchemaOk);
+var mv = EN.ENEMIES.MERIDIAN_VANGUARD;
+ok('202. MERIDIAN_VANGUARD 스탯 = hp14/atk5/def4/spd2/hack0 IRON advance (§2 그대로)',
+  mv.hp === 14 && mv.atk === 5 && mv.def === 4 && mv.spd === 2 && mv.hack === 0 && mv.attr === 'IRON' && mv.ai === 'advance');
+var ms = EN.ENEMIES.MERIDIAN_STALKER, md = EN.ENEMIES.MERIDIAN_DRONE, mw = EN.ENEMIES.MERIDIAN_WARLORD;
+ok('203. STALKER SHADE hp8 coverShooter · DRONE VOLT isMachine · WARLORD ASH hp24 보스',
+  ms.attr === 'SHADE' && ms.hp === 8 && ms.ai === 'coverShooter' && md.attr === 'VOLT' && md.isMachine === true &&
+  mw.attr === 'ASH' && mw.hp === 24);
+var wn = EN.ENEMIES.WARD_NODE;
+ok('204. WARD_NODE = GRID static · physImmune · hackOnly · ap0 (오브젝티브 수호 · ICE 차별축)',
+  wn.attr === 'GRID' && wn.ai === 'static' && wn.physImmune === true && wn.hackOnly === true && wn.ap === 0);
+var ev = EN.ENEMIES.ELIA_VOSS, hv = EN.ENEMIES.HARLAN_VOSS;
+ok('205. lore 보스 ELIA_VOSS(BIO hp18)·HARLAN_VOSS(VOLT hp20) 첫 등장',
+  ev.attr === 'BIO' && ev.hp === 18 && hv.attr === 'VOLT' && hv.hp === 20);
+
+console.log('\n== [61차 §3.4] 하드모드 적 스탯 스케일 (spawnEnemy scale) ==');
+var a2m = CAMP.missionData('a2-00-framing');
+var hmChar = CH.makeCharacter('CIPHER');
+var cBase = S.buildCombat(a2m, hmChar, 'outro');
+var cScale1 = S.buildCombat(a2m, hmChar, 'outro', { enemyScale: 1 });
+ok('206. enemyScale=1 → 적 유닛 byte 불변(하위호환 불변식)',
+  JSON.stringify(cBase.units.filter(function (u) { return u.side === 'enemy'; })) ===
+  JSON.stringify(cScale1.units.filter(function (u) { return u.side === 'enemy'; })));
+var cHard = S.buildCombat(a2m, hmChar, 'outro', { enemyScale: 1.25 });
+var eB = cBase.units.filter(function (u) { return u.side === 'enemy'; })[0];
+var eH = cHard.units.filter(function (u) { return u.side === 'enemy'; })[0];
+ok('207. scale 1.25: hp/maxHp/atk = ceil(base×1.25) · def 원값 유지 (STALKER 8→10 · atk4→5 · def2 불변)',
+  eH.hp === Math.ceil(eB.hp * 1.25) && eH.maxHp === Math.ceil(eB.maxHp * 1.25) &&
+  eH.atk === Math.ceil(eB.atk * 1.25) && eH.def === eB.def && eB.hp === 8 && eH.hp === 10 && eH.atk === 5);
+ok('208. buildCombat.combat 이 enemyScale 를 combat.enemyScale 로 이월(증원 스폰 동일 배율)', cHard.enemyScale === 1.25);
+
+console.log('\n== [61차 §3.4] 하드모드 토글 (TOGGLE_HARD_MODE 리듀서) ==');
+var hmState = S.rpgInitialState();
+ok('209. 초기 save.flags.hardMode 미설정(기본 표준 밸런스)', !hmState.save.flags.hardMode);
+var hmOn = S.rpgReducer(hmState, { type: 'TOGGLE_HARD_MODE' });
+ok('210. TOGGLE_HARD_MODE → hardMode true 반전', hmOn.save.flags.hardMode === true);
+var hmOff = S.rpgReducer(hmOn, { type: 'TOGGLE_HARD_MODE' });
+ok('211. 재토글 → hardMode false (복원)', hmOff.save.flags.hardMode === false);
+
+console.log('\n== [61차 §3.1] 멀티 인카운터 — buildCombat opts.combat 오버라이드 ==');
+// 합성 미션: combat=enc① · encounters.stage2=enc②(다른 그리드/적) — store.buildCombat 오버라이드 계약.
+var synMission = {
+  id: 'syn-multi', title: 'syn', subtitle: 'syn',
+  combat: { cols: 6, rows: 7, playerStart: { x: 3, y: 6 }, walls: [], cover: [],
+    objective: { x: 3, y: 0, threshold: 6, label: 'enc1' }, enemies: [{ key: 'MERIDIAN_DRONE', x: 3, y: 3 }] },
+  encounters: { stage2: { cols: 8, rows: 8, playerStart: { x: 4, y: 7 }, walls: [], cover: [],
+    objective: { x: 4, y: 0, threshold: 11, label: 'enc2' }, enemies: [{ key: 'MERIDIAN_WARLORD', x: 4, y: 3 }, { key: 'WARD_NODE', x: 4, y: 1 }] } },
+};
+var enc1 = S.buildCombat(synMission, hmChar, 'interlude');
+ok('212. opts 없음 → enc①=mission.combat (6×8? 실제 6×7 · MERIDIAN_DRONE · thr6) [하위호환]',
+  enc1.field.cols === 6 && enc1.field.rows === 7 && enc1.objective.max === 6 &&
+  enc1.units.filter(function (u) { return u.side === 'enemy'; }).length === 1);
+var enc2 = S.buildCombat(synMission, hmChar, 'outro', { combat: synMission.encounters.stage2 });
+ok('213. opts.combat=encounters.stage2 → enc②(8×8 · thr11 · WARLORD+WARD_NODE 2적) 오버라이드',
+  enc2.field.cols === 8 && enc2.field.rows === 8 && enc2.objective.max === 11 &&
+  enc2.units.filter(function (u) { return u.side === 'enemy'; }).length === 2);
+ok('214. enc② missionId 는 mission.id 유지(resolveCombat 라우팅 계약 불변)', enc2.missionId === 'syn-multi');
+// 인카운터 해석 표현식 계약(store.dialogueChoose): encounter 문자열 → mission.encounters[key].
+function resolveEnc(mission, startCombat) {
+  return (startCombat.encounter && mission.encounters) ? mission.encounters[startCombat.encounter] : null;
+}
+ok('215. encounter 해석: {encounter:"stage2"} → encounters.stage2 · 미지정 → null(mission.combat 폴백)',
+  resolveEnc(synMission, { encounter: 'stage2', onWin: 'outro' }) === synMission.encounters.stage2 &&
+  resolveEnc(synMission, { onWin: 'outro' }) === null &&
+  resolveEnc({ id: 'x', combat: {} }, { encounter: 'stage2' }) === null);
+
+console.log('\n== [61차 §3.2] 엔딩 게이트 + 클래스 게이트 해금 ==');
+function mkSave(o) { var s = { missionsDone: [], flags: {}, character: { classKey: 'CIPHER' }, endings: { seen: {}, byClass: {}, runs: 0 } }; return Object.assign(s, o || {}); }
+var eGate = { id: 'x', unlock: { endingSeen: ['corporate-eternal'] } };
+ok('216. endingSeen 게이트: 미열람 → 잠김',
+  CAMP.isUnlocked(eGate, mkSave()) === false);
+ok('217. endingSeen 게이트: 열람(seen>0) → 해금',
+  CAMP.isUnlocked(eGate, mkSave({ endings: { seen: { 'corporate-eternal': 1 }, byClass: {}, runs: 1 } })) === true);
+var eGate2 = { id: 'x', unlock: { endingSeen: ['corporate-eternal', 'street-rising'] } };
+ok('218. endingSeen AND: 일부만 열람 → 잠김',
+  CAMP.isUnlocked(eGate2, mkSave({ endings: { seen: { 'corporate-eternal': 1 }, byClass: {}, runs: 1 } })) === false);
+var cGate = { id: 'x', unlock: { classKey: 'MOLE' } };
+ok('219. classKey 게이트: 타 클래스(CIPHER) → 잠김 · 해당 클래스(MOLE) → 해금',
+  CAMP.isUnlocked(cGate, mkSave({ character: { classKey: 'CIPHER' } })) === false &&
+  CAMP.isUnlocked(cGate, mkSave({ character: { classKey: 'MOLE' } })) === true);
+var eHint = CAMP.unlockHint({ unlock: { endingSeen: ['nexus-reborn'] } });
+var cHint = CAMP.unlockHint({ unlock: { classKey: ['MOLE'] } });
+ok('220. unlockHint: endingSeen → "NEXUS REBORN 엔딩 열람" · classKey → "MOLE 클래스 편성" 힌트',
+  /NEXUS REBORN/.test(eHint) && /엔딩 열람/.test(eHint) && /MOLE/.test(cHint) && /클래스 편성/.test(cHint));
+
+console.log('\n== [61차] a2-00 프레이밍 — 레지스트리 · 보드 · 완주 경로 ==');
+var a2entry = CAMP.missionById('a2-00-framing');
+ok('221. a2-00 레지스트리 = kind act2 · unlock missionsDone ch08 (엔딩 무관)',
+  a2entry && a2entry.kind === 'act2' && a2entry.unlock.missionsDone[0] === 'ch08-zero-day' && !a2entry.unlock.endingSeen);
+var noCh8 = mkSave();
+var yesCh8 = mkSave({ missionsDone: ['ch08-zero-day'] });
+ok('222. a2-00 해금: ch08 미완주 → 잠김 · 완주 → 해금(엔딩 무관하게)',
+  CAMP.isUnlocked(a2entry, noCh8) === false && CAMP.isUnlocked(a2entry, yesCh8) === true);
+var bs = CAMP.boardState(yesCh8);
+ok('223. boardState.act2 = a2-00 1건(해금) · mains 8 · sides 8 (기존 그룹 불변)',
+  bs.act2.length === 1 && bs.act2[0].id === 'a2-00-framing' && bs.act2[0].unlocked === true &&
+  bs.mains.length === 8 && bs.sides.length === 8);
+// 완주 경로(전투 경로): intro→approach→[전투]→outro→settle→returnHub. RIGGER(spd2) = 전투 폴백.
+var a2 = S.rpgInitialState();
+a2.save.missionsDone = ['ch08-zero-day'];
+a2.save.character = CH.makeCharacter('RIGGER');
+a2 = S.startMission(a2, 'a2-00-framing');
+ok('224. a2-00 진입 = dialogue intro (해금 통과)', a2.scene === 'dialogue' && a2.dialogue.nodeId === 'intro');
+a2 = S.dialogueChoose(a2, 0);   // intro → approach
+a2 = S.dialogueChoose(a2, 0);   // approach → [전투] startCombat onWin outro
+ok('225. approach 전투 선택 → scene combat · onWin outro · MERIDIAN 정찰대 3적(STALKER×2+DRONE)',
+  a2.scene === 'combat' && a2.combat.onWin === 'outro' &&
+  a2.combat.units.filter(function (u) { return u.side === 'enemy'; }).length === 3);
+// 전투 강제 승리 → resolveCombat → outro → settle → returnHub(applyRewards).
+a2.combat.objective.done = true; a2.combat.outcome = 'win';
+a2 = S.resolveCombat(a2);
+ok('226. 전투 승리 → outro 라우팅 (meridianKnown/act2Framed flag)', a2.dialogue.nodeId === 'outro' && a2.save.flags.meridianKnown === true);
+a2 = S.dialogueChoose(a2, 0);   // outro → settle (applyRewards)
+ok('227. settle applyRewards → a2-00 클리어 기록 · rep 가산(4)',
+  a2.save.missionsDone.indexOf('a2-00-framing') >= 0 && a2.save.character.rep >= 4);
+var a2hub = S.dialogueChoose(a2, 0);  // settle → returnHub
+ok('228. settle → returnHub → 허브 귀환(미션 종결)', a2hub.scene === 'hub');
+
+console.log('\n== [61차] a2-00 게이트 지름길 (SPD4 · flag) — skipCombat 전투 스킵 ==');
+// CIPHER(spd4) → [SPD4] 우회 통과(전투 스킵) · RIGGER(spd2) → 잠김(전투 폴백).
+var a2c = S.rpgInitialState(); a2c.save.missionsDone = ['ch08-zero-day']; a2c.save.character = CH.makeCharacter('CIPHER');
+a2c = S.startMission(a2c, 'a2-00-framing'); a2c = S.dialogueChoose(a2c, 0);  // approach
+var a2cSpd = S.dialogueChoose(a2c, 1);   // [SPD4] 우회 (CIPHER spd4 통과)
+ok('229. CIPHER(spd4) [SPD4] 우회 → 전투 스킵(combat null · outro) · meridianRecon flag',
+  a2cSpd.scene === 'dialogue' && a2cSpd.dialogue.nodeId === 'outro' && a2cSpd.combat === null && a2cSpd.save.flags.meridianRecon === true);
+var a2r = S.rpgInitialState(); a2r.save.missionsDone = ['ch08-zero-day']; a2r.save.character = CH.makeCharacter('RIGGER');
+a2r = S.startMission(a2r, 'a2-00-framing'); a2r = S.dialogueChoose(a2r, 0);  // approach
+var a2rSpd = S.dialogueChoose(a2r, 1);   // [SPD4] RIGGER spd2 → blocked
+ok('230. RIGGER(spd2) [SPD4] 잠김 → blocked 배너(전투 폴백 상존, MFU)',
+  a2rSpd.banner && a2rSpd.banner.kind === 'blocked' && a2rSpd.scene === 'dialogue' && a2rSpd.dialogue.nodeId === 'approach');
+// [flag zeroDayBreached] 지름길 — 계승 flag 보유 시 전투 스킵.
+var a2f = S.rpgInitialState(); a2f.save.missionsDone = ['ch08-zero-day']; a2f.save.character = CH.makeCharacter('RIGGER');
+a2f.save.flags.zeroDayBreached = true;
+a2f = S.startMission(a2f, 'a2-00-framing'); a2f = S.dialogueChoose(a2f, 0);  // approach
+var a2fGate = S.dialogueChoose(a2f, 2);  // [flag zeroDayBreached] → skipCombat
+ok('231. [flag zeroDayBreached] 계승 지름길 → 전투 스킵(outro) · meridianDecoded flag',
+  a2fGate.dialogue.nodeId === 'outro' && a2fGate.combat === null && a2fGate.save.flags.meridianDecoded === true);
+
+console.log('\n== [61차 §3.1] 하드모드 통합 — dialogueChoose 전투 개시 시 스케일 적용 ==');
+var a2h = S.rpgInitialState(); a2h.save.missionsDone = ['ch08-zero-day']; a2h.save.character = CH.makeCharacter('RIGGER');
+a2h.save.flags.hardMode = true;
+a2h = S.startMission(a2h, 'a2-00-framing'); a2h = S.dialogueChoose(a2h, 0);  // approach
+a2h = S.dialogueChoose(a2h, 0);  // 전투 개시 (hardMode → scale 1.25)
+var hEnemy = a2h.combat.units.filter(function (u) { return u.side === 'enemy' && u.key === 'MERIDIAN_STALKER'; })[0];
+ok('232. hardMode ON → dialogueChoose 전투 개시 시 적 스탯 스케일(STALKER hp 8→10) · combat.enemyScale 1.25',
+  hEnemy.hp === 10 && hEnemy.atk === 5 && a2h.combat.enemyScale === 1.25);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

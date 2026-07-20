@@ -191,6 +191,54 @@
       attr: 'GRID', range: 4, ai: 'advance', isMachine: false, bloc: 'NEXUS',
       lineage: '[신규 · NEXUS 수호자 최종 보스] GRID 코어 (ch08 결전)',
     },
+
+    // ── [신규 61차] MERIDIAN 외부 세력 (Act 2 · docs/25 §9.2 후크 "제로데이 이후 외부 위협") ──
+    //   애시그리드 성벽 너머 비통제구역 외곽에서 온 외부 기업 연합. 제로데이로 무방비해진
+    //   틈을 노린다. 희소축 속성 전면화(SHADE/ASH/GRID) — Act1 블록 유닛과 차별.
+    //   AI 태그는 기존 어휘 재사용(advance/coverShooter/static) — 엔진 무편집.
+    MERIDIAN_VANGUARD: {
+      key: 'MERIDIAN_VANGUARD', name: 'MERIDIAN Vanguard', icon: '🪖',
+      hp: 14, atk: 5, def: 4, spd: 2, hack: 0, mov: 2, ap: 2,
+      attr: 'IRON', range: 1, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 · MERIDIAN 외부 세력] IRON 중장 돌격 — 저속 고DEF 근접 전위',
+    },
+    MERIDIAN_STALKER: {
+      key: 'MERIDIAN_STALKER', name: 'MERIDIAN Stalker', icon: '🥷',
+      hp: 8, atk: 4, def: 2, spd: 4, hack: 2, mov: 4, ap: 2,
+      attr: 'SHADE', range: 4, ai: 'coverShooter', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 · MERIDIAN 외부 세력] SHADE 저격수 (적 희소축 SHADE 전면화)',
+    },
+    MERIDIAN_DRONE: {
+      key: 'MERIDIAN_DRONE', name: 'MERIDIAN Recon Drone', icon: '🛰',
+      hp: 6, atk: 3, def: 2, spd: 4, hack: 0, mov: 4, ap: 2,
+      attr: 'VOLT', range: 4, ai: 'coverShooter', isMachine: true, bloc: 'MERIDIAN',
+      lineage: '[신규 · MERIDIAN 외부 세력] VOLT 정찰 드론 (기계 → DATA SPIKE 대상)',
+    },
+    MERIDIAN_WARLORD: {
+      key: 'MERIDIAN_WARLORD', name: 'MERIDIAN Warlord', icon: '👹',
+      hp: 24, atk: 6, def: 4, spd: 4, hack: 2, mov: 4, ap: 2,
+      attr: 'ASH', range: 2, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 · MERIDIAN 외부 위협 보스] ASH 전쟁군주 (적 희소축 ASH · Act2 메인 보스)',
+    },
+    WARD_NODE: {
+      key: 'WARD_NODE', name: 'Ward Node', icon: '◈',
+      hp: 5, atk: 0, def: 0, spd: 0, hack: 0, mov: 0, ap: 0,
+      attr: 'GRID', range: 0, ai: 'static', isMachine: false,
+      physImmune: true, hackOnly: true, bloc: 'MERIDIAN',
+      lineage: '[신규 · MERIDIAN 오브젝티브 수호] GRID 정적 노드 · 물리무효·HACK만 (ICE_NODE/SIGNAL_ICE 차별축)',
+    },
+    ELIA_VOSS: {
+      key: 'ELIA_VOSS', name: 'Elia Voss', icon: '🧬',
+      hp: 18, atk: 4, def: 3, spd: 2, hack: 4, mov: 2, ap: 2,
+      attr: 'BIO', range: 3, ai: 'advance', isMachine: false, bloc: 'HELIX',
+      lineage: '[신규 · lore ELIA VOSS HELIX Dr. 첫 등장] BIO 보스 (S-MOLE 사이드 숙적)',
+    },
+    HARLAN_VOSS: {
+      key: 'HARLAN_VOSS', name: 'Harlan Voss', icon: '🏭',
+      hp: 20, atk: 5, def: 5, spd: 2, hack: 3, mov: 2, ap: 2,
+      attr: 'VOLT', range: 3, ai: 'advance', isMachine: false, bloc: 'CARBON',
+      lineage: '[신규 · lore HARLAN VOSS CARBON Elder 첫 등장] VOLT 보스 (S-RIGGER 사이드 숙적)',
+    },
   };
 
   var API = { BLOC_EXEC: BLOC_EXEC, ENEMIES: ENEMIES };

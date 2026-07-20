@@ -74,6 +74,7 @@
 <script src="./data/missions/side-06-rival-duel.js"></script>
 <script src="./data/missions/side-07-server-zero.js"></script>
 <script src="./data/missions/side-08-harbor-run.js"></script>
+<script src="./data/missions/a2-00-framing.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -131,6 +132,9 @@ const ENEMY_SPRITE = {
   IRONWALL_TURRET: 'px-turret', SPLICE_HOUND: 'px-hound', MESH_WISP: 'px-wisp', GANG_THUG: 'px-thug',
   ICE_NODE: 'px-ice', SIGNAL_ICE: 'px-ice',
   RIVAL_GHOST: 'px-boss', KAI_MORROW: 'px-boss', MARCUS_CRANE: 'px-boss', VERA_ASHTON: 'px-boss', NEXUS_WARDEN: 'px-boss',
+  // [61차 Act2] MERIDIAN 외부 세력 + lore 보스 — 기존 17장 재활용(신규 다운로드 0).
+  MERIDIAN_VANGUARD: 'px-elite', MERIDIAN_STALKER: 'px-wisp', MERIDIAN_DRONE: 'px-drone',
+  MERIDIAN_WARLORD: 'px-boss', WARD_NODE: 'px-ice', ELIA_VOSS: 'px-boss', HARLAN_VOSS: 'px-boss',
 };
 function spriteForUnit(u) {
   if (!u) return null;
@@ -278,9 +282,14 @@ function MissionCard({ row, current, dispatch }) {
   const isCurrent = row.id === current;
   // 미해금: 메인은 챕터 번호 + 힌트, 사이드는 ??? + 힌트 (미리보기 은폐).
   if (!row.unlocked) {
+    // 미해금 표기: 메인=챕터 번호, 사이드=???, act2=??? (엔딩/클래스 게이트 힌트).
+    let lockedTtl;
+    if (row.kind === 'side') lockedTtl = '??? — 미해금 계약';
+    else if (row.kind === 'act2') lockedTtl = '??? — ACT 2 미개방';
+    else lockedTtl = chLabel(entry);
     return (
       <div className={'mcard locked ' + row.kind}>
-        <span className="mc-ttl">🔒 {row.kind === 'side' ? '??? — 미해금 계약' : chLabel(entry)}</span>
+        <span className="mc-ttl">🔒 {lockedTtl}</span>
         <span className="mc-hint">{row.hint}</span>
       </div>
     );
@@ -306,6 +315,8 @@ function MissionCard({ row, current, dispatch }) {
 function MissionBoard({ state, dispatch }) {
   const board = CAMP.boardState(state.save);
   const sideVisible = board.sides.filter(s => s.unlocked).length;
+  const act2 = board.act2 || [];
+  const act2Visible = act2.filter(a => a.unlocked).length;
   return (
     <div className="sheet mboard">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
@@ -321,6 +332,16 @@ function MissionBoard({ state, dispatch }) {
       <div className="mission-list">
         {board.sides.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
       </div>
+      {act2.length ? (
+        <React.Fragment>
+          <div className="board-sec act2-sec">🌆 ACT 2 — AFTER ZERO DAY ({act2Visible}/{act2.length} 개방){" "}
+            <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>· 제로데이 이후 · MERIDIAN 외부 위협</span>
+          </div>
+          <div className="mission-list">
+            {act2.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+          </div>
+        </React.Fragment>
+      ) : null}
     </div>
   );
 }
@@ -480,6 +501,13 @@ function Hub({ state, dispatch, openSave }) {
         <div className="lab">SIGNAL 추적 / 캠페인 위협 {threat.value}/{threat.cap} · 전투 노출은 미션 내 게이지로 실동</div>
         <div className="bar"><i style={{ width: Math.min(100, threat.value / threat.cap * 100) + '%' }} /></div>
       </div>
+      {/* [61차 §3.4] 하드 모드 토글 — NG+ 회차(runs>0)부터 노출. 켜짐 시 이후 전투의 적 스탯 +25%(hp/atk). */}
+      {(ENDING && ENDING.migrateEndings(save.endings).runs > 0) ? (
+        <button className={'btn ghost hardmode-btn' + (save.flags && save.flags.hardMode ? ' on' : '')}
+          onClick={() => dispatch({ type: 'TOGGLE_HARD_MODE' })}>
+          {save.flags && save.flags.hardMode ? '🔥 하드 모드 ON — 적 스탯 +25% (다음 전투부터)' : '🔥 하드 모드 OFF — 표준 밸런스 (탭해서 상향)'}
+        </button>
+      ) : null}
       <button className="btn ghost" onClick={openSave}>💾 세이브 / 문자열 export·import</button>
     </div>
   );
@@ -989,6 +1017,9 @@ try {
 .mboard { gap: 6px; }
 .board-sec { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim);
   margin: 12px 0 4px; padding-bottom: 3px; border-bottom: 1px solid var(--border); }
+.board-sec.act2-sec { color: var(--orange); border-bottom-color: var(--orange); }
+.mcard.locked.act2 { border-left: 2px solid var(--orange); opacity: .72; }
+.hardmode-btn.on { color: var(--orange); border-color: var(--orange); }
 .mission-list { display: flex; flex-direction: column; gap: 8px; }
 .mcard { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
   border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg2);
