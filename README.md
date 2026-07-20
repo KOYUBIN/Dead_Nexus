@@ -5,7 +5,7 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.27 (2026-07) — 레이스 HUD + 시나리오 S01~S06 전체 개방 + 레거시 캠페인 Stage 1 + 모바일 지원 + highlightPoints 승리 환산
+**현재 버전**: v6.39 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 16미션·4클래스·장비 경제·아이소 뷰 + 외부 의존 0 + NEXUS BAR/레이스 HUD
 
 - **라이브 플레이**: [dead-nexus.vercel.app](https://dead-nexus.vercel.app) — 브라우저에서 바로 시작 (모바일 세로 스택 지원, v6.25)
 - **레이스 HUD**: 중앙 상단 4요소 — VICTORY RACE 트랙(전 좌석 승리 진척 %) · MARKET 틱커 · THREAT 스트립 · ROUND BRIEF. 판정 코드(`getVictoryGoals`/`evalPlayerVictory`)와 동일 소스로 계기판 정직성 유지 (v6.26)

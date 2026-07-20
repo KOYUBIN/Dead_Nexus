@@ -23,6 +23,7 @@ var AB   = require('./data/abilities.js');
 var MI   = require('./data/missions/ch01-first-blood.js');
 var EN   = require('./data/enemies.js');
 var GEAR = require('./data/gear.js');
+var END  = require('./systems/ending.js');
 
 var pass = 0, fail = 0, fails = [];
 function ok(name, cond) { if (cond) { pass++; console.log('  PASS  ' + name); } else { fail++; fails.push(name); console.log('  FAIL  ' + name); } }
@@ -824,6 +825,138 @@ ok('176. full: 후반 챕터(ch06~08) ≥3R 유지 & 트리비얼 0 — 트리�
   guardFull.pass === true && guardFull.trivLate === 0 &&
   guardFull.perCh[6].min >= 3 && guardFull.perCh[7].min >= 3 && guardFull.perCh[8].min >= 3 &&
   aggFull.clearable === 64 && aggFull.fail === 0);
+
+// ============================================================================
+// ============  57차 — 챕터 8 완주 피날레 (엔딩 씬 · 통계 · 회차 플레이)  ======
+//   엔딩 분기 판정(누적 flag) · 에필로그 발췌 · 통계 파생 · 엔딩 기록 영속 ·
+//   회차 리셋 시 엔딩 기록 보존 · 마이그레이션 하위 호환 · store 에필로그 라우팅.
+// ============================================================================
+
+console.log('\n== 엔딩 분기 판정 [57차 ending.resolveEnding] ==');
+// 'ending' flag(ch08 end 노드가 세움)가 최우선.
+ok('177. ending flag 우선 판정 (corporate-eternal)',
+  END.resolveEnding({ flags: { ending: 'corporate-eternal' } }) === 'corporate-eternal');
+// ending flag 없을 때 누적 flag 파생 — ch08 endingSplit 게이트 우선순위 계승.
+ok('178. 파생: endingTrack → corporate-eternal (ch07 지배 트랙)',
+  END.resolveEnding({ flags: { endingTrack: 'domination' } }) === 'corporate-eternal');
+ok('179. 파생 우선순위: allBlocsHostile → street-rising (endingTrack 없을 때)',
+  END.resolveEnding({ flags: { allBlocsHostile: true } }) === 'street-rising' &&
+  END.resolveEnding({ flags: { endingTrack: 'x', allBlocsHostile: true } }) === 'corporate-eternal');
+ok('180. 파생: ascendEnding → nexus-reborn (유일 전원 생존)',
+  END.resolveEnding({ flags: { ascendEnding: true } }) === 'nexus-reborn');
+ok('181. 누적 flag 전무 → dead-nexus (카드 확정 기본값)',
+  END.resolveEnding({ flags: {} }) === 'dead-nexus' && END.resolveEnding({}) === 'dead-nexus');
+
+console.log('\n== 에필로그 발췌 + 통계 파생 [57차] ==');
+var epC = END.epilogueFor('corporate-eternal');
+ok('182. epilogueFor: 제목·스티커·산문 라인 + 발췌/각색 태그 (원전 통제)',
+  epC.title === 'CORPORATE ETERNAL' && epC.sticker === 'ERA OF ONE' && epC.lines.length >= 3 &&
+  epC.lines.some(function (l) { return l.indexOf('[발췌]') === 0; }) &&
+  epC.lines.some(function (l) { return l.indexOf('[각색]') === 0; }));
+ok('183. epilogueFor 미지 key → dead-nexus 폴백', END.epilogueFor('???').key === 'dead-nexus' && END.ORDER.length === 4);
+// 당신의 선택들 — flags 파생, 값 있는 항목만.
+var sumFlags = { heroChoice: 'hero', extractionStyle: 'quiet', breachMethod: 'signature', endingTrack: 'revolution' };
+var summ = END.choiceSummary(sumFlags);
+ok('184. choiceSummary: heroChoice/extractionStyle/breachMethod/endingTrack 회고 (4항목)',
+  summ.length === 4 && summ[0].ch === 1 && summ.some(function (c) { return c.key === 'breachMethod' && c.text.indexOf('서명') >= 0; }) &&
+  END.choiceSummary({}).length === 0);
+// 통계 파생 — karma 지출 = growth 합, 메인/사이드 분리.
+var statSave = S.newSave();
+statSave.character.growth = { hp: 1, atk: 0, def: 2, spd: 0, hack: 3 }; // 지출 6
+statSave.character.karma = 4; statSave.character.gearOwned = ['SMART_LINK']; statSave.character.equipment = { weapon: 'SMART_LINK', cyberware: null };
+statSave.missionsDone = ['ch01-first-blood', 'ch02-insider-game', 'side-01-traitor-contract'];
+var stat = END.campaignStats(statSave);
+ok('185. campaignStats: 클리어 3(메인2·사이드1) · karma 지출 6 · 잔여 4 · 장비 보유 1/장착 1',
+  stat.missionsCleared === 3 && stat.mainCleared === 2 && stat.sideCleared === 1 &&
+  stat.karmaSpent === 6 && stat.karmaCurrent === 4 && stat.gearOwnedCount === 1 && stat.gearEquipped.length === 1);
+
+console.log('\n== 엔딩 기록 영속 + 마이그레이션 [57차 recordEnding/migrateEndings] ==');
+var rec0 = END.recordEnding(undefined, 'corporate-eternal', 'CIPHER');
+ok('186. recordEnding: seen count 1 · byClass CIPHER · runs 1 (구세이브 undefined 안전)',
+  rec0.seen['corporate-eternal'] === 1 && rec0.byClass.CIPHER === true && rec0.runs === 1);
+var rec1 = END.recordEnding(rec0, 'corporate-eternal', 'BLADE');
+ok('187. recordEnding 누적: 같은 엔딩 count 2 · byClass 2클래스 · runs 2 (순수 — 원본 불변)',
+  rec1.seen['corporate-eternal'] === 2 && rec1.byClass.CIPHER === true && rec1.byClass.BLADE === true &&
+  rec1.runs === 2 && rec0.runs === 1);
+ok('188. migrateEndings: 손상/부분 스키마 정규화 + 멱등',
+  JSON.stringify(END.migrateEndings(null)) === JSON.stringify({ seen: {}, byClass: {}, runs: 0 }) &&
+  JSON.stringify(END.migrateEndings({ seen: { x: 1 } })) === JSON.stringify({ seen: { x: 1 }, byClass: {}, runs: 0 }) &&
+  JSON.stringify(END.migrateEndings(rec1)) === JSON.stringify(rec1));
+var seenList = END.endingsSeen(rec1);
+ok('189. endingsSeen: 4엔딩 고정 목록 · corporate 열람(count2) · 나머지 미열람',
+  seenList.length === 4 && seenList[0].key === 'corporate-eternal' && seenList[0].seen === true && seenList[0].count === 2 &&
+  seenList[3].seen === false);
+
+console.log('\n== 회차 플레이 — 진행 리셋 · 엔딩 기록 보존 [57차 newGamePlus] ==');
+var prevSave = S.newSave();
+prevSave.missionsDone = ['ch01-first-blood', 'ch08-zero-day']; prevSave.flags = { ending: 'nexus-reborn', heroChoice: 'ghost' };
+prevSave.character.rep = 40; prevSave.intel = { 'ch01-first-blood': true };
+prevSave.endings = END.recordEnding(undefined, 'nexus-reborn', 'CIPHER');
+var ngp = END.newGamePlus(prevSave, S.newSave());
+ok('190. newGamePlus: missionsDone/flags/intel/rep 리셋 (신규 진행)',
+  ngp.missionsDone.length === 0 && Object.keys(ngp.flags).length === 0 &&
+  Object.keys(ngp.intel).length === 0 && ngp.character.rep === 0);
+ok('191. newGamePlus: 엔딩 기록(endings) 영속 — nexus-reborn seen 유지 · runs 1',
+  ngp.endings.seen['nexus-reborn'] === 1 && ngp.endings.byClass.CIPHER === true && ngp.endings.runs === 1);
+
+console.log('\n== 세이브 마이그레이션: endings 백필 [57차 하위 호환] ==');
+// 구세이브(endings 필드 없음) → 빈 기록 백필 · 라운드트립 · 멱등.
+var oldSave = { version: 1, character: S.newSave().character, flags: {}, heat: 0, heatCap: 10, missionsDone: [] };
+var oldImp = SAVE.importString(SAVE.exportString(oldSave));
+ok('192. 구세이브 마이그레이션 → endings{seen:{},byClass:{},runs:0} 백필',
+  oldImp.ok && oldImp.save.endings && typeof oldImp.save.endings.seen === 'object' &&
+  typeof oldImp.save.endings.byClass === 'object' && oldImp.save.endings.runs === 0);
+var endSave = S.newSave(); endSave.endings = END.recordEnding(undefined, 'street-rising', 'BLADE');
+var endImp = SAVE.importString(SAVE.exportString(endSave));
+ok('193. endings 라운드트립 무손실 + 마이그레이션 멱등',
+  endImp.ok && endImp.save.endings.seen['street-rising'] === 1 && endImp.save.endings.byClass.BLADE === true &&
+  JSON.stringify(SAVE.importString(SAVE.exportString(endImp.save)).save.endings) === JSON.stringify(endImp.save.endings));
+
+console.log('\n== ch08 완주 → 에필로그 씬 라우팅 (store 통합) [57차] ==');
+// ch08 settle 선택지 = epilogue + returnHub 병기 (검증기 종결 계약 + 에필로그 라우팅).
+var settleCh = CAMP.missionData('ch08-zero-day').dialogue.nodes.settle.choices[0].effect;
+ok('194. ch08 settle 선택지 effect = { epilogue:true, returnHub:true } (데이터 구동)',
+  settleCh.epilogue === true && settleCh.returnHub === true);
+// CIPHER(HACK5) 완주: intro→approach→[HACK5]coreBreach→endingSplit→endCorporate→settle→epilogue.
+var ep = S.rpgInitialState();
+ep.save.missionsDone = ['ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice', 'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city'];
+ep.save.flags = { endingTrack: 'domination' };
+ep = S.startMission(ep, 'ch08-zero-day');   // intro
+ep = S.dialogueChoose(ep, 0);               // intro → approach
+ep = S.dialogueChoose(ep, 1);               // [HACK5] 서명 직결(전투 스킵) → coreBreach
+ok('195. CIPHER [HACK5] 코어 돌파 = 전투 스킵 (combat null · coreBreach)',
+  ep.combat === null && ep.dialogue.nodeId === 'coreBreach');
+ep = S.dialogueChoose(ep, 0);               // coreBreach → endingSplit
+ep = S.dialogueChoose(ep, 0);               // [endingTrack] → endCorporate (ending flag 세움)
+ep = S.dialogueChoose(ep, 0);               // endCorporate → settle (applyRewards · ch08 missionsDone)
+ok('196. settle 진입 = ending flag corporate-eternal · ch08 클리어 기록',
+  ep.save.flags.ending === 'corporate-eternal' && ep.save.missionsDone.indexOf('ch08-zero-day') >= 0);
+var epFinal = S.dialogueChoose(ep, 0);      // settle → epilogue (엔딩 기록 영속)
+ok('197. 완주 → scene epilogue · epilogue.ending corporate-eternal · 엔딩 기록 영속(seen·byClass·runs)',
+  epFinal.scene === 'epilogue' && epFinal.epilogue.ending === 'corporate-eternal' &&
+  epFinal.save.endings.seen['corporate-eternal'] === 1 && epFinal.save.endings.byClass.CIPHER === true &&
+  epFinal.save.endings.runs === 1);
+
+console.log('\n== 에필로그 → 허브 / 새 회차 (리듀서) [57차] ==');
+var epHub = S.rpgReducer(epFinal, { type: 'EPILOGUE_CONTINUE' });
+ok('198. EPILOGUE_CONTINUE → 허브 귀환 (봉인 유지 · 진행 보존)',
+  epHub.scene === 'hub' && epHub.epilogue === null && epHub.save.missionsDone.indexOf('ch08-zero-day') >= 0);
+var epNgp = S.rpgReducer(epFinal, { type: 'NEW_GAME_PLUS' });
+ok('199. NEW_GAME_PLUS → 진행 리셋(missionsDone 0 · flags 0) · 엔딩 기록 영속(runs 1) · 허브',
+  epNgp.scene === 'hub' && epNgp.save.missionsDone.length === 0 && Object.keys(epNgp.save.flags).length === 0 &&
+  epNgp.save.endings.seen['corporate-eternal'] === 1 && epNgp.save.endings.runs === 1);
+// 폴백 엔딩(누적 flag 없음) 완주 → dead-nexus 기록 (endingSplit ungated 폴백 경로).
+var epD = S.rpgInitialState();
+epD.save.missionsDone = ['ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice', 'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city'];
+epD = S.startMission(epD, 'ch08-zero-day');
+epD = S.dialogueChoose(epD, 0);             // approach
+epD = S.dialogueChoose(epD, 1);             // [HACK5] → coreBreach
+epD = S.dialogueChoose(epD, 0);             // → endingSplit
+epD = S.dialogueChoose(epD, 4);             // ungated 폴백 → endDead
+epD = S.dialogueChoose(epD, 0);             // endDead → settle
+var epDFinal = S.dialogueChoose(epD, 0);    // → epilogue
+ok('200. 폴백 경로(누적 flag 없음) → dead-nexus 엔딩 기록 (endingSplit ungated 폴백)',
+  epDFinal.epilogue.ending === 'dead-nexus' && epDFinal.save.endings.seen['dead-nexus'] === 1);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

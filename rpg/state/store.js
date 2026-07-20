@@ -15,14 +15,15 @@
       return { G: w.RPG_GRID, R: w.RPG_RESOLVE, AI: w.RPG_AI, ATTR: w.RPG_ATTRS,
         DLG: w.RPG_DIALOGUE, CH: w.RPG_CHARACTER, CAMP: w.RPG_CAMPAIGN,
         AB: w.RPG_ABILITIES, EN: w.RPG_ENEMIES, MI: w.RPG_MISSION_CH01,
-        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES, GEAR: w.RPG_GEAR };
+        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES, GEAR: w.RPG_GEAR, END: w.RPG_ENDING };
     }
     return { G: require('../systems/combat/grid.js'), R: require('../systems/combat/resolve.js'),
       AI: require('../systems/combat/ai.js'), ATTR: require('../data/attributes.js'),
       DLG: require('../systems/dialogue.js'), CH: require('../systems/character.js'),
       CAMP: require('../systems/campaign.js'), AB: require('../data/abilities.js'),
       EN: require('../data/enemies.js'), MI: require('../data/missions/ch01-first-blood.js'),
-      SIG: require('../data/signal.js'), CL: require('../data/classes.js'), GEAR: require('../data/gear.js') };
+      SIG: require('../data/signal.js'), CL: require('../data/classes.js'), GEAR: require('../data/gear.js'),
+      END: require('../systems/ending.js') };
   }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -50,6 +51,8 @@
       inventory: [], flags: {}, missionsDone: [], openingsSeen: [],
       heat: 0, heatCap: 10, crew: [], hubState: { node: 'root' },
       intel: {},                        // [B1] 정보상: 구매한 미션 인텔 { missionId: true } (전투 브리핑 공개)
+      // [57차] 엔딩 기록 — 어느 엔딩을 봤는지(seen)·완주 클래스(byClass)·총 회차(runs). 회차 리셋 시 영속.
+      endings: { seen: {}, byClass: {}, runs: 0 },
       karma: ch.karma, nuyen: ch.nuyen, // §5.3 명시 필드 미러(캐릭터가 정본)
     };
   }
@@ -60,6 +63,7 @@
       save: newSave(),
       dialogue: null,
       combat: null,
+      epilogue: null,        // [57차] 캠페인 완주 에필로그 씬 상태 { ending }
       hub: { node: 'root' },
       banner: null,
       log: [],
@@ -508,6 +512,16 @@
       s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin, { intel: intelOn });
       return s;
     }
+    // [57차] 캠페인 완주 에필로그 — ch08 settle 이 epilogue+returnHub 를 함께 보유.
+    //   epilogue 를 returnHub 보다 먼저 소비 → 완주 시 전용 에필로그 씬으로 라우팅.
+    //   엔딩 분기 판정 후 엔딩 기록 영속(seen·byClass·runs). 미션 무관(데이터가 구동).
+    if (eff.epilogue) {
+      var endKey = D.END.resolveEnding(s.save);
+      s.save.endings = D.END.recordEnding(s.save.endings, endKey, s.save.character.classKey);
+      s.scene = 'epilogue'; s.dialogue = null; s.combat = null;
+      s.epilogue = { ending: endKey };
+      return s;
+    }
     // 귀환.
     if (eff.returnHub) {
       s.scene = 'hub'; s.dialogue = null; s.hub = { node: 'root' };
@@ -562,6 +576,17 @@
   }
 
   function hubNav(state, node) { var s = clone(state); s.hub = { node: node }; s.banner = null; return s; }
+
+  // [57차] 회차 플레이 — 캠페인 진행 리셋하되 엔딩 기록(endings) 영속.
+  //   신규 진행(newSave)에 이전 세이브의 endings 만 이월 → "어느 엔딩 봤는지"는 회차를 넘어 남는다.
+  function newGamePlus(state) {
+    var D = deps(); var s = clone(state);
+    s.save = D.END.newGamePlus(s.save, newSave());
+    s.scene = 'hub'; s.epilogue = null; s.dialogue = null; s.combat = null;
+    s.hub = { node: 'root' };
+    s.banner = { kind: 'growth', text: '새 회차 시작 — 캠페인 진행 리셋 (엔딩 기록 ' + s.save.endings.runs + '회 보존)' };
+    return s;
+  }
 
   // 로스터: 플레이어블 클래스 선택 → 해당 빌드로 신규 캐릭터 편성(성장 초기화).
   //   캠페인 진행(flags·missionsDone·heat)은 유지 → 같은 미션을 다른 빌드로 재완주.
@@ -656,6 +681,8 @@
       case 'UNEQUIP_GEAR': return unequipGear(state, action.slot);
       case 'BUY_INTEL': return buyIntel(state, action.missionId);
       case 'HUB_NAV': return hubNav(state, action.node);
+      case 'EPILOGUE_CONTINUE': { var se = clone(state); se.scene = 'hub'; se.epilogue = null; se.hub = { node: 'root' }; se.banner = null; return se; }
+      case 'NEW_GAME_PLUS': return newGamePlus(state);
       case 'CLEAR_BANNER': { var s7 = clone(state); s7.banner = null; return s7; }
       default: return state;
     }
@@ -669,6 +696,7 @@
     startMission: startMission, dialogueChoose: dialogueChoose, resolveCombat: resolveCombat,
     spendKarma: spendKarma, dialogueCtx: dialogueCtx, selectClass: selectClass,
     buyGear: buyGear, unequipGear: unequipGear, buyIntel: buyIntel,
+    newGamePlus: newGamePlus,
     PLAYER_ID: PLAYER_ID,
     exposure: function (combat) { return computeExposure(deps(), combat); },
   };
