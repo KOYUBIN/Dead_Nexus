@@ -53,12 +53,18 @@
     if (!save.intel || typeof save.intel !== 'object') save.intel = {};
     // [57차] 엔딩 기록 스키마 백필 (멱등). 구세이브엔 endings 없음 → 빈 기록(회차 0).
     //   endings = { seen:{key:count}, byClass:{CLS:true}, runs:N }. 회차 리셋 시에도 영속.
-    if (!save.endings || typeof save.endings !== 'object') save.endings = { seen: {}, byClass: {}, runs: 0 };
+    if (!save.endings || typeof save.endings !== 'object') save.endings = { seen: {}, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} };
     else {
       if (!save.endings.seen || typeof save.endings.seen !== 'object') save.endings.seen = {};
       if (!save.endings.byClass || typeof save.endings.byClass !== 'object') save.endings.byClass = {};
       if (typeof save.endings.runs !== 'number' || !isFinite(save.endings.runs)) save.endings.runs = 0;
+      // [v6.44] 캡스톤 기록 백필(멱등) — 구세이브엔 capstone/capstoneByClass 없음 → 0/{}.
+      if (typeof save.endings.capstone !== 'number' || !isFinite(save.endings.capstone)) save.endings.capstone = 0;
+      if (!save.endings.capstoneByClass || typeof save.endings.capstoneByClass !== 'object') save.endings.capstoneByClass = {};
     }
+    // [v6.44 · 과제 A1] 심연 프로토콜 최고 웨이브 기록 백필(멱등) — 구세이브엔 abyss 없음 → best 0.
+    if (!save.abyss || typeof save.abyss !== 'object') save.abyss = { best: 0 };
+    else if (typeof save.abyss.best !== 'number' || !isFinite(save.abyss.best)) save.abyss.best = 0;
     // firstBlood(레거시 챕터1 클리어 플래그) → ch01 클리어 기록으로 추론.
     if (save.flags.firstBlood && save.missionsDone.indexOf('ch01-first-blood') < 0) {
       save.missionsDone.push('ch01-first-blood');

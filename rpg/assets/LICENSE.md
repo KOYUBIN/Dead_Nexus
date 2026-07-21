@@ -47,3 +47,54 @@ kenney.nl 자산 페이지 메타 문구:
 | px-floor.png  | (2,0)  | 바닥 변주 텍스처(교차 타일) |
 
 총 17장 · 합계 약 2.6KB (500KB 상한 이내). 전량 모노크롬(흰색/투명) — CSS 틴트(진영색 글로우)로 염색.
+
+---
+
+# RPG 사운드 (SFX) — 자산 출처 · 라이선스  [v6.44 B1]
+
+## 채택 팩 (3종 · 전량 CC0)
+| 팩명 | 출처 URL | 다운로드 zip | 다운로드 일자 |
+|------|----------|--------------|---------------|
+| Kenney "Interface Sounds" (1.0) | https://kenney.nl/assets/interface-sounds | https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip | 2026-07-21 |
+| Kenney "Sci-Fi Sounds" (1.0)    | https://kenney.nl/assets/sci-fi-sounds    | https://kenney.nl/media/pages/assets/sci-fi-sounds/6b296f9ecf-1677589334/kenney_sci-fi-sounds.zip       | 2026-07-21 |
+| Kenney "Digital Audio"          | https://kenney.nl/assets/digital-audio    | https://kenney.nl/media/pages/assets/digital-audio/216eac4753-1677590265/kenney_digital-audio.zip       | 2026-07-21 |
+
+- **라이선스**: **Creative Commons Zero (CC0 1.0 / 퍼블릭 도메인)** — http://creativecommons.org/publicdomain/zero/1.0/
+
+### 라이선스 원문 증빙 (각 팩 동봉 License.txt)
+> Interface Sounds (1.0) — Created/distributed by Kenney (www.kenney.nl)
+> License: (Creative Commons Zero, CC0)
+> http://creativecommons.org/publicdomain/zero/1.0/
+> This content is free to use in personal, educational and commercial projects.
+> Support us by crediting Kenney or www.kenney.nl (this is not mandatory)
+
+> Sci-Fi Sounds (1.0) — Created/distributed by Kenney (www.kenney.nl)
+> License: (Creative Commons Zero, CC0)  …동일 문구…
+
+> Digital Audio — by Kenney Vleugels (Kenney.nl)
+> License (Creative Commons Zero, CC0)
+> http://creativecommons.org/publicdomain/zero/1.0/
+> You may use these assets in personal and commercial projects.
+> Credit (Kenney or www.kenney.nl) would be nice but is not mandatory.
+
+표기(크레딧)는 **의무 아님(not mandatory)** — 순수 퍼블릭 도메인. 본 프로젝트는 자율 표기로 이 문서를 유지한다.
+
+## 선별 SFX (rpg/assets/audio/ · 원본 팩 파일명 → 리포 시맨틱 파일명)
+전체 시트가 아닌, 아래 선별 12개 ogg 만 커밋 (표시층 전용). ogg 우선(전 브라우저·file:// 호환).
+
+| 리포 파일 | 원본 팩 | 원본 파일 | 크기(B) | 용도 (전투/UI 이벤트 훅) |
+|-----------|---------|-----------|---------|--------------------------|
+| hit.ogg     | Sci-Fi Sounds    | impactMetal_001.ogg          | 15305 | 타격(피해 명중 — 아군/적 피격) |
+| crit.ogg    | Sci-Fi Sounds    | explosionCrunch_000.ogg      | 28274 | 크리티컬(치명타 배수) |
+| hack.ogg    | Sci-Fi Sounds    | laserRetro_001.ogg           | 12732 | 해킹샷(HACK 계열 · 서버 랙 해킹) |
+| kill.ogg    | Sci-Fi Sounds    | lowFrequency_explosion_000.ogg | 14317 | 처치(적 파괴/디졸브) |
+| move.ogg    | Interface Sounds | click_002.ogg                | 4275  | 이동(타일 이동) |
+| ui.ogg      | Interface Sounds | click_001.ogg                | 4876  | UI 탭(허브/보드/버튼) |
+| select.ogg  | Interface Sounds | select_002.ogg               | 5463  | 능력 선택(어빌리티 셀렉트) |
+| mission.ogg | Interface Sounds | confirmation_001.ogg         | 8968  | 미션 시작(출격) |
+| victory.ogg | Digital Audio    | powerUp1.ogg                 | 9011  | 승리 스팅(미션/웨이브 성공) |
+| defeat.ogg  | Digital Audio    | lowDown.ogg                  | 5956  | 패배 스팅(다운) |
+| ending.ogg  | Digital Audio    | threeTone1.ogg               | 7361  | 엔딩 스팅(에필로그 진입) |
+| toggle.ogg  | Interface Sounds | switch_001.ogg               | 6753  | 마스터 토글 ON 피드백 |
+
+총 12개 · 합계 **123,291 B ≈ 120.4 KiB** (300KB 상한 이내). 원본 무변형(리네임만).

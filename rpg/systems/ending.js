@@ -76,6 +76,23 @@
       ],
     },
   };
+  // ---- [신규 v6.44 — 과제 A1] 캡스톤 에필로그 "ASHGRID PREVAILS" ----------------
+  //   4갈래 종결 미션 전부 클리어 → a2-99-flagship(MERIDIAN FLAGSHIP) 격파 시 전용 피날레.
+  //   4엔딩과 별개 기록(endings.capstone). 산문 = 원전 리프레인 "블록은 불사신이 아니다"
+  //   변주 각색([신규] 태그) — 성벽 안의 체제도, 성벽 밖의 침공도 불사신이 아니었다는 수렴.
+  var CAPSTONE = {
+    key: 'ashgrid-prevails', title: 'ASHGRID PREVAILS', icon: '🌃',
+    sticker: 'THE CITY REMAINS', accent: 'cyan',
+    cond: '4갈래 종결전 수렴 → MERIDIAN FLAGSHIP · OVERLORD 격파',
+    lines: [
+      '[신규] 네 개의 전선이 하나로 모였다. 왕관도, 자유항도, 재건된 넥서스도, 폐허의 신호도 — 오늘 밤 같은 하늘 아래 섰다.',
+      '[신규 · 리프레인 변주] 블록은 불사신이 아니었다. 그리고 오늘, 성벽 너머에서 온 것들도 불사신이 아니라는 것이 증명됐다.',
+      '[신규] MERIDIAN 기함이 애시그리드의 스카이라인 아래로 가라앉는다. OVERLORD는 도시의 이름조차 발음하지 못한 채 꺼졌다.',
+      '[신규] 도시는 승리하지 않았다 — 도시는 살아남았다. 그 둘의 차이를 아는 자들만이 이 재를 상속한다.',
+      '[신규] 레거시 상자에 "THE CITY REMAINS" 스티커가 붙는다. 애시그리드는, 여전히, 애시그리드다.',
+    ],
+  };
+
   // ch08 endingSplit 게이트 우선순위(계승) — 게이트 truthy flag → 엔딩 key.
   var DERIVE_ORDER = [
     { flag: 'endingTrack',     key: 'corporate-eternal' },
@@ -98,6 +115,8 @@
   }
 
   function epilogueFor(key) { return ENDINGS[key] || ENDINGS['dead-nexus']; }
+  // [신규 v6.44] 캡스톤 에필로그 메타 접근자 (에필로그 씬 capstone 분기 소비).
+  function capstoneEpilogue() { return CAPSTONE; }
 
   // ---- "당신의 선택들" — 지난 7챕터 + ch08 선택 회고 (세이브 flags 파생) --------
   //   flag 별 서사 라벨. 값이 있는 항목만 노출. (data/missions/*.js setFlags 값 기준)
@@ -111,6 +130,28 @@
     { key: 'endingTrack', ch: 7, label: '기여 트랙', map: { collapse: '⛓ 붕괴', council: '🕊 평의회', domination: '👑 지배', revolution: '🔥 혁명' } },
     { key: 'breachMethod', ch: 8, label: '코어 돌파', map: { assault: '⚔ 정면 결전', signature: '💻 제로데이 서명', breach: '🗡 격벽 관통' } },
   ];
+
+  // [신규 v6.44] Act2 4갈래 종결 선택 회고 스펙 — 캡스톤 에필로그 "지난 선택 반영" 카드.
+  //   4갈래 종결 미션의 최종 서사 분기 flag. 값 있는 항목만 노출(choiceSummary 계약 공유).
+  var CAPSTONE_RECALL_SPEC = [
+    { key: 'throneChoice', br: 'A', label: 'IRON CROWN', map: { seal: '👑 왕관 봉인 — 체제 질서 유지', reveal: '📜 원장 공개 — 도시 각성' } },
+    { key: 'freeportStance', br: 'B', label: 'ASH REPUBLIC', map: { open: '🏴 자유항 개항 — 개방 무역', smuggle: '🚢 밀수로 존속 — 지하 경제' } },
+    { key: 'signalWarCleared', br: 'C', label: 'COUNCIL OF ASH', map: { true: '🕊️ 근원 코어 정지 — 재건 도시 방어' } },
+    { key: 'harvesterChoice', br: 'D', label: 'RUIN SURVIVORS', map: { destroy: '💥 하베스터 파괴 — 잔해 봉인', warn: '📡 경고 발신 — 억지 신호' } },
+  ];
+  // 캡스톤 회고 — 4갈래 종결 flag → 갈래별 회고 라인(지난 선택 반영). 미설정 갈래는 스킵.
+  function capstoneRecall(flags) {
+    flags = flags || {};
+    var out = [];
+    for (var i = 0; i < CAPSTONE_RECALL_SPEC.length; i++) {
+      var spec = CAPSTONE_RECALL_SPEC[i];
+      var v = flags[spec.key];
+      if (v == null || v === false) continue;
+      var text = (spec.map && spec.map[String(v)]) || (v === true ? spec.label : (spec.label + ': ' + v));
+      out.push({ br: spec.br, key: spec.key, label: spec.label, text: text });
+    }
+    return out;
+  }
   function choiceSummary(flags) {
     flags = flags || {};
     var out = [];
@@ -161,6 +202,8 @@
       classClears: classClears,
       runs: e.runs,
       endingsSeen: endingsSeen(e),
+      capstoneCleared: e.capstone || 0,                                  // [신규 v6.44] 캡스톤 격파 횟수
+      capstoneClasses: playable.filter(function (k) { return !!e.capstoneByClass[k]; }),
     };
   }
 
@@ -171,6 +214,17 @@
     if (!e.seen || typeof e.seen !== 'object') e.seen = {};
     if (!e.byClass || typeof e.byClass !== 'object') e.byClass = {};
     if (typeof e.runs !== 'number' || !isFinite(e.runs)) e.runs = 0;
+    // [신규 v6.44] 캡스톤 기록 백필(멱등) — 4엔딩 기록과 별개. capstone=격파 횟수, capstoneByClass=완주 클래스.
+    if (typeof e.capstone !== 'number' || !isFinite(e.capstone)) e.capstone = 0;
+    if (!e.capstoneByClass || typeof e.capstoneByClass !== 'object') e.capstoneByClass = {};
+    return e;
+  }
+  // [신규 v6.44] 캡스톤 1회 기록 — capstone count 증가 · 완주 클래스 표시. 4엔딩 seen/runs 와 독립.
+  //   순수(새 객체 반환). NG+ 회차를 넘어 endings 로 영속(migrateEndings 백필 보장).
+  function recordCapstone(endings, classKey) {
+    var e = migrateEndings(endings);
+    e.capstone = (e.capstone || 0) + 1;
+    if (classKey) e.capstoneByClass[classKey] = true;
     return e;
   }
   // 엔딩 1회 기록 — seen count 증가 · 완주 클래스 표시 · 총 회차 증가. 순수(새 객체 반환).
@@ -201,9 +255,10 @@
 
   var API = {
     SIGNAL_FINAL: SIGNAL_FINAL, ENDINGS: ENDINGS, ORDER: ORDER,
-    resolveEnding: resolveEnding, epilogueFor: epilogueFor,
-    choiceSummary: choiceSummary, campaignStats: campaignStats,
-    migrateEndings: migrateEndings, recordEnding: recordEnding,
+    CAPSTONE: CAPSTONE,
+    resolveEnding: resolveEnding, epilogueFor: epilogueFor, capstoneEpilogue: capstoneEpilogue,
+    choiceSummary: choiceSummary, capstoneRecall: capstoneRecall, campaignStats: campaignStats,
+    migrateEndings: migrateEndings, recordEnding: recordEnding, recordCapstone: recordCapstone,
     endingsSeen: endingsSeen, newGamePlus: newGamePlus,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

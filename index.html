@@ -176,6 +176,13 @@
     .card .go {
       margin-top: 14px; font-size: 11px; letter-spacing: 3px; color: var(--accent, var(--cyan));
     }
+    /* [신규 v6.44 · 과제 A3] 진행 배지 — 로컬 세이브 있을 때만 JS가 hidden 해제(레이아웃 불변). */
+    .progress { margin-top: 12px; font-size: 10.5px; letter-spacing: .3px; color: var(--text-dim); line-height: 1.5; }
+    .progress .bar {
+      margin-top: 5px; height: 3px; border-radius: 2px; background: var(--bg3);
+      border: 1px solid var(--border); overflow: hidden;
+    }
+    .progress .bar > i { display: block; height: 100%; width: 0%; background: var(--accent, var(--cyan)); }
 
     /* ── 부가 링크 ── */
     .links {
@@ -210,7 +217,7 @@
       <div class="label">ASHGRID 2091 · NEXUS PORTAL</div>
       <h1 data-text="DEAD_NEXUS">DEAD<span class="accent">_</span>NEXUS</h1>
       <p class="tagline">사이버펑크 <span class="hl">비대칭 시장 전쟁</span> — 레이드가 곧 주가 포지션이 된다</p>
-      <span class="stamp">SIMULATOR <b>v6.43</b> · 3-TRACK BUILD</span>
+      <span class="stamp">SIMULATOR <b>v6.44</b> · 3-TRACK BUILD</span>
     </section>
 
     <nav class="tracks" aria-label="트랙 선택">
@@ -223,6 +230,10 @@
           <span class="badge">튜토리얼</span>
           <span class="badge">모바일</span>
         </div>
+        <div class="progress" id="prog-sim" hidden>
+          <span id="prog-sim-text"></span>
+          <div class="bar"><i id="prog-sim-bar"></i></div>
+        </div>
         <div class="go">▶ 시작</div>
       </a>
 
@@ -233,6 +244,10 @@
         <div class="badges">
           <span class="badge new">NEW</span>
           <span class="badge">모바일</span>
+        </div>
+        <div class="progress" id="prog-rpg" hidden>
+          <span id="prog-rpg-text"></span>
+          <div class="bar"><i id="prog-rpg-bar"></i></div>
         </div>
         <div class="go">▶ 입장</div>
       </a>
@@ -260,5 +275,96 @@
       <span class="sep">·</span> © 2026
     </footer>
   </main>
+
+  <script>
+    // ==========================================================================
+    // [신규 v6.44 · 과제 A3] 홈 포털 진행 배지 — 로컬 세이브 존재 시에만 표시.
+    //   순수 인라인 JS, 외부 의존 0. 세이브 없음/파싱 실패/file:// localStorage 차단 등
+    //   어떤 사유로든 읽기가 실패하면 배지를 그냥 숨김 상태로 둔다(레이아웃 불변) —
+    //   장식용 진행 표시일 뿐 핵심 동작이 아니므로 이 블록에 한해 의도적으로 조용히 실패한다.
+    //   시뮬레이터 스키마: simulator/v0.5/legacy_module.js 의 localStorage 'dn_legacy_v1'
+    //     { chaptersUnlocked: number[] (1~8) }.
+    //   RPG 스키마: rpg/state/save.js 의 localStorage 'dead_nexus_rpg_save_v1'
+    //     { missionsDone: string[], endings: { seen: {key:count}, capstone: number } }.
+    //   미션/엔딩 ID 목록은 rpg/systems/campaign.js MISSIONS·rpg/systems/ending.js ORDER 와
+    //   동기(캡스톤 a2-99-flagship 은 29종에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
+    // ==========================================================================
+    (function () {
+      try {
+        if (typeof localStorage === 'undefined' || localStorage === null) return;
+        // file:// 등에서 localStorage 접근 자체가 던지는 브라우저 대비 — 프로브 후 즉시 정리.
+        var probeKey = '__dn_home_probe__';
+        try { localStorage.setItem(probeKey, '1'); localStorage.removeItem(probeKey); }
+        catch (eProbe) { return; }
+
+        // ── 시뮬레이터 카드: 레거시 캠페인 챕터 해금 진행 ──
+        try {
+          var simRaw = localStorage.getItem('dn_legacy_v1');
+          if (simRaw) {
+            var simState = JSON.parse(simRaw);
+            var chapters = (simState && Array.isArray(simState.chaptersUnlocked)) ? simState.chaptersUnlocked : [];
+            var simSeen = {}, simN = 0;
+            for (var i = 0; i < chapters.length; i++) {
+              var c = chapters[i];
+              if (c >= 1 && c <= 8 && !simSeen[c]) { simSeen[c] = true; simN++; }
+            }
+            if (simN > 0) {
+              var simBox = document.getElementById('prog-sim');
+              var simText = document.getElementById('prog-sim-text');
+              var simBar = document.getElementById('prog-sim-bar');
+              if (simBox && simText && simBar) {
+                simText.textContent = '저장됨 · 레거시 캠페인 ' + simN + '/8 챕터 해금';
+                simBar.style.width = Math.min(100, (simN / 8) * 100) + '%';
+                simBox.hidden = false;
+              }
+            }
+          }
+        } catch (eSim) { /* 시뮬 배지만 숨김 유지, RPG 배지는 계속 시도 */ }
+
+        // ── RPG 카드: 미션 n/29 · 엔딩 n/4 · 캡스톤 여부 ──
+        try {
+          var RPG_MISSION_IDS = [
+            'ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
+            'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city', 'ch08-zero-day',
+            'side-01-traitor-contract', 'side-02-corp-breach', 'side-05-informant-hit', 'side-03-chemical-raid',
+            'side-08-harbor-run', 'side-04-medbay-heist', 'side-06-rival-duel', 'side-07-server-zero',
+            'a2-00-framing',
+            'a2-a1-crown-breach', 'a2-a2-crown-throne', 'a2-b1-barricade', 'a2-b2-freeport',
+            'a2-c1-first-contact', 'a2-c2-signal-war', 'a2-d1-scavenge', 'a2-d2-last-signal',
+            'a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami'
+          ]; // 29종 (캡스톤 a2-99-flagship 제외)
+          var RPG_ENDING_KEYS = ['corporate-eternal', 'street-rising', 'nexus-reborn', 'dead-nexus'];
+
+          var rpgRaw = localStorage.getItem('dead_nexus_rpg_save_v1');
+          if (rpgRaw) {
+            var rpgSave = JSON.parse(rpgRaw);
+            var done = (rpgSave && Array.isArray(rpgSave.missionsDone)) ? rpgSave.missionsDone : [];
+            var doneSet = {};
+            for (var j = 0; j < done.length; j++) doneSet[done[j]] = true;
+            var mCount = 0;
+            for (var k = 0; k < RPG_MISSION_IDS.length; k++) { if (doneSet[RPG_MISSION_IDS[k]]) mCount++; }
+
+            var endingsObj = (rpgSave && rpgSave.endings && typeof rpgSave.endings === 'object') ? rpgSave.endings : {};
+            var seen = (endingsObj.seen && typeof endingsObj.seen === 'object') ? endingsObj.seen : {};
+            var eCount = 0;
+            for (var e = 0; e < RPG_ENDING_KEYS.length; e++) { if ((seen[RPG_ENDING_KEYS[e]] || 0) > 0) eCount++; }
+            var capstoneDone = typeof endingsObj.capstone === 'number' && endingsObj.capstone > 0;
+
+            if (mCount > 0 || eCount > 0 || capstoneDone) {
+              var rpgBox = document.getElementById('prog-rpg');
+              var rpgText = document.getElementById('prog-rpg-text');
+              var rpgBar = document.getElementById('prog-rpg-bar');
+              if (rpgBox && rpgText && rpgBar) {
+                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/29 · 엔딩 ' + eCount + '/4' +
+                  (capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
+                rpgBar.style.width = Math.min(100, (mCount / 29) * 100) + '%';
+                rpgBox.hidden = false;
+              }
+            }
+          }
+        } catch (eRpg) { /* RPG 배지만 숨김 유지 */ }
+      } catch (eOuter) { /* 전체 실패 시 두 배지 모두 숨김 — 레이아웃 불변 */ }
+    })();
+  </script>
 </body>
 </html>

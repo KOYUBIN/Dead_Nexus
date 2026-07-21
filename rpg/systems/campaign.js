@@ -131,6 +131,12 @@
     { id: 'a2-side-mole-whoami',    kind: 'act2', chapter: null, order: 32, branch: 'class',
       global: 'RPG_MISSION_A2_SIDE_MOLE_WHOAMI', module: '../data/missions/a2-side-mole-whoami.js',
       unlock: { missionsDone: ['ch08-zero-day'], classKey: 'MOLE' } },
+
+    // ── [v6.44 · 과제 A1] ACT 2 캡스톤 (kind 'act2' · branch 'capstone' · 4갈래 종결 AND 게이트) ──
+    //   4갈래 종결 미션(A2/B2/C2/D2) 전부 클리어 시 해금. 3연전 · OVERLORD 결전 · 캡스톤 에필로그.
+    { id: 'a2-99-flagship',         kind: 'act2', chapter: null, order: 40, branch: 'capstone',
+      global: 'RPG_MISSION_A2_99_FLAGSHIP', module: '../data/missions/a2-99-flagship.js',
+      unlock: { missionsDone: ['a2-a2-crown-throne', 'a2-b2-freeport', 'a2-c2-signal-war', 'a2-d2-last-signal'] } },
   ];
 
   var BY_ID = {};

@@ -17,6 +17,13 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.44 — 대규모 업데이트: 캡스톤·협상 페이즈·사운드 (63차 워크플로, 유저 "워크플로 구성해서 대규모업데이트 또") 🔊
+- **RPG 캡스톤 "MERIDIAN FLAGSHIP"** (rpg/): 4갈래 최종 미션 전부 클리어 시 해금 — 3연전 최종 결전 (MERIDIAN_OVERLORD [신규] 보스), 갈래별 선택 회고, 전용 에필로그 "ASHGRID PREVAILS". + **무한 상승 계약 "심연 프로토콜"** (웨이브 결정론·스케일 1+0.05N·로컬 최고 기록). 미션 총 30종, 하네스 160/160 클리어
+- **시뮬레이터 협상 페이즈 배선** (docs/17 §2 원전 — Phase 1.5): 자원 스왑·비공격 약속(truce — 지킴 양측 ★+1/위반 ★−2·피해자 ★+2)·BROKER 중개 (매 R ★+1 ₵+1 클래스 정체성). **v0.9.2부터 죽어 있던 NEGOTIATE_PHASE 리듀서를 발굴·회생** — 봇 EV-중립 수락 AI, 계기판 정직화 (약속 상태 = 판정 데이터). + **B-04 클로즈**: 모바일 매수/매도 세로 배치
+- **사운드 도입** (양 트랙, Kenney CC0 — Interface/Sci-Fi/Digital Audio 팩, 라이선스 증빙 각 LICENSE.md): RPG 12 SFX (152KB)·시뮬 11 SFX (112KB), 마스터 🔊/🔇 토글 (localStorage 분리 키), autoplay 정책 준수 (제스처 후 활성·실패 무해), 전투 엔진 순수성 유지 (표시층 훅만)
+- **홈 포털 진행 배지**: 시뮬 레거시 n/8 · RPG 미션 n/30·엔딩 n/4·캡스톤 (localStorage 파생, 세이브 없으면 숨김)
+- 검증: RPG 유닛 271/271 · 시뮬 유닛 327/327 · 검증기 30/30 · 하네스 160/160 · Playwright 통합 4/4 · 콘솔 에러 0 · 자산 증가 +291KB (전부 CC0 증빙)
+
 ### v6.43 — RPG Act 2 "AFTER ZERO DAY" 대확장 (60~62차, 유저 "대규모업데이트·2시간+ 챕터 구성") 🎉
 - **미션 16 → 29종** (+81%): 프롤로그 a2-00 + 엔딩 분기 후일담 4갈래×2 (🏙️ IRON CROWN / 🔥 ASH REPUBLIC / 🕊️ COUNCIL OF ASH — 원전 정본 After Zero Day / 💀 RUIN SURVIVORS) + 클래스 전용 개인 서사 4 (숙적 보스: VERA ASHTON·MARCUS CRANE·ELIA VOSS·HARLAN VOSS)
 - **신규 외부 세력 MERIDIAN** [신규] 7종 — Act 1 희소 속성축(SHADE·ASH·GRID) 전면화, 원전 §엔딩3 "새로운 외부 위협" 각주 기반

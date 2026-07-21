@@ -220,6 +220,19 @@
       attr: 'ASH', range: 2, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
       lineage: '[신규 · MERIDIAN 외부 위협 보스] ASH 전쟁군주 (적 희소축 ASH · Act2 메인 보스)',
     },
+    // ── [신규 v6.44 — 과제 A1] MERIDIAN 최상위 사령관 (캡스톤 a2-99-flagship 최종 보스) ──
+    //   WARLORD 상위 규격 — 4갈래 종결전을 흡수한 MERIDIAN 침공 함대의 사령탑. Act1/Act2 통틀어
+    //   최대 HP. 희소축 GRID(NEXUS_WARDEN 이후 두 번째) — "성벽 너머의 논리" 정점을 표상.
+    //   스탯 문서화(WARLORD 대비 델타): HP 24→30(+6, 최대 체급) · ATK 6→7(+1) · DEF 4→5(+1) ·
+    //     HACK 2→4(+2, 메시 침습) · SPD/MOV 4(동일) · attr ASH→GRID(축 승격) · range 2→3(+1).
+    //   AI 'advance'(기존 어휘 재사용 — 엔진 무편집). def5 로 저ATK 클래스는 직접 격파 난망 →
+    //     MFU 이중 경로(오브젝티브 코어 차감)로 4클래스 완주 보장(캡스톤 stage3 밸런스 설계).
+    MERIDIAN_OVERLORD: {
+      key: 'MERIDIAN_OVERLORD', name: 'MERIDIAN Overlord', icon: '👺',
+      hp: 30, atk: 7, def: 5, spd: 4, hack: 4, mov: 4, ap: 2,
+      attr: 'GRID', range: 3, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 v6.44 · MERIDIAN 최종 보스] GRID 사령관 — WARLORD 상위(HP30/ATK7/DEF5/HACK4). 캡스톤 3연전 결전 보스',
+    },
     WARD_NODE: {
       key: 'WARD_NODE', name: 'Ward Node', icon: '◈',
       hp: 5, atk: 0, def: 0, spd: 0, hack: 0, mov: 0, ap: 0,

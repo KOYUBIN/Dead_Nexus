@@ -304,8 +304,8 @@ var REG = CAMP.MISSIONS;
 var mains = REG.filter(function (e) { return e.kind === 'main'; });
 var sides = REG.filter(function (e) { return e.kind === 'side'; });
 var act2 = REG.filter(function (e) { return e.kind === 'act2'; });
-// [62차] Act2 본편 등록 → 레지스트리 29(메인 8 + 사이드 8 + act2 13[a2-00 + 4갈래×2 + 클래스 4]). 메인/사이드 불변.
-ok('77. 레지스트리 = 29 미션 (메인 8 + 사이드 8 + act2 13)', REG.length === 29 && mains.length === 8 && sides.length === 8 && act2.length === 13);
+// [62차/v6.44] Act2 등록 → 레지스트리 30(메인 8 + 사이드 8 + act2 14[a2-00 + 4갈래×2 + 클래스 4 + 캡스톤 1]). 메인/사이드 불변.
+ok('77. 레지스트리 = 30 미션 (메인 8 + 사이드 8 + act2 14)', REG.length === 30 && mains.length === 8 && sides.length === 8 && act2.length === 14);
 // 전 미션 데이터 해석 + id 일치 + 필수 섹션.
 var resolveOk = true, resolveBad = [];
 REG.forEach(function (e) {
@@ -340,7 +340,8 @@ function dfs(id) {
 REG.forEach(function (e) { if (!color[e.id]) dfs(e.id); });
 ok('80. 해금 선행(missionsDone) 그래프 순환 없음 + 선행 실존', !cyc && prereqMissing.length === 0);
 // 도달성: 빈 세이브에서 확산. Act2 갈래(endingSeen)·클래스 사이드(classKey)는 회차/클래스 전환으로
-//   개방되므로, 4엔딩 전부 열람 + 4클래스 순회의 합집합으로 전 29 미션 도달을 검증(NG+/클래스 전환 완성형).
+//   개방되므로, 4엔딩 전부 열람 + 4클래스 순회의 합집합으로 전 30 미션 도달을 검증(NG+/클래스 전환 완성형).
+//   [v6.44] 캡스톤(a2-99)은 4갈래 종결 전부 완료 시 개방 → 4엔딩 합집합에서 도달.
 var ALL_ENDINGS = { 'corporate-eternal': 1, 'street-rising': 1, 'nexus-reborn': 1, 'dead-nexus': 1 };
 var reachedUnion = {};
 ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'].forEach(function (clsK) {
@@ -355,7 +356,7 @@ var reachedUnion = {};
   }
   rsave.missionsDone.forEach(function (id) { reachedUnion[id] = 1; });
 });
-ok('81. 전 29 미션 도달 가능 (4엔딩 열람 + 4클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 29);
+ok('81. 전 30 미션 도달 가능 (4엔딩 열람 + 4클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 30);
 // 단일 세이브(1엔딩·1클래스) 도달: 8 메인 + 8 사이드 + a2-00 + 해당 갈래 2 메인 + 해당 클래스 사이드 1 = 20.
 var oneSave = { missionsDone: [], flags: {}, endings: { seen: { 'corporate-eternal': 1 } }, character: { classKey: 'CIPHER' } };
 var chg = true, g2 = 0;
@@ -616,11 +617,12 @@ for (var _mi = 0; _mi < mrx.length; _mi++) {
     if (_vd.clearable && _vd.rep.rounds > worstRush) worstRush = _vd.rep.rounds;
   }
 }
-// [62차] 매트릭스 = 37 인카운터(29미션 + 2연전 8미션의 enc② 8행)×4 = 148조합. 전원 클리어 유지.
-//   2연전 미션은 enc①(mission.combat) + enc②(mission.encounters.stage2)를 개별 행으로 측정(하네스 encounters 순회).
-var nEnc2 = REG.filter(function (e) { var m = CAMP.missionData(e.id); return m && m.encounters; }).length;
-ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 37 인카운터×4=148)',
-  nClear === nTotal && mrx.length === REG.length + nEnc2 && nTotal === (REG.length + nEnc2) * 4 && nFail === 0 && nEnc2 === 8);
+// [62차/v6.44] 매트릭스 = 40 인카운터(30미션 + enc② 키 10[2연전 8×1 + 캡스톤 3연전×2])×4 = 160조합. 전원 클리어 유지.
+//   멀티 인카운터 미션은 enc①(mission.combat) + 각 encounters 키를 개별 행으로 측정(하네스 encounters 순회).
+var nEncKeys = 0;
+REG.forEach(function (e) { var m = CAMP.missionData(e.id); if (m && m.encounters) nEncKeys += Object.keys(m.encounters).length; });
+ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 40 인카운터×4=160)',
+  nClear === nTotal && mrx.length === REG.length + nEncKeys && nTotal === (REG.length + nEncKeys) * 4 && nFail === 0 && nEncKeys === 10);
 ok('127. 소모전(attrition) 이상치 0', nAttr === 0);
 ok('128. 최속 승리 라운드 밴드 상한 ≤ 9 (전 조합)', worstRush <= 9);
 
@@ -838,10 +840,10 @@ ok('173. base 시나리오 = 무인자 runEncounter byte 동일 (기존 64조합
 var aggBase = BAL.aggregateScenario(BAL.runMatrix('base'));
 var aggMid  = BAL.aggregateScenario(BAL.runMatrix('mid'));
 var aggFull = BAL.aggregateScenario(BAL.runMatrix('full'));
-var AGG_N = aggBase.total;   // [62차] 37 인카운터×4 = 148. 시나리오 집계 총량(하네스 encounters 순회 반영).
+var AGG_N = aggBase.total;   // [62차/v6.44] 40 인카운터×4 = 160. 시나리오 집계 총량(하네스 encounters 순회 반영).
 // 트리비얼은 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) 3건 — 문서화 허용(51차 선례). clearFail 0 이 램프 불변식.
 ok('174. base ' + AGG_N + '/' + AGG_N + ' 클리어 · clearFail 0 · trivial ≤3(enc①/베이스라인 · 무장비 밴드)',
-  aggBase.clearable === AGG_N && aggBase.total === 148 && aggBase.trivial <= 3 && aggBase.fail === 0);
+  aggBase.clearable === AGG_N && aggBase.total === 160 && aggBase.trivial <= 3 && aggBase.fail === 0);
 ok('175. mid: 클리어율 동일(' + AGG_N + '/' + AGG_N + '=base) · 여유 증가(평균종료HP mid≥base)',
   aggMid.clearable === aggBase.clearable && aggMid.clearable === AGG_N && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
 // ★full 후반 챕터 트리비얼화 가드 — ch06~08 최속승리 min ≥3R & 후반 트리비얼 0 = 합격(장비 하향 불요).
@@ -903,10 +905,11 @@ var rec1 = END.recordEnding(rec0, 'corporate-eternal', 'BLADE');
 ok('187. recordEnding 누적: 같은 엔딩 count 2 · byClass 2클래스 · runs 2 (순수 — 원본 불변)',
   rec1.seen['corporate-eternal'] === 2 && rec1.byClass.CIPHER === true && rec1.byClass.BLADE === true &&
   rec1.runs === 2 && rec0.runs === 1);
-ok('188. migrateEndings: 손상/부분 스키마 정규화 + 멱등',
-  JSON.stringify(END.migrateEndings(null)) === JSON.stringify({ seen: {}, byClass: {}, runs: 0 }) &&
-  JSON.stringify(END.migrateEndings({ seen: { x: 1 } })) === JSON.stringify({ seen: { x: 1 }, byClass: {}, runs: 0 }) &&
-  JSON.stringify(END.migrateEndings(rec1)) === JSON.stringify(rec1));
+// [v6.44] migrateEndings 가 capstone/capstoneByClass 백필 → 정규화 기대형에 포함.
+ok('188. migrateEndings: 손상/부분 스키마 정규화 + 멱등 (v6.44 capstone 백필 포함)',
+  JSON.stringify(END.migrateEndings(null)) === JSON.stringify({ seen: {}, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} }) &&
+  JSON.stringify(END.migrateEndings({ seen: { x: 1 } })) === JSON.stringify({ seen: { x: 1 }, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} }) &&
+  JSON.stringify(END.migrateEndings(END.migrateEndings(rec1))) === JSON.stringify(END.migrateEndings(rec1)));
 var seenList = END.endingsSeen(rec1);
 ok('189. endingsSeen: 4엔딩 고정 목록 · corporate 열람(count2) · 나머지 미열람',
   seenList.length === 4 && seenList[0].key === 'corporate-eternal' && seenList[0].seen === true && seenList[0].count === 2 &&
@@ -1090,13 +1093,13 @@ var yesCh8 = mkSave({ missionsDone: ['ch08-zero-day'] });
 ok('222. a2-00 해금: ch08 미완주 → 잠김 · 완주 → 해금(엔딩 무관하게)',
   CAMP.isUnlocked(a2entry, noCh8) === false && CAMP.isUnlocked(a2entry, yesCh8) === true);
 var bs = CAMP.boardState(yesCh8);   // mkSave 기본 classKey = CIPHER · endings.seen = {} (엔딩 미열람)
-// [62차] act2 그룹 = 13(a2-00 + 갈래 8 + 클래스 4). ch08 완주 + CIPHER 편성 → a2-00 + CIPHER 사이드 해금.
-//   갈래 8(endingSeen 게이트) 전부 잠김 · 타 클래스 사이드 3 잠김(classKey 게이트).
+// [62차/v6.44] act2 그룹 = 14(a2-00 + 갈래 8 + 클래스 4 + 캡스톤 1). ch08 완주 + CIPHER 편성 → a2-00 + CIPHER 사이드 해금.
+//   갈래 8(endingSeen 게이트) 전부 잠김 · 타 클래스 사이드 3 잠김(classKey 게이트) · 캡스톤 잠김(4갈래 종결 게이트).
 var a2FramingRow = bs.act2.filter(function (r) { return r.id === 'a2-00-framing'; })[0];
 var a2Unlocked = bs.act2.filter(function (r) { return r.unlocked; }).map(function (r) { return r.id; });
 var branchLocked = bs.act2.filter(function (r) { return ['A', 'B', 'C', 'D'].indexOf(r.branch) >= 0 && !r.unlocked; }).length;
-ok('223. boardState.act2 = 13(a2-00+갈래8+클래스4) · ch08+CIPHER → a2-00·CIPHER사이드 해금 · 갈래8 잠금 · mains 8 · sides 8',
-  bs.act2.length === 13 && a2FramingRow && a2FramingRow.unlocked === true &&
+ok('223. boardState.act2 = 14(a2-00+갈래8+클래스4+캡스톤1) · ch08+CIPHER → a2-00·CIPHER사이드 해금 · 갈래8 잠금 · mains 8 · sides 8',
+  bs.act2.length === 14 && a2FramingRow && a2FramingRow.unlocked === true &&
   a2Unlocked.length === 2 && a2Unlocked.indexOf('a2-side-cipher-static') >= 0 &&
   branchLocked === 8 && bs.mains.length === 8 && bs.sides.length === 8);
 // 완주 경로(전투 경로): intro→approach→[전투]→outro→settle→returnHub. RIGGER(spd2) = 전투 폴백.
@@ -1256,6 +1259,133 @@ ok('249. 12 act2 미션 보상 스키마 = rep/karma/nuyen 수치 존재',
 ok('250. 구조: 클래스 사이드 4 = 단일 전투(encounters 미보유) · 갈래 메인 8 = encounters.stage2 보유',
   A2_CLASS.every(function (id) { return !CAMP.missionData(id).encounters; }) &&
   A2_MAIN.every(function (id) { return !!CAMP.missionData(id).encounters.stage2; }));
+
+console.log('\n== [v6.44 · 과제 A1] 캡스톤 MERIDIAN FLAGSHIP + 심연 프로토콜 ==');
+var ABX = require('./systems/abyss.js');
+var CAP_ID = 'a2-99-flagship';
+var CAP_FINALS = ['a2-a2-crown-throne', 'a2-b2-freeport', 'a2-c2-signal-war', 'a2-d2-last-signal'];
+// 251. 캡스톤 해금 AND 게이트 — 4갈래 종결 미션 전부 완료 시 개방, 하나라도 없으면 잠김.
+var capEntry = CAMP.missionById(CAP_ID);
+var saveAll = S.newSave(); saveAll.missionsDone = CAP_FINALS.slice();
+var save3 = S.newSave(); save3.missionsDone = CAP_FINALS.slice(0, 3);
+ok('251. 캡스톤 해금: 4갈래 종결 전부 완료 → unlocked · 3개만 → locked (AND 게이트)',
+  CAMP.isUnlocked(capEntry, saveAll) === true && CAMP.isUnlocked(capEntry, save3) === false);
+// 252. 캡스톤 미션 데이터 = 3연전(combat=enc① · encounters.stage2/stage3) 구조.
+var capM = CAMP.missionData(CAP_ID);
+ok('252. 캡스톤 3연전 구조: combat(enc①) + encounters.stage2 + encounters.stage3',
+  !!capM.combat && !!(capM.encounters && capM.encounters.stage2 && capM.encounters.stage3) && capM.capstone === true);
+// 253. 3연전 라우팅 체인 — bridge1 이 stage2, bridge2 가 stage3 를 startCombat.encounter 로 배선.
+function encEdge(nodes, encKey) { var f = false;
+  Object.keys(nodes).forEach(function (nk) { (nodes[nk].choices || []).forEach(function (c2) {
+    if (c2.effect && c2.effect.startCombat && c2.effect.startCombat.encounter === encKey) f = true; }); }); return f; }
+ok('253. 3연전 라우팅: interlude 노드가 startCombat.encounter="stage2" · "stage3" 배선(체인)',
+  encEdge(capM.dialogue.nodes, 'stage2') && encEdge(capM.dialogue.nodes, 'stage3'));
+// 254. settle → capstoneEpilogue 종결 라우팅(4엔딩 epilogue 와 별개 종결 효과).
+var settleCap = false;
+(capM.dialogue.nodes.settle.choices || []).forEach(function (c2) { if (c2.effect && c2.effect.capstoneEpilogue) settleCap = true; });
+ok('254. settle 노드에 effect.capstoneEpilogue 종결 라우팅 존재', settleCap);
+// 255. OVERLORD 스키마 — WARLORD 상위(HP/ATK/DEF/HACK 전부 ≥) + GRID 축 + advance AI + 로스터 등록.
+var OVL = EN.ENEMIES.MERIDIAN_OVERLORD, WLD = EN.ENEMIES.MERIDIAN_WARLORD;
+ok('255. MERIDIAN_OVERLORD 스키마: WARLORD 상위(HP30>24·ATK7>6·DEF5>4·HACK4>2) · GRID · advance',
+  OVL && OVL.hp === 30 && OVL.hp > WLD.hp && OVL.atk === 7 && OVL.atk > WLD.atk &&
+  OVL.def === 5 && OVL.def > WLD.def && OVL.hack === 4 && OVL.hack > WLD.hack &&
+  OVL.attr === 'GRID' && OVL.ai === 'advance' && OVL.bloc === 'MERIDIAN');
+// 256. enc③ 결전에 OVERLORD 배치 + spawnEnemy scale 반영(스케일 배율로 hp/atk ceil 상승).
+var capCh = CH.makeCharacter('CIPHER');
+var enc3 = capM.encounters.stage3;
+ok('256. enc③(stage3) 에 MERIDIAN_OVERLORD 배치 존재',
+  (enc3.enemies || []).some(function (e) { return e.key === 'MERIDIAN_OVERLORD'; }));
+// 257. 캡스톤 3연전 4클래스 전 조합 클리어 가능(clearFail 0) — enc①+stage2+stage3.
+var capRows = mrx.filter(function (r) { return r.baseId === CAP_ID; });
+var capClear = 0, capTot = 0, capFail = 0;
+capRows.forEach(function (r) { BAL.CLASSES.forEach(function (cl) {
+  var vd = BAL.verdict(r.cells[cl]); capTot++; if (vd.clearable) capClear++; if (vd.flags.indexOf('clearFail') >= 0) capFail++; }); });
+ok('257. 캡스톤 3연전 전 조합 클리어 가능 (' + capClear + '/' + capTot + ' · clearFail 0 · 3인카운터×4클래스)',
+  capClear === capTot && capFail === 0 && capTot === 3 * 4);
+
+console.log('\n== [v6.44] 심연 프로토콜 — 웨이브 결정론 ==');
+// 258. 웨이브 스케일 결정론식 1+0.05N (N=1→1.05 · N=10→1.5 · N=20→2.0).
+ok('258. waveScale(N)=1+0.05N 결정론: N1=1.05 · N10=1.5 · N20=2.0',
+  ABX.waveScale(1) === 1.05 && ABX.waveScale(10) === 1.5 && ABX.waveScale(20) === 2.0);
+// 259. 풀 순환 선택 결정론 — poolIndex(N) 이 POOL.length 주기(N 과 N+len 동일).
+var PL = ABX.POOL.length;
+ok('259. 웨이브 풀 순환 결정론: poolIndex(1)===poolIndex(1+len) · 같은 N 동일 결과',
+  ABX.poolIndex(1) === ABX.poolIndex(1 + PL) && ABX.poolIndex(3) === ABX.poolIndex(3 + PL) &&
+  JSON.stringify(ABX.wavePlan(7)) === JSON.stringify(ABX.wavePlan(7)));
+// 260. 웨이브 인카운터 해석 — 전 풀 항목이 실 인카운터 config(objective+enemies) 로 해석됨.
+var waveEncOk = true;
+for (var wv = 1; wv <= PL; wv++) { var cfg = ABX.waveEncounter(wv);
+  if (!cfg || !cfg.objective || !(cfg.enemies || []).length) waveEncOk = false; }
+ok('260. 웨이브 1..len 전부 유효 인카운터 해석(objective+enemies)', waveEncOk);
+// 261. buildAbyssCombat 이 스케일 반영 — 같은 무대(N 과 N+len)에서 고 웨이브 적 HP ≥ 저 웨이브.
+var cLow = S.buildAbyssCombat(capCh, 1);
+var cHigh = S.buildAbyssCombat(capCh, 1 + PL); // 같은 풀 항목, 스케일만 상승
+function firstEnemyHp(c) { var e = c.units.filter(function (u) { return u.side === 'enemy'; })[0]; return e ? e.maxHp : 0; }
+ok('261. buildAbyssCombat 스케일 반영: 웨이브 ' + (1 + PL) + ' 적 HP ≥ 웨이브 1 (같은 무대·배율만 상승)',
+  cLow && cHigh && cLow.abyss.wave === 1 && cHigh.abyss.wave === (1 + PL) && firstEnemyHp(cHigh) >= firstEnemyHp(cLow));
+// 262. 심연 전투 = combat.abyss 표식 + onWin 미션 라우팅 미사용(웨이브 경로 분기 대상).
+ok('262. 심연 전투 combat.abyss={wave,label,scale} 표식 + 결정론 재현(같은 N 동일 유닛수)',
+  cLow.abyss && typeof cLow.abyss.wave === 'number' && typeof cLow.abyss.scale === 'number' &&
+  S.buildAbyssCombat(capCh, 1).units.length === cLow.units.length);
+// 263. 심연 승리 → 최고 웨이브 기록 갱신 + 다음 웨이브 전투 배선(씬 유지·페널티 경로 아님).
+var stAb = S.rpgInitialState();
+stAb.save.endings = END.recordCapstone(stAb.save.endings, 'CIPHER'); // 캡스톤 해금
+var stW1 = S.rpgReducer(stAb, { type: 'ABYSS_START' });
+stW1.combat.outcome = 'win'; // 강제 승리 후 resolve
+var stW2 = S.rpgReducer(stW1, { type: 'COMBAT_RESOLVE' });
+ok('263. 심연 승리: best=1 기록 + 웨이브2 전투 배선(scene combat 유지)',
+  stW1.combat.abyss.wave === 1 && stW2.save.abyss.best === 1 &&
+  stW2.scene === 'combat' && stW2.combat.abyss.wave === 2);
+// 264. 심연 패배 → 허브 귀환 · 페널티 없음(best 불변) · missionsDone/karma 무변동.
+var stLoseSrc = S.rpgReducer(stW2, { type: 'COMBAT_RESOLVE' }); // wave2 상태에서
+var stLose = clone264(stW2); stLose.combat.outcome = 'lose';
+function clone264(o) { return JSON.parse(JSON.stringify(o)); }
+var stHub = S.rpgReducer(stLose, { type: 'COMBAT_RESOLVE' });
+ok('264. 심연 패배: 허브 귀환 · best 불변(1) · 페널티 없음(missionsDone 무변동)',
+  stHub.scene === 'hub' && stHub.save.abyss.best === 1 &&
+  (stHub.save.missionsDone || []).length === (stLose.save.missionsDone || []).length);
+// 265. 캡스톤 클리어 후 해금 게이트 — endings.capstone>0 이어야 ABYSS_START 개시(그 전엔 차단).
+var stNoCap = S.rpgReducer(S.rpgInitialState(), { type: 'ABYSS_START' });
+ok('265. 심연 게이트: 캡스톤 미클리어(capstone=0) → ABYSS_START 차단(scene 유지)',
+  stNoCap.scene !== 'combat' && !!stNoCap.banner);
+// 266. capstoneEpilogue 라우팅 — settle 선택 시 endings.capstone 증가 + 에필로그 씬(4엔딩 seen 무변동).
+var stSettle = S.rpgInitialState();
+stSettle.save.character.classKey = 'BLADE';
+var seenBefore = JSON.stringify(END.migrateEndings(stSettle.save.endings).seen);
+var epi = S.dialogueChoose({ scene: 'dialogue', save: stSettle.save,
+  dialogue: { missionId: CAP_ID, nodeId: 'settle' }, combat: null, hub: { node: 'root' } }, 0);
+ok('266. capstoneEpilogue: 에필로그 씬 전환 + endings.capstone 증가 + 4엔딩 seen 무변동',
+  epi.scene === 'epilogue' && epi.epilogue && epi.epilogue.capstone === true &&
+  END.migrateEndings(epi.save.endings).capstone === 1 &&
+  JSON.stringify(END.migrateEndings(epi.save.endings).seen) === seenBefore);
+// 267. 캡스톤 기록 NG+ 영속 + 최고 웨이브 기록 영속(migrateEndings 백필 · newGamePlus 이월).
+var stNgSrc = S.rpgInitialState();
+stNgSrc.save.endings = END.recordCapstone(stNgSrc.save.endings, 'MOLE');
+stNgSrc.save.abyss = { best: 7 };
+stNgSrc.save.missionsDone = ['ch01-first-blood'];
+var stNg = S.rpgReducer(stNgSrc, { type: 'NEW_GAME_PLUS' });
+ok('267. NG+ 영속: endings.capstone(1)·capstoneByClass(MOLE)·abyss.best(7) 이월 · 진행 리셋',
+  END.migrateEndings(stNg.save.endings).capstone === 1 &&
+  END.migrateEndings(stNg.save.endings).capstoneByClass.MOLE === true &&
+  stNg.save.abyss.best === 7 && (stNg.save.missionsDone || []).length === 0);
+// 268. save.migrate 백필(멱등) — 구세이브(endings.capstone·abyss 없음) → 기본값 백필.
+var legacy = { version: 1, character: CH.makeCharacter('CIPHER'), missionsDone: [], flags: {},
+  endings: { seen: {}, byClass: {}, runs: 2 } };
+var mig = SAVE.migrate(JSON.parse(JSON.stringify(legacy)));
+var mig2 = SAVE.migrate(mig); // 멱등 재적용
+ok('268. save.migrate 백필: endings.capstone=0 · capstoneByClass={} · abyss.best=0 (멱등)',
+  mig.endings.capstone === 0 && typeof mig.endings.capstoneByClass === 'object' &&
+  mig.abyss.best === 0 && JSON.stringify(mig) === JSON.stringify(mig2));
+// 269. capstoneRecall 회고 — 4갈래 종결 flag 반영(지난 선택), 미설정 갈래는 스킵.
+var recall = END.capstoneRecall({ throneChoice: 'reveal', flagshipDown: false, signalWarCleared: true, harvesterChoice: 'destroy' });
+ok('269. capstoneRecall: 설정된 갈래(A reveal·C·D destroy)만 회고, 미설정 갈래(B) 스킵',
+  recall.length === 3 && recall.some(function (r) { return r.br === 'A'; }) &&
+  recall.some(function (r) { return r.br === 'C'; }) && recall.some(function (r) { return r.br === 'D'; }) &&
+  !recall.some(function (r) { return r.br === 'B'; }));
+// 270. 캡스톤 미션 = 순수 데이터(DOM 참조 0) · window 전역 등록 형태(계약 준수).
+var capSrc = require('fs').readFileSync(require('path').join(__dirname, 'data/missions/a2-99-flagship.js'), 'utf8');
+ok('270. 캡스톤 미션 순수성: document 참조 0 · window.RPG_MISSION_A2_99_FLAGSHIP 등록',
+  capSrc.indexOf('document') < 0 && capSrc.indexOf('window.RPG_MISSION_A2_99_FLAGSHIP') >= 0);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
