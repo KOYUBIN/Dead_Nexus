@@ -15,7 +15,8 @@
       return { G: w.RPG_GRID, R: w.RPG_RESOLVE, AI: w.RPG_AI, ATTR: w.RPG_ATTRS,
         DLG: w.RPG_DIALOGUE, CH: w.RPG_CHARACTER, CAMP: w.RPG_CAMPAIGN,
         AB: w.RPG_ABILITIES, EN: w.RPG_ENEMIES, MI: w.RPG_MISSION_CH01,
-        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES, GEAR: w.RPG_GEAR, END: w.RPG_ENDING };
+        SIG: w.RPG_SIGNAL, CL: w.RPG_CLASSES, GEAR: w.RPG_GEAR, END: w.RPG_ENDING,
+        ABX: w.RPG_ABYSS };
     }
     return { G: require('../systems/combat/grid.js'), R: require('../systems/combat/resolve.js'),
       AI: require('../systems/combat/ai.js'), ATTR: require('../data/attributes.js'),
@@ -23,7 +24,7 @@
       CAMP: require('../systems/campaign.js'), AB: require('../data/abilities.js'),
       EN: require('../data/enemies.js'), MI: require('../data/missions/ch01-first-blood.js'),
       SIG: require('../data/signal.js'), CL: require('../data/classes.js'), GEAR: require('../data/gear.js'),
-      END: require('../systems/ending.js') };
+      END: require('../systems/ending.js'), ABX: require('../systems/abyss.js') };
   }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -52,7 +53,10 @@
       heat: 0, heatCap: 10, crew: [], hubState: { node: 'root' },
       intel: {},                        // [B1] 정보상: 구매한 미션 인텔 { missionId: true } (전투 브리핑 공개)
       // [57차] 엔딩 기록 — 어느 엔딩을 봤는지(seen)·완주 클래스(byClass)·총 회차(runs). 회차 리셋 시 영속.
-      endings: { seen: {}, byClass: {}, runs: 0 },
+      //   [v6.44] capstone(격파 횟수)·capstoneByClass 는 ending.migrateEndings 가 백필(별도 기록).
+      endings: { seen: {}, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} },
+      // [v6.44 · 과제 A1] 심연 프로토콜 로컬 최고 웨이브 기록. 캡스톤 클리어 후 해금(패배 페널티 0).
+      abyss: { best: 0 },
       karma: ch.karma, nuyen: ch.nuyen, // §5.3 명시 필드 미러(캐릭터가 정본)
     };
   }
@@ -537,6 +541,15 @@
       s.epilogue = { ending: endKey };
       return s;
     }
+    // [v6.44 · 과제 A1] 캡스톤 에필로그 — a2-99-flagship settle 이 capstoneEpilogue 로 라우팅.
+    //   4엔딩 기록과 별개로 endings.capstone 을 기록(영속) → 허브 심연 프로토콜 카드 개방 게이트.
+    //   settle onEnter.applyRewards 가 missionsDone 을 이미 기록 → 여기선 캡스톤 기록 + 씬 전환만.
+    if (eff.capstoneEpilogue) {
+      s.save.endings = D.END.recordCapstone(s.save.endings, s.save.character.classKey);
+      s.scene = 'epilogue'; s.dialogue = null; s.combat = null;
+      s.epilogue = { capstone: true };
+      return s;
+    }
     // 귀환.
     if (eff.returnHub) {
       s.scene = 'hub'; s.dialogue = null; s.hub = { node: 'root' };
@@ -561,11 +574,66 @@
     };
   }
 
+  // ---- [v6.44 · 과제 A1] 심연 프로토콜 (무한 상승 계약) -----------------------
+  //   신규 씬 0 — 기존 전투 엔진(buildCombat + 전투 스텝) 재사용. 웨이브 N 은 abyss.js POOL 을
+  //   N 기반 순환 선택 + 적 스탯 스케일 1+0.05N(spawnEnemy scale 재사용). 결정론.
+  function abyssMission() {
+    return { id: 'abyss', title: '심연 프로토콜', subtitle: '무한 상승 계약 (웨이브 결정론 전투)' };
+  }
+  // 웨이브 N 전투 빌드 — abyss.waveEncounter(N) config 를 buildCombat 오버라이드로 소비.
+  //   실패 시 null(풀 미해석 방어). combat.abyss 플래그로 resolveAbyss 라우팅 대상 표식.
+  function buildAbyssCombat(D, character, wave) {
+    if (!D.ABX) return null;
+    var cfg = D.ABX.waveEncounter(wave);
+    if (!cfg) return null;
+    var plan = D.ABX.wavePlan(wave);
+    var combat = buildCombat(abyssMission(), character, 'ABYSS', { combat: cfg, enemyScale: plan.scale });
+    combat.abyss = { wave: wave, label: plan.label, scale: plan.scale };
+    combat.log = ['심연 프로토콜 — 웨이브 ' + wave + '  ' + plan.label + '  (적 스케일 ×' + plan.scale.toFixed(2) + ')'];
+    return combat;
+  }
+  // 허브 카드 → 웨이브 1 개시. 캡스톤(endings.capstone>0) 미클리어면 차단.
+  function startAbyss(state) {
+    var D = deps(); var s = clone(state);
+    var e = D.END.migrateEndings(s.save.endings);
+    if (!(e.capstone > 0)) { s.banner = { kind: 'blocked', text: '심연 프로토콜 — 캡스톤(MERIDIAN FLAGSHIP) 클리어 후 개방' }; return s; }
+    var combat = buildAbyssCombat(D, s.save.character, 1);
+    if (!combat) { s.banner = { kind: 'blocked', text: '심연 데이터 미해석' }; return s; }
+    if (!s.save.abyss) s.save.abyss = { best: 0 };
+    s.scene = 'combat'; s.combat = combat; s.dialogue = null; s.banner = null;
+    return s;
+  }
+  // 심연 전투 종료 처리 — 승리 시 다음 웨이브(씬 유지), 패배 시 허브 귀환(페널티 0).
+  //   최고 웨이브(save.abyss.best)는 '완주한 최고 웨이브' = 승리 시 max 갱신.
+  function resolveAbyss(D, s) {
+    var wave = (s.combat.abyss && s.combat.abyss.wave) || 1;
+    if (!s.save.abyss) s.save.abyss = { best: 0 };
+    if (s.combat.outcome === 'win') {
+      if (wave > (s.save.abyss.best || 0)) s.save.abyss.best = wave;
+      var next = buildAbyssCombat(D, s.save.character, wave + 1);
+      if (next) {
+        s.scene = 'combat'; s.combat = next;
+        s.banner = { kind: 'growth', text: '심연 — 웨이브 ' + wave + ' 돌파 → 웨이브 ' + (wave + 1) + ' (최고 ' + s.save.abyss.best + ')' };
+        return s;
+      }
+      // 다음 웨이브 미해석(방어) — 허브 귀환.
+      s.scene = 'hub'; s.combat = null; s.hub = { node: 'root' };
+      s.banner = { kind: 'growth', text: '심연 — 웨이브 ' + wave + ' 완주 (최고 웨이브 ' + s.save.abyss.best + ')' };
+      return s;
+    }
+    // 패배 — 페널티 없음. 최고 웨이브는 직전 승리들에서 이미 기록됨(웨이브-1까지).
+    s.scene = 'hub'; s.combat = null; s.hub = { node: 'root' };
+    s.banner = { kind: 'fail', text: '심연 프로토콜 — 웨이브 ' + wave + ' 에서 종료 · 최고 웨이브 ' + (s.save.abyss.best || 0) + ' (페널티 없음)' };
+    return s;
+  }
+
   // 전투 종료 후 대화 재개(승리) 또는 허브 귀환(패배/재시도).
   function resolveCombat(state) {
     var D = deps(); var s = clone(state);
-    var mission = missionFor(D, s.combat && s.combat.missionId);
     if (!s.combat) return state;
+    // [v6.44] 심연 전투는 미션 대화 라우팅 대신 웨이브 순환/기록 경로로 분기.
+    if (s.combat.abyss) return resolveAbyss(D, s);
+    var mission = missionFor(D, s.combat && s.combat.missionId);
     if (s.combat.outcome === 'win') {
       // 승리 후 아웃트로 노드로 라우팅 — 미션별 flag 는 노드 onEnter.setFlags 가 설정.
       s.scene = 'dialogue';
@@ -606,7 +674,9 @@
   //   신규 진행(newSave)에 이전 세이브의 endings 만 이월 → "어느 엔딩 봤는지"는 회차를 넘어 남는다.
   function newGamePlus(state) {
     var D = deps(); var s = clone(state);
+    var prevBest = (s.save.abyss && s.save.abyss.best) || 0;   // [v6.44] 최고 웨이브 기록은 회차를 넘어 영속.
     s.save = D.END.newGamePlus(s.save, newSave());
+    s.save.abyss = { best: prevBest };
     s.scene = 'hub'; s.epilogue = null; s.dialogue = null; s.combat = null;
     s.hub = { node: 'root' };
     s.banner = { kind: 'growth', text: '새 회차 시작 — 캠페인 진행 리셋 (엔딩 기록 ' + s.save.endings.runs + '회 보존)' };
@@ -700,6 +770,7 @@
       case 'COMBAT_END_TURN': { var s6 = clone(state); s6.combat = runEnemyTurn(state.combat); return s6; }
       case 'COMBAT_CLEAR_FLOATERS': { if (!state.combat || !state.combat.floaters || !state.combat.floaters.length) return state; var s6b = clone(state); s6b.combat.floaters = []; return s6b; }
       case 'COMBAT_RESOLVE': return resolveCombat(state);
+      case 'ABYSS_START': return startAbyss(state);
       case 'SPEND_KARMA': return spendKarma(state, action.stat);
       case 'SELECT_CLASS': return selectClass(state, action.classKey);
       case 'BUY_GEAR': return buyGear(state, action.slot, action.key);
@@ -723,6 +794,7 @@
     spendKarma: spendKarma, dialogueCtx: dialogueCtx, selectClass: selectClass,
     buyGear: buyGear, unequipGear: unequipGear, buyIntel: buyIntel,
     newGamePlus: newGamePlus, toggleHardMode: toggleHardMode,
+    startAbyss: startAbyss, buildAbyssCombat: function (character, wave) { return buildAbyssCombat(deps(), character, wave); },
     PLAYER_ID: PLAYER_ID,
     exposure: function (combat) { return computeExposure(deps(), combat); },
   };

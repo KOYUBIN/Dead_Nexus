@@ -297,7 +297,7 @@ function orderedMissions() {
 }
 
 // [62차] 미션 → 측정 인카운터 목록. enc①(mission.combat) + 각 encounters 키(2연전 enc②).
-//   각 인카운터가 개별 행이 되어 전 조합(29미션 · 8미션은 enc①+enc②)이 매트릭스에 노출된다.
+//   각 인카운터가 개별 행이 되어 전 조합(30미션 · 8미션은 enc①+enc② · 캡스톤은 enc①+stage2+stage3)이 매트릭스에 노출된다.
 function encountersOf(e) {
   var m = CAMP.missionData(e.id);
   var list = [{ id: e.id, encKey: null, encLabel: '' }];
@@ -366,7 +366,7 @@ function cellStr(v) {
 
 function printMatrix(rows) {
   var line = '';
-  console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 29미션 · 2연전 enc①+enc②=37 인카운터) ================');
+  console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 30미션 · 2연전 enc①+enc② + 캡스톤 3연전 = 40 인카운터) ================');
   console.log('셀 = 종합판정(승리 정책 대표). W=승 L=패 T=timeout · R수 · 종료HP%. ⚑=이상치. #stage2=2연전 enc②.');
   console.log('C=combat정책 승 / O=objective정책 승 (승리 경로 표기).\n');
   console.log(pad('MISSION', 26) + CLASSES.map(function (c) { return pad(c, 14); }).join('') + '  FLAGS');
@@ -494,7 +494,7 @@ function printScenarios() {
   for (var i = 0; i < GEAR_SCENARIOS.length; i++) scn[GEAR_SCENARIOS[i]] = aggregateScenario(runMatrix(GEAR_SCENARIOS[i]));
   var b = scn.base, m = scn.mid, f = scn.full;
 
-  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×37 인카운터[29미션·2연전 enc①+enc②]) ================');
+  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×40 인카운터[30미션·2연전 enc①+enc②·캡스톤 3연전]) ================');
   console.log('base=무장비(불변 재확인) · mid=슬롯당 최저가(SMART_LINK+MOOD_CHIP) · full=슬롯당 최고가(HAIR_TRIGGER+NEURAL_JACK/BLADE는 IRON_SKIN).');
   console.log(pad('시나리오', 16) + pad('클리어', 9) + pad('밴드무플래그', 14) + pad('트리비얼', 10) + pad('소모전', 8) + pad('clearFail', 11) + pad('평균종료HP%', 13) + '평균최속R');
   console.log('-'.repeat(94));

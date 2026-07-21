@@ -44,6 +44,8 @@ var PLANNED_ROSTER = [
   // [61차 Act2] MERIDIAN 외부 세력 + lore 보스 신규 7종 (data/enemies.js 통합됨).
   'MERIDIAN_VANGUARD', 'MERIDIAN_STALKER', 'MERIDIAN_DRONE', 'MERIDIAN_WARLORD',
   'WARD_NODE', 'ELIA_VOSS', 'HARLAN_VOSS',
+  // [v6.44 · 과제 A1] 캡스톤 최종 보스 (data/enemies.js 통합됨).
+  'MERIDIAN_OVERLORD',
 ];
 
 // ---- 결과 수집기 -----------------------------------------------------------
@@ -227,9 +229,13 @@ function checkDialogue(M, R) {
       }
       // returnHub = 종결
       if (eff.returnHub) { terminalNodes.push(nid); routes++; }
+      // [57차/v6.44] 에필로그 종결 — store.dialogueChoose 는 epilogue(캠페인 완주)·
+      //   capstoneEpilogue(캡스톤 완주)를 종결 씬(scene='epilogue')으로 라우팅(허브 귀환과 동격 종결).
+      if (eff.epilogue) { terminalNodes.push(nid); routes++; }
+      if (eff.capstoneEpilogue) { terminalNodes.push(nid); routes++; }
 
       if (routes === 0) {
-        R.err('dialogue', where + ' 에 라우팅 없음(goto/startCombat.onWin/returnHub 중 하나 필요) — 죽은 선택지.');
+        R.err('dialogue', where + ' 에 라우팅 없음(goto/startCombat.onWin/returnHub/epilogue/capstoneEpilogue 중 하나 필요) — 죽은 선택지.');
       }
 
       // ④ 게이트 검증 (선택지 단위)

@@ -584,6 +584,9 @@
     .phase-actions { flex-wrap: wrap; }
     .pa-btn { flex: 1 1 auto; min-height: 40px; }
     .modal { max-height: 88vh; overflow-y: auto; }
+    /* v6.44 (B-04): 모바일 매수/매도 세로 스택 — 5블록 병렬(≈23px 폭)에서 좌우 병렬 버튼이 라벨 잘림 → 세로 배치로 탭 타깃 확보 */
+    .mkt-bs { flex-direction: column; gap: 4px; }
+    .mkt-bs-btn { min-height: 30px; font-size: 10px !important; }
   }
   .tut-bubble .tut-title {
     font-family: 'Share Tech Mono', monospace;
@@ -789,6 +792,68 @@
     heal('lore_module.js', 'loreEpilogue');
     heal('legacy_module.js', 'legacyLoad');
   });
+})();
+</script>
+
+<script>
+// v6.44 (B2): 시뮬레이터 사운드 계층 — Kenney CC0 SFX (audio/*.ogg · LICENSE.md 증빙).
+//   원칙(RPG 동일): 외부 의존 0(로컬 ogg) · file:// 호환 · autoplay 정책 준수(최초 제스처 후 언락) ·
+//   언락 전/재생 실패 무해(no-op) · 마스터 토글(localStorage dn_sim_sound, RPG 키와 분리) · 게임 로직 무변경.
+(function () {
+  var LS_KEY = 'dn_sim_sound';
+  // 디렉토리 보정 — 위 healer 와 동일 규칙(슬래시 없는 서빙 대응). file://·정상 URL 에선 그대로.
+  var dir = location.pathname.replace(/index(\.html?)?$/, '');
+  if (dir.charAt(dir.length - 1) !== '/') dir += '/';
+  var BASE = dir + 'audio/';
+  var MAP = {
+    raid_impact: 'raid_impact.ogg', trade_tick: 'trade_tick.ogg', phase_shift: 'phase_shift.ogg',
+    card_play: 'card_play.ogg', select: 'select.ogg', deal: 'deal.ogg', truce: 'truce.ogg',
+    broker: 'broker.ogg', end_sting: 'end_sting.ogg', victory: 'victory.ogg', defeat: 'defeat.ogg'
+  };
+  var VOL = {
+    raid_impact: 0.5, trade_tick: 0.32, phase_shift: 0.26, card_play: 0.4, select: 0.34,
+    deal: 0.44, truce: 0.4, broker: 0.46, end_sting: 0.5, victory: 0.55, defeat: 0.5
+  };
+  var els = {}, loaded = false, unlocked = false;
+  function isOn() { try { return localStorage.getItem(LS_KEY) !== 'off'; } catch (e) { return true; } }
+  function preload() {
+    if (loaded) return; loaded = true;
+    for (var k in MAP) {
+      try { var a = new Audio(); a.src = BASE + MAP[k]; a.preload = 'auto'; a.volume = VOL[k] || 0.4; els[k] = a; } catch (e) {}
+    }
+  }
+  function unlock() {
+    if (unlocked) return; unlocked = true; preload();
+    // 제스처 컨텍스트에서 무음 프라임 — autoplay 정책 통과(실패 무해)
+    for (var k in els) {
+      try { var a = els[k]; a.muted = true; var p = a.play(); if (p && p.then) p.then(function () {}).catch(function () {}); a.pause(); a.currentTime = 0; a.muted = false; } catch (e) {}
+    }
+  }
+  function play(name) {
+    if (!unlocked || !isOn()) return;
+    var a = els[name]; if (!a) return;
+    try {
+      if (!a.paused) { var c = a.cloneNode(false); c.volume = a.volume; var pc = c.play(); if (pc && pc.catch) pc.catch(function () {}); return; }
+      a.currentTime = 0; var p = a.play(); if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+  function toggle() {
+    var next = isOn() ? 'off' : 'on';
+    try { localStorage.setItem(LS_KEY, next); } catch (e) {}
+    if (next === 'on') play('select');
+    return next === 'on';
+  }
+  function onFirstGesture() {
+    unlock();
+    window.removeEventListener('pointerdown', onFirstGesture, true);
+    window.removeEventListener('keydown', onFirstGesture, true);
+    window.removeEventListener('touchstart', onFirstGesture, true);
+  }
+  window.addEventListener('pointerdown', onFirstGesture, true);
+  window.addEventListener('keydown', onFirstGesture, true);
+  window.addEventListener('touchstart', onFirstGesture, true);
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', preload); else preload();
+  window.DNSound = { play: play, toggle: toggle, isOn: isOn, unlock: unlock };
 })();
 </script>
 
@@ -2735,6 +2800,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
       milestonesAwarded: Object.fromEntries([...Array(5).keys()].map(k => [k, []])),  // v0.6.3b: 거리명성 마일스톤 기록
       highlights: [],            // v0.9.1: 하이라이트 모먼트 기록 (게임 중 기억할 한 수)
       promises: [],              // v0.9.2: 협상 약속 트래킹
+      negoStats: { proposed: 0, accepted: 0, rejected: 0, swaps: 0, truces: 0, broker: 0 },  // v6.44 (A2): 협상 발생 계측 (cap-immune)
       mode,                      // v1.0.1: 'solo' | 'multi' (핫시트) | 'bots' (시뮬)
       difficulty,                // v1.0.1: easy / normal / hard (솔로 한정)
       activePlayer: 0,           // v1.0.2: 핫시트용 — 현재 차례 인간 인덱스
@@ -2992,6 +3058,89 @@ function settleShortPositions(state) {
     meta: { ...state.meta, lastStockSnapshot: { ...state.stocks } },
     log: logs.length ? [...state.log, ...logs].slice(-150) : state.log,
   };
+}
+
+// ===== v6.44 (A2): 협상 페이즈 (Phase 1.5) 공용 헬퍼 — docs/17 §2 원전 배선 =====
+// 원전 §2.1 거래 3종만 생성: 자원 스왑 / 비공격 약속(truce) / BROKER 중개.
+// EV-중립(지배 전략 금지): 봇 수락은 net-value ≥ 0 문턱. 지속·보상·위반은 기존 채널 재사용
+// (truce 만료 ★+1 = NEXT_ROUND, truce 위반 ★-2/피해자 ★+2 = 레이드 판정, 인맥 트랙 = raiseTrack).
+function negoTypeLabel(t) { return t === 'swap' ? '자원 스왑' : t === 'truce' ? '비공격 약속' : t === 'broker_deal' ? 'BROKER 중개' : t; }
+function negoResAbbr(k) { return ({ credit: '₵', weapons: '🔩', data: '📡', parts: '⚙', rep: '★' })[k] || (k.charAt(0).toUpperCase()); }
+
+// 원전 §2.1 3종 거래 후보 생성. from 이 남는 자원 ↔ to 가 남는 자원 = 양측 부족분 보충(win-win, EV-중립).
+function negoBuildCandidates(fromP, from, toP, to, round) {
+  const cands = [];
+  const fr = fromP.resources || {}, tr = toP.resources || {};
+  // (1) 자원 스왑 — 원전 §2.1 "크레딧↔무기, 데이터↔부품 등. 즉시 자원 교환"
+  if ((fr.credit || 0) >= 4 && (tr.weapons || 0) >= 2 && (fr.weapons || 0) < 2)
+    cands.push({ from, to, type: 'swap', give: { credit: 4 }, get: { weapons: 2 }, value: 5 });
+  if ((fr.weapons || 0) >= 2 && (tr.credit || 0) >= 4 && (fr.credit || 0) < 4)
+    cands.push({ from, to, type: 'swap', give: { weapons: 2 }, get: { credit: 4 }, value: 5 });
+  if ((fr.data || 0) >= 2 && (tr.parts || 0) >= 2 && (fr.parts || 0) < 2)
+    cands.push({ from, to, type: 'swap', give: { data: 2 }, get: { parts: 2 }, value: 4 });
+  // (2) 비공격 약속 truce — 원전 §2.1 "1R 동안 서로 raid 안 한다" (진영 다를 때만 의미)
+  if (fromP.role !== toP.role)
+    cands.push({ from, to, type: 'truce', give: {}, get: {}, expiresR: round + 1, value: 3 });
+  // (3) BROKER 중개 — 원전 §2.1/§2.3 "BROKER 클래스 한정. 매 R ★+1 ₵+1"
+  if (fromP.specific === 'BROKER')
+    cands.push({ from, to, type: 'broker_deal', give: {}, get: { rep: 1, credit: 1 }, value: 3 });
+  return cands;
+}
+
+// EV-중립 봇 수락 판정. acceptValue = (to 가 받는 것) − (to 가 내주는 것) + 관계가치.
+// prop.give = from→to 이전분(=to 수령), prop.get = to→from 이전분(=to 지불). net ≥ 0 이면 수락.
+// 지배 전략 방지: 스왑은 부족분 보충 시에만 +, truce 는 소폭 +(만료 ★+1 기대), broker 는 to 무손실.
+function negoEvalAccept(prop, toP) {
+  let acceptValue = 0;
+  for (const [, v] of Object.entries(prop.give || {})) acceptValue += v;   // to 가 수령
+  for (const [, v] of Object.entries(prop.get || {})) acceptValue -= v;    // to 가 지불
+  if (prop.type === 'truce') acceptValue += 2;        // 비공격 약속 자체 가치
+  if (prop.type === 'broker_deal') acceptValue = 1;   // 중개는 to 무손실 → 수락 (BROKER 정체성, to 지불 없음)
+  let canAfford = true;   // 스왑만 to 가 get(지불분)을 실제 보유해야 성립 (broker 의 get 은 from 보너스라 to 무지불)
+  if (prop.type === 'swap' && prop.get) for (const [k, v] of Object.entries(prop.get)) if ((toP.resources[k] || 0) < v) canAfford = false;
+  return { accept: canAfford && acceptValue >= 0, acceptValue, canAfford };
+}
+
+// 협상 처리 — 봇↔봇 자동·인간→봇 UI 공용. 발생 로그 + cap-immune 계측(meta.negoStats). 조용한 실패 금지.
+function negoApply(s, prop) {
+  const fromP = s.players[prop.from], toP = s.players[prop.to];
+  if (!fromP || !toP || fromP.defeated || toP.defeated) return s;
+  const stats = { proposed: 0, accepted: 0, rejected: 0, swaps: 0, truces: 0, broker: 0, ...(s.meta.negoStats || {}) };
+  stats.proposed += 1;
+  const evl = negoEvalAccept(prop, toP);
+  if (!evl.accept) {
+    stats.rejected += 1;
+    s = logEntry(s, `🤝 협상 거절: P${prop.from} [${fromP.specific}] → P${prop.to} [${toP.specific}] (${negoTypeLabel(prop.type)}) · EV ${evl.acceptValue}`);
+    return { ...s, meta: { ...s.meta, negoStats: stats } };
+  }
+  stats.accepted += 1;
+  const ps = [...s.players];
+  if (prop.type === 'swap') {
+    stats.swaps += 1;
+    const frr = { ...fromP.resources }, trr = { ...toP.resources };
+    for (const [k, v] of Object.entries(prop.give)) { frr[k] = (frr[k] || 0) - v; trr[k] = (trr[k] || 0) + v; }
+    for (const [k, v] of Object.entries(prop.get)) { trr[k] = (trr[k] || 0) - v; frr[k] = (frr[k] || 0) + v; }
+    ps[prop.from] = { ...fromP, resources: frr };
+    ps[prop.to] = { ...toP, resources: trr };
+    s = { ...s, players: ps };
+    const gs = Object.entries(prop.give).map(([k, v]) => `${v}${negoResAbbr(k)}`).join(' ');
+    const gt = Object.entries(prop.get).map(([k, v]) => `${v}${negoResAbbr(k)}`).join(' ');
+    s = logEntry(s, `🤝 거래 성사: P${prop.from} [${fromP.specific}] (${gs}) ↔ P${prop.to} [${toP.specific}] (${gt})`);
+    s = raiseTrack(s, prop.from, 'party', 1, '거래');
+  } else if (prop.type === 'truce') {
+    stats.truces += 1;
+    const newPromises = [...(s.meta.promises || []), { from: prop.from, to: prop.to, type: 'truce', expiresR: prop.expiresR, status: 'active' }];
+    s = { ...s, meta: { ...s.meta, promises: newPromises } };
+    s = logEntry(s, `🕊 비공격 약속: P${prop.from} ↔ P${prop.to} (R${prop.expiresR}까지 · 지킴 양측 ★+1 / 위반 ★-2·피해자 ★+2)`);
+  } else if (prop.type === 'broker_deal') {
+    stats.broker += 1;
+    const frr = { ...fromP.resources, rep: (fromP.resources.rep || 0) + 1, credit: (fromP.resources.credit || 0) + 1 };
+    ps[prop.from] = { ...fromP, resources: frr };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🎙 BROKER 중개: P${prop.from} ★+1 ₵+1 (P${prop.to} 중개 성사 · 원전 §2.3)`);
+    s = raiseTrack(s, prop.from, 'party', 1, 'BROKER 중개');
+  }
+  return { ...s, meta: { ...s.meta, negoStats: stats } };
 }
 
 function reducer(state, action) {
@@ -3734,98 +3883,38 @@ function reducer(state, action) {
       return s;
     }
 
-    // v0.9.2: NEGOTIATE_PHASE — Phase 1.5 협상
-    // 자원 거래 / 비공격 약속 / Bloc 동맹 — 봇 AI는 net-value로 자동 수락/거절
+    // v6.44 (A2): NEGOTIATE_PHASE — Phase 1.5 협상 (docs/17 §2 원전 배선).
+    //   봇↔봇 자동 경로만 여기서 처리(발생 로그 + cap-immune 계측). 인간(P0)은 UI PROPOSE_NEGOTIATION.
+    //   봇↔봇 과밀 방지: 라운드당 봇 제안 상한(NEGO_MAX). 밴드 이탈 시 이 상수 하향이 튜닝 노브.
+    //   EV-중립: negoEvalAccept net ≥ 0 만 수락(지배 전략 금지). 원전 3종만 negoBuildCandidates 로 생성.
     case 'NEGOTIATE_PHASE': {
       let s = { ...state };
-      const players = s.players;
-      const proposals = [];
-      // 각 플레이어가 1개 제안 시도 (수락 가능한 상대 1명 선정)
-      for (let from = 0; from < players.length; from++) {
+      const players = s.players, round = s.meta.round;
+      const NEGO_MAX = 2;   // 과밀 방지 · 밴드 튜닝 노브 (라운드당 봇 제안 상한)
+      let fired = 0;
+      for (let from = 0; from < players.length && fired < NEGO_MAX; from++) {
         const fromP = players[from];
-        if (fromP.defeated || fromP.isNpc) continue;
-        // 후보 상대: 인접하지 않아도 OK, defeated/NPC 제외
-        const others = players.map((pp, i) => ({ pp, i })).filter(({ pp, i }) => i !== from && !pp.defeated && !pp.isNpc);
+        // 봇 발기자만 (인간 seat 은 UI 경로) · NPC/패배 제외
+        if (fromP.defeated || fromP.isNpc || fromP.kind === 'human') continue;
+        // 대상: 봇 상대만 (봇↔봇). 인간·NPC·패배 제외 → 인간은 UI 로만 협상 도달
+        const others = players.map((pp, i) => ({ pp, i })).filter(({ pp, i }) => i !== from && !pp.defeated && !pp.isNpc && pp.kind !== 'human');
         if (others.length === 0) continue;
-        // 거래 시나리오 후보 — 가장 실용적인 1개 선정
-        const candidates = [];
-        for (const { pp: toP, i: to } of others) {
-          // (1) 자원 스왑: from이 부족한 자원 ↔ to가 부족한 자원
-          // 단순 룰: from이 credit≥4 + to가 weapons≥2 → credit 4 / weapons 2 거래
-          if ((fromP.resources.credit || 0) >= 4 && (toP.resources.weapons || 0) >= 2 && (fromP.resources.weapons || 0) < 2) {
-            candidates.push({ from, to, type: 'swap', give: { credit: 4 }, get: { weapons: 2 }, value: 5 });
-          }
-          if ((fromP.resources.weapons || 0) >= 2 && (toP.resources.credit || 0) >= 4 && (fromP.resources.credit || 0) < 4) {
-            candidates.push({ from, to, type: 'swap', give: { weapons: 2 }, get: { credit: 4 }, value: 5 });
-          }
-          if ((fromP.resources.data || 0) >= 2 && (toP.resources.parts || 0) >= 2 && (fromP.resources.parts || 0) < 2) {
-            candidates.push({ from, to, type: 'swap', give: { data: 2 }, get: { parts: 2 }, value: 4 });
-          }
-          // (2) 비공격 약속: Ghost↔Bloc 또는 Ghost↔Ghost (서로 다음 R 안 친다)
-          if (fromP.role !== toP.role) {
-            // Ghost가 Bloc에게: "다음 R raid 안 함" 제안 (Bloc은 ★+1로 보상)
-            candidates.push({ from, to, type: 'truce', give: {}, get: {}, expiresR: s.meta.round + 1, value: 3 });
-          }
-          // (3) BROKER 보너스 (v0.9.3) — 협상 시 +1 자원 (너프: rep 2→1, credit 2→1)
-          if (fromP.specific === 'BROKER') {
-            candidates.push({ from, to, type: 'broker_deal', give: {}, get: { rep: 1, credit: 1 }, value: 3 });
-          }
-        }
-        if (candidates.length === 0) continue;
-        // 가장 가치 높은 것 선택
-        candidates.sort((a, b) => b.value - a.value);
-        proposals.push(candidates[0]);
-      }
-      // 거래 처리
-      for (const prop of proposals) {
-        const fromP = s.players[prop.from];
-        const toP = s.players[prop.to];
-        if (fromP.defeated || toP.defeated) continue;
-        // 봇 AI: to 측이 받을 가치 평가 (net positive면 수락)
-        let acceptValue = 0;
-        for (const [k, v] of Object.entries(prop.give || {})) acceptValue += v;
-        for (const [k, v] of Object.entries(prop.get || {})) acceptValue -= v;
-        if (prop.type === 'truce') acceptValue += 2;  // 비공격 약속 자체 가치
-        if (prop.type === 'broker_deal') acceptValue = 1;  // BROKER 거래는 작은 비용으로 받아줌
-        // 비용 충분한지
-        let canAfford = true;
-        if (prop.type === 'swap') {
-          for (const [k, v] of Object.entries(prop.get)) {
-            if ((toP.resources[k] || 0) < v) { canAfford = false; break; }
-          }
-        }
-        if (!canAfford || acceptValue < -3) {
-          s = logEntry(s, `🤝 협상 거절: P${prop.from} [${fromP.specific}] → P${prop.to} [${toP.specific}] (${prop.type})`);
-          continue;
-        }
-        // 수락 — 자원 교환
-        const ps = [...s.players];
-        if (prop.type === 'swap') {
-          const fr = { ...fromP.resources }, tr = { ...toP.resources };
-          for (const [k, v] of Object.entries(prop.give)) { fr[k] = (fr[k] || 0) - v; tr[k] = (tr[k] || 0) + v; }
-          for (const [k, v] of Object.entries(prop.get)) { tr[k] = (tr[k] || 0) - v; fr[k] = (fr[k] || 0) + v; }
-          ps[prop.from] = { ...fromP, resources: fr };
-          ps[prop.to] = { ...toP, resources: tr };
-          s = { ...s, players: ps };
-          const giveStr = Object.entries(prop.give).map(([k, v]) => `${v}${k.charAt(0).toUpperCase()}`).join(' ');
-          const getStr = Object.entries(prop.get).map(([k, v]) => `${v}${k.charAt(0).toUpperCase()}`).join(' ');
-          s = logEntry(s, `🤝 거래 성사: P${prop.from} [${fromP.specific}] (${giveStr}) ↔ P${prop.to} [${toP.specific}] (${getStr})`);
-          s = raiseTrack(s, prop.from, 'party', 1, '거래');
-        } else if (prop.type === 'truce') {
-          // 약속 등록
-          const newPromises = [...(s.meta.promises || []), { from: prop.from, to: prop.to, type: 'truce', expiresR: prop.expiresR, status: 'active' }];
-          s = { ...s, meta: { ...s.meta, promises: newPromises } };
-          s = logEntry(s, `🕊 비공격 약속: P${prop.from} ↔ P${prop.to} (R${prop.expiresR}까지)`);
-        } else if (prop.type === 'broker_deal') {
-          // BROKER가 평판 + 크레딧 받음 (v0.9.3 보너스, 너프됨)
-          const fr = { ...fromP.resources, rep: (fromP.resources.rep || 0) + 1, credit: (fromP.resources.credit || 0) + 1 };
-          ps[prop.from] = { ...fromP, resources: fr };
-          s = { ...s, players: ps };
-          s = logEntry(s, `🎙 BROKER 협상: P${prop.from} ★+1 ₵+1 (P${prop.to}와 중개 성사)`);
-          s = raiseTrack(s, prop.from, 'party', 1, 'BROKER 협상');
-        }
+        const cands = [];
+        for (const { pp: toP, i: to } of others) cands.push(...negoBuildCandidates(fromP, from, toP, to, round));
+        if (cands.length === 0) continue;
+        cands.sort((a, b) => b.value - a.value);
+        s = negoApply(s, cands[0]);   // 발생 로그 + 계측 (수락/거절 모두 기록)
+        fired++;
       }
       return s;
+    }
+
+    // v6.44 (A2): PROPOSE_NEGOTIATION — 인간(P0) UI 제안 경로. 모달이 완성된 prop 전달, 봇은 EV-중립 판정.
+    //   truce 는 meta.promises 에 등록 → 위반 시 레이드 판정(★-2/피해자 ★+2), 만료 시 NEXT_ROUND ★+1.
+    case 'PROPOSE_NEGOTIATION': {
+      const prop = action.prop;
+      if (!prop || prop.from == null || prop.to == null) return state;
+      return negoApply({ ...state }, prop);
     }
 
     case 'BOT_MARKET': {
@@ -7222,6 +7311,57 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
   const [selectedHalves, setSelectedHalves] = useState([]);  // 각 선택 카드의 'top'|'bot' (Ghost) / 'main'|'side' (Bloc)
   const [suppressTarget, setSuppressTarget] = useState(null);  // v6.4: 능동 견제 대상 인덱스
   const [suppressType, setSuppressType] = useState('combat');  // v6.4: 견제 토큰 종류
+  const [negoModal, setNegoModal] = useState(null);  // v6.44 (A2): 협상 모달 { to } — 인간 제안 대상
+  const [soundOn, setSoundOn] = useState(() => (typeof DNSound !== 'undefined' ? DNSound.isOn() : true));  // v6.44 (B2): 사운드 토글 표시 상태
+
+  // v6.44 (B2): 사운드 표시층 훅 — 상태 전이 관찰만(게임 로직 무변경). DNSound 미로드/미언락 시 전부 무해.
+  const _sndLogRef = useRef(state.log && state.log.length ? state.log[state.log.length - 1] : null);
+  useEffect(() => {
+    if (typeof DNSound === 'undefined') return;
+    const log = state.log || [];
+    if (!log.length) return;
+    const top = log[log.length - 1];
+    if (top === _sndLogRef.current) return;
+    const at = log.indexOf(_sndLogRef.current);
+    const fresh = at >= 0 ? log.slice(at + 1) : log.slice(-6);
+    _sndLogRef.current = top;
+    if (!fresh.length) return;
+    const has = (re) => fresh.some(e => e && e.message && re.test(e.message));
+    let pick = null;
+    if (has(/레이드/) && has(/✅ 성공|성공 ·|명중|타격/)) pick = 'raid_impact';
+    else if (has(/ 레이드 \[/)) pick = 'raid_impact';
+    else if (has(/거래 성사/)) pick = 'deal';
+    else if (has(/비공격 약속/)) pick = 'truce';
+    else if (has(/BROKER 중개/)) pick = 'broker';
+    else if (has(/주 매수|주 매도|숏 .*진입/)) pick = 'trade_tick';
+    if (pick) DNSound.play(pick);
+  }, [state.log]);
+
+  const _sndPhaseRef = useRef(state.meta.phase);
+  useEffect(() => {
+    if (typeof DNSound === 'undefined') return;
+    if (state.meta.phase !== _sndPhaseRef.current) {
+      _sndPhaseRef.current = state.meta.phase;
+      if (!state.meta.gameOver) DNSound.play('phase_shift');
+    }
+  }, [state.meta.phase]);
+
+  const _sndDeclRef = useRef(!!state.meta.victoryDeclaration);
+  useEffect(() => {
+    if (typeof DNSound === 'undefined') return;
+    const now = !!state.meta.victoryDeclaration;
+    if (now && !_sndDeclRef.current) DNSound.play('end_sting');
+    _sndDeclRef.current = now;
+  }, [state.meta.victoryDeclaration]);
+
+  const _sndOverRef = useRef(state.meta.gameOver);
+  useEffect(() => {
+    if (typeof DNSound === 'undefined') return;
+    if (state.meta.gameOver && !_sndOverRef.current) {
+      DNSound.play(state.meta.winner === meIdx ? 'victory' : 'defeat');
+    }
+    _sndOverRef.current = state.meta.gameOver;
+  }, [state.meta.gameOver]);
 
   // v1.0.2: 핫시트 — activePlayer 변경되면 카드 선택 리셋 + pass-device 모달 자동 표시
   useEffect(() => {
@@ -7243,6 +7383,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
     if (ph === 1 && !state.currentNews) {
       setTimeout(() => dispatch({ type: 'DRAW_NEWS' }), 400);
       setTimeout(() => dispatch({ type: 'BOT_MARKET' }), 1200);
+      // v6.44 (A2): Phase 1.5 — 봇↔봇 협상 자동 발동(발생 로그만, 과밀 방지). 인간 협상은 시장 패널 버튼.
+      setTimeout(() => dispatch({ type: 'NEGOTIATE_PHASE' }), 1600);
       // phase 2로의 자동 이동은 사용자가 시장 패널의 "거래 끝" 버튼을 눌러야 함
     }
 
@@ -7309,6 +7451,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
   };
 
   const confirmPlan = () => {
+    // v6.44 (B2): 카드 플레이 SFX — 인간 계획 확정(표시층 핸들러). 미로드/미언락 무해.
+    if (typeof DNSound !== 'undefined') DNSound.play('card_play');
     // v1.0.2: 핫시트 모드면 활성 인간 인덱스로
     dispatch({ type: 'PLAN_CARDS', playerIdx: meIdx, cards: selectedCards, halves: selectedHalves });
     const budget = computeMoveBudget(selectedCards, selectedHalves);
@@ -7900,6 +8044,16 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             </div>
           );
         })()}
+        {/* v6.44 (B2): 사운드 마스터 토글 (🔊/🔇 · localStorage dn_sim_sound) */}
+        <button
+          className="sound-toggle"
+          title={soundOn ? '사운드 끄기' : '사운드 켜기'}
+          aria-label={soundOn ? '사운드 끄기' : '사운드 켜기'}
+          onClick={() => { if (typeof DNSound !== 'undefined') { setSoundOn(DNSound.toggle()); } }}
+          style={{ marginLeft: 'auto', background: 'transparent', border: '1px solid var(--border)', color: soundOn ? 'var(--cyan)' : 'var(--text-dim)', borderRadius: 3, cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: '3px 7px', fontFamily: 'inherit' }}
+        >
+          {soundOn ? '🔊' : '🔇'}
+        </button>
       </div>
 
       {/* v6.12 P0-1: 종료 선언 배너 (전 좌석 공개) */}
@@ -8532,10 +8686,79 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', background: 'rgba(60,200,220,0.08)', border: '1px solid var(--cyan)', borderRadius: 4, padding: 8 }}>
                 <div style={{ color: 'var(--cyan)', fontWeight: 700, fontSize: 12 }}>📊 시장 개장</div>
                 <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>현재 ₵{me.resources.credit || 0} 보유</div>
+                {/* v6.44 (A2): 협상 (Phase 1.5) — docs/17 §2. 인간이 대상+제안 선택, 봇은 EV-중립 판정 */}
+                <button className="pa-btn" style={{ borderColor: 'var(--yellow)', color: 'var(--yellow)' }} onClick={() => setNegoModal(negoModal ? null : { to: null })}>
+                  🤝 협상 {negoModal ? '닫기' : '(Phase 1.5)'}
+                </button>
                 <button className="pa-btn primary" style={{ marginLeft: 'auto' }} onClick={() => dispatch({ type: 'SET_PHASE', phase: 2 })}>
                   ▶ 거래 끝 / 계획 단계로
                 </button>
               </div>
+              {/* v6.44 (A2): 계기판 정직화 — 활성 약속 상시 표시(모달 무관). 표시값 = 위반/만료 판정 데이터 */}
+              {(() => {
+                const active = (state.meta.promises || []).filter(pm => pm.status === 'active' && pm.expiresR >= state.meta.round && (pm.from === meIdx || pm.to === meIdx));
+                if (active.length === 0) return null;
+                return (
+                  <div style={{ background: 'rgba(60,200,220,0.06)', border: '1px solid var(--cyan)', borderRadius: 4, padding: 6, fontFamily: 'Share Tech Mono, monospace', fontSize: 10, color: 'var(--cyan)' }}>
+                    🕊 내 비공격 약속: {active.map((pm, k) => {
+                      const other = pm.from === meIdx ? pm.to : pm.from;
+                      return <span key={k} style={{ marginRight: 8 }}>P{other} [{state.players[other]?.specific}] R{pm.expiresR}까지</span>;
+                    })}
+                    <span style={{ color: 'var(--text-dim)' }}>· 위반 raid 시 ★-2 / 만료 시 ★+1</span>
+                  </div>
+                );
+              })()}
+              {/* v6.44 (A2): 협상 패널 — 원전 §2.1 3종(자원 스왑·비공격 약속·BROKER 중개)만 노출 */}
+              {negoModal && (() => {
+                const targets = state.players.map((p, i) => ({ p, i })).filter(({ p, i }) => i !== meIdx && !p.defeated && !p.isNpc);
+                const active = (state.meta.promises || []).filter(pm => pm.status === 'active' && pm.expiresR >= state.meta.round);
+                return (
+                  <div style={{ background: 'rgba(255,235,60,0.06)', border: '1px solid var(--yellow)', borderRadius: 4, padding: 10, fontFamily: 'Share Tech Mono, monospace', fontSize: 11 }}>
+                    <div style={{ color: 'var(--yellow)', fontWeight: 700, marginBottom: 6, letterSpacing: 1 }}>🤝 협상 테이블 · Phase 1.5 <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>(원전 docs/17 §2 — 자원 스왑 / 비공격 약속 / BROKER 중개)</span></div>
+                    {/* 계기판 정직화: 활성 약속 상태 = 판정 데이터 (위반 판정·만료 보상이 이 목록으로 실행됨) */}
+                    {active.length > 0 && (
+                      <div style={{ marginBottom: 8, padding: 6, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 3 }}>
+                        <div style={{ color: 'var(--cyan)', fontSize: 10, marginBottom: 3 }}>🕊 활성 비공격 약속 (위반 시 ★-2 · 만료 시 양측 ★+1)</div>
+                        {active.map((pm, k) => (
+                          <div key={k} style={{ fontSize: 10, color: 'var(--text)' }}>P{pm.from} [{state.players[pm.from]?.specific}] ↔ P{pm.to} [{state.players[pm.to]?.specific}] · R{pm.expiresR}까지</div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ color: 'var(--text-dim)', fontSize: 10, marginBottom: 4 }}>대상 선택 → 제안 (봇은 EV-중립 net≥0 시 수락)</div>
+                    {targets.length === 0 && <div style={{ color: 'var(--text-dim)' }}>협상 가능한 상대 없음</div>}
+                    {targets.map(({ p, i }) => {
+                      const cands = negoBuildCandidates(me, meIdx, p, i, state.meta.round);
+                      const sel = negoModal.to === i;
+                      return (
+                        <div key={i} style={{ marginBottom: 6, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+                          <button onClick={() => setNegoModal({ to: sel ? null : i })}
+                            style={{ fontSize: 11, padding: '3px 8px', background: sel ? 'var(--yellow)' : 'var(--bg3)', color: sel ? 'var(--bg1)' : 'var(--text)', border: `1px solid ${sel ? 'var(--yellow)' : 'var(--border)'}`, borderRadius: 2, cursor: 'pointer', fontWeight: sel ? 700 : 400 }}>
+                            {p.kind === 'human' ? '👤' : '🤖'} P{i} · {p.specific} ({p.role === 'ghost' ? 'Ghost' : 'Bloc'})
+                          </button>
+                          {sel && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                              {cands.length === 0 && <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>제안 가능한 거래 없음 (자원 부족 / 동일 진영)</span>}
+                              {cands.map((c, k) => {
+                                const gs = Object.entries(c.give).map(([kk, v]) => `${v}${negoResAbbr(kk)}`).join(' ');
+                                const gt = Object.entries(c.get).map(([kk, v]) => `${v}${negoResAbbr(kk)}`).join(' ');
+                                const label = c.type === 'swap' ? `자원 스왑: 내가 ${gs} → ${gt} 받음`
+                                  : c.type === 'truce' ? `비공격 약속 (R${c.expiresR}까지)`
+                                  : `BROKER 중개 (★+1 ₵+1)`;
+                                return (
+                                  <button key={k} onClick={() => { dispatch({ type: 'PROPOSE_NEGOTIATION', prop: c }); setNegoModal(null); }}
+                                    style={{ fontSize: 10, padding: '4px 8px', background: 'var(--bg3)', color: 'var(--cyan)', border: '1px solid var(--cyan)', borderRadius: 2, cursor: 'pointer' }}>
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
               {state.meta.pendingMna && (
                 <div style={{ background: 'rgba(255,45,120,0.12)', border: '1px solid var(--magenta)', borderRadius: 4, padding: 8, fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--magenta)', fontWeight: 700 }}>
                   🏴 {state.meta.pendingMna.target} 인수 진행 — 방어 라운드 (다음 라운드 판정)
@@ -8585,14 +8808,15 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                         );
                       })()}
                       {!isOwnBloc && (
-                        <div style={{ display: 'flex', gap: 3 }}>
-                          <button
+                        /* v6.44 (B-04): 모바일(≤720px) 매수/매도 세로 배치 — .mkt-bs 미디어쿼리로 5블록 병렬 23px 폭 해소 */
+                        <div className="mkt-bs" style={{ display: 'flex', gap: 3 }}>
+                          <button className="mkt-bs-btn"
                             style={{ flex: 1, fontSize: 9, padding: '3px', background: canBuy ? 'var(--bg3)' : 'var(--bg1)', color: canBuy ? 'var(--green)' : 'var(--text-dim)', border: `1px solid ${canBuy ? 'var(--green)' : 'var(--border)'}`, borderRadius: 2, cursor: canBuy ? 'pointer' : 'not-allowed' }}
                             disabled={!canBuy}
                             onClick={() => dispatch({ type: 'BUY_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>
                             + 매수
                           </button>
-                          <button
+                          <button className="mkt-bs-btn"
                             style={{ flex: 1, fontSize: 9, padding: '3px', background: canSell ? 'var(--bg3)' : 'var(--bg1)', color: canSell ? 'var(--magenta)' : 'var(--text-dim)', border: `1px solid ${canSell ? 'var(--magenta)' : 'var(--border)'}`, borderRadius: 2, cursor: canSell ? 'pointer' : 'not-allowed' }}
                             disabled={!canSell}
                             onClick={() => dispatch({ type: 'SELL_STOCK', playerIdx: 0, bloc: bl, qty: 1 })}>

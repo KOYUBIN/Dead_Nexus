@@ -50,6 +50,7 @@
 <!-- ── 콘텐츠/로직 모듈 (fetch/XHR 0 — 전부 <script src> window 전역 로드) ── -->
 <script src="./core/loader.js"></script>
 <script src="./core/projection.js"></script>
+<script src="./core/sound.js"></script>
 <script src="./data/attributes.js"></script>
 <script src="./data/signal.js"></script>
 <script src="./data/classes.js"></script>
@@ -88,6 +89,8 @@
 <script src="./data/missions/a2-side-blade-vendetta.js"></script>
 <script src="./data/missions/a2-side-rigger-build.js"></script>
 <script src="./data/missions/a2-side-mole-whoami.js"></script>
+<!-- [v6.44 · 과제 A1] ACT 2 캡스톤 — MERIDIAN FLAGSHIP (3연전) -->
+<script src="./data/missions/a2-99-flagship.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -97,6 +100,7 @@
 <script src="./systems/character.js"></script>
 <script src="./systems/campaign.js"></script>
 <script src="./systems/ending.js"></script>
+<script src="./systems/abyss.js"></script>
 <script src="./state/save.js"></script>
 <script src="./state/store.js"></script>
 
@@ -120,6 +124,8 @@ const STORE = window.RPG_STORE, CH = window.RPG_CHARACTER, AB = window.RPG_ABILI
       GRID = window.RPG_GRID, PROJ = window.RPG_PROJECTION, LORE = window.RPG_LORE,
       SAVE = window.RPG_SAVE, ATTRS = window.RPG_ATTRS, CAMP = window.RPG_CAMPAIGN,
       GEAR = window.RPG_GEAR, ENDING = window.RPG_ENDING;
+// [v6.44 B1] SFX 표시층 훅 — window.RPG_SOUND 부재/미지원 시 무해 no-op (엔진 무관).
+const SFX = (name) => { try { if (window.RPG_SOUND) window.RPG_SOUND.play(name); } catch (e) {} };
 // 활성 미션 = 진행 중 대화/전투의 missionId 를 레지스트리로 해석 (ch01 폴백).
 function missionOf(state) {
   const id = (state.dialogue && state.dialogue.missionId) || (state.combat && state.combat.missionId);
@@ -198,6 +204,8 @@ const STAGE_THEME = {
   'a2-side-blade-vendetta': 'ironwall',  // IRONWALL 무기고 심부 — 군수 적갈
   'a2-side-rigger-build': 'carbon',      // CARBON E6 공장 심부 — 황동
   'a2-side-mole-whoami': 'helix',        // HELIX G6 HQ 양성시설 — 바이오 녹
+  'a2-99-flagship': 'zeroday',           // [v6.44] MERIDIAN 기함 결전 — 결전 마젠타
+  'abyss': 'nexus',                      // [v6.44] 심연 프로토콜 — 시안
 };
 function stageTheme(id) { return (id && STAGE_THEME[id]) || 'vanta'; }
 
@@ -221,12 +229,19 @@ function Portrait({ kind }) {
 function TopBar({ save, onSave, view, onToggleView }) {
   const ch = save.character;
   const iso = view === 'iso';
+  // [v6.44 B1] 마스터 사운드 토글 — localStorage 영속(window.RPG_SOUND), 기본 ON.
+  const [snd, setSnd] = useState(() => (window.RPG_SOUND ? window.RPG_SOUND.enabled() : false));
+  const toggleSound = () => { const on = window.RPG_SOUND ? window.RPG_SOUND.toggle() : false; setSnd(on); };
   return (
     <div className="topbar">
       <a className="home-link" href="../index.html" title="홈으로">⌂</a>
       <span className="brand">GHOSTGRID</span>
       <span className="stat">{ch.icon || '👤'} {ch.classKey} <b>{ch.codename || ''}</b></span>
       <span className="spacer" />
+      <button className={'chip sndtoggle' + (snd ? '' : ' off')} onClick={toggleSound}
+        title={'사운드: ' + (snd ? '켜짐 (탭 시 음소거)' : '음소거 (탭 시 켜기)')} style={{cursor:'pointer'}}>
+        {snd ? '🔊' : '🔇'}
+      </button>
       <button className={'chip viewtoggle' + (iso ? ' iso' : '')} onClick={onToggleView}
         title={'전투 뷰: ' + (iso ? '아이소 (탭 시 탑다운)' : '탑다운 (탭 시 아이소)')} style={{cursor:'pointer'}}>
         {iso ? '◈ ISO' : '▦ TOP'}
@@ -311,6 +326,7 @@ const ACT2_BRANCHES = [
   { key: 'C', icon: '🕊️', label: 'COUNCIL OF ASH (넥서스 재건)', gateHint: '🕊️ NEXUS REBORN 엔딩 열람 필요' },
   { key: 'D', icon: '💀', label: 'RUIN SURVIVORS (폐허 생존)', gateHint: '💀 DEAD NEXUS 엔딩 열람 필요' },
   { key: 'class', icon: '🧬', label: '클래스 전용 사이드', gateHint: '해당 클래스로 편성 필요' },
+  { key: 'capstone', icon: '🌃', label: 'CAPSTONE — MERIDIAN FLAGSHIP (최종 결전)', gateHint: '4갈래 종결전 전부 클리어 필요' },
 ];
 
 // ── 미션 카드 (메인 체인 / 사이드 보드 공용) ──
@@ -341,7 +357,7 @@ function MissionCard({ row, current, dispatch }) {
   else tag = '신규 · 최초 클리어 전액 보상';
   return (
     <button className={'mcard' + (isCurrent ? ' current' : '') + (row.cleared ? ' cleared' : '')}
-      onClick={() => dispatch({ type: 'START_MISSION', missionId: row.id })}>
+      onClick={() => { SFX('mission'); dispatch({ type: 'START_MISSION', missionId: row.id }); }}>
       <span className="mc-ttl">{row.cleared ? '✅ ' : (isCurrent ? '▶ ' : '')}{title}</span>
       <span className="mc-sub">{subtitle}</span>
       <span className="mc-tag">{tag}</span>
@@ -530,23 +546,23 @@ function Hub({ state, dispatch, openSave }) {
       <EndingBadges save={save} />
       <LastOpPanel flags={save.flags} />
       <div className="hub-grid">
-        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'missions' })}>
+        <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'missions' }); }}>
           <span className="ic">🎯</span><span className="lb">미션 보드</span>
           <span className="nt">{missionNote}</span>
         </button>
-        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'sheet' })}>
+        <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'sheet' }); }}>
           <span className="ic">📋</span><span className="lb">캐릭터 시트</span>
           <span className="nt">karma {ch.karma} 지출 가능</span>
         </button>
-        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'roster' })}>
+        <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'roster' }); }}>
           <span className="ic">👥</span><span className="lb">크루 / 로스터</span>
           <span className="nt">4클래스 빌드 전환 (해킹·근접·설치·위장)</span>
         </button>
-        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'shop' })}>
+        <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'shop' }); }}>
           <span className="ic">🛒</span><span className="lb">장비 상점</span>
           <span className="nt">₵{ch.nuyen} · 무기 개조 + 사이버웨어 {gearEquippedCount(ch)}/2 장착</span>
         </button>
-        <button className="hub-node" onClick={() => dispatch({ type: 'HUB_NAV', node: 'intel' })}>
+        <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'intel' }); }}>
           <span className="ic">🛰</span><span className="lb">정보상</span>
           <span className="nt">미션 인텔 {intelCount(save)}건 확보 · 전투 브리핑 공개</span>
         </button>
@@ -555,6 +571,14 @@ function Hub({ state, dispatch, openSave }) {
         <div className="lab">SIGNAL 추적 / 캠페인 위협 {threat.value}/{threat.cap} · 전투 노출은 미션 내 게이지로 실동</div>
         <div className="bar"><i style={{ width: Math.min(100, threat.value / threat.cap * 100) + '%' }} /></div>
       </div>
+      {/* [v6.44 · 과제 A1] 심연 프로토콜 — 캡스톤(endings.capstone>0) 클리어 후 개방. 무한 상승 웨이브 전투. */}
+      {(ENDING && ENDING.migrateEndings(save.endings).capstone > 0) ? (
+        <button className="abyss-card" onClick={() => dispatch({ type: 'ABYSS_START' })}>
+          <span className="ab-h">🌃 심연 프로토콜 — 무한 상승 계약</span>
+          <span className="ab-nt">웨이브 결정론 전투 · 적 스케일 1+0.05N · 패배 페널티 없음</span>
+          <span className="ab-best">로컬 최고 웨이브 <b>{(save.abyss && save.abyss.best) || 0}</b> · 탭하여 웨이브 1 개시</span>
+        </button>
+      ) : null}
       {/* [61차 §3.4] 하드 모드 토글 — NG+ 회차(runs>0)부터 노출. 켜짐 시 이후 전투의 적 스탯 +25%(hp/atk). */}
       {(ENDING && ENDING.migrateEndings(save.endings).runs > 0) ? (
         <button className={'btn ghost hardmode-btn' + (save.flags && save.flags.hardMode ? ' on' : '')}
@@ -786,13 +810,32 @@ function Combat({ state, dispatch, view }) {
     if (c.outcome) return;
     const enemyHere = c.units.find(u => u.x === x && u.y === y && u.side === 'enemy' && u.hp > 0);
     if (enemyHere && canTarget(enemyHere)) { dispatch({ type: 'COMBAT_ATTACK', targetId: enemyHere.id, ability: c.selectedAbility }); return; }
-    if (reach[x + ',' + y] > 0 && !c.field.cover.find(k=>k.x===x&&k.y===y)) { dispatch({ type: 'COMBAT_MOVE', tile: { x, y } }); return; }
+    if (reach[x + ',' + y] > 0 && !c.field.cover.find(k=>k.x===x&&k.y===y)) { SFX('move'); dispatch({ type: 'COMBAT_MOVE', tile: { x, y } }); return; }
   }
 
-  // 자동 floater 정리
+  // 자동 floater 정리 + [v6.44 B1] SFX 훅 (부유 텍스트 종류로 타격/크리/해킹샷 판별 — 표시층 전용)
   useEffect(() => {
-    if (c.floaters && c.floaters.length) { const id = setTimeout(() => dispatch({ type: 'COMBAT_CLEAR_FLOATERS' }), 1050); return () => clearTimeout(id); }
+    const fs = c.floaters || [];
+    if (fs.length) {
+      if (fs.some(f => f.kind === 'dmg' && f.crit)) SFX('crit');
+      else if (fs.some(f => f.kind === 'dmg')) SFX('hit');
+      if (fs.some(f => f.kind === 'hack')) SFX('hack');
+      const id = setTimeout(() => dispatch({ type: 'COMBAT_CLEAR_FLOATERS' }), 1050); return () => clearTimeout(id);
+    }
   }, [c.floaters]);
+  // [v6.44 B1] 처치 SFX — 적 전사 수 증가 감지 (표시층 전용, 유닛 배열 무변경).
+  const deadRef = useRef(0);
+  useEffect(() => {
+    const dead = (c.units || []).filter(u => u.side === 'enemy' && u.hp <= 0).length;
+    if (dead > deadRef.current) SFX('kill');
+    deadRef.current = dead;
+  }, [c.units]);
+  // [v6.44 B1] 승리/패배 스팅 — outcome 전이 1회.
+  const outRef = useRef(null);
+  useEffect(() => {
+    if (c.outcome && c.outcome !== outRef.current) SFX(c.outcome === 'win' ? 'victory' : 'defeat');
+    outRef.current = c.outcome;
+  }, [c.outcome]);
 
   // 투영 병진 → CSS calc (tx/ty 는 --tile 배수, iso 는 소수 가능). 룰 무관, 표시층만.
   const posStyle = (px, py, extra) => {
@@ -837,6 +880,7 @@ function Combat({ state, dispatch, view }) {
     <div className={'combat stage stage-' + theme}>
       {flash ? <div className="ult-flash" key={'uf' + flash} /> : null}
       <div className="combat-top">
+        {c.abyss ? <span className="rnd" style={{ color: 'var(--cyan)' }}>🌃 심연 웨이브 {c.abyss.wave}</span> : null}
         <span className="rnd">ROUND {c.round}</span>
         <span className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
         <span className="obj">🎯 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
@@ -879,9 +923,11 @@ function Combat({ state, dispatch, view }) {
       {c.outcome ? (
         <div className="hud">
           <div className="banner" style={{ borderColor: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', color: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', margin: 0 }}>
-            {c.outcome === 'win' ? ('★ 미션 성공' + (c.objective && c.objective.dataTB ? ' — ' + c.objective.dataTB + 'TB 유출' : ' — 목표 달성')) : '미션 실패 — 다운'}
+            {c.abyss
+              ? (c.outcome === 'win' ? ('★ 웨이브 ' + c.abyss.wave + ' 돌파 — 다음 웨이브로') : ('심연 종료 — 웨이브 ' + c.abyss.wave + ' 다운 (페널티 없음)'))
+              : (c.outcome === 'win' ? ('★ 미션 성공' + (c.objective && c.objective.dataTB ? ' — ' + c.objective.dataTB + 'TB 유출' : ' — 목표 달성')) : '미션 실패 — 다운')}
           </div>
-          <button className="btn" onClick={() => dispatch({ type: 'COMBAT_RESOLVE' })}>계속</button>
+          <button className="btn" onClick={() => dispatch({ type: 'COMBAT_RESOLVE' })}>{c.abyss ? (c.outcome === 'win' ? '다음 웨이브' : '허브로') : '계속'}</button>
         </div>
       ) : (
         <div className="hud">
@@ -897,7 +943,7 @@ function Combat({ state, dispatch, view }) {
               const cd = p.cooldowns[k] || 0;
               const dis = p.ap < a.ap || cd > 0 || (a.oncePerMission && p.ultUsed);
               return <button key={k} className={'ability' + (c.selectedAbility === k ? ' sel' : '')} disabled={a.kind === 'ULTIMATE' ? dis : false}
-                onClick={() => { if (a.kind === 'ULTIMATE') { if (!dis) dispatch({ type: 'COMBAT_ATTACK', targetId: null, ability: k }); } else dispatch({ type: 'COMBAT_SELECT', ability: k }); }}>
+                onClick={() => { if (a.kind === 'ULTIMATE') { if (!dis) dispatch({ type: 'COMBAT_ATTACK', targetId: null, ability: k }); } else { SFX('select'); dispatch({ type: 'COMBAT_SELECT', ability: k }); } }}>
                 <span className="an">{a.icon} {a.name}</span>
                 <span className="ameta">{a.ap}AP{a.cooldown ? ' · cd' + a.cooldown : ''}{cd > 0 ? ' · 대기' + cd : ''}{a.oncePerMission ? (p.ultUsed ? ' · 소진' : ' · 1회') : ''}</span>
               </button>;
@@ -961,19 +1007,26 @@ function EndingBadges({ save }) {
   );
 }
 
-// ── 에필로그 씬 (ch08 완주 피날레 — 엔딩 분기별 상이 에필로그) ──
+// ── 에필로그 씬 (ch08 완주 피날레 — 엔딩 분기별 상이 에필로그 / v6.44 캡스톤 피날레) ──
 function Epilogue({ state, dispatch }) {
   const save = state.save;
+  // [v6.44 · 과제 A1] 캡스톤 에필로그 분기 — 4엔딩과 별개 "ASHGRID PREVAILS".
+  const isCapstone = !!(state.epilogue && state.epilogue.capstone);
   const key = (state.epilogue && state.epilogue.ending) || ENDING.resolveEnding(save);
-  const ep = ENDING.epilogueFor(key);
-  const summary = ENDING.choiceSummary(save.flags);
+  const ep = isCapstone ? ENDING.capstoneEpilogue() : ENDING.epilogueFor(key);
+  // 회고 카드: 캡스톤은 4갈래 종결 선택(capstoneRecall), 캠페인은 7챕터 선택(choiceSummary).
+  const summary = isCapstone ? ENDING.capstoneRecall(save.flags) : ENDING.choiceSummary(save.flags);
   const stats = ENDING.campaignStats(save);
+  const kicker = isCapstone
+    ? ('ACT 2 CAPSTONE · MERIDIAN FLAGSHIP 격추 · 캡스톤 ' + stats.capstoneCleared + '회')
+    : 'CAMPAIGN COMPLETE · 8/8 · 캠페인 봉인';
+  const recallHeader = isCapstone ? '🧭 네 전선의 회고 — 4갈래 종결 선택' : '🧭 당신의 선택들 — 7챕터의 회고';
   return (
     <div className="epilogue stage stage-zeroday">
       <div className="ep-hero">
         <div className="ep-badge">{ep.icon}</div>
         <div className="ep-titles">
-          <div className="ep-kicker">CAMPAIGN COMPLETE · 8/8 · 캠페인 봉인</div>
+          <div className="ep-kicker">{kicker}</div>
           <h1 className="ep-title">{ep.title}</h1>
           <div className="ep-sticker">🏷 "{ep.sticker}" · {ep.cond}</div>
         </div>
@@ -985,16 +1038,22 @@ function Epilogue({ state, dispatch }) {
         <Typewriter text={ENDING.SIGNAL_FINAL.join('\n')} speed={26} />
       </div>
       <div className="ep-card">
-        <div className="ep-card-h">🧭 당신의 선택들 — 7챕터의 회고</div>
+        <div className="ep-card-h">{recallHeader}</div>
         <div className="ep-choices">
           {summary.length ? summary.map((c, i) => (
             <div key={i} className="ep-choice">
-              <span className="ep-ch">CH{c.ch < 10 ? '0' + c.ch : c.ch}</span>
+              <span className="ep-ch">{isCapstone ? ('갈래 ' + c.br) : ('CH' + (c.ch < 10 ? '0' + c.ch : c.ch))}</span>
               <span className="ep-ct">{c.text}</span>
             </div>
           )) : <div className="ep-empty">기록된 분기 선택 없음</div>}
         </div>
       </div>
+      {isCapstone ? (
+        <div className="ep-card">
+          <div className="ep-card-h">🌃 심연 프로토콜 개방 — 무한 상승 계약</div>
+          <div className="ep-runs">허브에서 웨이브 결정론 전투 개시 · 현재 최고 웨이브 {(save.abyss && save.abyss.best) || 0} · 패배 페널티 없음</div>
+        </div>
+      ) : null}
       <div className="ep-card">
         <div className="ep-card-h">📊 캠페인 통계 (세이브 파생)</div>
         <div className="ep-stats">
@@ -1009,11 +1068,19 @@ function Epilogue({ state, dispatch }) {
             <span key={c.classKey} className={'ep-cls' + (c.done ? ' done' : '')}>{c.done ? '✅' : '—'} {c.classKey}</span>
           ))}
         </div>
-        <div className="ep-runs">총 완주 회차 {stats.runs}회 · 이번 엔딩 {ep.title}</div>
+        <div className="ep-runs">
+          총 완주 회차 {stats.runs}회 · {isCapstone ? ('캡스톤 격파 ' + stats.capstoneCleared + '회 · 완주 클래스 ' + (stats.capstoneClasses.join('/') || '—')) : ('이번 엔딩 ' + ep.title)}
+        </div>
       </div>
       <div className="ep-actions">
-        <button className="btn" onClick={() => dispatch({ type: 'NEW_GAME_PLUS' })}>↻ 새 회차 (진행 리셋 · 엔딩 기록 보존)</button>
-        <button className="btn ghost" onClick={() => dispatch({ type: 'EPILOGUE_CONTINUE' })}>허브로 (봉인 유지)</button>
+        {isCapstone ? (
+          <button className="btn" onClick={() => dispatch({ type: 'EPILOGUE_CONTINUE' })}>허브로 — 심연 프로토콜 개시</button>
+        ) : (
+          <React.Fragment>
+            <button className="btn" onClick={() => dispatch({ type: 'NEW_GAME_PLUS' })}>↻ 새 회차 (진행 리셋 · 엔딩 기록 보존)</button>
+            <button className="btn ghost" onClick={() => dispatch({ type: 'EPILOGUE_CONTINUE' })}>허브로 (봉인 유지)</button>
+          </React.Fragment>
+        )}
       </div>
     </div>
   );
@@ -1035,6 +1102,12 @@ function App() {
   });
   // 자동세이브: 허브 귀환 시 localStorage (안전판은 문자열).
   useEffect(() => { if (state.scene === 'hub') { try { SAVE.saveLocal(state.save); } catch (e) {} } }, [state.scene, state.save]);
+  // [v6.44 B1] 엔딩 스팅 — 에필로그 씬 진입 1회 (표시층 전용).
+  const sceneRef = useRef(null);
+  useEffect(() => {
+    if (state.scene === 'epilogue' && sceneRef.current !== 'epilogue') SFX('ending');
+    sceneRef.current = state.scene;
+  }, [state.scene]);
 
   let scene, sceneKey;
   if (saveOpen) { scene = <SaveMenu state={state} dispatch={dispatch} back={() => setSaveOpen(false)} />; sceneKey = 'save'; }
@@ -1077,6 +1150,14 @@ try {
 .board-sec.act2-branch.locked { opacity: .55; border-bottom-style: dotted; }
 .mcard.locked.act2 { border-left: 2px solid var(--orange); opacity: .72; }
 .hardmode-btn.on { color: var(--orange); border-color: var(--orange); }
+/* [v6.44] 심연 프로토콜 허브 카드 */
+.abyss-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; cursor: pointer;
+  margin-top: 10px; padding: 10px 12px; border: 1.5px solid var(--cyan); border-radius: 8px;
+  background: rgba(0,229,255,0.06); color: var(--text); font-family: inherit; }
+.abyss-card:hover { background: rgba(0,229,255,0.12); box-shadow: 0 0 8px rgba(0,229,255,0.22); }
+.abyss-card .ab-h { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); font-size: 14px; }
+.abyss-card .ab-nt { color: var(--text-dim); font-size: 11px; }
+.abyss-card .ab-best { color: var(--orange); font-size: 12px; }
 .mission-list { display: flex; flex-direction: column; gap: 8px; }
 .mcard { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
   border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg2);

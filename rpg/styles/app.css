@@ -51,6 +51,9 @@ button { font-family: inherit; cursor: pointer; }
   color: var(--text-dim); background: var(--bg3); }
 .chip.karma { color: var(--orange); border-color: var(--orange); }
 .chip.rep { color: var(--cyan); }
+/* [v6.44 B1] 마스터 사운드 토글 — ON=강조 · OFF(음소거)=흐림 */
+.chip.sndtoggle { cursor: pointer; border-color: var(--cyan); color: var(--cyan); }
+.chip.sndtoggle.off { border-color: var(--border); color: var(--text-dim); opacity: 0.6; }
 
 /* ---- 배너 ---- */
 .banner { margin: 8px 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.5;
