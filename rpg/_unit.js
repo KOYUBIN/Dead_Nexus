@@ -230,8 +230,11 @@ console.log('\n== 로스터 선택 [Stage 2 다른 빌드] ==');
 var rosterState = S.rpgInitialState();
 var toBlade = S.selectClass(rosterState, 'BLADE');
 ok('64. 로스터에서 BLADE 편성 → classKey=BLADE & 근접 킷', toBlade.save.character.classKey === 'BLADE' && toBlade.save.character.kit.indexOf('POINT_BLANK') >= 0);
-// [48차] RIGGER·MOLE 이 플레이어블로 승격 → 미해금 대조군을 BROKER(비플레이어블)로 교체.
-ok('65. 미해금 클래스(BROKER) 선택 차단(캐릭터 유지)', S.selectClass(rosterState, 'BROKER').save.character.classKey === 'CIPHER');
+// [48차] RIGGER·MOLE 승격 → 미해금 대조군 BROKER. [65차] BROKER·DRIFTER 도 승격(6클래스 전량)
+//   → BROKER 는 "미해금→해금" 선택 경로 반전 검증, 차단 대조군은 로스터 밖 키(AXIOM 비플레이어블).
+ok('65. 해금 클래스(BROKER) 선택 허용(미해금→해금 전환) · 로스터 밖 키(AXIOM) 차단(캐릭터 유지)',
+  S.selectClass(rosterState, 'BROKER').save.character.classKey === 'BROKER' &&
+  S.selectClass(rosterState, 'AXIOM').save.character.classKey === 'CIPHER');
 
 console.log('\n== 오브젝티브 무력 강습 vs 해킹 [각색 docs/25 §3.5] ==');
 // BLADE(ATK5/HACK1) 인접 → 강습에 ATK5 사용.
@@ -304,8 +307,9 @@ var REG = CAMP.MISSIONS;
 var mains = REG.filter(function (e) { return e.kind === 'main'; });
 var sides = REG.filter(function (e) { return e.kind === 'side'; });
 var act2 = REG.filter(function (e) { return e.kind === 'act2'; });
-// [62차/v6.44] Act2 등록 → 레지스트리 30(메인 8 + 사이드 8 + act2 14[a2-00 + 4갈래×2 + 클래스 4 + 캡스톤 1]). 메인/사이드 불변.
-ok('77. 레지스트리 = 30 미션 (메인 8 + 사이드 8 + act2 14)', REG.length === 30 && mains.length === 8 && sides.length === 8 && act2.length === 14);
+// [62차/v6.44] Act2 등록 → 30. [65차] BROKER/DRIFTER 클래스 사이드 2 추가 → 레지스트리 32
+//   (메인 8 + 사이드 8 + act2 16[a2-00 + 4갈래×2 + 클래스 6 + 캡스톤 1]). 메인/사이드 불변.
+ok('77. 레지스트리 = 32 미션 (메인 8 + 사이드 8 + act2 16)', REG.length === 32 && mains.length === 8 && sides.length === 8 && act2.length === 16);
 // 전 미션 데이터 해석 + id 일치 + 필수 섹션.
 var resolveOk = true, resolveBad = [];
 REG.forEach(function (e) {
@@ -340,11 +344,11 @@ function dfs(id) {
 REG.forEach(function (e) { if (!color[e.id]) dfs(e.id); });
 ok('80. 해금 선행(missionsDone) 그래프 순환 없음 + 선행 실존', !cyc && prereqMissing.length === 0);
 // 도달성: 빈 세이브에서 확산. Act2 갈래(endingSeen)·클래스 사이드(classKey)는 회차/클래스 전환으로
-//   개방되므로, 4엔딩 전부 열람 + 4클래스 순회의 합집합으로 전 30 미션 도달을 검증(NG+/클래스 전환 완성형).
-//   [v6.44] 캡스톤(a2-99)은 4갈래 종결 전부 완료 시 개방 → 4엔딩 합집합에서 도달.
+//   개방되므로, 4엔딩 전부 열람 + 6클래스 순회의 합집합으로 전 32 미션 도달을 검증(NG+/클래스 전환 완성형).
+//   [v6.44] 캡스톤(a2-99)은 4갈래 종결 전부 완료 시 개방 → 4엔딩 합집합에서 도달. [65차] 6클래스 순회.
 var ALL_ENDINGS = { 'corporate-eternal': 1, 'street-rising': 1, 'nexus-reborn': 1, 'dead-nexus': 1 };
 var reachedUnion = {};
-['CIPHER', 'BLADE', 'RIGGER', 'MOLE'].forEach(function (clsK) {
+['CIPHER', 'BLADE', 'RIGGER', 'MOLE', 'BROKER', 'DRIFTER'].forEach(function (clsK) {
   var rsave = { missionsDone: [], flags: {}, endings: { seen: ALL_ENDINGS }, character: { classKey: clsK } };
   var changed = true, guard = 0;
   while (changed && guard++ < 60) {
@@ -356,7 +360,7 @@ var reachedUnion = {};
   }
   rsave.missionsDone.forEach(function (id) { reachedUnion[id] = 1; });
 });
-ok('81. 전 30 미션 도달 가능 (4엔딩 열람 + 4클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 30);
+ok('81. 전 32 미션 도달 가능 (4엔딩 열람 + 6클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 32);
 // 단일 세이브(1엔딩·1클래스) 도달: 8 메인 + 8 사이드 + a2-00 + 해당 갈래 2 메인 + 해당 클래스 사이드 1 = 20.
 var oneSave = { missionsDone: [], flags: {}, endings: { seen: { 'corporate-eternal': 1 } }, character: { classKey: 'CIPHER' } };
 var chg = true, g2 = 0;
@@ -471,10 +475,11 @@ ok('97. 재클리어 렙 = 축소만(+1) · 영웅 +5 재적용 안 됨(farming 
 //   위장 태그 게이트 통과 · 무소음(발각 리스크 관리) · 클래스별 해금 시그니처 일반화.
 // ============================================================================
 
-console.log('\n== 4클래스 플레이어블 로스터 [48차 · docs/07 §2] ==');
-ok('98. PLAYABLE = 4클래스 (CIPHER·BLADE·RIGGER·MOLE)',
-  CL.PLAYABLE.length === 4 && CL.PLAYABLE.indexOf('RIGGER') >= 0 && CL.PLAYABLE.indexOf('MOLE') >= 0 &&
-  CL.PLAYABLE.indexOf('BROKER') < 0 && CL.PLAYABLE.indexOf('DRIFTER') < 0);
+console.log('\n== 6클래스 플레이어블 로스터 [48차→65차 · docs/07 §2] ==');
+// [65차] BROKER·DRIFTER 승격 → 6클래스 전량 플레이어블.
+ok('98. PLAYABLE = 6클래스 (CIPHER·BLADE·RIGGER·MOLE·BROKER·DRIFTER)',
+  CL.PLAYABLE.length === 6 && CL.PLAYABLE.indexOf('RIGGER') >= 0 && CL.PLAYABLE.indexOf('MOLE') >= 0 &&
+  CL.PLAYABLE.indexOf('BROKER') >= 0 && CL.PLAYABLE.indexOf('DRIFTER') >= 0);
 ok('99. RIGGER/MOLE 이 passive 보유(로스터 UI·시트 표기)',
   !!CL.CLASSES.RIGGER.passive && !!CL.CLASSES.MOLE.passive);
 
@@ -617,12 +622,13 @@ for (var _mi = 0; _mi < mrx.length; _mi++) {
     if (_vd.clearable && _vd.rep.rounds > worstRush) worstRush = _vd.rep.rounds;
   }
 }
-// [62차/v6.44] 매트릭스 = 40 인카운터(30미션 + enc② 키 10[2연전 8×1 + 캡스톤 3연전×2])×4 = 160조합. 전원 클리어 유지.
+// [62차/v6.44] 40 인카운터×4=160. [65차] 6클래스×32미션 → 42 인카운터(32미션 + enc② 키 10
+//   [2연전 8×1 + 캡스톤 3연전×2])×6 = 252조합. 전원 클리어 유지.
 //   멀티 인카운터 미션은 enc①(mission.combat) + 각 encounters 키를 개별 행으로 측정(하네스 encounters 순회).
 var nEncKeys = 0;
 REG.forEach(function (e) { var m = CAMP.missionData(e.id); if (m && m.encounters) nEncKeys += Object.keys(m.encounters).length; });
-ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 40 인카운터×4=160)',
-  nClear === nTotal && mrx.length === REG.length + nEncKeys && nTotal === (REG.length + nEncKeys) * 4 && nFail === 0 && nEncKeys === 10);
+ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 42 인카운터×6=252)',
+  nClear === nTotal && mrx.length === REG.length + nEncKeys && nTotal === (REG.length + nEncKeys) * 6 && nFail === 0 && nEncKeys === 10);
 ok('127. 소모전(attrition) 이상치 0', nAttr === 0);
 ok('128. 최속 승리 라운드 밴드 상한 ≤ 9 (전 조합)', worstRush <= 9);
 
@@ -840,10 +846,10 @@ ok('173. base 시나리오 = 무인자 runEncounter byte 동일 (기존 64조합
 var aggBase = BAL.aggregateScenario(BAL.runMatrix('base'));
 var aggMid  = BAL.aggregateScenario(BAL.runMatrix('mid'));
 var aggFull = BAL.aggregateScenario(BAL.runMatrix('full'));
-var AGG_N = aggBase.total;   // [62차/v6.44] 40 인카운터×4 = 160. 시나리오 집계 총량(하네스 encounters 순회 반영).
+var AGG_N = aggBase.total;   // [62차/v6.44] 160 → [65차] 6클래스 42 인카운터×6 = 252. 시나리오 집계 총량(하네스 encounters 순회 반영).
 // 트리비얼은 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) 3건 — 문서화 허용(51차 선례). clearFail 0 이 램프 불변식.
 ok('174. base ' + AGG_N + '/' + AGG_N + ' 클리어 · clearFail 0 · trivial ≤3(enc①/베이스라인 · 무장비 밴드)',
-  aggBase.clearable === AGG_N && aggBase.total === 160 && aggBase.trivial <= 3 && aggBase.fail === 0);
+  aggBase.clearable === AGG_N && aggBase.total === 252 && aggBase.trivial <= 3 && aggBase.fail === 0);
 ok('175. mid: 클리어율 동일(' + AGG_N + '/' + AGG_N + '=base) · 여유 증가(평균종료HP mid≥base)',
   aggMid.clearable === aggBase.clearable && aggMid.clearable === AGG_N && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
 // ★full 후반 챕터 트리비얼화 가드 — ch06~08 최속승리 min ≥3R & 후반 트리비얼 0 = 합격(장비 하향 불요).
@@ -1093,13 +1099,13 @@ var yesCh8 = mkSave({ missionsDone: ['ch08-zero-day'] });
 ok('222. a2-00 해금: ch08 미완주 → 잠김 · 완주 → 해금(엔딩 무관하게)',
   CAMP.isUnlocked(a2entry, noCh8) === false && CAMP.isUnlocked(a2entry, yesCh8) === true);
 var bs = CAMP.boardState(yesCh8);   // mkSave 기본 classKey = CIPHER · endings.seen = {} (엔딩 미열람)
-// [62차/v6.44] act2 그룹 = 14(a2-00 + 갈래 8 + 클래스 4 + 캡스톤 1). ch08 완주 + CIPHER 편성 → a2-00 + CIPHER 사이드 해금.
-//   갈래 8(endingSeen 게이트) 전부 잠김 · 타 클래스 사이드 3 잠김(classKey 게이트) · 캡스톤 잠김(4갈래 종결 게이트).
+// [62차/v6.44] act2 그룹 14 → [65차] 16(a2-00 + 갈래 8 + 클래스 6 + 캡스톤 1). ch08 완주 + CIPHER 편성 → a2-00 + CIPHER 사이드 해금.
+//   갈래 8(endingSeen 게이트) 전부 잠김 · 타 클래스 사이드 5 잠김(classKey 게이트) · 캡스톤 잠김(4갈래 종결 게이트).
 var a2FramingRow = bs.act2.filter(function (r) { return r.id === 'a2-00-framing'; })[0];
 var a2Unlocked = bs.act2.filter(function (r) { return r.unlocked; }).map(function (r) { return r.id; });
 var branchLocked = bs.act2.filter(function (r) { return ['A', 'B', 'C', 'D'].indexOf(r.branch) >= 0 && !r.unlocked; }).length;
-ok('223. boardState.act2 = 14(a2-00+갈래8+클래스4+캡스톤1) · ch08+CIPHER → a2-00·CIPHER사이드 해금 · 갈래8 잠금 · mains 8 · sides 8',
-  bs.act2.length === 14 && a2FramingRow && a2FramingRow.unlocked === true &&
+ok('223. boardState.act2 = 16(a2-00+갈래8+클래스6+캡스톤1) · ch08+CIPHER → a2-00·CIPHER사이드 해금 · 갈래8 잠금 · mains 8 · sides 8',
+  bs.act2.length === 16 && a2FramingRow && a2FramingRow.unlocked === true &&
   a2Unlocked.length === 2 && a2Unlocked.indexOf('a2-side-cipher-static') >= 0 &&
   branchLocked === 8 && bs.mains.length === 8 && bs.sides.length === 8);
 // 완주 경로(전투 경로): intro→approach→[전투]→outro→settle→returnHub. RIGGER(spd2) = 전투 폴백.
@@ -1153,23 +1159,25 @@ ok('232. hardMode ON → dialogueChoose 전투 개시 시 적 스탯 스케일(S
   hEnemy.hp === 10 && hEnemy.atk === 5 && a2h.combat.enemyScale === 1.25);
 
 // ============================================================================
-console.log('\n== [62차] Act2 본편 12엔트리 — 레지스트리 · 해금 게이트 · 갈래 개방 ==');
+console.log('\n== [62차→65차] Act2 본편 14엔트리 — 레지스트리 · 해금 게이트 · 갈래 개방 ==');
 var A2_MAIN = ['a2-a1-crown-breach', 'a2-a2-crown-throne', 'a2-b1-barricade', 'a2-b2-freeport',
   'a2-c1-first-contact', 'a2-c2-signal-war', 'a2-d1-scavenge', 'a2-d2-last-signal'];
-var A2_CLASS = ['a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami'];
+// [65차] BROKER/DRIFTER 클래스 사이드 2 추가 → 클래스 사이드 6(6클래스 전량).
+var A2_CLASS = ['a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami',
+  'a2-side-broker-ledger', 'a2-side-drifter-lastroad'];
 var A2_ALL = A2_MAIN.concat(A2_CLASS);
-// 233. 12 신규 엔트리 등록 + kind act2 + order 21~32 연속 + branch 필드.
+// 233. 14 엔트리 등록 + kind act2 + order 21~34 연속 + branch 필드.
 var a2entries = A2_ALL.map(function (id) { return byId[id]; });
 var orders = a2entries.map(function (e) { return e && e.order; });
 var orderOk = true; for (var oi = 0; oi < orders.length; oi++) if (orders[oi] !== 21 + oi) orderOk = false;
-ok('233. 12 신규 act2 엔트리 등록 · kind act2 · order 21~32 연속 · branch 부착',
+ok('233. 14 act2 엔트리 등록 · kind act2 · order 21~34 연속 · branch 부착',
   a2entries.every(function (e) { return e && e.kind === 'act2' && e.branch; }) && orderOk);
-// 234. 전 12 미션 global/module 해석 + id 일치 + dialogue/combat/rewards.
+// 234. 전 14 미션 global/module 해석 + id 일치 + dialogue/combat/rewards.
 var a2ResolveOk = A2_ALL.every(function (id) {
   var m = CAMP.missionData(id); var e = byId[id];
   return m && m.id === id && m.dialogue && m.combat && m.rewards && typeof window === 'undefined' && e.global && e.module;
 });
-ok('234. 12 미션 missionData 해석 + id 일치 + 필수 섹션 + global/module 메타', a2ResolveOk);
+ok('234. 14 미션 missionData 해석 + id 일치 + 필수 섹션 + global/module 메타', a2ResolveOk);
 // 235. 갈래 A 엔딩 게이트 + 2nd 미션 체인.
 var A1 = byId['a2-a1-crown-breach'], A2e = byId['a2-a2-crown-throne'];
 ok('235. 갈래 A: a1 = ch08+corporate-eternal · a2 = +a1 체인(missionsDone)',
@@ -1181,10 +1189,11 @@ var BR = { 'a2-b2-freeport': ['street-rising', 'a2-b1-barricade'],
 var brChainOk = Object.keys(BR).every(function (id) {
   var e = byId[id]; return e.unlock.endingSeen[0] === BR[id][0] && e.unlock.missionsDone.indexOf(BR[id][1]) >= 0; });
 ok('236. 갈래 B/C/D: 엔딩(street-rising/nexus-reborn/dead-nexus) 게이트 + 2nd 미션 체인', brChainOk);
-// 237. 클래스 사이드 4 classKey 게이트 정합.
+// 237. 클래스 사이드 6 classKey 게이트 정합 ([65차] BROKER/DRIFTER 포함).
 var CLSMAP = { 'a2-side-cipher-static': 'CIPHER', 'a2-side-blade-vendetta': 'BLADE',
-  'a2-side-rigger-build': 'RIGGER', 'a2-side-mole-whoami': 'MOLE' };
-ok('237. 클래스 사이드 4 = classKey 게이트(CIPHER/BLADE/RIGGER/MOLE) + ch08 완주',
+  'a2-side-rigger-build': 'RIGGER', 'a2-side-mole-whoami': 'MOLE',
+  'a2-side-broker-ledger': 'BROKER', 'a2-side-drifter-lastroad': 'DRIFTER' };
+ok('237. 클래스 사이드 6 = classKey 게이트(CIPHER/BLADE/RIGGER/MOLE/BROKER/DRIFTER) + ch08 완주',
   Object.keys(CLSMAP).every(function (id) { var e = byId[id];
     return e.unlock.classKey === CLSMAP[id] && e.unlock.missionsDone.indexOf('ch08-zero-day') >= 0; }));
 // 238. endingSeen 게이트: corporate-eternal 열람 → A갈래 개방 · B/C/D 잠김.
@@ -1199,25 +1208,27 @@ ok('239. 4엔딩 전부 열람 + 1st 갈래 클리어 → 갈래 메인 8 전부
   A2_MAIN.every(function (id) { return CAMP.isUnlocked(byId[id], allSeen); }));
 // 240. classKey 전환: BLADE 편성 → blade 사이드만 해금 · 타 클래스 사이드 잠김.
 var bladeSave = { missionsDone: ['ch08-zero-day'], flags: {}, endings: { seen: {} }, character: { classKey: 'BLADE' } };
-ok('240. BLADE 편성 → blade 사이드 해금 · cipher/rigger/mole 사이드 잠김(classKey 게이트)',
+ok('240. BLADE 편성 → blade 사이드 해금 · cipher/rigger/mole/broker/drifter 사이드 잠김(classKey 게이트)',
   CAMP.isUnlocked(byId['a2-side-blade-vendetta'], bladeSave) === true &&
   CAMP.isUnlocked(byId['a2-side-cipher-static'], bladeSave) === false &&
   CAMP.isUnlocked(byId['a2-side-rigger-build'], bladeSave) === false &&
-  CAMP.isUnlocked(byId['a2-side-mole-whoami'], bladeSave) === false);
+  CAMP.isUnlocked(byId['a2-side-mole-whoami'], bladeSave) === false &&
+  CAMP.isUnlocked(byId['a2-side-broker-ledger'], bladeSave) === false &&
+  CAMP.isUnlocked(byId['a2-side-drifter-lastroad'], bladeSave) === false);
 // 241. 해금 그래프 순환 0 (29 레지스트리 · act2 체인 포함) — test80 재확인 + act2 선행 실존.
 var a2ChainOk = A2_MAIN.concat(A2_CLASS).every(function (id) {
   return (byId[id].unlock.missionsDone || []).every(function (p) { return byId[p]; }); });
 ok('241. act2 해금 선행(missionsDone) 전부 실존 + 그래프 순환 0(전 29)', a2ChainOk && !cyc && prereqMissing.length === 0);
-// 242. boardState.act2 branch 분류 = framing 1 · A/B/C/D 각 2 · class 4.
+// 242. boardState.act2 branch 분류 = framing 1 · A/B/C/D 각 2 · class 6 ([65차] BROKER/DRIFTER 사이드 추가).
 var brCount = {}; CAMP.boardState(yesCh8).act2.forEach(function (r) { brCount[r.branch] = (brCount[r.branch] || 0) + 1; });
-ok('242. boardState act2 branch = framing1 · A2·B2·C2·D2 · class4',
-  brCount.framing === 1 && brCount.A === 2 && brCount.B === 2 && brCount.C === 2 && brCount.D === 2 && brCount['class'] === 4);
+ok('242. boardState act2 branch = framing1 · A2·B2·C2·D2 · class6',
+  brCount.framing === 1 && brCount.A === 2 && brCount.B === 2 && brCount.C === 2 && brCount.D === 2 && brCount['class'] === 6);
 
 console.log('\n== [62차 §3.1] 하네스 encounters 순회 — 2연전 enc①+enc② 측정 ==');
 // 243. encountersOf: 2연전 8미션 = 2행(enc①+stage2) · 단일 미션 = 1행.
 var enc2Missions = A2_MAIN.filter(function (id) { var m = CAMP.missionData(id); return m.encounters && m.encounters.stage2; });
 var singleClass = A2_CLASS.every(function (id) { return BAL.encountersOf(byId[id]).length === 1; });
-ok('243. encountersOf: 갈래 메인 8 = 2연전(enc①+stage2) · 클래스 사이드 4 = 단일 전투',
+ok('243. encountersOf: 갈래 메인 8 = 2연전(enc①+stage2) · 클래스 사이드 6 = 단일 전투',
   enc2Missions.length === 8 && A2_MAIN.every(function (id) { return BAL.encountersOf(byId[id]).length === 2; }) && singleClass);
 // 244. runEncounter encKey='stage2' = mission.encounters.stage2 소비(enc② 측정) · 미지정 = enc①.
 var rEnc1 = BAL.runEncounter('BLADE', 'a2-a1-crown-breach', 'objective', 'base', null);
@@ -1238,25 +1249,33 @@ var interludeOk = A2_MAIN.every(function (id) {
   return found; });
 ok('246. 2연전 interlude 노드 startCombat.encounter="stage2" 배선(enc② 라우팅)', interludeOk);
 
-console.log('\n== [62차] Act2 본편 밸런스 — 전 조합 클리어 + 보정 핀 ==');
-// 247. 갈래 메인 8(enc①+enc②) + 클래스 사이드 4 전 조합 클리어 가능(clearFail 0).
+console.log('\n== [62차→65차] Act2 본편 밸런스 — 전 조합 클리어 + 보정 핀 ==');
+// 247. 갈래 메인 8(enc①+enc②) + 클래스 사이드 6 전 조합 클리어 가능(clearFail 0) — 6클래스.
 var a2Rows = mrx.filter(function (r) { return (r.baseId ? A2_ALL.indexOf(r.baseId) : A2_ALL.indexOf(r.id)) >= 0; });
 var a2Clear = 0, a2Total = 0, a2Fail = 0;
 a2Rows.forEach(function (r) { BAL.CLASSES.forEach(function (cl) {
   var vd = BAL.verdict(r.cells[cl]); a2Total++; if (vd.clearable) a2Clear++; if (vd.flags.indexOf('clearFail') >= 0) a2Fail++; }); });
-ok('247. Act2 본편 전 조합 클리어 가능 (' + a2Clear + '/' + a2Total + ' · clearFail 0 · enc①+enc②×4)',
-  a2Clear === a2Total && a2Fail === 0 && a2Total === (8 * 2 + 4) * 4);
-// 248. 밸런스 보정 핀(62차 회귀 가드) — enc② 보스 threshold 하향 · a2-a1 enc② eff.
+ok('247. Act2 본편 전 조합 클리어 가능 (' + a2Clear + '/' + a2Total + ' · clearFail 0 · (enc①+enc②)×6클래스)',
+  a2Clear === a2Total && a2Fail === 0 && a2Total === (8 * 2 + 6) * 6);
+// 248. 밸런스 보정 핀(62차→65차 회귀 가드) — enc② 보스 threshold. [65차] BROKER(hack2) 은신 3턴
+//   창 내 완주를 위해 a2-a1/a2-b2 eff 10→8 · a2-c2 eff 14→12 하향(a2-a2/a2-d2 는 10 유지).
 function encThr(id, key) { var s = CAMP.missionData(id).encounters[key]; return s.objective.threshold + (s.objective.veil || 0); }
-ok('248. 62차 보정 핀: a2-a2/a2-b2/a2-d2 stage2 eff threshold=10 · a2-a1 stage2 eff=10',
-  encThr('a2-a2-crown-throne', 'stage2') === 10 && encThr('a2-b2-freeport', 'stage2') === 10 &&
-  encThr('a2-d2-last-signal', 'stage2') === 10 && encThr('a2-a1-crown-breach', 'stage2') === 10);
+ok('248. 보정 핀: a2-a2/a2-d2 stage2 eff=10 · a2-a1/a2-b2 stage2 eff=8 · a2-c2 stage2 eff=12',
+  encThr('a2-a2-crown-throne', 'stage2') === 10 && encThr('a2-d2-last-signal', 'stage2') === 10 &&
+  encThr('a2-a1-crown-breach', 'stage2') === 8 && encThr('a2-b2-freeport', 'stage2') === 8 &&
+  encThr('a2-c2-signal-war', 'stage2') === 12);
+// 248b. [65차] 신규 보정 핀 — 클래스 사이드/최난도 사이드: vendetta thr 8 · broker-ledger thr 9 ·
+//   side-07 eff 10(51차 유지) + 이동 차단 엄폐 재배치(접근 레인 개방 — 상세는 각 미션 파일 주석).
+ok('248b. 65차 보정 핀: vendetta 8 · broker-ledger 9 · side-07 eff 10',
+  CAMP.missionData('a2-side-blade-vendetta').combat.objective.threshold === 8 &&
+  CAMP.missionData('a2-side-broker-ledger').combat.objective.threshold === 9 &&
+  (function () { var o = CAMP.missionData('side-07-server-zero').combat.objective; return o.threshold + (o.veil || 0) === 10; })());
 // 249. act2 보상 스키마 = rep/karma/nuyen(applyRewards 계약) 존재.
-ok('249. 12 act2 미션 보상 스키마 = rep/karma/nuyen 수치 존재',
+ok('249. 14 act2 미션 보상 스키마 = rep/karma/nuyen 수치 존재',
   A2_ALL.every(function (id) { var r = CAMP.missionData(id).rewards;
     return typeof r.rep === 'number' && typeof r.karma === 'number' && typeof r.nuyen === 'number'; }));
 // 250. 구조 계약: 클래스 사이드 = 단일 전투(encounters 없음) · 갈래 메인 = 2연전(encounters.stage2).
-ok('250. 구조: 클래스 사이드 4 = 단일 전투(encounters 미보유) · 갈래 메인 8 = encounters.stage2 보유',
+ok('250. 구조: 클래스 사이드 6 = 단일 전투(encounters 미보유) · 갈래 메인 8 = encounters.stage2 보유',
   A2_CLASS.every(function (id) { return !CAMP.missionData(id).encounters; }) &&
   A2_MAIN.every(function (id) { return !!CAMP.missionData(id).encounters.stage2; }));
 
@@ -1295,13 +1314,13 @@ var capCh = CH.makeCharacter('CIPHER');
 var enc3 = capM.encounters.stage3;
 ok('256. enc③(stage3) 에 MERIDIAN_OVERLORD 배치 존재',
   (enc3.enemies || []).some(function (e) { return e.key === 'MERIDIAN_OVERLORD'; }));
-// 257. 캡스톤 3연전 4클래스 전 조합 클리어 가능(clearFail 0) — enc①+stage2+stage3.
+// 257. 캡스톤 3연전 6클래스 전 조합 클리어 가능(clearFail 0) — enc①+stage2+stage3. [65차] 6클래스.
 var capRows = mrx.filter(function (r) { return r.baseId === CAP_ID; });
 var capClear = 0, capTot = 0, capFail = 0;
 capRows.forEach(function (r) { BAL.CLASSES.forEach(function (cl) {
   var vd = BAL.verdict(r.cells[cl]); capTot++; if (vd.clearable) capClear++; if (vd.flags.indexOf('clearFail') >= 0) capFail++; }); });
-ok('257. 캡스톤 3연전 전 조합 클리어 가능 (' + capClear + '/' + capTot + ' · clearFail 0 · 3인카운터×4클래스)',
-  capClear === capTot && capFail === 0 && capTot === 3 * 4);
+ok('257. 캡스톤 3연전 전 조합 클리어 가능 (' + capClear + '/' + capTot + ' · clearFail 0 · 3인카운터×6클래스)',
+  capClear === capTot && capFail === 0 && capTot === 3 * 6);
 
 console.log('\n== [v6.44] 심연 프로토콜 — 웨이브 결정론 ==');
 // 258. 웨이브 스케일 결정론식 1+0.05N (N=1→1.05 · N=10→1.5 · N=20→2.0).
@@ -1386,6 +1405,93 @@ ok('269. capstoneRecall: 설정된 갈래(A reveal·C·D destroy)만 회고, 미
 var capSrc = require('fs').readFileSync(require('path').join(__dirname, 'data/missions/a2-99-flagship.js'), 'utf8');
 ok('270. 캡스톤 미션 순수성: document 참조 0 · window.RPG_MISSION_A2_99_FLAGSHIP 등록',
   capSrc.indexOf('document') < 0 && capSrc.indexOf('window.RPG_MISSION_A2_99_FLAGSHIP') >= 0);
+
+// ============================================================================
+// ==========  65차 — BROKER + DRIFTER 로스터 확장 (6클래스 전량 플레이어블)  ====
+//   BROKER 협상·중개 킷(BLACKMAIL/POKER FACE/INFO BROKER/BURN THE BRIDGE) ·
+//   DRIFTER 기동·보급 킷(RAM CHARGE/AMBUSH/RAMPAGE/GHOST RUN) ·
+//   미해금→해금 선택 경로 · 클래스별 해금 시그니처(OLD DEBTS/OLD ROUTES).
+// ============================================================================
+
+console.log('\n== BROKER 협상·중개 로스터 [계승 docs/07 §2 6/2/2/5/2 · cards/ghost/broker.md] ==');
+var broker = CH.makeCharacter('BROKER');
+var brEff = CH.effectiveStats(broker);
+ok('271. BROKER 스탯 6/2/2/5/2 → 유효HP12·ATK2·DEF2·MOV4(SPD5)·HACK2 [계승 §10/§3.1]',
+  brEff.maxHp === 12 && brEff.atk === 2 && brEff.def === 2 && brEff.mov === 4 && brEff.hack === 2);
+eq('272. BROKER 킷 = BLACKMAIL/POKER FACE/INFO BROKER/BURN THE BRIDGE', broker.kit, AB.BROKER_KIT);
+ok('273. BROKER signalFavor=iron (🔴DOWN 정렬) · 최고 SPD → [SPD 5] 게이트 통과(전용) [회피 정체성]',
+  broker.signalFavor === 'iron' &&
+  DLG.evalGate({ attr: 'spd', min: 5 }, S.dialogueCtx({ save: { character: broker, flags: {} } })).ok === true &&
+  DLG.evalGate({ attr: 'spd', min: 5 }, S.dialogueCtx({ save: { character: CH.makeCharacter('DRIFTER'), flags: {} } })).ok === false);
+// BLACKMAIL 무소음 원격 기본공격 = HACK 사용 · threat.noise 미가산(loud:false).
+var bkm = S.buildCombat(MI.MISSION, broker, 'outro');
+var bkmP = S.player(bkm); var bkmTgt = bkm.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+bkmP.x = bkmTgt.x; bkmP.y = bkmTgt.y + 1;   // 인접(사거리 4 내)
+bkm.signal = SIG.STATES.DOWN;               // 결정론(HACK 미보정 축)
+var bkmNoise0 = bkm.threat.noise || 0;
+var afterBkm = S.applyAttack(bkm, bkmTgt.id, 'BLACKMAIL');
+var bkmHit = S.findUnit(afterBkm, bkmTgt.id);
+ok('274. BLACKMAIL: HACK 축 원격 피해 + 무소음(threat.noise 미가산) [각색 broker.md Card03]',
+  bkmHit.hp < bkmTgt.hp && (afterBkm.threat.noise || 0) === bkmNoise0);
+// POKER FACE 디버프: DEF−2 & 엄폐 무효(coverNull) — 무소음.
+var pkf = S.buildCombat(MI.MISSION, broker, 'outro');
+var pkfP = S.player(pkf); var pkfTgt = pkf.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+pkfP.x = pkfTgt.x; pkfP.y = pkfTgt.y + 1;
+var afterPkf = S.applyAttack(pkf, pkfTgt.id, 'POKER_FACE');
+var pkfHit = S.findUnit(afterPkf, pkfTgt.id);
+ok('275. POKER FACE → 대상 DEF−2 & 엄폐 무효 2턴 [각색 broker.md Card08]',
+  pkfHit.status.defDown === 2 && pkfHit.status.coverNull === true && pkfHit.status.debuffTurns === 2);
+// BURN THE BRIDGE 궁극: 3턴 은신 + 재등장 크리 ×2 — [65차 밸런스] 은신 3턴 핀(ZERO TRACE 2턴 대비 +1).
+var btb = S.buildCombat(MI.MISSION, broker, 'outro');
+var afterBtb = S.applyAttack(btb, null, 'BURN_THE_BRIDGE');
+var btbP = S.player(afterBtb);
+ok('276. BURN THE BRIDGE 궁극 → 3턴 은신 + 크리 ×2 & 1회 소진 [65차 밸런스 핀 · broker.md Card09 LOSS]',
+  btbP.status.stealth === true && btbP.status.stealthTurns === 3 && btbP.status.nextCrit === 2 && btbP.ultUsed === true &&
+  AB.ABILITIES.BURN_THE_BRIDGE.applyStatus.turns === 3);
+
+console.log('\n== DRIFTER 기동·보급 로스터 [계승 docs/07 §2 9/4/2/4/1 · cards/ghost/drifter.md] ==');
+var drifter = CH.makeCharacter('DRIFTER');
+var drEff = CH.effectiveStats(drifter);
+ok('277. DRIFTER 스탯 9/4/2/4/1 → 유효HP18·ATK4·DEF2·MOV4·HACK1 [계승 §10/§3.1]',
+  drEff.maxHp === 18 && drEff.atk === 4 && drEff.def === 2 && drEff.mov === 4 && drEff.hack === 1);
+eq('278. DRIFTER 킷 = RAM CHARGE/AMBUSH/RAMPAGE/GHOST RUN', drifter.kit, AB.DRIFTER_KIT);
+// RAM CHARGE 근접 기본공격 = ATK 사용(사거리 1).
+var ram = S.buildCombat(MI.MISSION, drifter, 'outro');
+var ramP = S.player(ram); var ramTgt = ram.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+ramP.x = ramTgt.x; ramP.y = ramTgt.y + 1;   // 인접(근접 사거리 1)
+ram.signal = SIG.STATES.UP;                 // 결정론(iron favor 미보정 축)
+var afterRam = S.applyAttack(ram, ramTgt.id, 'RAM_CHARGE');
+var ramHit = S.findUnit(afterRam, ramTgt.id);
+ok('279. RAM CHARGE: ATK 축 근접 피해(사거리 1) [각색 drifter.md Card08]', ramHit.hp < ramTgt.hp);
+// GHOST RUN 궁극: 2턴 무적 + 재등장 크리 ×3 (LAST STAND 스키마 재사용 — 추적불가 질주).
+var gr = S.buildCombat(MI.MISSION, drifter, 'outro');
+var afterGr = S.applyAttack(gr, null, 'GHOST_RUN');
+var grP = S.player(afterGr);
+ok('280. GHOST RUN 궁극 → 2턴 무적 + 크리 ×3 & 1회 소진 [각색 drifter.md Card09 LOSS]',
+  grP.status.invuln === true && grP.status.invulnTurns === 2 && grP.status.nextCrit === 3 && grP.ultUsed === true);
+
+console.log('\n== 6클래스 선택 경로 + 해금 시그니처 [65차] ==');
+// 미해금→해금 선택 경로: DRIFTER 편성 → 기동 킷 · 클래스 사이드 게이트 연동.
+var toDrifter = S.selectClass(S.rpgInitialState(), 'DRIFTER');
+ok('281. 로스터에서 DRIFTER 편성 → classKey=DRIFTER & 기동 킷(RAM_CHARGE)',
+  toDrifter.save.character.classKey === 'DRIFTER' && toDrifter.save.character.kit.indexOf('RAM_CHARGE') >= 0);
+// 클래스별 보상 해금 시그니처 일반화 — BROKER=OLD_DEBTS · DRIFTER=OLD_ROUTES (objectiveBonus PASSIVE).
+var brkSave = S.newSave(); brkSave.character = CH.makeCharacter('BROKER');
+var brkRew = CAMP.applyRewards(brkSave, MI.MISSION);
+var drfSave = S.newSave(); drfSave.character = CH.makeCharacter('DRIFTER');
+var drfRew = CAMP.applyRewards(drfSave, MI.MISSION);
+ok('282. 귀환 정산 해금: BROKER→OLD DEBTS · DRIFTER→OLD ROUTES (BACKDOOR 치환 · objectiveBonus+1)',
+  brkRew.character.kit.indexOf('OLD_DEBTS') >= 0 && brkRew.character.kit.indexOf('BACKDOOR') < 0 &&
+  drfRew.character.kit.indexOf('OLD_ROUTES') >= 0 && drfRew.character.kit.indexOf('BACKDOOR') < 0 &&
+  AB.ABILITIES.OLD_DEBTS.objectiveBonus === 1 && AB.ABILITIES.OLD_ROUTES.objectiveBonus === 1);
+// 클래스 사이드 해금 경로: BROKER 편성 시 broker-ledger 만 · DRIFTER 편성 시 drifter-lastroad 만.
+var brkSideSave = { missionsDone: ['ch08-zero-day'], flags: {}, endings: { seen: {} }, character: { classKey: 'BROKER' } };
+var drfSideSave = { missionsDone: ['ch08-zero-day'], flags: {}, endings: { seen: {} }, character: { classKey: 'DRIFTER' } };
+ok('283. BROKER 편성 → broker-ledger 해금·drifter-lastroad 잠김 (DRIFTER 편성 시 반대)',
+  CAMP.isUnlocked(byId['a2-side-broker-ledger'], brkSideSave) === true &&
+  CAMP.isUnlocked(byId['a2-side-drifter-lastroad'], brkSideSave) === false &&
+  CAMP.isUnlocked(byId['a2-side-drifter-lastroad'], drfSideSave) === true &&
+  CAMP.isUnlocked(byId['a2-side-broker-ledger'], drfSideSave) === false);
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

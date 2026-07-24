@@ -2,7 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06060e">
+<meta name="description" content="DEAD NEXUS 시뮬레이터 — 애시그리드 2091, Bloc과 Ghost의 인수·억압·레이드 전략 웹 시뮬레이터 (봇 밸런스/솔로 플레이).">
 <title>DEAD NEXUS · Simulator v0.5</title>
 <!-- 외부 폰트 의존 제거 (CDN 0 · file:// 호환) — 로컬 Share Tech Mono/Rajdhani가 있으면 쓰고, 없으면 시스템 폰트로 폴백. -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20fill%3D'%2306060e'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'9'%20fill%3D'none'%20stroke%3D'%2300e5ff'%20stroke-width%3D'1.5'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'3'%20fill%3D'%2300e5ff'%2F%3E%3C%2Fsvg%3E">
@@ -285,6 +287,8 @@
     font-family: 'Share Tech Mono', monospace;
   }
   .map-cell:hover { filter: brightness(1.28) saturate(1.12); outline: 1px solid var(--cyan); z-index: 3; }
+  /* v6.45 a11y: 키보드 포커스 가시화 (WCAG 2.4.7) — 상호작용 셀만 role=button */
+  .map-cell[role="button"]:focus-visible { outline: 3px solid var(--cyan); outline-offset: -2px; z-index: 4; }
   /* 라벨/코너(빈 셀) 제외 — 실제 구역만 네온 글로우 */
   .map-cell:not(.label):not(.corner):hover { box-shadow: inset 0 0 10px rgba(0,229,255,.22), 0 0 9px rgba(0,229,255,.28); }
   /* v6.38 B2: 소유 블록 색 링 (--own 은 셀 인라인 스타일에서 주입) */
@@ -715,7 +719,8 @@
   /* prefers-reduced-motion 존중 — 장식 애니 전면 정지 (색/글로우 정적값은 유지) */
   @media (prefers-reduced-motion: reduce) {
     .map-board::after, .z-nex::after, .map-cell.raidable::after, .map-cell .cell-flash,
-    .mkt-ticker .mt-up, .mkt-ticker .mt-down, .decl-banner.enemy, .card { animation: none !important; }
+    .mkt-ticker .mt-up, .mkt-ticker .mt-down, .decl-banner.enemy, .card,
+    .race-marker .rm-decl, .bb-decq, .bb-hp.low b, .bb-hpbar.low i, .bb-wanted.hot { animation: none !important; }
   }
 </style>
 </head>
@@ -1614,8 +1619,8 @@ const BUILDINGS = {
   factory:   { name: '공장',     icon: '🏭', tl: 1, cost: { credit: 4, parts: 2 }, desc: '매 라운드 부품 +2' },
   hq:        { name: '사옥',     icon: '🏢', tl: 2, cost: { credit: 6 },           desc: '자산 +5 영구, 매 라운드 인플루언스 +1' },
   security:  { name: '보안센터', icon: '🛡', tl: 1, cost: { credit: 3, parts: 1 }, desc: '구역 요새화 +2 영구 (레이드 방어)' },
-  trading:   { name: '거래소',   icon: '📈', tl: 2, cost: { credit: 5 },           desc: '매 라운드 자사 주식 +1, 매 R&D 크레딧 +3' },
-  media:     { name: '미디어허브', icon: '📡', tl: 3, cost: { credit: 5, parts: 2 }, desc: '뉴스 효과 -50% (받기), Ghost 수배 +1 (옆 도시)' },
+  trading:   { name: '거래소',   icon: '📈', tl: 2, cost: { credit: 5 },           desc: '매 라운드 크레딧 +2' },
+  media:     { name: '미디어허브', icon: '📡', tl: 3, cost: { credit: 5, parts: 2 }, desc: '자산 +4 (건설 보너스)' },
 };
 function canBuildBuilding(state, playerIdx, key, coord) {
   const p = state.players[playerIdx];
@@ -1762,11 +1767,11 @@ function getNexusController(state) {
 }
 // Bloc별 NEXUS 컨트롤 글로벌 룰
 const NEXUS_RULES = {
-  VANTA:    { id: 'info_open',    label: '정보 공개', desc: '모든 NPC 시그널 +1, 정찰 효과 +1' },
-  IRONWALL: { id: 'martial',      label: '계엄령',     desc: '모든 ATK +1 / Ghost 수배 +1/R' },
-  HELIX:    { id: 'biocode',      label: '바이오 코드', desc: '모든 플레이어 매 R HP+1' },
-  AXIOM:    { id: 'algo_market',  label: '알고리즘 시장', desc: '주식 변동 ×2, 모든 매 R 데이터+1' },
-  CARBON:   { id: 'energy_grid',  label: '에너지 망',   desc: '모든 자사 구역 수입 +1 크레딧' },
+  VANTA:    { id: 'info_open',    label: '정보 공개', desc: '라운드 시작 모든 NPC 시그널 +1' },
+  IRONWALL: { id: 'martial',      label: '계엄령',     desc: '라운드 시작 모든 Ghost 수배 +1' },
+  HELIX:    { id: 'biocode',      label: '바이오 코드', desc: '라운드 시작 모든 플레이어 HP +1' },
+  AXIOM:    { id: 'algo_market',  label: '알고리즘 시장', desc: '라운드 시작 모든 플레이어 데이터 +1' },
+  CARBON:   { id: 'energy_grid',  label: '에너지 망',   desc: '수입 단계 자사 구역당 크레딧 +1' },
 };
 // Ghost가 컨트롤 중일 때는 룰 무효화 (NEXUS는 Ghost가 점령해도 중립)
 function getActiveNexusRule(state) {
@@ -2044,7 +2049,7 @@ function hudRaceProgress(p, idx, state, goals) {
 //        예) startHeat(시작 공권력) · mnaNoCooldown(M&A 쿨다운 제거).
 //   (2) initGame 훅 — applyScenarioInit(...)/initGame 인라인이 시작 players·map 을 변형.
 //        예) allBloc(전원 Bloc) · npcFillTo(NPC Bloc 충원) · startCredit · extraSupport(추가 구역).
-//   S01(현행 기본)·S02(코프 대전) 등록. S03~S06 은 locked 자리(UI 표시·미구현 보고용).
+//   S01~S06 전부 등록·개방(v6.21). 전 시나리오 locked:false — UI 선택·initGame 훅·룰 오버라이드 완비.
 // ============================================================================
 const SCENARIOS = {
   S01: {
@@ -3145,20 +3150,6 @@ function negoApply(s, prop) {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'DRAW_INITIAL': {
-      // Draw hand size depending on role
-      const ps = state.players.map(p => {
-        const handSize = 6;
-        const newHand = p.deck.slice(0, handSize);
-        const newDeck = p.deck.slice(handSize);
-        return { ...p, hand: newHand, deck: newDeck };
-      });
-      return { ...state, players: ps };
-    }
-
-    case 'LOG':
-      return { ...state, log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: action.msg }].slice(-150) };
-
     case 'SET_PHASE':
       return { ...state, meta: { ...state.meta, phase: action.phase } };
 
@@ -3585,67 +3576,6 @@ function reducer(state, action) {
       return s;
     }
 
-    case 'RESOLVE_RAID_YES': {
-      // 레거시 호환 — 아직 호출되는 코드 있으면 즉시 새 EXECUTE로 위임
-      const pr = state.meta.pendingRaid;
-      if (!pr) return state;
-      let s = { ...state };
-      const me = s.players[0];
-      const raidRoll = raidBonus(me);  // v5.2.0: 결정론적 (무기 자원 기반)
-      // 상성 보너스: Ghost 클래스가 타겟 Bloc 카운터면 atk +1
-      const counterBonus = countersBloc(me.specific, pr.bloc) ? 1 : 0;
-      const raidTotal = raidRoll + pr.atk + counterBonus;
-      const cell = s.map[pr.coord];
-      if (raidTotal >= pr.threshold) {
-        const newStocks = { ...s.stocks, [pr.bloc]: Math.max(1, s.stocks[pr.bloc] - 3) };
-        const ps = [...s.players];
-        // v6.5: 기본 평판 보상(+3)은 결정 모달로 대체 — 평판 루트 vs 등가 약탈 루트 (아래 큐잉)
-        ps[0] = {
-          ...me,
-          wanted: (me.wanted || 0) + 1,
-        };
-        const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
-        s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + scenRaidHeat(s, 1)) };
-        s.meta = { ...s.meta, pendingRaid: null,
-          raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 },
-          raidDmgByBloc: { ...(s.meta.raidDmgByBloc || {}), [pr.bloc]: ((s.meta.raidDmgByBloc || {})[pr.bloc] || 0) + 1 },  // v6.24 (레거시): 도시 흉터 집계
-        };
-        s = insertScandal(s, cell.owner, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
-        // v6.5: 레이드 성공 기본 평판 보상을 선택 결정으로 큐잉 (밸런스 중립: ★+3 vs 등가 약탈)
-        if (typeof euro_addPendingDecision === 'function' && typeof euro_raidLootBundle === 'function') {
-          const _lb = euro_raidLootBundle(3);
-          s = euro_addPendingDecision(s, {
-            id: `raid_reward_r${s.meta.round}_${pr.coord}`,
-            type: 'raid_reward',
-            playerIdx: 0,
-            prompt: '레이드 성공 — 보상 선택',
-            options: [
-              { id: 'rep',  label: '★ 평판 +3 (평판 루트)' },
-              { id: 'loot', label: `₵+${_lb.credit}, ⚙+${_lb.parts} (약탈 루트)` },
-            ],
-            context: { round: s.meta.round, rep: 3, coord: pr.coord },
-          });
-        } else {
-          const ps2 = [...s.players];
-          ps2[0] = { ...ps2[0], resources: { ...ps2[0].resources, rep: (ps2[0].resources.rep || 0) + 3 } };
-          s = { ...s, players: ps2 };
-        }
-        const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}${cbStr}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 보상 선택 대기(★+3 또는 약탈)`);
-      } else {
-        const ps = [...s.players];
-        ps[0] = {
-          ...me,
-          wanted: (me.wanted || 0) + 1,
-        };
-        s = { ...s, players: ps, heat: Math.min(10, s.heat + 1), meta: { ...s.meta, pendingRaid: null } };
-        s = logEntry(s, `⭐ 당신 ❌ 레이드 실패 [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}=${raidTotal} < ${pr.threshold} — HP-3, 수배+1`);
-        // v6.11.4 (P0-4): HP-3을 통합 헬퍼로 (HP0 시 STEP F, Bloc 방어자 약탈)
-        s = applyDamage(s, 0, 3, { attacker: (typeof pr.blocIdx === 'number' ? pr.blocIdx : null), label: '레이드 실패' });
-      }
-      return s;
-    }
-
     case 'RESOLVE_RAID_NO': {
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
@@ -3844,42 +3774,6 @@ function reducer(state, action) {
       // v0.6.3b: 상점 구매 → 파티(인맥 거래) 트랙 +1, 무기/용병은 무력으로
       const tk = (action.item === 'arms' || action.item === 'recruit') ? 'combat' : 'party';
       s = raiseTrack(s, action.playerIdx, tk, 1, `상점:${it.name}`);
-      return s;
-    }
-
-    case 'BOT_SHOP': {
-      // 봇 상점 AI — 상황에 맞게 자동 구매
-      let s = { ...state };
-      const ps = [...state.players];
-      state.players.forEach((p, pi) => {
-        if (p.kind !== 'bot' || p.defeated) return;
-        const credit = p.resources.credit || 0;
-        // 우선순위: HP 낮으면 의료 > 수배 높으면 뇌물 > 무기 부족하면 무기상 > 렙 < 10이면 정보상/현상금
-        const actions = [];
-        if (p.hp < p.maxHp * 0.5 && credit >= 5) actions.push('medical');
-        if ((p.wanted||0) >= 3 && credit >= 3) actions.push('bribe');
-        if (p.role === 'ghost' && (p.resources.rep||0) < 12 && credit >= 4) actions.push('bounty');
-        if ((p.resources.weapons||0) < 2 && credit >= 4) actions.push('arms');
-        if (p.role === 'ghost' && (p.resources.data||0) < 2 && credit >= 3) actions.push('info');
-        if (actions.length === 0) return;
-        const item = actions[0];
-        const items = {
-          medical: { cost: 5, apply: pp => ({ ...pp, hp: pp.maxHp }) },
-          arms:    { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, weapons: (pp.resources.weapons||0) + 2 } }) },
-          info:    { cost: 3, apply: pp => ({ ...pp, resources: { ...pp.resources, data: (pp.resources.data||0) + 2, rep: (pp.resources.rep||0) + 1 } }) },
-          bribe:   { cost: 3, apply: pp => ({ ...pp, wanted: Math.max(0, (pp.wanted||0) - 2) }) },
-          bounty:  { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, rep: (pp.resources.rep||0) + 2 } }) },
-        };
-        const it = items[item];
-        let upd = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
-        upd = it.apply(upd);
-        ps[pi] = upd;
-        s = logEntry({ ...s, players: ps }, `🏪 P${pi} [${p.specific}] · 상점 구매 (${item}, ₵-${it.cost})`);
-        if (item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
-        // v0.6.3b: 봇 상점 구매 → 트랙 상승 (party/combat)
-        const tk = (item === 'arms' || item === 'recruit') ? 'combat' : 'party';
-        s = raiseTrack(s, pi, tk, 1, `상점:${item}`);
-      });
       return s;
     }
 
@@ -4111,13 +4005,6 @@ function reducer(state, action) {
       return { ...state, meta: { ...state.meta, turnDiff: diff } };
     }
 
-    case 'NEXT_PHASE': {
-      const cur = state.meta.phase;
-      if (cur < 6) return { ...state, meta: { ...state.meta, phase: cur + 1 } };
-      // End of round
-      return state;  // handled elsewhere
-    }
-
     case 'NEXT_ROUND': {
       // v5.2.1: 유로 메커닉 hook (euro_module.js, 없으면 무시)
       if (typeof euro_applyAll === 'function') state = euro_applyAll(state);
@@ -4174,6 +4061,14 @@ function reducer(state, action) {
         state = { ...state, players: ps0,
           log: [...state.log, { round: newRound, phase: 0, message: `🌐 NEXUS 룰 [${nexRule.label}] 활성 (P${ctrlIdx} ${getNexusController(state).specific} 점유)` }].slice(-150)
         };
+      }
+
+      // v6.45: 하이라이트 死엔트리 배선 — Bloc 10구역 동시 점유 정점 (라운드 시작 판정, recordHighlight 1회성)
+      for (let _pi = 0; _pi < state.players.length; _pi++) {
+        const _bp = state.players[_pi];
+        if (_bp.role !== 'bloc' || _bp.defeated) continue;
+        const _owned = Object.values(state.map).filter(c => c.owner === _pi).length;
+        if (_owned >= 10) state = recordHighlight(state, 'ten_zone_hold', _pi);
       }
 
       // v0.9.2: 만료된 truce 약속 — 지킴(active)이면 양측 ★+1
@@ -4824,19 +4719,6 @@ function reducer(state, action) {
         players: ps,
         meta: { ...state.meta, claimedAchievements: { ...state.meta.claimedAchievements, [action.achievementId]: action.playerIdx } },
         log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `🏆 P${action.playerIdx} 업적 달성: ${achv.name}` }].slice(-150),
-      };
-    }
-
-    case 'MOVE_PLAYER': {
-      // action.playerIdx, action.to
-      const ps = state.players.map((p, i) => {
-        if (i !== action.playerIdx) return p;
-        return { ...p, position: action.to };
-      });
-      return {
-        ...state,
-        players: ps,
-        log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `P${action.playerIdx} 이동 → ${action.to}` }].slice(-150),
       };
     }
 
@@ -5869,6 +5751,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       s = { ...s, players: ps };
       s = logEntry(s, `🎯 P${playerIdx} [${p.specific}] · 현상금 발행 → P${tIdx} ${target.specific} 수배+3, 자기 ₵+3 🎙+1`);
       s = raiseTrack(s, playerIdx, 'security', 1, '현상금');
+      s = recordHighlight(s, 'bounty_hit', playerIdx);  // v6.45: 死엔트리 배선 — Bloc 능동 액션 성공
       if (tIdx === 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'bounty_post', detail: '수배+3' } };
     }
   }
@@ -5885,6 +5768,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       s = logEntry(s, `🗡 P${playerIdx} [${p.specific}] · 청부 살인 → P${tIdx} ${target.specific} HP-4 (₵-3 ★+2)`);
       s = applyDamage(s, tIdx, 4, { attacker: playerIdx, label: '청부 살인' });  // v6.11.4 (P0-4)
       s = raiseTrack(s, playerIdx, 'combat', 1, '청부');
+      s = recordHighlight(s, 'bounty_hit', playerIdx);  // v6.45: 死엔트리 배선 — Bloc 능동 액션 성공
       if (tIdx === 0) s.meta = { ...s.meta, lastTargetedBy: { attacker: playerIdx, effectKey: 'assassin_contract', detail: 'HP-4' } };
     }
   }
@@ -8490,8 +8374,14 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                   }
                   if (isTargeting && !isReachable && !hasMe) { style.opacity = 0.4; }
                   const onClick = (isTargeting && isReachable) ? () => pickMoveTarget(cd) : undefined;
+                  // v6.45 a11y (WCAG 2.1.1): 상호작용 셀(이동·레이드 대상)만 키보드 접근 부여. 라벨/코너·빈 셀은 이 분기 이전 조기 반환.
+                  const cellLabel = onClick
+                    ? `${cd} ${z ? z.name : ''}${owner ? ` · P${cell.owner} 점유` : ''}${previewTag ? ` · ${previewTag}` : ' · 이동 가능'}`
+                    : undefined;
+                  const onCellKeyDown = onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined;
                   return (
-                    <div key={cd} className={`map-cell ${z.color} ${owner ? 'owned' : ''} ${raidPreview ? 'raidable' : ''}`} style={ownColor ? { ...style, '--own': ownColor } : style} onClick={onClick}>
+                    <div key={cd} className={`map-cell ${z.color} ${owner ? 'owned' : ''} ${raidPreview ? 'raidable' : ''}`} style={ownColor ? { ...style, '--own': ownColor } : style} onClick={onClick}
+                      role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} aria-label={cellLabel} onKeyDown={onCellKeyDown}>
                       {cd === raidedCoord && <i className="cell-flash" />}
                       <div className="coord">{cd}</div>
                       <div className="ztype">{z.name}</div>

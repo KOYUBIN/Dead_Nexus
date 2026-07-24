@@ -17,6 +17,15 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
 
+### v6.45 — 할 일 발굴 사이클: 6클래스·정직화·PWA·접근성 (64~65차, 유저 "할일들 찾아서 업데이트")
+4차원 실측 감사로 30건 발굴 → 도메인 분리 5배치 병렬 구현 (opus 주간 한도 중단 2배치는 승계 완료).
+- **RPG 6클래스 완성**: BROKER(SILK — BLACKMAIL·POKER FACE·INFO BROKER·BURN THE BRIDGE 은신 3턴, 무소음 SHADE 원격)·DRIFTER(FLINT — RAM CHARGE·AMBUSH·GHOST RUN, ASH 브루저) 플레이어블 승격 (broker.md/drifter.md 원전 킷 계승) + 클래스 사이드 2종 = **미션 32종** · 밸런스 252조합 clearFail 0 (BROKER 저HP 회피형 보정 6건 — 미션 데이터만) · 하네스 하드모드 축 신설 · 유닛 285/285
+- **시뮬 계기판 정직화·정리**: 건물 desc↔판정 정합(거래소 ₵+2)·NEXUS 룰 desc 실효화·하이라이트 死엔트리 2종 배선(bounty_hit·ten_zone_hold)·dispatch 0 데드코드 6케이스 제거(BOT_SHOP ~40줄 포함)·SCENARIOS stale 주석 정정 · **접근성**: 맵 셀 키보드 접근(role/tabIndex/onKeyDown)·reduced-motion 커버리지 확장·head 메타 보강 · 유닛 307/307
+- **홈 PWA**: manifest.webmanifest + PNG 아이콘(순수 파이썬 zlib 자체 생성) — 홈 화면 추가 설치 가능 · 푸터 대비 AA(4.83:1) · 진행 배지 ARIA progressbar · **_home_check.js 드리프트 가드 신설** (첫 실행에서 미션 2종 추가 드리프트를 실제로 적발·정정 — 동적 카운트로 개선, 8/8)
+- **print-kit 외부 폰트 CDN 제거** (14파일 — 전 트랙 외부 요청 0 완성, Playwright 오프라인 실증) · **문서 현행화** (README v6.44·docs/00·docs/25 — RPG "구현 전" 오표기 해소)
+- rpg/README 현행화·HUB_NODES 데드코드 제거·RPG 뷰포트 줌 봉인 해제(WCAG 1.4.4)·RPG meta description
+- **Deferred (정직 이월)**: B-01 S03 2-레버 스윕(opus 중단 — 측정 하네스 미완)·hard×구클래스 기존 실패 15건(v6.44 이전부터, 게이트 밖)·오브젝티브 다양성 신규 승리모드·S05/S06 원안 확장·MOLE HELIX 태그
+
 ### v6.44 — 대규모 업데이트: 캡스톤·협상 페이즈·사운드 (63차 워크플로, 유저 "워크플로 구성해서 대규모업데이트 또") 🔊
 - **RPG 캡스톤 "MERIDIAN FLAGSHIP"** (rpg/): 4갈래 최종 미션 전부 클리어 시 해금 — 3연전 최종 결전 (MERIDIAN_OVERLORD [신규] 보스), 갈래별 선택 회고, 전용 에필로그 "ASHGRID PREVAILS". + **무한 상승 계약 "심연 프로토콜"** (웨이브 결정론·스케일 1+0.05N·로컬 최고 기록). 미션 총 30종, 하네스 160/160 클리어
 - **시뮬레이터 협상 페이즈 배선** (docs/17 §2 원전 — Phase 1.5): 자원 스왑·비공격 약속(truce — 지킴 양측 ★+1/위반 ★−2·피해자 ★+2)·BROKER 중개 (매 R ★+1 ₵+1 클래스 정체성). **v0.9.2부터 죽어 있던 NEGOTIATE_PHASE 리듀서를 발굴·회생** — 봇 EV-중립 수락 AI, 계기판 정직화 (약속 상태 = 판정 데이터). + **B-04 클로즈**: 모바일 매수/매도 세로 배치

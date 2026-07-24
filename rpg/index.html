@@ -291,7 +291,7 @@ function Roster({ state, dispatch }) {
     <div className="sheet">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
       <h1 style={{ color: 'var(--cyan)', fontFamily: 'monospace', margin: '4px 0' }}>크루 / 로스터</h1>
-      <p className="sub" style={{ color: 'var(--text-dim)' }}>운영자를 편성한다. 같은 미션을 다른 빌드로 완주 — CIPHER 해킹 · BLADE 근접 · RIGGER 설치/제어 · MOLE 위장/침투.</p>
+      <p className="sub" style={{ color: 'var(--text-dim)' }}>운영자를 편성한다. 같은 미션을 다른 빌드로 완주 — CIPHER 해킹 · BLADE 근접 · RIGGER 설치/제어 · MOLE 위장/침투 · BROKER 중개/정보전 · DRIFTER 기동/충돌.</p>
       {playable.map(key => {
         const cl = window.RPG_CLASSES.CLASSES[key];
         const active = cur === key;
@@ -556,7 +556,7 @@ function Hub({ state, dispatch, openSave }) {
         </button>
         <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'roster' }); }}>
           <span className="ic">👥</span><span className="lb">크루 / 로스터</span>
-          <span className="nt">4클래스 빌드 전환 (해킹·근접·설치·위장)</span>
+          <span className="nt">6클래스 빌드 전환 (해킹·근접·설치·위장·중개·기동)</span>
         </button>
         <button className="hub-node" onClick={() => { SFX('ui'); dispatch({ type: 'HUB_NAV', node: 'shop' }); }}>
           <span className="ic">🛒</span><span className="lb">장비 상점</span>

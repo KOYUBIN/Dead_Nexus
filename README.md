@@ -5,7 +5,7 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.39 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 16미션·4클래스·장비 경제·아이소 뷰 + 외부 의존 0 + NEXUS BAR/레이스 HUD
+**현재 버전**: v6.44 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 30미션·4클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·캡스톤+심연 프로토콜·장비 경제·아이소 뷰·사운드 + 시뮬 협상 페이즈 배선 + 외부 의존 0 + NEXUS BAR/레이스 HUD
 
 - **라이브 플레이**: [dead-nexus.vercel.app](https://dead-nexus.vercel.app) — 브라우저에서 바로 시작 (모바일 세로 스택 지원, v6.25)
 - **레이스 HUD**: 중앙 상단 4요소 — VICTORY RACE 트랙(전 좌석 승리 진척 %) · MARKET 틱커 · THREAT 스트립 · ROUND BRIEF. 판정 코드(`getVictoryGoals`/`evalPlayerVictory`)와 동일 소스로 계기판 정직성 유지 (v6.26)
@@ -114,13 +114,12 @@ dead-nexus/
 │       └── meta.md
 │
 ├── simulator/                         # 웹 시뮬레이터
-│   ├── index.html                     # (구 스캐폴드 — 배포는 v0.5/ 사용)
-│   └── v0.5/                          # 메인 시뮬레이터 (v6.27)
+│   └── v0.5/                          # 메인 시뮬레이터 (v6.44)
 │       ├── index.html                 # React 18 + Babel · 11×11 + 5×5 · 엔트리+코어 로직
 │       ├── euro_module.js             # 유로 메커닉 (web 빌드)
 │       ├── tutorial_module.js         # BGA 스타일 가이드 튜토리얼 (5×5 솔로)
 │       ├── lore_module.js             # 서사 표면화 (인물 11인·명대사·에필로그)
-│       ├── legacy_module.js           # 레거시 캠페인 Stage 1 (localStorage 영속)
+│       ├── legacy_module.js           # 레거시 캠페인 8챕터 완결 (localStorage 영속, v6.39)
 │       └── README.md
 │
 ├── sim-harness/                       # 헤드리스 시뮬 + 밸런스 회귀
@@ -287,10 +286,18 @@ dead-nexus/
 - **레이스 HUD + print-kit 테이블 에디션 v1** — 승리 진척 계기판 4요소 + 인쇄 세트 수치 현행화 (v6.26)
 - **highlightPoints 승리 환산** — 하이라이트 포인트를 판정 임계에 직결, 종료 선언 역전 재측정 (v6.27)
 
+### ✅ v6.28–v6.44 — RPG 모드 "ASH & SIGNAL" 신설 + 완성 (완료)
+- **RPG 트랙 신설** — GHOSTGRID 아키텍처(`docs/25-rpg-mode.md`). Stage 1 수직 슬라이스(챕터 1 "First Blood", v6.29) → Stage 2(BLADE 클래스·위협 게이지·시그널 다이, v6.32) → Stage 3(아이소메트릭 뷰 v6.36·장비 경제 v6.38)
+- **미션 1 → 30종**: 메인 챕터 1~8 + 사이드 8종(v6.33, 16종) → Act 2 "AFTER ZERO DAY" 확장으로 29종(v6.43) → 캡스톤 "MERIDIAN FLAGSHIP" 추가 30종(v6.44)
+- **플레이어블 4클래스**: CIPHER(해킹, v6.29) · BLADE(근접, v6.32) · RIGGER·MOLE(설치/위장, v6.34)
+- **4엔딩 + New Game+** (v6.40): 🏙️CORPORATE ETERNAL / 🔥STREET RISING / 🕊️NEXUS REBORN / 💀DEAD NEXUS + 회차 플레이(엔딩 기록만 이월)
+- **Act 2 "AFTER ZERO DAY"** (v6.43): 엔딩 4갈래 후일담 2연전 + 클래스 전용 개인 서사(숙적 보스 4종) + 신규 외부 세력 MERIDIAN + 하드 모드
+- **캡스톤 + 심연 프로토콜** (v6.44): "MERIDIAN FLAGSHIP" 3연전 최종 결전 + 무한 상승 웨이브 "심연 프로토콜"
+- 픽셀 아트(Kenney CC0, v6.42) · 사운드 12종(Kenney CC0, v6.44) — rpg 유닛 271/271 · 미션 검증기 30/30 · 밸런스 하네스 160/160
+
 ### 🔄 다음 마일스톤 — 실제 미완 항목
 - 대면 플레이테스트 1~3회 (실 데이터 수집, `playtesting/session-00-guide.md` 가이드 준비 완료)
 - 오토마 덱 설계 (봇 3인의 테이블 번역 — `playtesting/balance-issues-digest.md` §4 로드맵)
-- RPG 모드 Stage 1 수직 슬라이스 (`docs/25-rpg-mode.md` 비전 확정, 구현 전)
 - TTS(Tabletop Simulator) 익스포트
 - 일러스트 + 공식 룰북 PDF + 카드 아트
 - 킥스타터 준비

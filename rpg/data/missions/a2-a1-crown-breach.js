@@ -78,7 +78,7 @@
   var ENC2 = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
-    objective: { x: 3, y: 0, threshold: 9, veil: 1, label: '상층 관제 단말', dataTB: 2.1 },   // [62차 밸런스] eff 13→10 (저HP 해커 1 해킹턴 완주 · 51차 ch08 선례)
+    objective: { x: 3, y: 0, threshold: 7, veil: 1, label: '상층 관제 단말', dataTB: 2.1 },   // [62차 밸런스] eff 13→10 · [65차 밸런스] eff 10→8 (BROKER hack2 은신 3턴 창 내 완주 — R2 잠적 후 R3~R4 차감 4+4)
     threatCap: 10,  // enc② 상향 페이싱 + 증원.
     reinforcement: { key: 'MERIDIAN_DRONE', x: 6, y: 1 },  // [계승 §2 A1 증원 MERIDIAN_DRONE]
     walls: [

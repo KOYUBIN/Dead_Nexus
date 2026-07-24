@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>참조 카드</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4 portrait; margin: 8mm; }
   @media print { body { margin: 0; } .no-print { display: none !important; } }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif;
     margin: 0; padding: 8mm; background: white; color: #000;
     font-size: 9pt;
     line-height: 1.35;
@@ -23,7 +22,7 @@
   .page:last-child { page-break-after: auto; }
 
   h1 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 14pt;
     margin: 0 0 3mm 0;
     padding-bottom: 2mm;
@@ -31,7 +30,7 @@
     letter-spacing: 0.05em;
   }
   h2 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 10pt;
     background: #000;
     color: white;
@@ -40,7 +39,7 @@
     letter-spacing: 0.1em;
   }
   h3 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 9pt;
     margin: 2mm 0 1mm 0;
     color: #c04828;
@@ -70,7 +69,7 @@
   }
   th {
     background: #eee;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
   }
 
@@ -79,7 +78,7 @@
     margin-bottom: 1.5mm;
   }
   .step-num {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     background: #000;
     color: white;
@@ -94,12 +93,12 @@
     border: 0.5px solid #000;
     border-left: none;
   }
-  .step-body strong { font-family: 'JetBrains Mono', monospace; }
+  .step-body strong { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
 
   .chip {
     display: inline-block;
     padding: 0.3mm 1.5mm;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 7pt;
     font-weight: 700;
     color: white;
@@ -123,7 +122,7 @@
   .callout strong { color: #C04828; }
 
   kbd {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     background: #eee;
     padding: 0.5px 4px;
     border: 0.5px solid #999;

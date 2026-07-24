@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>캐릭터 시트</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4 portrait; margin: 10mm; }
   @media print { body { margin: 0; } .no-print { display: none !important; } }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif;
     margin: 0; padding: 10mm; background: white; color: #000;
   }
   .no-print { margin-bottom: 10px; color: #666; font-size: 12px; }
@@ -31,7 +30,7 @@
     margin-bottom: 3mm;
   }
   .sheet-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     font-size: 18pt;
     letter-spacing: 0.05em;
@@ -56,7 +55,7 @@
     gap: 2mm;
   }
   .field label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
     font-size: 9pt;
     min-width: 22mm;
@@ -68,7 +67,7 @@
   }
 
   .section-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     font-size: 10pt;
     letter-spacing: 0.1em;
@@ -90,12 +89,12 @@
     padding: 2mm;
   }
   .stat .lbl {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
     font-size: 8pt;
   }
   .stat .val {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     font-size: 18pt;
     line-height: 1.1;
@@ -135,13 +134,13 @@
     text-align: center;
   }
   .res .rlbl {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 7pt;
     font-weight: 700;
   }
   .res .rval {
     min-height: 8mm;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     font-size: 14pt;
     border-bottom: 1px solid #000;
@@ -171,7 +170,7 @@
     display: grid;
     grid-template-columns: repeat(10, 1fr);
     gap: 1mm;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 7pt;
     margin-bottom: 2mm;
   }
@@ -196,7 +195,7 @@
     align-items: center;
     border-bottom: 1px dashed #ccc;
     padding: 1.2mm 0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 9pt;
   }
   .v10-track-row .name { font-weight: 700; }
@@ -219,16 +218,16 @@
     display: flex; justify-content: space-between; align-items: center;
     background: #f8e8a0;
   }
-  .streetcred-bar .label { font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: 11pt; letter-spacing: 0.05em; }
+  .streetcred-bar .label { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-weight: 900; font-size: 11pt; letter-spacing: 0.05em; }
   .streetcred-bar .total {
-    font-family: 'JetBrains Mono', monospace; font-weight: 900; font-size: 16pt;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-weight: 900; font-size: 16pt;
     border: 1.5px solid #000; padding: 0 4mm; background: white;
   }
   .streetcred-milestones { display: flex; gap: 3mm; }
   .streetcred-milestones .ms {
     width: 14mm; height: 9mm; border: 1.5px solid #000; border-radius: 2mm;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 9pt;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-weight: 700; font-size: 9pt;
   }
 
   /* 하이라이트 모먼트 12종 토큰 시트 */
@@ -249,7 +248,7 @@
   .highlight-token .icon { font-size: 16pt; }
   .highlight-token .label { font-weight: 700; margin: 1mm 0 0.5mm; }
   .highlight-token .desc { font-size: 7pt; color: #666; }
-  .highlight-token .rep { font-family: 'JetBrains Mono', monospace; font-size: 8pt; color: #d9534f; }
+  .highlight-token .rep { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 8pt; color: #d9534f; }
 
   /* Ghost class colors */
   .cipher .sheet-title { color: #185FA5; }
@@ -260,7 +259,7 @@
   .bloc-carbon .sheet-title { color: #8b5a2b; }
 
   kbd {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     background: #eee;
     padding: 1px 5px;
     border: 1px solid #999;
@@ -301,7 +300,7 @@
   </div>
 
   <div class="hp-track">
-    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 6 → 튜토 8):</strong>
+    <strong style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;font-size:9pt;">HP 트랙 (최대 6 → 튜토 8):</strong>
     <div class="hp-circles">
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
@@ -388,7 +387,7 @@
   </div>
 
   <div class="hp-track">
-    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 10):</strong>
+    <strong style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;font-size:9pt;">HP 트랙 (최대 10):</strong>
     <div class="hp-circles">
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
@@ -473,7 +472,7 @@
   </div>
 
   <div class="hp-track">
-    <strong style="font-family:'JetBrains Mono',monospace;font-size:9pt;">HP 트랙 (최대 6):</strong>
+    <strong style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;font-size:9pt;">HP 트랙 (최대 6):</strong>
     <div class="hp-circles">
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
       <div class="hp-c"></div><div class="hp-c"></div><div class="hp-c"></div>
@@ -607,7 +606,7 @@
 <div class="sheet">
   <div class="sheet-header">
     <div class="sheet-title">v1.0 STREET CRED 시트<span class="sub">5트랙 + 거리명성 + 마일스톤 추적</span></div>
-    <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; align-self:center;">플레이어: __________ · 클래스: __________</div>
+    <div style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:9pt; align-self:center;">플레이어: __________ · 클래스: __________</div>
   </div>
 
   <div class="streetcred-bar">
@@ -667,7 +666,7 @@
   </div>
 
   <div class="section-title" style="margin-top:3mm;">📜 약속 트래킹 (협상 페이즈)</div>
-  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2mm; font-size:8pt; font-family:'JetBrains Mono',monospace;">
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2mm; font-size:8pt; font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;">
     <div style="border:1px solid #000; padding:2mm;">
       <div style="font-weight:700;">truce 1</div>
       <div>상대: ______ R: __</div>
@@ -784,18 +783,18 @@
   <div class="section-title" style="margin-top:4mm;">🤝 협상 페이즈 (Phase 1.5) — 거래 종류</div>
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3mm; font-size:9pt;">
     <div style="border:2px solid #000; padding:3mm;">
-      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">자원 스왑</h4>
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;">자원 스왑</h4>
       <p>크레딧 4 ↔ 무기 2 / 데이터 2 ↔ 부품 2 등. 즉시 자원 교환.</p>
       <p style="font-size:7pt; color:#666;">예: A가 ₵4 주고 B에게 무기2 받음. 즉시 양측 자원 변경.</p>
     </div>
     <div style="border:2px solid #000; padding:3mm; background:#e8f5e9;">
-      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">비공격 약속 (truce)</h4>
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;">비공격 약속 (truce)</h4>
       <p>1R 동안 서로 raid 안 함.</p>
       <p style="font-size:8pt;"><strong>지킴</strong> → 양측 ★+1<br/><strong>위반</strong> (raid 발동) → 위반자 ★-2, 피해자 ★+2</p>
       <p style="font-size:7pt; color:#666;">시트 좌측에 truce 박스 3개 있음. 체크.</p>
     </div>
     <div style="border:2px solid #000; padding:3mm; background:#fff3e0;">
-      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',monospace;">BROKER 중개</h4>
+      <h4 style="margin:0 0 2mm; font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace;">BROKER 중개</h4>
       <p>BROKER 클래스 한정. 상대가 동의하면 매 R 자동 ★+1 ₵+1 + 인맥 트랙 +1.</p>
       <p style="font-size:7pt; color:#666;">BROKER 정체성 회복용. 상대는 거의 무조건 동의.</p>
     </div>
@@ -822,21 +821,21 @@
 <div class="sheet">
   <div class="sheet-header">
     <div class="sheet-title">v1.1 CYBERWARE 슬롯<span class="sub">임플란트 6종 · 슬롯 max 3 · R3·R6 자동 장착</span></div>
-    <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; align-self:center;">플레이어: __________ · 클래스: __________</div>
+    <div style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:9pt; align-self:center;">플레이어: __________ · 클래스: __________</div>
   </div>
 
   <div class="section-title">슬롯 (장착 임플란트 표시)</div>
   <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:3mm; margin-bottom:3mm;">
     <div style="border:2px solid #000; height:30mm; padding:2mm; text-align:center;">
-      <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; font-weight:700;">슬롯 1</div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:9pt; font-weight:700;">슬롯 1</div>
       <div style="font-size:8pt; color:#666; margin-top:2mm;">(R3 자동)</div>
     </div>
     <div style="border:2px solid #000; height:30mm; padding:2mm; text-align:center;">
-      <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; font-weight:700;">슬롯 2</div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:9pt; font-weight:700;">슬롯 2</div>
       <div style="font-size:8pt; color:#666; margin-top:2mm;">(R6 자동)</div>
     </div>
     <div style="border:2px solid #000; height:30mm; padding:2mm; text-align:center;">
-      <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; font-weight:700;">슬롯 3</div>
+      <div style="font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,'DejaVu Sans Mono',monospace; font-size:9pt; font-weight:700;">슬롯 3</div>
       <div style="font-size:8pt; color:#666; margin-top:2mm;">(추가 효과 카드 시)</div>
     </div>
   </div>
