@@ -26,7 +26,7 @@ var AB   = require('./data/abilities.js');
 var G    = require('./systems/combat/grid.js');
 var GEAR = require('./data/gear.js');   // [V1] 장비 반영 밸런스 재측정 — 옵트인 파워 밴드.
 
-var CLASSES = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'];
+var CLASSES = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE', 'BROKER', 'DRIFTER'];   // [65차] BROKER·DRIFTER 승격 → 6클래스 재측정.
 var POLICIES = ['combat', 'objective'];
 var ROUND_CAP = 30;          // 봇 라운드 상한(무한 소모전 가드). 밴드 목표는 3~9.
 var TRIVIAL_ROUNDS = 2;      // ≤2R + 무피해 = 트리비얼
@@ -253,16 +253,21 @@ function playerTurn(c, policy) {
 // ---- 단일 인카운터 자동 플레이 ---------------------------------------------
 // [62차] encKey 옵션 — 지정 시 mission.encounters[encKey] 을 buildCombat 오버라이드(enc②/2연전).
 //   미지정 시 mission.combat(enc①) — 하위호환 100%. 엔진 무변경(buildCombat opts.combat 소비).
-function runEncounter(classKey, missionId, policy, scenario, encKey) {
+function runEncounter(classKey, missionId, policy, scenario, encKey, enemyScale) {
   var ch = CH.makeCharacter(classKey);
   // [V1] 장비 시나리오 반영(기본 base=무장비). base 는 equipment{null,null} → effectiveStats
-  //   델타 0 → 반환 객체 byte 불변(기존 64조합 재확인의 근거). scenario 필드는 미부착(셀 순도 유지).
+  //   델타 0 → 반환 객체 byte 불변(기존 조합 재확인의 근거). scenario 필드는 미부착(셀 순도 유지).
   ch.equipment = equipFor(scenario || 'base', ch);
   var mission = CAMP.missionData(missionId);
   if (!mission || !mission.combat) return { error: 'no combat', missionId: missionId };
   var encCfg = encKey ? (mission.encounters && mission.encounters[encKey]) : null;
   if (encKey && !encCfg) return { error: 'no encounter ' + encKey, missionId: missionId };
-  var c = S.buildCombat(mission, ch, 'outro', encCfg ? { combat: encCfg } : undefined);
+  // [65차 하드모드 축] enemyScale 미지정(1) → buildCombat scale 1 → 반환 객체 byte 불변(base/mid/full
+  //   회귀 방어). store.js 하드모드(save.flags.hardMode → scale 1.25)를 하네스로 실측 —
+  //   기존 runEncounter 가 enemyScale 미전달로 scale=1 만 측정하던 '측정 사각' 제거.
+  var es = enemyScale || 1;
+  var opts = (encCfg || es !== 1) ? { combat: encCfg || undefined, enemyScale: es } : undefined;
+  var c = S.buildCombat(mission, ch, 'outro', opts);
   var startEnemyHp = totalEnemyHp(c);
   var reinforcedEver = false, rounds = 0, guard = 0;
   while (!c.outcome && rounds < ROUND_CAP && guard++ < 400) {
@@ -308,7 +313,7 @@ function encountersOf(e) {
   return list;
 }
 
-function runMatrix(scenario) {
+function runMatrix(scenario, enemyScale) {
   var ms = orderedMissions();
   var rows = [];
   for (var mi = 0; mi < ms.length; mi++) {
@@ -320,7 +325,8 @@ function runMatrix(scenario) {
       for (var ci = 0; ci < CLASSES.length; ci++) {
         var cls = CLASSES[ci];
         var byPol = {};
-        for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario, enc.encKey);
+        // [65차] enemyScale 미지정 → runEncounter es=1 → byte 불변(runMatrix() 무인자 회귀 방어).
+        for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario, enc.encKey, enemyScale);
         cells[cls] = byPol;
       }
       // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
@@ -506,7 +512,21 @@ function printScenarios() {
       + padL(s.avgHp.toFixed(1), 8) + pad('', 5) + padL(s.avgRepR.toFixed(2), 6));
   });
 
+  // [65차 하드모드 축] hard×base · hard×full (적 스탯 scale 1.25 = store.js save.flags.hardMode 실측).
+  //   측정 사각 제거 — runEncounter 가 enemyScale 미전달로 scale=1 만 측정하던 것을 1.25 로 실측.
+  //   오브젝티브 임계는 scale 무영향(spawnEnemy 는 hp/atk 만) → 오브젝티브 러시 경로 불변, 전멸·생존만 가중.
+  var HARD_SCALE = 1.25;
+  var hardScn = { base: aggregateScenario(runMatrix('base', HARD_SCALE)), full: aggregateScenario(runMatrix('full', HARD_SCALE)) };
+  console.log('  ' + '-'.repeat(92));
+  [['hard×base(무장비)', hardScn.base], ['hard×full(최고가)', hardScn.full]].forEach(function (pair) {
+    var s = pair[1];
+    console.log(pad(pair[0], 16) + pad(s.clearable + '/' + s.total, 9) + padL(String(s.bandOk), 6) + pad('', 8)
+      + padL(String(s.trivial), 5) + pad('', 5) + padL(String(s.attrition), 4) + pad('', 4) + padL(String(s.fail), 6) + pad('', 5)
+      + padL(s.avgHp.toFixed(1), 8) + pad('', 5) + padL(s.avgRepR.toFixed(2), 6));
+  });
+
   var guard = lateChapterGuard(runMatrix('full'));
+  var hardGuardBase = lateChapterGuard(runMatrix('base', HARD_SCALE));
   console.log('\n---- 수용 판정 (docs/25 §8 정직화 · 표시=판정) ----');
   // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식). 트리비얼은
   //   전량 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) — 문서화 허용(51차 선례).
@@ -516,6 +536,13 @@ function printScenarios() {
   console.log('  mid  : 클리어율 동일(' + m.clearable + '/' + m.total + '=base) · 여유 증가(평균종료HP ' + b.avgHp.toFixed(1) + '→' + m.avgHp.toFixed(1) + '%) — ' + (midMargin ? 'PASS' : 'CHECK'));
   var chStr = guard.chs.map(function (c) { return 'ch0' + c + ' min=' + guard.perCh[c].min; }).join(' · ');
   console.log('  full : 후반 챕터 최속승리 라운드 ' + chStr + ' · 후반 트리비얼 ' + guard.trivLate + ' — ' + (guard.pass ? 'PASS(≥3R 유지 · 트리비얼화 없음 → 장비 하향 불요)' : 'FAIL(<3R → 장비 수치 하향 보정 필요)'));
+  // [65차 하드모드] hard×base = 무장비 +25% 적, 전 조합 클리어 가능 + clearFail 0(하드모드 램프 불변식).
+  //   hard×full = 최고가 장비로 하드모드 상쇄 → clearFail 0 + 후반 트리비얼 게이트(≥3R 유지). 하드는 트리비얼을
+  //   줄이므로(전멸·생존 가중) 후반 게이트는 여유로 통과 — 판정은 clearFail 0 이 핵심.
+  console.log('  hard×base : +25% 적 무장비 전 조합 클리어(' + hardScn.base.clearable + '/' + hardScn.base.total + ') · clearFail ' + hardScn.base.fail
+    + ' · 후반 트리비얼 ' + hardGuardBase.trivLate + ' — ' + (hardScn.base.clearable === hardScn.base.total && hardScn.base.fail === 0 ? 'PASS(하드모드 클리어 보장 · 오브젝티브 러시 불변)' : 'FAIL(하드모드 clearFail → 밸런스 검토)'));
+  console.log('  hard×full : +25% 적 최고가 상쇄 클리어(' + hardScn.full.clearable + '/' + hardScn.full.total + ') · clearFail ' + hardScn.full.fail
+    + ' · 평균종료HP ' + hardScn.full.avgHp.toFixed(1) + '% — ' + (hardScn.full.clearable === hardScn.full.total && hardScn.full.fail === 0 ? 'PASS(장비로 하드모드 흡수)' : 'FAIL(hard×full clearFail)'));
 
   console.log('\n---- 장비 유발 이상치(신규, base 대비) ----');
   var baseSet = {};

@@ -3150,20 +3150,6 @@ function negoApply(s, prop) {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'DRAW_INITIAL': {
-      // Draw hand size depending on role
-      const ps = state.players.map(p => {
-        const handSize = 6;
-        const newHand = p.deck.slice(0, handSize);
-        const newDeck = p.deck.slice(handSize);
-        return { ...p, hand: newHand, deck: newDeck };
-      });
-      return { ...state, players: ps };
-    }
-
-    case 'LOG':
-      return { ...state, log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: action.msg }].slice(-150) };
-
     case 'SET_PHASE':
       return { ...state, meta: { ...state.meta, phase: action.phase } };
 
@@ -3590,67 +3576,6 @@ function reducer(state, action) {
       return s;
     }
 
-    case 'RESOLVE_RAID_YES': {
-      // 레거시 호환 — 아직 호출되는 코드 있으면 즉시 새 EXECUTE로 위임
-      const pr = state.meta.pendingRaid;
-      if (!pr) return state;
-      let s = { ...state };
-      const me = s.players[0];
-      const raidRoll = raidBonus(me);  // v5.2.0: 결정론적 (무기 자원 기반)
-      // 상성 보너스: Ghost 클래스가 타겟 Bloc 카운터면 atk +1
-      const counterBonus = countersBloc(me.specific, pr.bloc) ? 1 : 0;
-      const raidTotal = raidRoll + pr.atk + counterBonus;
-      const cell = s.map[pr.coord];
-      if (raidTotal >= pr.threshold) {
-        const newStocks = { ...s.stocks, [pr.bloc]: Math.max(1, s.stocks[pr.bloc] - 3) };
-        const ps = [...s.players];
-        // v6.5: 기본 평판 보상(+3)은 결정 모달로 대체 — 평판 루트 vs 등가 약탈 루트 (아래 큐잉)
-        ps[0] = {
-          ...me,
-          wanted: (me.wanted || 0) + 1,
-        };
-        const newMap = { ...s.map, [pr.coord]: { ...cell, owner: null } };
-        s = { ...s, players: ps, stocks: newStocks, map: newMap, heat: Math.min(10, s.heat + scenRaidHeat(s, 1)) };
-        s.meta = { ...s.meta, pendingRaid: null,
-          raidsThisGame: { ...s.meta.raidsThisGame, 0: (s.meta.raidsThisGame[0] || 0) + 1 },
-          raidDmgByBloc: { ...(s.meta.raidDmgByBloc || {}), [pr.bloc]: ((s.meta.raidDmgByBloc || {})[pr.bloc] || 0) + 1 },  // v6.24 (레거시): 도시 흉터 집계
-        };
-        s = insertScandal(s, cell.owner, '레이드로 구역 상실');  // v6.13.1 (P1-1): 스캔들 덱 오염
-        // v6.5: 레이드 성공 기본 평판 보상을 선택 결정으로 큐잉 (밸런스 중립: ★+3 vs 등가 약탈)
-        if (typeof euro_addPendingDecision === 'function' && typeof euro_raidLootBundle === 'function') {
-          const _lb = euro_raidLootBundle(3);
-          s = euro_addPendingDecision(s, {
-            id: `raid_reward_r${s.meta.round}_${pr.coord}`,
-            type: 'raid_reward',
-            playerIdx: 0,
-            prompt: '레이드 성공 — 보상 선택',
-            options: [
-              { id: 'rep',  label: '★ 평판 +3 (평판 루트)' },
-              { id: 'loot', label: `₵+${_lb.credit}, ⚙+${_lb.parts} (약탈 루트)` },
-            ],
-            context: { round: s.meta.round, rep: 3, coord: pr.coord },
-          });
-        } else {
-          const ps2 = [...s.players];
-          ps2[0] = { ...ps2[0], resources: { ...ps2[0].resources, rep: (ps2[0].resources.rep || 0) + 3 } };
-          s = { ...s, players: ps2 };
-        }
-        const cbStr = counterBonus > 0 ? ` +상성${counterBonus}` : '';
-        s = logEntry(s, `⭐ 당신 🗡️ 레이드 성공! [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}${cbStr}=${raidTotal} ≥ ${pr.threshold} — ${pr.bloc} 주가-3, 중립화, 보상 선택 대기(★+3 또는 약탈)`);
-      } else {
-        const ps = [...s.players];
-        ps[0] = {
-          ...me,
-          wanted: (me.wanted || 0) + 1,
-        };
-        s = { ...s, players: ps, heat: Math.min(10, s.heat + 1), meta: { ...s.meta, pendingRaid: null } };
-        s = logEntry(s, `⭐ 당신 ❌ 레이드 실패 [${pr.coord} ${pr.zoneNm}] 🎲${raidRoll}+${pr.atk}=${raidTotal} < ${pr.threshold} — HP-3, 수배+1`);
-        // v6.11.4 (P0-4): HP-3을 통합 헬퍼로 (HP0 시 STEP F, Bloc 방어자 약탈)
-        s = applyDamage(s, 0, 3, { attacker: (typeof pr.blocIdx === 'number' ? pr.blocIdx : null), label: '레이드 실패' });
-      }
-      return s;
-    }
-
     case 'RESOLVE_RAID_NO': {
       const pr = state.meta.pendingRaid;
       if (!pr) return state;
@@ -3849,42 +3774,6 @@ function reducer(state, action) {
       // v0.6.3b: 상점 구매 → 파티(인맥 거래) 트랙 +1, 무기/용병은 무력으로
       const tk = (action.item === 'arms' || action.item === 'recruit') ? 'combat' : 'party';
       s = raiseTrack(s, action.playerIdx, tk, 1, `상점:${it.name}`);
-      return s;
-    }
-
-    case 'BOT_SHOP': {
-      // 봇 상점 AI — 상황에 맞게 자동 구매
-      let s = { ...state };
-      const ps = [...state.players];
-      state.players.forEach((p, pi) => {
-        if (p.kind !== 'bot' || p.defeated) return;
-        const credit = p.resources.credit || 0;
-        // 우선순위: HP 낮으면 의료 > 수배 높으면 뇌물 > 무기 부족하면 무기상 > 렙 < 10이면 정보상/현상금
-        const actions = [];
-        if (p.hp < p.maxHp * 0.5 && credit >= 5) actions.push('medical');
-        if ((p.wanted||0) >= 3 && credit >= 3) actions.push('bribe');
-        if (p.role === 'ghost' && (p.resources.rep||0) < 12 && credit >= 4) actions.push('bounty');
-        if ((p.resources.weapons||0) < 2 && credit >= 4) actions.push('arms');
-        if (p.role === 'ghost' && (p.resources.data||0) < 2 && credit >= 3) actions.push('info');
-        if (actions.length === 0) return;
-        const item = actions[0];
-        const items = {
-          medical: { cost: 5, apply: pp => ({ ...pp, hp: pp.maxHp }) },
-          arms:    { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, weapons: (pp.resources.weapons||0) + 2 } }) },
-          info:    { cost: 3, apply: pp => ({ ...pp, resources: { ...pp.resources, data: (pp.resources.data||0) + 2, rep: (pp.resources.rep||0) + 1 } }) },
-          bribe:   { cost: 3, apply: pp => ({ ...pp, wanted: Math.max(0, (pp.wanted||0) - 2) }) },
-          bounty:  { cost: 4, apply: pp => ({ ...pp, resources: { ...pp.resources, rep: (pp.resources.rep||0) + 2 } }) },
-        };
-        const it = items[item];
-        let upd = { ...p, resources: { ...p.resources, credit: p.resources.credit - it.cost } };
-        upd = it.apply(upd);
-        ps[pi] = upd;
-        s = logEntry({ ...s, players: ps }, `🏪 P${pi} [${p.specific}] · 상점 구매 (${item}, ₵-${it.cost})`);
-        if (item === 'bribe') s = { ...s, heat: Math.max(0, s.heat - 1) };
-        // v0.6.3b: 봇 상점 구매 → 트랙 상승 (party/combat)
-        const tk = (item === 'arms' || item === 'recruit') ? 'combat' : 'party';
-        s = raiseTrack(s, pi, tk, 1, `상점:${item}`);
-      });
       return s;
     }
 
@@ -4114,13 +4003,6 @@ function reducer(state, action) {
         };
       });
       return { ...state, meta: { ...state.meta, turnDiff: diff } };
-    }
-
-    case 'NEXT_PHASE': {
-      const cur = state.meta.phase;
-      if (cur < 6) return { ...state, meta: { ...state.meta, phase: cur + 1 } };
-      // End of round
-      return state;  // handled elsewhere
     }
 
     case 'NEXT_ROUND': {
@@ -4837,19 +4719,6 @@ function reducer(state, action) {
         players: ps,
         meta: { ...state.meta, claimedAchievements: { ...state.meta.claimedAchievements, [action.achievementId]: action.playerIdx } },
         log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `🏆 P${action.playerIdx} 업적 달성: ${achv.name}` }].slice(-150),
-      };
-    }
-
-    case 'MOVE_PLAYER': {
-      // action.playerIdx, action.to
-      const ps = state.players.map((p, i) => {
-        if (i !== action.playerIdx) return p;
-        return { ...p, position: action.to };
-      });
-      return {
-        ...state,
-        players: ps,
-        log: [...state.log, { round: state.meta.round, phase: state.meta.phase, message: `P${action.playerIdx} 이동 → ${action.to}` }].slice(-150),
       };
     }
 

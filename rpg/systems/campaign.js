@@ -11,7 +11,6 @@
   //   applyRewards : 챕터 효과 정산. ★최초 클리어=전액+챕터효과+해금 /
   //                  재클리어=₵·렙 50%·karma 0·챕터효과/해금 없음 (세이브 missionsDone 기록)
   //   threatGauge  : 중앙 위협/노출 게이지 [G10, 각색 raidThreshold + docs/07 §8 Heat]
-  //   HUB_NODES    : 허브 4노드 (미션보드·시트·크루·상점)
   // ==========================================================================
 
   function getCharacter() {
@@ -131,6 +130,13 @@
     { id: 'a2-side-mole-whoami',    kind: 'act2', chapter: null, order: 32, branch: 'class',
       global: 'RPG_MISSION_A2_SIDE_MOLE_WHOAMI', module: '../data/missions/a2-side-mole-whoami.js',
       unlock: { missionsDone: ['ch08-zero-day'], classKey: 'MOLE' } },
+    // ── [65차] BROKER·DRIFTER 플레이어블 승격 → 클래스 전용 사이드 2 (classKey 게이트) ──
+    { id: 'a2-side-broker-ledger',  kind: 'act2', chapter: null, order: 33, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_BROKER_LEDGER', module: '../data/missions/a2-side-broker-ledger.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'BROKER' } },
+    { id: 'a2-side-drifter-lastroad', kind: 'act2', chapter: null, order: 34, branch: 'class',
+      global: 'RPG_MISSION_A2_SIDE_DRIFTER_LASTROAD', module: '../data/missions/a2-side-drifter-lastroad.js',
+      unlock: { missionsDone: ['ch08-zero-day'], classKey: 'DRIFTER' } },
 
     // ── [v6.44 · 과제 A1] ACT 2 캡스톤 (kind 'act2' · branch 'capstone' · 4갈래 종결 AND 게이트) ──
     //   4갈래 종결 미션(A2/B2/C2/D2) 전부 클리어 시 해금. 3연전 · OVERLORD 결전 · 캡스톤 에필로그.
@@ -246,13 +252,6 @@
     return { mains: mains, sides: sides, act2: act2, current: current };
   }
 
-  var HUB_NODES = [
-    { key: 'missions', icon: '🎯', label: '미션 보드', stub: false },
-    { key: 'sheet',    icon: '📋', label: '캐릭터 시트', stub: false },
-    { key: 'shop',     icon: '🛒', label: '상점 / 의료', stub: true, note: 'HELIX 회복 계승 (Stage 3)' },
-    { key: 'crew',     icon: '👥', label: '크루 / 로스터', stub: true, note: '후속 로스터 (Stage 2)' },
-  ];
-
   // ==========================================================================
   // 미션 보상 정산. save-state(character, heat, heatCap, flags, missionsDone)에 병합.
   //   ★최초 클리어  : 전액(렙/karma/₵) + 챕터효과(heatCapDelta) + 해금(unlocks).
@@ -305,7 +304,7 @@
   }
 
   var API = {
-    MISSIONS: MISSIONS, HUB_NODES: HUB_NODES,
+    MISSIONS: MISSIONS,
     missionById: missionById, missionData: missionData,
     isUnlocked: isUnlocked, isCleared: isCleared, unlockHint: unlockHint, boardState: boardState,
     applyRewards: applyRewards, threatGauge: threatGauge,
