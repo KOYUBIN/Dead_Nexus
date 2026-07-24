@@ -61,6 +61,8 @@
     heal('data/missions/a2-side-blade-vendetta.js', 'RPG_MISSION_A2_SIDE_BLADE_VENDETTA');
     heal('data/missions/a2-side-rigger-build.js', 'RPG_MISSION_A2_SIDE_RIGGER_BUILD');
     heal('data/missions/a2-side-mole-whoami.js', 'RPG_MISSION_A2_SIDE_MOLE_WHOAMI');
+    heal('data/missions/a2-side-broker-ledger.js', 'RPG_MISSION_A2_SIDE_BROKER_LEDGER');
+    heal('data/missions/a2-side-drifter-lastroad.js', 'RPG_MISSION_A2_SIDE_DRIFTER_LASTROAD');
     heal('data/missions/a2-99-flagship.js', 'RPG_MISSION_A2_99_FLAGSHIP');   // [v6.44] 캡스톤
     heal('systems/abyss.js', 'RPG_ABYSS');                                    // [v6.44] 심연 프로토콜
     heal('systems/combat/grid.js', 'RPG_GRID');
