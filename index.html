@@ -10,6 +10,12 @@
   <meta property="og:description" content="사이버펑크 비대칭 시장 전쟁 — 전략 시뮬 · RPG · 프린트 킷" />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20fill%3D'%2306060e'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'9'%20fill%3D'none'%20stroke%3D'%23ff003c'%20stroke-width%3D'1.5'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'3'%20fill%3D'%23ff003c'%2F%3E%3C%2Fsvg%3E" />
+  <!-- [신규 v6.45 · 배치 C] PWA — 설치 가능(홈 화면 추가). 매니페스트 + PNG 아이콘(assets/). 외부 의존 0. -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DEAD NEXUS" />
   <style>
     /* ── 팔레트 (simulator/v0.5 · rpg/styles/palette.css 색계 복제, CDN 0) ── */
     :root {
@@ -197,9 +203,10 @@
     .links a:hover, .links a:focus-visible { color: var(--cyan); border-color: #00e5ff55; outline: none; }
 
     footer {
-      text-align: center; font-size: 10px; letter-spacing: 2px; color: #55556e;
+      /* [a11y v6.45] 대비 상향: #55556e(2.80:1, AA 미달) → #7a7a92(≈4.6:1, AA 통과) on --bg #06060e */
+      text-align: center; font-size: 10px; letter-spacing: 2px; color: #7a7a92;
     }
-    footer .sep { color: #33334a; margin: 0 8px; }
+    footer .sep { color: #5a5a72; margin: 0 8px; } /* [a11y v6.45] #33334a(1.65:1) → #5a5a72 구분자 가독 */
 
     @media (max-width: 480px) {
       body { padding: 28px 16px; }
@@ -230,9 +237,9 @@
           <span class="badge">튜토리얼</span>
           <span class="badge">모바일</span>
         </div>
-        <div class="progress" id="prog-sim" hidden>
+        <div class="progress" id="prog-sim" hidden aria-label="전략 시뮬레이션 진행 상태">
           <span id="prog-sim-text"></span>
-          <div class="bar"><i id="prog-sim-bar"></i></div>
+          <div class="bar"><i id="prog-sim-bar" role="progressbar" aria-label="레거시 캠페인 챕터 해금 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
         </div>
         <div class="go">▶ 시작</div>
       </a>
@@ -245,9 +252,9 @@
           <span class="badge new">NEW</span>
           <span class="badge">모바일</span>
         </div>
-        <div class="progress" id="prog-rpg" hidden>
+        <div class="progress" id="prog-rpg" hidden aria-label="RPG 진행 상태">
           <span id="prog-rpg-text"></span>
-          <div class="bar"><i id="prog-rpg-bar"></i></div>
+          <div class="bar"><i id="prog-rpg-bar" role="progressbar" aria-label="RPG 미션 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
         </div>
         <div class="go">▶ 입장</div>
       </a>
@@ -314,7 +321,9 @@
               var simBar = document.getElementById('prog-sim-bar');
               if (simBox && simText && simBar) {
                 simText.textContent = '저장됨 · 레거시 캠페인 ' + simN + '/8 챕터 해금';
-                simBar.style.width = Math.min(100, (simN / 8) * 100) + '%';
+                var simPct = Math.round(Math.min(100, (simN / 8) * 100));
+                simBar.style.width = simPct + '%';
+                simBar.setAttribute('aria-valuenow', String(simPct)); // [a11y] progressbar 값 동기
                 simBox.hidden = false;
               }
             }
@@ -357,7 +366,9 @@
               if (rpgBox && rpgText && rpgBar) {
                 rpgText.textContent = '저장됨 · 미션 ' + mCount + '/29 · 엔딩 ' + eCount + '/4' +
                   (capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
-                rpgBar.style.width = Math.min(100, (mCount / 29) * 100) + '%';
+                var rpgPct = Math.round(Math.min(100, (mCount / 29) * 100));
+                rpgBar.style.width = rpgPct + '%';
+                rpgBar.setAttribute('aria-valuenow', String(rpgPct)); // [a11y] progressbar 값 동기
                 rpgBox.hidden = false;
               }
             }

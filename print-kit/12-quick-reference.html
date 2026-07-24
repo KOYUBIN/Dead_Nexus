@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>DEAD NEXUS — 퀵 레퍼런스 (1매)</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4 portrait; margin: 6mm; }
   @media print { body { margin: 0; } .no-print { display: none !important; } }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif;
     margin: 0; padding: 6mm; background: white; color: #000;
     font-size: 8pt;
     line-height: 1.3;
@@ -18,7 +17,7 @@
   .no-print a { color: #2d6fff; }
 
   h1 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 14pt;
     margin: 0 0 1mm 0;
     padding-bottom: 1mm;
@@ -30,11 +29,11 @@
     font-size: 8pt;
     color: #666;
     margin: 0 0 3mm 0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     letter-spacing: 0.05em;
   }
   h2 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 9pt;
     background: #000;
     color: white;
@@ -84,7 +83,7 @@
     background: #fafafa;
   }
   .phase-box .num {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 900;
     color: #c04828;
     font-size: 11pt;
@@ -116,7 +115,7 @@
     text-align: center;
   }
   .track-name {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
     font-size: 8.5pt;
     flex: 0 0 60pt;
@@ -136,7 +135,7 @@
   .win-card.bloc { background: #e3f2fd; border-color: #1976d2; }
   .win-card .title {
     font-weight: 900;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 9pt;
     margin-bottom: 1mm;
     color: #000;
@@ -149,7 +148,7 @@
     color: white;
     padding: 2mm 3mm;
     border-radius: 2mm;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 7.5pt;
   }
   .key-numbers .label { color: #ff6b35; font-weight: 700; }
@@ -161,17 +160,17 @@
     font-size: 6.5pt;
     color: #888;
     text-align: center;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   }
 
   .icon-set {
     font-size: 7pt;
     color: #555;
   }
-  .icon-set b { color: #000; font-family: 'JetBrains Mono', monospace; }
+  .icon-set b { color: #000; font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
 
   .raid-formula {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     background: #fff8e1;
     padding: 1.5mm;
     border-left: 3px solid #ffa726;
@@ -187,7 +186,7 @@
     background: #fff;
   }
   .v6-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
     font-size: 7.3pt;
     color: #2e7d32;
@@ -208,7 +207,7 @@
     color: #555;
   }
   .v2-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-weight: 700;
     font-size: 7.6pt;
     color: #616161;
@@ -227,10 +226,10 @@
     font-size: 6.7pt;
     line-height: 1.3;
   }
-  .v2-grid b { font-family: 'JetBrains Mono', monospace; color: #424242; }
+  .v2-grid b { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace; color: #424242; }
   .v2-tag {
     display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     font-size: 6pt;
     font-weight: 700;
     background: #616161;

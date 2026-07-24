@@ -1,13 +1,13 @@
 # 25. RPG 모드 — DEAD NEXUS: ASH & SIGNAL
 
 **문서 ID**: `docs/25-rpg-mode.md`
-**버전**: v1.0 (현행화 — Stage 1~3 전부 구현 완료 반영, v6.40 기준. 58차)
+**버전**: v1.0 (현행화 — Stage 1~3 전부 구현 완료 + Act 2·캡스톤·심연 프로토콜 반영, v6.44 기준. 63차)
 **최초 작성**: 2026-07-17 (v0.1, 비전 초안 — 수직 슬라이스 확정 전)
-**최종 수정**: 2026-07-20
+**최종 수정**: 2026-07-24
 **아키텍처 코드네임**: GHOSTGRID (hybrid-scene)
-**관련 문서**: `docs/01-worldbuilding.md`, `docs/03-factions-blocs.md`, `docs/04-characters-ghosts.md`, `docs/06-attribute-system.md`, `docs/07-combat-stats.md`, `docs/09-tech-tree.md`, `docs/12-legacy-campaign.md`, `docs/22-game-identity.md`, `cards/legacy/chapter-01-first-blood.md`, `simulator/v0.5/lore_module.js`, `rpg/README.md`, `CHANGELOG.md`(v6.29~v6.40)
+**관련 문서**: `docs/01-worldbuilding.md`, `docs/03-factions-blocs.md`, `docs/04-characters-ghosts.md`, `docs/06-attribute-system.md`, `docs/07-combat-stats.md`, `docs/09-tech-tree.md`, `docs/12-legacy-campaign.md`, `docs/22-game-identity.md`, `cards/legacy/chapter-01-first-blood.md`, `simulator/v0.5/lore_module.js`, `rpg/README.md`, `CHANGELOG.md`(v6.29~v6.44)
 
-> **현행화 안내**: §1~§6은 v0.1 비전 초안(2026-07-17, Stage 0 시점) 원문을 **그대로 보존**한다 — 아키텍처 결정 근거와 계보 표는 착수 당시의 설계 기록으로서 사후에도 유효하다. §7(로드맵)에 완료 상태·각주를 덧붙였고, §8(비-목표)에 해소/유지 상태를 표기했으며, **§9(신설)** 가 v6.40 기준 실제 구현 현황을 사실관계로 정리한다. 원문 vs 실장 괴리는 §7·§9의 각주로만 기술하며, §1~§6 본문은 편집하지 않는다(계획 문서로서의 사료 가치 보존).
+> **현행화 안내**: §1~§6은 v0.1 비전 초안(2026-07-17, Stage 0 시점) 원문을 **그대로 보존**한다 — 아키텍처 결정 근거와 계보 표는 착수 당시의 설계 기록으로서 사후에도 유효하다. §7(로드맵)에 완료 상태·각주를 덧붙였고, §8(비-목표)에 해소/유지 상태를 표기했으며, **§9** 가 v6.44 기준 실제 구현 현황을 사실관계로 정리한다. 원문 vs 실장 괴리는 §7·§9의 각주로만 기술하며, §1~§6 본문은 편집하지 않는다(계획 문서로서의 사료 가치 보존). v6.44 현행화(64차)에서는 원 로드맵(Stage 1~3, ~v6.40)에 없던 **Act 2 "AFTER ZERO DAY"(v6.43)·캡스톤+심연 프로토콜+사운드(v6.44)** 를 §7 로드맵 말미와 §9에 "계획 대비 초과 확장"으로 정직 각주 처리했다.
 
 > **표기 규약 (창작 무단 혼입 금지 원칙 승계)**
 > 모든 룰·수치에 계보 태그를 상시 부착한다.
