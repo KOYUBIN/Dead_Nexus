@@ -294,7 +294,7 @@
     //   RPG 스키마: rpg/state/save.js 의 localStorage 'dead_nexus_rpg_save_v1'
     //     { missionsDone: string[], endings: { seen: {key:count}, capstone: number } }.
     //   미션/엔딩 ID 목록은 rpg/systems/campaign.js MISSIONS·rpg/systems/ending.js ORDER 와
-    //   동기(캡스톤 a2-99-flagship 은 29종에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
+    //   동기(캡스톤 a2-99-flagship 은 31종에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
     // ==========================================================================
     (function () {
       try {
@@ -330,7 +330,7 @@
           }
         } catch (eSim) { /* 시뮬 배지만 숨김 유지, RPG 배지는 계속 시도 */ }
 
-        // ── RPG 카드: 미션 n/29 · 엔딩 n/4 · 캡스톤 여부 ──
+        // ── RPG 카드: 미션 n/31 · 엔딩 n/4 · 캡스톤 여부 ──
         try {
           var RPG_MISSION_IDS = [
             'ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
@@ -340,8 +340,9 @@
             'a2-00-framing',
             'a2-a1-crown-breach', 'a2-a2-crown-throne', 'a2-b1-barricade', 'a2-b2-freeport',
             'a2-c1-first-contact', 'a2-c2-signal-war', 'a2-d1-scavenge', 'a2-d2-last-signal',
-            'a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami'
-          ]; // 29종 (캡스톤 a2-99-flagship 제외)
+            'a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami',
+            'a2-side-broker-ledger', 'a2-side-drifter-lastroad'
+          ]; // 31종 (캡스톤 a2-99-flagship 제외 — v6.45 BROKER/DRIFTER 사이드 2종 추가, _home_check.js가 campaign.js와 동치 검증)
           var RPG_ENDING_KEYS = ['corporate-eternal', 'street-rising', 'nexus-reborn', 'dead-nexus'];
 
           var rpgRaw = localStorage.getItem('dead_nexus_rpg_save_v1');
@@ -364,7 +365,7 @@
               var rpgText = document.getElementById('prog-rpg-text');
               var rpgBar = document.getElementById('prog-rpg-bar');
               if (rpgBox && rpgText && rpgBar) {
-                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/29 · 엔딩 ' + eCount + '/4' +
+                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/31 · 엔딩 ' + eCount + '/4' +
                   (capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
                 var rpgPct = Math.round(Math.min(100, (mCount / 29) * 100));
                 rpgBar.style.width = rpgPct + '%';

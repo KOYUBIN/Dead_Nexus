@@ -49,7 +49,7 @@
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = 처형 단말(244번째 계약 원본). [계승 store applyHackObjective]
     //   인접 유닛 max(HACK,ATK) 자동축 → BLADE 는 ATK5 축으로 차감(부가 승리 경로).
-    objective: { x: 3, y: 0, threshold: 9, veil: 0, label: '처형 단말', dataTB: 0 },
+    objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '처형 단말', dataTB: 0 },   // [65차 밸런스] 9→8 — BROKER(hack2) 은신 3턴 창 내 완주(R1 잠적 → R3~R4 차감 4+4)
     threatCap: 9,
     reinforcement: { key: 'IRONWALL_ENFORCER', x: 6, y: 1 },   // 집행관 증원(경보 1회)
     walls: [

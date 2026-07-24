@@ -231,8 +231,10 @@
     BURN_THE_BRIDGE: {
       key: 'BURN_THE_BRIDGE', name: 'BURN THE BRIDGE', icon: '🔥', attr: 'SHADE',
       kind: 'ULTIMATE', useHack: false, ap: 2, cooldown: 0, oncePerMission: true, range: 0,
-      applyStatus: { stealth: true, turns: 2, nextCrit: 2 },
-      desc: '모든 다리를 태우고 잠적 — 2턴 은신(피격 불가) + 재등장 첫 공격 크리 ×2. 미션당 1회.',
+      // [65차 밸런스] 은신 3턴 — SILK 의 "전 계약 파기·완전 잠적"은 CIPHER ZERO TRACE(2턴)보다 긴
+      //   회피창(최저 HP·저 ATK 회피형의 생존 시그니처). 3턴 은신 동안 러시·오브젝티브 차감 안전 수행.
+      applyStatus: { stealth: true, turns: 3, nextCrit: 2 },
+      desc: '모든 다리를 태우고 잠적 — 3턴 은신(피격 불가) + 재등장 첫 공격 크리 ×2. 미션당 1회.',
       lineage: '[각색 broker.md Card09 BURN THE BRIDGE [LOSS] · 전 계약 파기·잠적]',
     },
     OLD_DEBTS: {

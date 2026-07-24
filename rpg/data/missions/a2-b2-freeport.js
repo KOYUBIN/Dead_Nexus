@@ -64,7 +64,7 @@
   var STAGE2 = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
-    objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '약탈 기함 코어', dataTB: 0 },   // [62차 밸런스] 12→10 (저HP 해커 1 해킹턴 완주 · WARLORD 로 난이도 유지)
+    objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '약탈 기함 코어', dataTB: 0 },   // [62차 밸런스] 12→10 · [65차 밸런스] 10→8 (BROKER hack2 은신 3턴 창 내 완주 — R2 잠적 후 R3~R4 차감 4+4)
     threatCap: 10,
     reinforcement: { key: 'MERIDIAN_DRONE', x: 0, y: 1 },   // 증원(경보 1회) — 카탈로그 지정
     walls: [

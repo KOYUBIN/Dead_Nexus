@@ -75,8 +75,9 @@
     stage2: {
       cols: 8, rows: 8,
       playerStart: { x: 4, y: 7 },
-      // 오브젝티브 = 외부 위협 근원 코어(threshold 13 · veil 1 = 유효 임계 14). 브랜치 C 최고 임계.
-      objective: { x: 4, y: 0, threshold: 13, veil: 1, label: '외부 위협 근원 코어', dataTB: 6.0 },
+      // 오브젝티브 = 외부 위협 근원 코어(threshold 11 · veil 1 = 유효 임계 12). 브랜치 C 최고 임계.
+      //   [65차 밸런스] 13→11 (eff 14→12) — BROKER hack2 은신 3턴 창(R2 잠적 → R3~R5 차감 4+4+4=12) 내 완주.
+      objective: { x: 4, y: 0, threshold: 11, veil: 1, label: '외부 위협 근원 코어', dataTB: 6.0 },
       threatCap: 11,
       // [카탈로그] 증원 MERIDIAN_STALKER(경보 1회 스폰) — SHADE 저격 압박 지속.
       reinforcement: { key: 'MERIDIAN_STALKER', x: 6, y: 2 },

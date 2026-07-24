@@ -64,9 +64,12 @@
       { x: 1, y: 4 }, { x: 5, y: 4 },   // 예측층 서버 랙 — 측면 접근 통제
     ],
     // [신규 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1. 데이터 콘솔 — 회피형 BROKER 전진 거점 엄폐.
+    //   [65차 밸런스] 상단 콘솔 (2,2)/(4,2) → (1,2)/(5,2) 측면 재배치 — 엄폐는 이동 차단이므로
+    //   중앙(2,2)/(4,2) 배치가 저MOV 클래스(RIGGER mov2)의 서버 접근 레인을 완전 봉쇄했다(clearFail).
+    //   측면 이동으로 x2/x4 접근 레인 개방 · 엄폐 기능(콘솔 5기) 유지.
     cover: [
       { x: 2, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' },
-      { x: 3, y: 3, type: 'light' }, { x: 2, y: 2, type: 'light' }, { x: 4, y: 2, type: 'light' },
+      { x: 3, y: 3, type: 'light' }, { x: 1, y: 2, type: 'light' }, { x: 5, y: 2, type: 'light' },
     ],
     // 로스터: KAI_MORROW(보스) + AXIOM_ANALYST×2 + AXIOM_DRONE. 전 적 killable → 전멸/오브젝티브 이중승리(MFU).
     //   KAI_MORROW = IRON 근접 보스(hp20), AXIOM_ANALYST×2 = 분석관, AXIOM_DRONE = 코어 수호(기계).

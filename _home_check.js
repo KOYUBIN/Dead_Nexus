@@ -2,14 +2,14 @@
 /* ==========================================================================
  * _home_check.js — 홈 포털 ↔ RPG 캠페인 드리프트 가드 [신규 v6.45 · 배치 C]
  * --------------------------------------------------------------------------
- * 근거: 루트 index.html 의 진행 배지 스크립트는 RPG 미션 ID 29종을 하드코딩한
+ * 근거: 루트 index.html 의 진행 배지 스크립트는 RPG 미션 ID 목록을 하드코딩한
  *   정적 사본이다(file:// 인라인 제약상 rpg/systems/campaign.js 를 import 할 수
  *   없어 사본 유지가 현실적). campaign.js MISSIONS 가 정본 — 미션이 추가/개명되면
- *   홈 사본이 조용히 어긋나 진행률(n/29)이 틀려진다. 이 스크립트가 회귀를 잡는다.
+ *   홈 사본이 조용히 어긋나 진행률 분모가 틀려진다. 이 스크립트가 회귀를 잡는다.
  *
  * 검증 항목:
  *   1. 홈 RPG_MISSION_IDS 집합  ===  campaign.js MISSIONS(캡스톤 제외) 집합
- *   2. 개수 정확히 29, 홈 목록에 중복 없음
+ *   2. 홈 개수 == campaign 비캡스톤 개수(동적), 홈 목록에 중복 없음
  *   3. 캡스톤 a2-99-flagship 은 홈 목록에서 제외돼 있어야 함
  *   4. 홈이 참조하는 RPG 세이브 키  ===  rpg/state/save.js KEY
  *   5. 홈 RPG_ENDING_KEYS 집합  ===  campaign.js MISSIONS 의 endingSeen 게이트 키 집합(4)
@@ -71,14 +71,14 @@ check(setEq(homeMissions, canonMissions),
   '미션 ID 집합 동치 (홈 ' + homeMissions.length + ' ↔ campaign 비캡스톤 ' + canonMissions.length + ')');
 
 // 2. 개수 29 + 중복 없음
-check(homeMissions.length === 29, '홈 미션 개수 == 29 (실제 ' + homeMissions.length + ')');
+check(homeMissions.length === canonMissions.length, '홈 미션 개수 == campaign 비캡스톤 개수 (홈 ' + homeMissions.length + ' ↔ campaign ' + canonMissions.length + ')');
 check(new Set(homeMissions).size === homeMissions.length, '홈 미션 목록 중복 없음');
-check(canonMissions.length === 29, 'campaign 비캡스톤 개수 == 29 (실제 ' + canonMissions.length + ')');
+check(canonMissions.length >= 29, 'campaign 비캡스톤 개수 >= 29 (실제 ' + canonMissions.length + ' — 콘텐츠는 늘 수만 있음, 감소=회귀)');
 
 // 3. 캡스톤 제외
 check(!homeMissions.includes(CAPSTONE_ID), '홈 목록에 캡스톤(' + CAPSTONE_ID + ') 미포함');
 check(campaign.MISSIONS.some((m) => m.id === CAPSTONE_ID),
-  'campaign 에 캡스톤(' + CAPSTONE_ID + ') 존재(29종에서만 제외 대상)');
+  'campaign 에 캡스톤(' + CAPSTONE_ID + ') 존재(비캡스톤 목록에서만 제외 대상)');
 
 // 4. 세이브 키 대조
 check(keyMatches.includes(save.KEY),
