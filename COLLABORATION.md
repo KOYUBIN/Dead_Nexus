@@ -125,6 +125,7 @@ node -c <모듈>                               # 문법
 | — | RPG ch07 "3R 연속 NEXUS 장악"은 종료 장악으로 근사 (레거시 챕터 7) | 정밀 카운터는 시뮬 엔진 死필드 — 필요 시 카운터 신설 검토 |
 | — | MOLE 위장 태그는 VANTA/IRONWALL/AXIOM 3종 (HELIX/CARBON 태그 게이트는 회색 폴백) | 확장 검토 가능 (`rpg/data/classes.js`) |
 | — | 시뮬 index.html 단일 파일 ~9,000줄 | 작동엔 문제없으나 편집 시 앵커 텍스트로 위치 탐색 권장 (라인 번호 금방 어긋남) |
+| — | **시뮬 인라인 babel 블록 500KB 임계 근접** (현 498,887자 — 여유 ~1,100자) | 초과 시 Babel deopt console.error. **신규 코드는 인라인 대신 모듈(js 파일+heal 로더)로 분리가 기본 전략** — fx_module.js(v6.50) 선례 |
 
 전체 이슈 이력: `playtesting/balance-issues-digest.md` (해결 12건 포함, Notion 동기화 정본).
 

@@ -539,26 +539,32 @@
     return { ok: true, character: ch, lines: lines };
   }
 
-  // [73차] 대화 선택지 서사 보상(effect.karma / effect.nuyen) 지급 — 최초 완주 1회만.
+  // [73차 · 74차 확장] 대화 선택지 서사 보상(effect.rep / effect.karma / effect.nuyen) 지급 —
+  //   최초 완주 1회만.
   //   farming 차단 근거: 이 지급은 미션 정산(applyRewards) 밖이라 firstClear 가드가 닿지 않는다.
-  //   그래서 같은 함수 안의 effect.rep 선례를 그대로 따라 missionsDone 포함 여부로 게이트한다
+  //   그래서 원조 선례인 effect.rep 을 그대로 따라 missionsDone 포함 여부로 게이트한다
   //   (missionsDone 은 settle 노드 onEnter.applyRewards 가 기록 → 선택 시점엔 1회차만 미포함).
   //   재클리어 시엔 지급을 생략하고 로그 1줄만 남긴다 — 조용한 무시 금지.
+  //   [74차] rep 은 73차까지 '실지급하되 무로그'였다 — 얻은 것이 화면에서 사라지는 유일한 자원.
+  //   같은 표에 합류시켜 지급/재클리어 고지를 karma·₵ 와 1:1로 통일한다(지급 수치·가드 무변경).
+  //   순서는 정산 로그(campaign.applyRewards: 렙→karma→₵)와 동일하게 rep 을 맨 앞에 둔다.
+  //   재클리어 고지의 자원 목록은 '선언된 자원'만 나열한다 — karma+₵ 동시 선언 시 기존 문자열
+  //   '(karma/₵ +0)' 과 byte 동일, rep 단독 선언이면 '(★ +0)' 로 정직하게 좁힌다.
+  var CHOICE_GAINS = [{ res: 'rep', label: '★' }, { res: 'karma', label: 'karma' }, { res: 'nuyen', label: '₵' }];
   function grantChoiceGains(s, eff, firstRun) {
-    var GAINS = [{ res: 'karma', label: 'karma' }, { res: 'nuyen', label: '₵' }];
-    var lines = [], declared = false;
-    for (var i = 0; i < GAINS.length; i++) {
-      var g = GAINS[i], n = eff[g.res];
+    var lines = [], declared = [];
+    for (var i = 0; i < CHOICE_GAINS.length; i++) {
+      var g = CHOICE_GAINS[i], n = eff[g.res];
       if (typeof n !== 'number' || n === 0) continue;
-      declared = true;
+      declared.push(g.label);
       if (!firstRun) continue;
       s.save.character[g.res] += n;
       lines.push('◈ ' + g.label + ' +' + n + ' (→' + s.save.character[g.res] + ')');
     }
-    if (!declared) return lines;
-    // §5.3 미러 재동기 (캐릭터가 정본).
+    if (!declared.length) return lines;
+    // §5.3 미러 재동기 (캐릭터가 정본). rep 은 미러가 없어 재동기 대상 아님.
     s.save.karma = s.save.character.karma; s.save.nuyen = s.save.character.nuyen;
-    if (!firstRun) lines.push('↻ 재클리어 — 대화 선택 보상 미지급 (karma/₵ +0)');
+    if (!firstRun) lines.push('↻ 재클리어 — 대화 선택 보상 미지급 (' + declared.join('/') + ' +0)');
     return lines;
   }
 
@@ -590,10 +596,8 @@
     // 서사 선택의 1회성 보너스(렙/karma/₵)는 최초 완주에만 적용 —
     //   재클리어 시 farming 방지 (missionsDone 은 settle applyRewards 에서 기록됨).
     var firstRun = (s.save.missionsDone || []).indexOf(mission.id) < 0;
-    if (typeof eff.rep === 'number') {
-      if (firstRun) s.save.character.rep += eff.rep;
-    }
-    // [73차] effect.karma / effect.nuyen 실지급 (선언 수치 그대로, rep 와 동일한 firstRun 가드).
+    // [73차 · 74차] effect.rep / effect.karma / effect.nuyen 실지급 (선언 수치 그대로, 공용 firstRun 가드).
+    //   74차에 rep 이 이 표에 합류 — 세 자원이 같은 지급·로그·재클리어 고지 경로를 탄다.
     feedLines = feedLines.concat(grantChoiceGains(s, eff, firstRun));
     if (feedLines.length) {
       s.banner = feedLines.length === 1

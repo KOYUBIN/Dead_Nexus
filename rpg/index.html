@@ -794,9 +794,12 @@ function DialogueOverlay({ state, dispatch }) {
           ].filter(Boolean);
           const gated = !!(c.gate || costs.length);
           const why = st === 'gray' ? window.RPG_DIALOGUE.choiceReason(c, ctx) : null;
-          // [73차] 선택지 지급(effect.karma/nuyen) 태그 — 재클리어(missionsDone 포함)엔 미지급이므로
-          //   그 사실까지 라벨에 드러낸다(store.grantChoiceGains 의 firstRun 가드와 1:1).
+          // [73차 · 74차 확장] 선택지 지급(effect.rep/karma/nuyen) 태그 — 재클리어(missionsDone 포함)엔
+          //   미지급이므로 그 사실까지 라벨에 드러낸다(store.grantChoiceGains 의 firstRun 가드와 1:1).
+          //   [74차] rep 합류 — 렙 글리프 ★ 는 상단 캐릭터 칩(★{ch.rep})과 동일 기호. 순서는
+          //   store.CHOICE_GAINS(렙→karma→₵) · 정산 로그와 같다.
           const gains = [
+            typeof ce.rep === 'number' && ce.rep ? '★ +' + ce.rep : null,
             typeof ce.karma === 'number' && ce.karma ? 'karma +' + ce.karma : null,
             typeof ce.nuyen === 'number' && ce.nuyen ? '₵ +' + ce.nuyen : null,
           ].filter(Boolean);
@@ -903,6 +906,13 @@ function Combat({ state, dispatch, view }) {
   const objByForce = p.hack < p.atk; // BLADE 등 물리 축 → 강습
   const sig = c.signal || { key: 'UP', sym: '🔵', label: 'MESH UP', desc: '' };
   const th = c.threat || { value: 0, cap: 8, alarm: false };
+  // [74차 juice] 표시층 전용 — 아래 3개는 "값이 바뀐 프레임에만" CSS 애니메이션을 1회 재생시키기
+  //   위한 리마운트 키다(React key 변경 = 새 엘리먼트 = animation 재시작). 상태·타이머·룰 전부 무관.
+  //   survHeld : 사수 라운드 진행도(표시식은 기존과 byte 동일) — 1라운드 버틸 때마다 칩 펄스.
+  //   objShown : 오브젝티브 잔여 방어도 — 차감될 때마다 숫자 롤 다운.
+  //   sig.key  : 시그널 다이 상태 — 전환될 때만 칩 플립.
+  const survHeld = c.survive ? Math.min(c.round - 1, c.survive) : 0;
+  const objShown = c.objective.done ? '✔' : c.objective.threshold;
   // 피격 플래시: dmg/miss 부유 텍스트가 있는 타일의 유닛을 flash [G7 juice]
   const hitTiles = {}; (c.floaters || []).forEach(f => { if (f.kind === 'dmg' || f.kind === 'miss') hitTiles[f.x + ',' + f.y] = true; });
 
@@ -963,7 +973,7 @@ function Combat({ state, dispatch, view }) {
       style={{ left: 'calc(' + pr.tx + ' * var(--tile))', top: 'calc(' + pr.ty + ' * var(--tile))' }} onClick={() => onTile(x, y)}>
       {cov ? <span className="cover-ic"><Glyph sprite={cov.type === 'full' ? 'px-barrel' : 'px-crate'} emoji={cov.type === 'full' ? '▩' : '▣'} cls="prop-spr" /></span> : null}
       {(c.objective.x === x && c.objective.y === y) ? <span className="obj-ic"><Glyph sprite="px-server" emoji="🖥" cls="prop-spr" /></span> : null}
-      {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge">{c.objective.done ? '✔' : c.objective.threshold}</span> : null}
+      {(c.objective.x === x && c.objective.y === y) ? <span className="obj-badge"><b key={'ob' + objShown} className="objnum">{objShown}</b></span> : null}
     </div>);
   }
   const units = c.units.filter(u => u.hp > 0).map(u => {
@@ -996,9 +1006,9 @@ function Combat({ state, dispatch, view }) {
       <div className="combat-top">
         {c.abyss ? <span className="rnd" style={{ color: 'var(--cyan)' }}>🌃 심연 웨이브 {c.abyss.wave}</span> : null}
         <span className="rnd">ROUND {c.round}</span>
-        <span className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
-        <span className="obj">🎯 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
-        {c.survive ? <span className="obj surv" title="이 인카운터는 생존형 — N라운드를 버티면 승리한다(차감/전멸 승리도 그대로 유효).">🛡 사수 {Math.min(c.round - 1, c.survive)}/{c.survive}R</span> : null}
+        <span key={'sg' + sig.key} className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
+        <span className="obj">🎯 방어도 {c.objective.done ? '돌파' : ''}<b key={'oh' + objShown} className="objnum">{objShown}</b></span>
+        {c.survive ? <span key={'sv' + survHeld} className="obj surv" title="이 인카운터는 생존형 — N라운드를 버티면 승리한다(차감/전멸 승리도 그대로 유효).">🛡 사수 {survHeld}/{c.survive}R</span> : null}
         <span>❤ {p.hp}/{p.maxHp}</span>
         <span className="spacer" />
         {p.status && p.status.stealth ? <span style={{color:'var(--cyan)'}}>👻 은신</span> : null}

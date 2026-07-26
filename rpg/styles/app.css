@@ -439,3 +439,83 @@ button { font-family: inherit; cursor: pointer; }
   .scene-anim { opacity: 1; transform: none; clip-path: none; }
   .choice { transition: none; }
 }
+
+/* ==========================================================================
+   [74차] 전투 juice 미세 폴리시 — 표시층 전용 (룰·판정·수치 전부 무변경)
+   ① 사수 라운드 펄스  ② 오브젝티브 숫자 롤 다운  ③ 시그널 다이 칩 플립
+   ④ 처치 스프라이트 산산조각 디졸브
+   재생 트리거는 전부 index.html 의 React key(값이 바뀐 프레임에만 리마운트)이며
+   JS 타이머·상태는 0. 애니메이션 속성은 transform/opacity 만(box-shadow 는 정적 위성점) →
+   합성 스레드에서 처리되어 모바일 60fps 유지. reduced-motion 은 §⑤ 에서 전면 차단.
+   ========================================================================== */
+
+/* ── ① 사수(survive) 라운드 펄스 — 1라운드 버틸 때마다 칩이 한 번 뛴다 (생존 체감) ── */
+.combat-top .obj.surv { animation: survTick .42s cubic-bezier(.34,1.4,.5,1); transform-origin: 50% 50%; }
+@keyframes survTick {
+  0%   { transform: scale(1); opacity: .7; }
+  38%  { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── ② 오브젝티브 차감 — 숫자 롤 다운(새 값이 위에서 굴러 내려온다) ──
+   부유 텍스트(.floater)는 위로 떠오르므로 방향이 서로 반대 → 두 연출이 겹쳐도 읽힘이 충돌하지 않는다. */
+.objnum { display: inline-block; font-weight: inherit; animation: objRoll .34s cubic-bezier(.2,.75,.3,1); }
+@keyframes objRoll {
+  0%   { opacity: 0; transform: translateY(-90%); }
+  45%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── ③ 시그널 다이 상태 전환 — 칩 플립(가로축 회전 1회) ──
+   SURGE 는 상시 글로우(surgeGlow)를 유지해야 하므로 플립을 앞에 얹고 글로우를 지연 재생한다. */
+.sigpill { animation: sigFlip .38s ease-out; transform-origin: 50% 50%; backface-visibility: hidden; }
+.sigpill.sig-SURGE { animation: sigFlip .38s ease-out, surgeGlow 1.1s ease-in-out .38s infinite; }
+@keyframes sigFlip {
+  0%   { opacity: .25; transform: perspective(240px) rotateX(-88deg) scale(.94); }
+  60%  { opacity: 1;   transform: perspective(240px) rotateX(12deg) scale(1.02); }
+  100% { opacity: 1;   transform: perspective(240px) rotateX(0) scale(1); }
+}
+
+/* ── ④ 처치 디졸브 강화 — 기존 글리치 페이드(dissolveOut) 위에 픽셀 파편 산란 2겹 ──
+   파편은 단일 요소 + 정적 다중 box-shadow(위성 사각점, border-radius 0 = 픽셀감)로 그리고
+   transform/opacity 만 애니메이션한다. steps() 로 프레임을 끊어 스프라이트가 부서지는 인상을 준다.
+   색은 currentColor(= .dissolve 의 --magenta) 계승 → 무대 팔레트와 따로 놀지 않는다. */
+.dissolve::before, .dissolve::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px;
+  margin: -1.5px 0 0 -1.5px; background: currentColor; pointer-events: none; z-index: 1;
+}
+/* 바깥 파편 — 크고 멀리 (본체 실루엣이 터져 나가는 축) */
+.dissolve::after {
+  box-shadow:
+    0 -13px 0 0 currentColor, 12px -8px 0 0 currentColor, -11px -9px 0 0 currentColor,
+    14px 2px 0 -0.5px currentColor, -14px 1px 0 -0.5px currentColor,
+    9px 11px 0 -0.5px currentColor, -8px 12px 0 -0.5px currentColor, 1px 14px 0 -1px currentColor;
+  animation: shardOut .5s steps(5, end) forwards;
+}
+/* 안쪽 파편 — 작고 촘촘, 살짝 늦게 (부서진 잔해가 뒤따르는 축) */
+.dissolve::before {
+  box-shadow:
+    -6px -5px 0 -0.5px currentColor, 6px -6px 0 -0.5px currentColor,
+    -7px 4px 0 -1px currentColor, 7px 5px 0 -1px currentColor,
+    0 -8px 0 -1px currentColor, 0 8px 0 -1px currentColor;
+  animation: shardIn .46s steps(4, end) .05s forwards;
+}
+@keyframes shardOut {
+  0%   { opacity: 0;   transform: scale(.3) rotate(0); }
+  14%  { opacity: .95; }
+  100% { opacity: 0;   transform: scale(2.3) rotate(9deg); }
+}
+@keyframes shardIn {
+  0%   { opacity: 0;   transform: scale(.4) rotate(0); }
+  18%  { opacity: .8; }
+  100% { opacity: 0;   transform: scale(1.7) rotate(-11deg); }
+}
+
+/* ── ⑤ reduced-motion — 74차 연출 전면 차단(값은 그대로 읽힌다) ── */
+@media (prefers-reduced-motion: reduce) {
+  .combat-top .obj.surv, .objnum, .sigpill, .sigpill.sig-SURGE,
+  .dissolve::before, .dissolve::after { animation: none !important; }
+  .objnum { opacity: 1; transform: none; }
+  .sigpill { transform: none; }
+  .dissolve::before, .dissolve::after { display: none; }   /* 파편 없이 즉시 제거 */
+}

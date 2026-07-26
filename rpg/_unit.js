@@ -2207,10 +2207,12 @@ var rn = pickDelta('a2-d1-scavenge', 'choice', 1, 0, 'nuyen', true);
 ok('369. 재클리어 farming 차단: 대화 재통과해도 karma/₵ 델타 0 (missionsDone 포함 → firstRun false)',
   rk.delta === 0 && rn.delta === 0 &&
   KARMA_GIVE.every(function (g) { return pickDelta(g.id, 'choice', g.give, g.sib, 'karma', true).delta === 0; }));
-ok('370. 재클리어 시 조용한 무시 금지 — 정산 로그에 "재클리어 … 미지급" 1줄이 남는다',
+//   [74차 개정] 형제 선택지(rep 4 선언)도 이제 같은 고지를 받는다 — 73차엔 rep 이 표 밖이라
+//   0줄이었다. '지급 선언이 있는 모든 선택지는 정확히 1줄' 이 74차 통일 후의 계약이다.
+ok('370. 재클리어 시 조용한 무시 금지 — 지급 선언 선택지는 정산 로그에 "재클리어 … 미지급" 정확히 1줄',
   !!rk.state.banner && Array.isArray(rk.state.banner.lines) &&
   rk.state.banner.lines.filter(function (l) { return /재클리어 — 대화 선택 보상 미지급/.test(l); }).length === 1 &&
-  rk.sibling.banner.lines.filter(function (l) { return /재클리어 — 대화 선택 보상 미지급/.test(l); }).length === 0);
+  rk.sibling.banner.lines.filter(function (l) { return /재클리어 — 대화 선택 보상 미지급/.test(l); }).length === 1);
 ok('371. 지급은 flag/라우팅과 독립 — 재클리어에서도 서사 flag·settle 라우팅은 그대로 (분기 소실 없음)',
   rk.state.save.flags.ruinDeterrent === true && rk.state.dialogue.nodeId === 'settle' &&
   rn.state.save.flags.ruinExitFund === true && rn.state.dialogue.nodeId === 'settle');
@@ -2251,6 +2253,107 @@ ok('377. UI 태그 실재: 지출 태그(◈ … 지출) · 지급 태그(gain-t
   /cost-tag/.test(uiFs) && /gain-tag/.test(uiFs) && /재클리어 미지급/.test(uiFs) &&
   /ce\.spendNuyen/.test(uiFs) && /ce\.spendKarma/.test(uiFs) &&
   /'₵ \+' \+ ce\.nuyen/.test(uiFs) && /'karma \+' \+ ce\.karma/.test(uiFs));
+
+// ======  74차 — 대화 effect.rep 지급 로그 통일 (73차 잔여: 실지급 O · 로그 X)  ==============
+console.log('\n== [74차] 대화 선택지 rep 지급 로그 — karma/₵ 와 동일 경로 통일 ==');
+
+// ① 전수 스캔 — effect.rep 을 선언한 선택지 집합(데이터가 정본, 하드코딩 목록 금지).
+var REP_GIVES = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm || !mm.dialogue) return;
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (cc, ci) {
+      if (cc.effect && typeof cc.effect.rep === 'number' && cc.effect.rep)
+        REP_GIVES.push({ id: reg.id, node: nid, idx: ci, n: cc.effect.rep });
+    });
+  });
+});
+function repRun(g, replay) {
+  return S.dialogueChoose(atNode(g.id, g.node, 'CIPHER', function (st) {
+    if (replay) st.save.missionsDone = [g.id];
+  }), g.idx);
+}
+function bannerLines(st) {
+  if (!st.banner) return [];
+  return Array.isArray(st.banner.lines) ? st.banner.lines : (st.banner.text ? [st.banner.text] : []);
+}
+ok('378. effect.rep 선언 전수 = ' + REP_GIVES.length + '건 (73차까지 전량 무로그) · 모두 지급 노드로 라우팅',
+  REP_GIVES.length === 12 && REP_GIVES.every(function (g) {
+    return CAMP.missionData(g.id).dialogue.nodes[g.node].choices[g.idx].goto === 'settle';
+  }));
+
+// ② 최초 완주 — 지급 수치 무변경 + karma/₵ 와 동일한 ★ 태그 1줄 + 정산 로그 맨 앞 합류.
+var repFail = REP_GIVES.filter(function (g) {
+  var st = repRun(g, false), ls = bannerLines(st);
+  return !(st.save.character.rep >= g.n && ls[0] === '◈ ★ +' + g.n + ' (→' + g.n + ')' && ls.length > 1);
+}).map(function (g) { return g.id + '/' + g.node + '#' + g.idx; });
+ok('379. rep 지급 ' + REP_GIVES.length + '건 전량 로그 실동: 배너 첫 줄이 "◈ ★ +n (→n)" · 정산 로그 앞에 합류 (누락 '
+  + repFail.length + '건)', repFail.length === 0);
+ok('380. 지급 수치 무변경 — 로그 통일이 rep 델타를 건드리지 않는다 (73차 회귀: d2 +4 · ch03 +10)',
+  repRun({ id: 'a2-d2-last-signal', node: 'choice', idx: 0 }, false).save.character.rep >= 4 &&
+  /^◈ ★ \+10 \(→10\)$/.test(bannerLines(repRun({ id: 'ch03-martial-night', node: 'choice', idx: 1 }, false))[0]));
+
+// ③ 재클리어 — 취소선 고지(로그 1줄) + 델타 0. karma/₵ 와 완전 동일한 firstRun 가드.
+var repReplayFail = REP_GIVES.filter(function (g) {
+  var ls = bannerLines(repRun(g, true));
+  return !(ls.filter(function (l) { return l === '↻ 재클리어 — 대화 선택 보상 미지급 (★ +0)'; }).length === 1 &&
+           ls.filter(function (l) { return /^◈ ★ \+/.test(l); }).length === 0);
+}).map(function (g) { return g.id + '/' + g.node + '#' + g.idx; });
+ok('381. 재클리어 고지 ' + REP_GIVES.length + '건 전량: "↻ 재클리어 … 미지급 (★ +0)" 1줄 · ★ 지급줄 0 (누락 '
+  + repReplayFail.length + '건)', repReplayFail.length === 0);
+
+// ④ 재클리어 고지의 자원 목록은 '선언된 자원'만 — rep 합류로 karma/₵ 고정 문구를 쓸 수 없게 됐다.
+//    (73차엔 선언과 무관하게 항상 '(karma/₵ +0)'. 74차는 선언 집합으로 좁혀 정직하게 표기.)
+function replayNotice(id, node, idx) {
+  return bannerLines(repRun({ id: id, node: node, idx: idx }, true)).filter(function (l) {
+    return /^↻ 재클리어 — 대화 선택/.test(l); })[0];   // settle 정산의 '축소 보상' 줄과 구분
+}
+ok('382. 재클리어 고지가 선언 자원만 나열: rep 단독 "(★ +0)" · karma 단독 "(karma +0)" · ₵ 단독 "(₵ +0)"',
+  replayNotice('a2-d2-last-signal', 'choice', 0) === '↻ 재클리어 — 대화 선택 보상 미지급 (★ +0)' &&
+  replayNotice('a2-d2-last-signal', 'choice', 1) === '↻ 재클리어 — 대화 선택 보상 미지급 (karma +0)' &&
+  replayNotice('a2-d1-scavenge', 'choice', 1) === '↻ 재클리어 — 대화 선택 보상 미지급 (₵ +0)');
+
+// ⑤ 지급 미선언 선택지는 여전히 무로그 — 통일이 '모든 선택지에 잡음'을 뿌리지 않는다.
+//    (ch03 잠행 = effect.wantedZero 만 선언 — rep/karma/₵ 어느 것도 없는 순수 서사 선택지)
+var quiet = repRun({ id: 'ch03-martial-night', node: 'choice', idx: 0 }, false);
+var quietR = repRun({ id: 'ch03-martial-night', node: 'choice', idx: 0 }, true);
+ok('383. 지급 미선언 선택지는 지급/재클리어 줄 0 (조용함이 정상인 경로 무변경) · 정산 로그는 그대로',
+  bannerLines(quiet).filter(function (l) { return /^◈ ★|^↻ 재클리어 — 대화 선택/.test(l); }).length === 0 &&
+  bannerLines(quietR).filter(function (l) { return /^◈ ★|^↻ 재클리어 — 대화 선택/.test(l); }).length === 0 &&
+  bannerLines(quiet).length > 0 && quiet.dialogue.nodeId === 'settle');
+
+// ⑥ 서사 flag·라우팅 독립 — 로그 통일이 분기를 건드리지 않는다(재클리어에서도 flag 그대로).
+var repFlagged = repRun({ id: 'a2-d2-last-signal', node: 'choice', idx: 0 }, true);
+ok('384. rep 재클리어에서도 서사 flag(ruinSealed·harvesterChoice)·settle 라우팅 무손상 (분기 소실 0)',
+  repFlagged.save.flags.ruinSealed === true && repFlagged.save.flags.harvesterChoice === 'destroy' &&
+  repFlagged.dialogue.nodeId === 'settle');
+
+// ⑦ UI 계약 핀 — ★ 태그와 재클리어 취소선이 표시층에 실재(사문 아님).
+ok('385. UI 태그 실재: 선택지 지급 태그에 ★ 합류(★ +n) · 재클리어 미지급 취소선(.gain-tag.spent line-through)',
+  /'★ \+' \+ ce\.rep/.test(uiFs) && /gain-tag\.spent[^}]*line-through/.test(uiFs) &&
+  /재클리어 미지급/.test(uiFs));
+
+// ⑧ 74차 juice — 전투 연출은 표시층 전용. CSS 실재 + reduced-motion 차단 + transform/opacity 한정.
+var cssFs = require('fs').readFileSync(__dirname + '/styles/app.css', 'utf8');
+var juice74 = cssFs.slice(cssFs.indexOf('[74차] 전투 juice'));
+ok('386. juice CSS 실재: 사수 펄스(survTick) · 오브젝티브 롤다운(objRoll) · 시그널 플립(sigFlip) · 파편(shardOut/shardIn)',
+  /@keyframes survTick/.test(cssFs) && /@keyframes objRoll/.test(cssFs) &&
+  /@keyframes sigFlip/.test(cssFs) && /@keyframes shardOut/.test(cssFs) && /@keyframes shardIn/.test(cssFs) &&
+  /sigFlip .38s ease-out, surgeGlow/.test(cssFs));
+ok('387. juice 재생 트리거는 React key(값 변화 프레임에만 1회) — JS 타이머/상태 0',
+  /key=\{'sv' \+ survHeld\}/.test(uiFs) && /key=\{'sg' \+ sig\.key\}/.test(uiFs) &&
+  /key=\{'ob' \+ objShown\}/.test(uiFs) && /key=\{'oh' \+ objShown\}/.test(uiFs));
+ok('388. juice reduced-motion 전면 차단 (74차 4종 전부 prefers-reduced-motion 블록에 등재)',
+  /prefers-reduced-motion/.test(juice74) &&
+  /\.combat-top \.obj\.surv, \.objnum, \.sigpill, \.sigpill\.sig-SURGE,\s*\n\s*\.dissolve::before, \.dissolve::after \{ animation: none !important; \}/.test(juice74));
+//    키프레임 본문만 떼어 검사한다(@keyframes … 부터 열 0 의 닫는 중괄호까지 — 퍼센트 블록은 한 줄).
+var kfBodies74 = juice74.match(/@keyframes\s+\w+\s*\{[\s\S]*?\n\}/g) || [];
+ok('389. juice 키프레임 ' + kfBodies74.length + '종의 애니메이션 속성이 transform/opacity 한정 (레이아웃/페인트 유발 0 — 모바일 60fps)',
+  kfBodies74.length === 5 &&
+  ['width','height','margin','padding','top:','left:','right:','bottom:','filter','box-shadow','clip-path','background']
+    .every(function (prop) {
+      return kfBodies74.every(function (kf) { return kf.indexOf(prop) < 0; });
+    }));
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
