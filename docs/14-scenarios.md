@@ -38,7 +38,7 @@
 | S03 | 스트리트 라이징 | Bloc 1 + Ghost 다수 + NPC Bloc 4. 하층 혁명. | ✅ 구현 |
 | S04 | 계엄의 밤 | 공권력 7. 경찰 NPC 순찰·구출 퀘스트. | ◐ 부분 구현 (레거시 챕터 3 미배선) |
 | S05 | 골드러시 | 경제 과열. 8라운드 스프린트. | ◐ 부분 구현 (세밀 경제 룰 No-op) |
-| S06 | 마켓 크래시 | 전 주가 5. 공매도·붕괴 드라마. | ◐ 부분 구현 (재건왕/청산자 타이틀 No-op) |
+| S06 | 마켓 크래시 | 전 주가 5. 공매도·붕괴 드라마. | ✅ 구현 (재건왕/청산자 타이틀 v6.46 하이라이트 배선 — 자산 보너스분만 No-op) |
 
 > **S07/S08 관련 주의**: 게임에 **S07·S08 시나리오는 존재하지 않는다**. `I-S07`(속성 절정)·`I-S08`(이사회 장악)은 **업적 ID**(`docs/16`)이며, `docs/19`·`docs/narratives/*`의 "시나리오 S07 (정식 도전)"은 narrative 생성기의 비공식 라벨(정식 11×11 도전판을 뜻함)로 실제 시나리오 정의가 아니다. 원전 미구현 원안은 §미구현 원안 절 참조.
 
@@ -239,7 +239,7 @@
 
 ### 웹 구현 상태 — ◐ 부분 구현
 - **배선 완료(v6.22 심층 룰 배선)**: 뉴스 ±50% 방향 배율 · 첫 2R 거래 동결 · 회복 배당 2배 · 저가 정산 2배 · 스캔들 선삽입.
-- **미배선(No-op)**: 원전 "특수 승리 루트" — **재건왕(RECONSTRUCTOR 타이틀)** / **청산자(2블록 파산 유도 렙 +10)**. 파산 복구/유도 조건부 ★ 타이틀 + 렙/자산 보너스는 전용 점수·타이틀 추적 시스템 의존이라 미배선.
+- **배선(v6.46)**: 원전 "특수 승리 루트" — **재건왕**(붕괴 바닥→주가 10 복구, ★+5) / **청산자**(Ghost가 2블록 파산 유도, ★+10)를 기존 하이라이트 시스템으로 경량 배선 (crashBottomThresh 1·reconstructThresh 10·liquidatorBlocs 2, scenarioRule 게이트). 잔여 No-op: 자산 +5 보너스분(하이라이트에 자산 통화 부재 — 창작 배제) · "복구한 플레이어" 귀속은 자사 블록 좌석 근사(엔진에 기여자 신호 부재, 코드 주석 명시).
 
 ### 튜닝값과 근거 (실측 S06 n=50, docs/23 §3)
 - ghost **54%**, 평균 **8.30R**, **자산/렙 경로 46:46(전 시나리오 최균형)**, 공매도 56%, M&A 0.58.
@@ -392,7 +392,7 @@
 | S05 실측 ghost38%·6.88R·시간종료28%; CHANGELOG "51/49" 편차 | docs/23 §3·§3 note |
 | S06 heat6·주가5·₵−3·인플−1·스캔들선삽입·저가정산2배 | `SCENARIOS.S06` 필드(`startHeat`/`startStock`/`startCreditAll`/`startInfluenceAll`/`startScandalEach`/`shortLowPriceMult`) |
 | S06 blocAssetBonus30·뉴스±50%·거래동결2R·회복배당2배 | `SCENARIOS.S06` 필드(`blocAssetBonus`/`newsStockUpMult`/`newsStockDownMult`/`tradeFreezeRounds`/`divRecoveryMult`/`divRecoveryThresh`) |
-| S06 재건왕/청산자 타이틀 No-op | `SCENARIOS.S06` No-op 주석 |
+| S06 재건왕/청산자 타이틀 배선 (v6.46, 자산분만 No-op) | `HIGHLIGHT_DEFS.reconstructor/liquidator` + `SCENARIOS.S06` 임계 3종 |
 | S06 실측 ghost54%·8.30R·자산/렙46:46; v6.22 33→53% 회복 | docs/23 §3; 커밋 16e2714 |
 | 종료 선언 라운드(선언→유예1R→확정, 5R가드, M&A즉시확정) | `checkVictoryByPoints`/`state.meta.victoryDeclaration` 처리부; CHANGELOG v6.12 |
 | roundLimit 초과 시 checkVictoryByPoints 자동 승리 | `checkVictoryByPoints` 함수 |
