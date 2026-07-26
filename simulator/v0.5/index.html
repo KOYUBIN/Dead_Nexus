@@ -3868,22 +3868,28 @@ function reducer(state, action) {
     case 'NEGOTIATE_PHASE': {
       let s = { ...state };
       if (typeof negoApply !== 'function' || typeof negoBuildCandidates !== 'function') return s;  // rules_module 미로드 (E13 배너 고지)
-      const players = s.players, round = s.meta.round;
+      const round = s.meta.round;
       // v6.51 (E3): 캡 단일 소스 = rules_module.RULES_NEGO_MAX (인간 PROPOSE_NEGOTIATION 과 동일 값)
       const NEGO_MAX = (typeof RULES_NEGO_MAX === 'number') ? RULES_NEGO_MAX : 2;   // 과밀 방지 · 밴드 튜닝 노브 (라운드당 봇 제안 상한)
       let fired = 0;
-      for (let from = 0; from < players.length && fired < NEGO_MAX; from++) {
-        const fromP = players[from];
+      // v6.52: 후보 생성 = 최신 s.players (stale 스냅샷 → 보유량 초과 give = 음수 자원 경로). 같은 쌍 재스왑 차단(핑퐁 왕복 방지).
+      const swappedPairs = new Set();
+      for (let from = 0; from < s.players.length && fired < NEGO_MAX; from++) {
+        const fromP = s.players[from];
         // 봇 발기자만 (인간 seat 은 UI 경로) · NPC/패배 제외
         if (fromP.defeated || fromP.isNpc || fromP.kind === 'human') continue;
         // 대상: 봇 상대만 (봇↔봇). 인간·NPC·패배 제외 → 인간은 UI 로만 협상 도달
-        const others = players.map((pp, i) => ({ pp, i })).filter(({ pp, i }) => i !== from && !pp.defeated && !pp.isNpc && pp.kind !== 'human');
+        const others = s.players.map((pp, i) => ({ pp, i })).filter(({ pp, i }) => i !== from && !pp.defeated && !pp.isNpc && pp.kind !== 'human');
         if (others.length === 0) continue;
         const cands = [];
         for (const { pp: toP, i: to } of others) cands.push(...negoBuildCandidates(fromP, from, toP, to, round));
-        if (cands.length === 0) continue;
-        cands.sort((a, b) => b.value - a.value);
-        s = negoApply(s, cands[0]);   // 발생 로그 + 계측 (수락/거절 모두 기록)
+        const usable = cands.filter(c => c.type !== 'swap' || !swappedPairs.has(Math.min(c.from, c.to) + ',' + Math.max(c.from, c.to)));
+        if (usable.length === 0) continue;
+        usable.sort((a, b) => b.value - a.value);
+        const before = s;
+        s = negoApply(s, usable[0]);   // 발생 로그 + 계측 (수락/거절 모두 기록)
+        if (usable[0].type === 'swap' && s !== before && ((s.meta.negoStats || {}).swaps || 0) > ((before.meta.negoStats || {}).swaps || 0))
+          swappedPairs.add(Math.min(usable[0].from, usable[0].to) + ',' + Math.max(usable[0].from, usable[0].to));
         fired++;
       }
       return s;

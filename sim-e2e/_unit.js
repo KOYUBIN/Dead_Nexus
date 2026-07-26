@@ -226,6 +226,10 @@ function tests(){
   ok('S06 blocAsset=base+adj+30 (iter2 방향 보정)',g6.blocAsset===100+adj6+SR(s6,'blocAssetBonus',0)&&SR(s6,'blocAssetBonus',0)===30,`got ${g6.blocAsset} bonus ${SR(s6,'blocAssetBonus',0)}`);
   // ---- v6.22: S06 심층 룰 배선 (뉴스 배율·거래 동결·회복 배당) ----
   const R=window.reducer, SND=window.scenNewsStockDelta;
+  // v6.53 [3차 감사 #26]: 결정론 헬퍼 — Math.random 상수 스텁(호출부 한정 복원 보장).
+  //   0.99 고정: 확률 게이트(suppression 0.3·leaderBreak 0.6·botProb 0.5)를 전부 "스킵" 쪽으로
+  //   고정해 라운드 파이프라인을 결정론화한다 (기존 seedRun 패턴의 상수판).
+  const withRand=(v,fn)=>{const real=Math.random;Math.random=()=>v;try{return fn();}finally{Math.random=real;}};
   // 시나리오 룰 키 존재
   ok('S06 newsStockUpMult=0.5',SR(s6,'newsStockUpMult',1)===0.5);
   ok('S06 newsStockDownMult=1.5',SR(s6,'newsStockDownMult',1)===1.5);
@@ -258,10 +262,19 @@ function tests(){
   // 회복 배당 배수: 주가 합계 임계 도달 시 divMult 적용 (COLLECT_INCOME divMult 로직 항등 검증)
   const stockSumLow=Object.values(s6.stocks).reduce((a,v)=>a+v,0); // 5×5=25 (붕괴 — 미도달)
   ok('S06 붕괴 시작 주가합=25 (<50 → 배당 미배수)',stockSumLow===25,`got ${stockSumLow}`);
-  const s6recov={...s6,stocks:Object.fromEntries(Object.keys(s6.stocks).map(k=>[k,11]))}; // 5×11=55 (회복)
-  const recSum=Object.values(s6recov.stocks).reduce((a,v)=>a+v,0);
-  const recMult=(recSum>=SR(s6recov,'divRecoveryThresh',Infinity))?SR(s6recov,'divRecoveryMult',1):1;
-  ok('S06 회복 주가합≥50 → 배당 배수=2',recSum>=50&&recMult===2,`sum ${recSum} mult ${recMult}`);
+  // v6.53 [3차 감사 #26 ⑦]: 동어반복 교정 — 기존 테스트는 divMult 를 프로덕션 식 그대로 재계산해
+  //   자기검증이었다. 교체: COLLECT_INCOME 를 실제 실행하고 배당 수령액을 수동 계산 리터럴로 핀.
+  //   픽스처: map 비움(구역·건물·확장 노이즈 0) · P0(CARBON) 보유 자사 CARBON 10주 + VANTA 4주 · 트랙 없음.
+  //   저가(합 5×5=25, 배수 1): floor(10×0.5)+floor(4×0.5) = 5+2 = ₵+7
+  //   회복(합 11×5=55, 배수 2): floor(10×0.5×2)+floor(4×0.5×2) = 10+4 = ₵+14
+  const s6divFix=(prices)=>({...s6,stocks:Object.fromEntries(Object.keys(s6.stocks).map(k=>[k,prices])),map:{},
+    players:s6.players.map((p,i)=>i===0?{...p,tracks:{},pool:{},stocks:{CARBON:10,VANTA:4}}:p)});
+  const s6divGain=(st)=>{const r=withRand(0.99,()=>R(st,{type:'COLLECT_INCOME'}));return r.players[0].resources.credit-st.players[0].resources.credit;};
+  ok('S06 붕괴(합25) 배당 무배수 — COLLECT_INCOME 실측 ₵+7',s6divGain(s6divFix(5))===7,`got ${s6divGain(s6divFix(5))}`);
+  ok('S06 회복(합55) 배당 2배 — COLLECT_INCOME 실측 ₵+14',s6divGain(s6divFix(11))===14,`got ${s6divGain(s6divFix(11))}`);
+  // 격리: 동일 픽스처를 S01 로 옮기면(임계 폴백 Infinity) 합 55 여도 무배수 ₵+7
+  const s1divFix={...s6divFix(11),meta:{...s6.meta,scenario:'S01'}};
+  ok('S01 동일 픽스처(합55) 배당 무배수 ₵+7 (S06 전용 게이트)',s6divGain(s1divFix)===7,`got ${s6divGain(s1divFix)}`);
   // ---- S01 unchanged (fallbacks) ----
   const s1=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
   const g1=GVG(s1);
@@ -1058,6 +1071,235 @@ function tests(){
   ok('V13ⓐ 4주 자동 매수 → 최저가 블록 주가+1(상한20)',mb4.stocks[cheap]===Math.min(20,mbS.stocks[cheap]+1)&&mb4.players[0].stocks[cheap]===(mbP.stocks[cheap]||0)+4,`${cheap} ${mbS.stocks[cheap]}→${mb4.stocks[cheap]}`);
   const mb2=AEFF(mbS,0,{stock_buy_any:2},'main',null);
   ok('V13ⓐ 2주 매수는 무충격',mb2.stocks[cheap]===mbS.stocks[cheap]);
+  // ============================================================
+  // v6.53 [3차 감사 #26]: 시뮬 유닛 커버리지 공백 보강
+  //   ① 승리 파이프라인(applyVictoryDeclaration/checkInstantVictory)
+  //   ② M&A 엔진(declare/resolve/방어 모달 5종/지분 분기)
+  //   ③ 협상(NEGOTIATE_PHASE 봇 경로·negoEvalAccept·negoApply)
+  //   ④ insertScandal 항등·settleShortPositions 전체 흐름
+  //   ⑤ assetValue 구역·건물 가산 분기
+  //   ⑥ 리듀서 핵심 액션(EXECUTE_TURN 이동/레이드·DECLARE_MNA·NEXT_ROUND·카드 효과)
+  //   ⑦ S02 정체성 룰 동작 어서션 (값 어서션 → 배선 실증)
+  //   주의: 감사 목록의 DECLARE_VICTORY/USE_CARD 액션은 리듀서에 실존하지 않음(39액션 목록 밖 명칭)
+  //   → 실제 대응 경로인 승리 선언 파이프라인(NEXT_ROUND 내 applyVictoryDeclaration)과
+  //     카드 사용 경로(EXECUTE_TURN→executeCards→applyEffect)로 봉합.
+  // ============================================================
+  const AVD=window.applyVictoryDeclaration, CKIV=window.checkInstantVictory,
+        EDM=window.euro_declareMna, ERM=window.euro_resolveMna, EDB=window.euro_declareMnaBots,
+        AMD=window.euro_applyMnaDefenseChoice, AMDD=window.euro_applyMnaDefenseDefault,
+        NEA=window.negoEvalAccept, EEQ=window.euro_equityPct;
+  ok('CV53 fns exposed',[AVD,CKIV,EDM,ERM,EDB,AMD,AMDD,NEA,EEQ].every(f=>typeof f==='function'));
+  // ---- ① 승리 파이프라인: 선언 → 유예 → 확정 ----
+  // sg = S01 solo ghost BLADE (1g3b) — GVG(sg).ghostRepOnly=48 (기존 gv13 핀과 동일 구성)
+  const vGoals=GVG(sg);
+  const sv1={...sg,meta:{...sg.meta,round:6,raidsThisGame:{}},players:sg.players.map((p,i)=>i===0?{...p,resources:{...p.resources,rep:999}}:p)};
+  const sv1r=AVD(sv1);
+  ok('VP 선언: R6 임계 도달 → victoryDeclaration {idx:0, round:6}',!!sv1r.meta.victoryDeclaration&&sv1r.meta.victoryDeclaration.idx===0&&sv1r.meta.victoryDeclaration.round===6,JSON.stringify(sv1r.meta.victoryDeclaration));
+  ok('VP 선언: declarationCounts 증가 + 📢 로그',sv1r.meta.declarationCounts[0]===1&&sv1r.log.slice(-3).some(l=>String(l.message).indexOf('📢')>=0));
+  ok('VP 선언: 선언만으로는 gameOver 아님 (유예 1R)',!sv1r.meta.gameOver);
+  const sv2={...sv1,meta:{...sv1.meta,declarationCounts:{0:2}}};
+  ok('VP 선언 캡: 게임당 2회 소진 → 재선언 없음(참조 동일)',AVD(sv2)===sv2);
+  const sv0={...sv1,meta:{...sv1.meta,round:4}};
+  ok('VP 선언: R<5 가드 → 항등(참조 동일)',AVD(sv0)===sv0);
+  const sv3={...sg,meta:{...sg.meta,round:7,raidsThisGame:{},victoryDeclaration:{idx:0,route:'repOnly',reason:'x',round:6}}};
+  const sv3r=AVD(sv3);
+  ok('VP 해제: 선언자 조건 이탈 → 선언 해제 + 견제 성공 로그',sv3r.meta.victoryDeclaration===null&&sv3r.log.slice(-2).some(l=>String(l.message).indexOf('종료 선언 해제')>=0),JSON.stringify(sv3r.meta.victoryDeclaration));
+  const sv4={...sv1,meta:{...sv1.meta,round:7,victoryDeclaration:{idx:0,route:'repOnly',reason:'Ghost 승리 (평판)',round:6}}};
+  const sv4r=CKIV(sv4);
+  ok('VP 확정: R6 선언 → R7 유지 → gameOver winner 0',sv4r.meta.gameOver===true&&sv4r.meta.winner===0&&String(sv4r.meta.winReason).indexOf('종료 선언 확정')>=0,sv4r.meta.winReason);
+  const sv5={...sv1,meta:{...sv1.meta,round:6,victoryDeclaration:{idx:0,route:'repOnly',reason:'x',round:6}}};
+  ok('VP 확정 게이트: 선언 라운드 == 현재 라운드 → 미확정',!CKIV(sv5).meta.gameOver);
+  ok('VP 즉시승리 금지: 신규 도달(선언 없음)은 checkInstantVictory 로 즉시 승리 불가',!CKIV(sv1).meta.gameOver);
+  const sv6={...sv1,meta:{...sv1.meta,round:4}};
+  ok('VP R<5: checkInstantVictory 항등(참조 동일)',CKIV(sv6)===sv6);
+  const sv7={...sg,meta:{...sg.meta,round:2,acquisitions:{1:['AXIOM','HELIX']}}};
+  const sv7r=CKIV(sv7);
+  ok('VP M&A 즉시 승리: 2블록 인수 → 5R 가드 우회 확정',sv7r.meta.gameOver===true&&sv7r.meta.winner===1&&String(sv7r.meta.winReason).indexOf('M&A 승리')>=0,sv7r.meta.winReason);
+  // 통합: NEXT_ROUND 가 선언을 남기고, 다음 라운드 checkInstantVictory 가 확정 (실배선 경로)
+  const svi={...sg,meta:{...sg.meta,round:6,raidsThisGame:{}},players:sg.players.map((p,i)=>i===0?{...p,resources:{...p.resources,rep:100}}:p)};
+  const svir=withRand(0.99,()=>R(svi,{type:'NEXT_ROUND'}));
+  ok('VP 통합: NEXT_ROUND(R6) → 선언 기록·round 7·미확정',svir.meta.round===7&&!!svir.meta.victoryDeclaration&&svir.meta.victoryDeclaration.idx===0&&svir.meta.victoryDeclaration.round===6&&!svir.meta.gameOver,JSON.stringify(svir.meta.victoryDeclaration));
+  const svic=CKIV(svir);
+  ok('VP 통합: R7 checkInstantVictory → 종료 선언 확정',svic.meta.gameOver===true&&svic.meta.winner===0&&String(svic.meta.winReason).indexOf('종료 선언 확정')>=0,svic.meta.winReason);
+  // ---- ② M&A 엔진 ----
+  // (a) 선언 게이트 통과 + 리듀서 DECLARE_MNA (S02: float 3 → 14/(10+14+3)=51%)
+  const m2d={...m2,players:m2.players.map((p,i)=>i===0?{...p,stocks:{...p.stocks,HELIX:14}}:p)};
+  ok('MNA check ok: 지분 51% 도달 (S02 float 3)',MNAC(m2d,0,'HELIX').ok===true&&EEQ(m2d,0,'HELIX')===51,JSON.stringify(MNAC(m2d,0,'HELIX')));
+  const md1=R(m2d,{type:'DECLARE_MNA',playerIdx:0,bloc:'HELIX'});
+  ok('MNA 선언: pendingMna 설정 + 카운트/라운드 트래킹',!!md1.meta.pendingMna&&md1.meta.pendingMna.attacker===0&&md1.meta.pendingMna.target==='HELIX'&&md1.meta.mnaCount[0]===1&&md1.meta.mnaLastRound[0]===m2d.meta.round,JSON.stringify(md1.meta.pendingMna));
+  ok('MNA 선언 로그: 적대적 인수 선언',md1.log.slice(-3).some(l=>String(l.message).indexOf('적대적 인수 선언')>=0));
+  const md2=R(md1,{type:'DECLARE_MNA',playerIdx:0,bloc:'AXIOM'});
+  ok('MNA 중복 선언 거부: 진행 중 M&A → 거부 로그·카운트 불변',md2.meta.pendingMna.target==='HELIX'&&md2.meta.mnaCount[0]===1&&String((md2.log[md2.log.length-1]||{}).message).indexOf('거부')>=0);
+  ok('MNA check 거부: 횟수 소진(3/3)',MNAC({...m2d,meta:{...m2d.meta,mnaCount:{0:3}}},0,'HELIX').ok===false&&String(MNAC({...m2d,meta:{...m2d.meta,mnaCount:{0:3}}},0,'HELIX').reason).indexOf('소진')>=0);
+  ok('MNA check 거부: 지분 미달(<51%)',(c=>c.ok===false&&String(c.reason).indexOf('지분')>=0)(MNAC(m2,0,'HELIX')));
+  // 쿨다운 배선: mnaNoCooldown(S02)=게이트 무시 · false 면 2R 대기 사유
+  const mcd={...m2d,meta:{...m2d.meta,mnaLastRound:{0:m2d.meta.round-1}}};
+  ok('MNA 쿨다운: S02(mnaNoCooldown) → 직전 R 선언에도 ok',MNAC(mcd,0,'HELIX').ok===true);
+  ok('MNA 쿨다운: 무쿨다운 해제 시 2R 대기 거부',(c=>c.ok===false&&String(c.reason).indexOf('대기')>=0)(MNAC({...mcd,meta:{...mcd.meta,mnaNoCooldown:false}},0,'HELIX')));
+  // (b) euro_resolveMna — 상호파괴(₵<10) → 인수 완료 (자산 30% 흡수·acquiredBy·스캔들·구역 이전)
+  const mhIdx=md1.players.findIndex(p=>p.role==='bloc'&&p.specific==='HELIX');
+  const zonesOf=(st,idx)=>Object.values(st.map).filter(c=>c.owner===idx).length;
+  const mrs={...md1,players:md1.players.map((p,i)=>i===mhIdx?{...p,kind:'bot',resources:{...p.resources,credit:4}}:p)};
+  const mrsZ0=zonesOf(mrs,0),mrsZh=zonesOf(mrs,mhIdx);
+  const mr1=ERM(mrs);
+  ok('MNA resolve(상호파괴→인수): 주가 -3 (8→5)',mr1.stocks.HELIX===5,`got ${mr1.stocks.HELIX}`);
+  ok('MNA resolve(인수): acquiredBy 마커 + acquisitions 기록 + pendingMna 소거',mr1.players[mhIdx].acquiredBy===0&&JSON.stringify(mr1.meta.acquisitions[0])==='["HELIX"]'&&mr1.meta.pendingMna===null);
+  ok('MNA resolve(인수): 크레딧 30% 흡수 (₵4→1 이전)',mr1.players[mhIdx].resources.credit===3&&mr1.players[0].resources.credit===mrs.players[0].resources.credit+1,`tgt ${mr1.players[mhIdx].resources.credit} atk +${mr1.players[0].resources.credit-mrs.players[0].resources.credit}`);
+  ok('MNA resolve(인수): 구역 30% 이전 (floor)',zonesOf(mr1,0)===mrsZ0+Math.floor(mrsZh*0.3)&&zonesOf(mr1,mhIdx)===mrsZh-Math.floor(mrsZh*0.3),`0:${zonesOf(mr1,0)} h:${zonesOf(mr1,mhIdx)}`);
+  ok('MNA resolve(인수): 피인수 덱 스캔들 오염',(mr1.players[mhIdx].discard||[]).includes('SCANDAL')&&(mr1.meta.scandalsThisGame||{})[mhIdx]===1);
+  ok('MNA resolve(인수 1곳): 즉시 승리 아님 (2곳 임계)',!mr1.meta.gameOver);
+  // (c) euro_resolveMna — 재매입 방어(₵≥10) → 지분 50%<51 → 방어 성공 (강제 매도 + 주가 +2)
+  const mrb={...md1,players:md1.players.map((p,i)=>i===mhIdx?{...p,kind:'bot',resources:{...p.resources,credit:20}}:p)};
+  const mr2=ERM(mrb);
+  ok('MNA resolve(재매입→방어 성공): 대상 ₵-10',mr2.players[mhIdx].resources.credit===10,`got ${mr2.players[mhIdx].resources.credit}`);
+  ok('MNA resolve(방어 성공): 공격자 재매입1+판정매도2 = 14→11주 · ₵+24 환급',mr2.players[0].stocks.HELIX===11&&mr2.players[0].resources.credit===mrb.players[0].resources.credit+24,`held ${mr2.players[0].stocks.HELIX} ₵+${mr2.players[0].resources.credit-mrb.players[0].resources.credit}`);
+  ok('MNA resolve(방어 성공): 주가 +2 (8→10) · pendingMna 소거 · 인수 없음',mr2.stocks.HELIX===10&&mr2.meta.pendingMna===null&&!(mr2.meta.acquisitions&&mr2.meta.acquisitions[0])&&!mr2.players[mhIdx].acquiredBy);
+  // (d) NPC 껍데기 (무좌석 블록): ₵+10 + 주가 -5
+  const ubBloc=['VANTA','IRONWALL','HELIX','AXIOM','CARBON'].find(b=>!sg.players.some(p=>p.specific===b));
+  const mnp={...sg,players:sg.players.map((p,i)=>i===0?{...p,stocks:{...p.stocks,[ubBloc]:30}}:p),meta:{...sg.meta,pendingMna:{attacker:0,target:ubBloc,declaredRound:1,defense:null}}};
+  const mr3=ERM(mnp);
+  ok(`MNA resolve(NPC 껍데기 ${ubBloc}): ₵+10 · 주가 8→3 · 인수 기록`,mr3.players[0].resources.credit===mnp.players[0].resources.credit+10&&mr3.stocks[ubBloc]===3&&JSON.stringify(mr3.meta.acquisitions[0])===JSON.stringify([ubBloc])&&mr3.meta.pendingMna===null,`₵+${mr3.players[0].resources.credit-mnp.players[0].resources.credit} px ${mr3.stocks[ubBloc]}`);
+  // (e) 공격자 부재 → 무산
+  const mgone={...mnp,players:mnp.players.map((p,i)=>i===0?{...p,defeated:true}:p)};
+  const mr4=ERM(mgone);
+  ok('MNA resolve(공격자 탈락): 무산 — pendingMna 소거·인수 없음',mr4.meta.pendingMna===null&&!(mr4.meta.acquisitions&&mr4.meta.acquisitions[0])&&mr4.log.slice(-2).some(l=>String(l.message).indexOf('무산')>=0));
+  // (f) 지분 계산 분기 — defeated 보유분 분모 제외 · whiteKnight 분모 가산
+  const mvS=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:'S01'});
+  const etsDef={...mvS,players:mvS.players.map((p,i)=>i===1?{...p,stocks:{...p.stocks,VANTA:22},defeated:true}:p)};
+  ok('ETS defeated 제외: 탈락자 22주 분모 제외 (10+10)',ETS(etsDef,'VANTA')===20,`got ${ETS(etsDef,'VANTA')}`);
+  // (g) 인간 방어 결정 모달 효과 5종 (P0 VANTA · 공격자 P1 22주 · total 42 · eq 52%)
+  const mkDef=(credit,infl,extraP0)=>({...mvS,players:mvS.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit,influence:infl},...(extraP0||{})}:i===1?{...p,stocks:{...p.stocks,VANTA:22}}:p),meta:{...mvS.meta,pendingMna:{attacker:1,target:'VANTA',declaredRound:1,defense:null,awaitingHuman:true}}});
+  const defDecision={id:'mna_defense_VANTA_r1',type:'mna_defense',playerIdx:0,context:{round:1,bloc:'VANTA',attacker:1}};
+  const dRb=AMD(mkDef(15,3),defDecision,'rebuy');
+  ok('MNA 방어① 재매입: P0 ₵-10 · 공격자 22→16주(재매입2+판정매도4) · ₵+48 · 방어 성공',dRb.players[0].resources.credit===5&&dRb.players[1].stocks.VANTA===16&&dRb.players[1].resources.credit===mkDef(15,3).players[1].resources.credit+48&&dRb.meta.pendingMna===null&&!dRb.players[0].acquiredBy,`₵${dRb.players[0].resources.credit} held ${dRb.players[1].stocks.VANTA}`);
+  ok('MNA 방어① 재매입: 방어 성공 주가 +2 (8→10)',dRb.stocks.VANTA===10);
+  const dWk=AMD(mkDef(8,3),defDecision,'whiteknight');
+  ok('MNA 방어② 백기사: 🎙3 소모 · whiteKnight 11주 발행 · 지분 희석 → 방어 성공',dWk.players[0].resources.influence===0&&(dWk.meta.whiteKnight||{}).VANTA===11&&dWk.meta.pendingMna===null&&!dWk.players[0].acquiredBy,JSON.stringify(dWk.meta.whiteKnight));
+  ok('MNA 방어② 백기사: euro_totalShares 분모 가산 (10+17+10+11=48)',ETS(dWk,'VANTA')===48,`got ${ETS(dWk,'VANTA')}`);
+  const dLg=AMD(mkDef(8,5),defDecision,'legal');
+  ok('MNA 방어③ 법적 대응: 🎙5 소모 · 판정 1R 지연 (pendingMna 유지)',dLg.players[0].resources.influence===0&&dLg.meta.pendingMna.defense==='legal'&&dLg.meta.pendingMna.delayedUntil===2&&!dLg.meta.gameOver,JSON.stringify(dLg.meta.pendingMna));
+  ok('MNA 방어③ 법적 대응: 지연 중 resolveMna 대기(참조 동일)',ERM(dLg)===dLg);
+  const dLg2={...dLg,meta:{...dLg.meta,round:2},players:dLg.players.map((p,i)=>i===0?{...p,stocks:{...p.stocks,VANTA:15}}:p)};
+  const dLg2r=ERM(dLg2);
+  ok('MNA 방어③ 지연 만료: 그 사이 매집(10→15주) → 지분 46% → 방어 성공',dLg2r.meta.pendingMna===null&&!dLg2r.players[0].acquiredBy&&dLg2r.players[1].stocks.VANTA===18&&dLg2r.stocks.VANTA===10,`held ${dLg2r.players[1].stocks.VANTA}`);
+  const dSc=AMD(mkDef(8,3),defDecision,'scorched');
+  ok('MNA 방어④ 상호 파괴: 주가 -3 (8→5) · 인수는 진행 (acquiredBy=1)',dSc.stocks.VANTA===5&&dSc.players[0].acquiredBy===1&&JSON.stringify(dSc.meta.acquisitions[1])==='["VANTA"]'&&dSc.meta.pendingMna===null,JSON.stringify(dSc.meta.acquisitions));
+  ok('MNA 방어④ 상호 파괴: ₵30% 흡수(8→6, 공격자 +2) + 스캔들 오염',dSc.players[0].resources.credit===6&&dSc.players[1].resources.credit===mkDef(8,3).players[1].resources.credit+2&&(dSc.players[0].discard||[]).includes('SCANDAL'));
+  const dDf1=AMDD(mkDef(15,3),defDecision);
+  ok('MNA 방어⑤ 만료 기본: ₵≥10 → 재매입 자동 적용',dDf1.players[0].resources.credit===5&&dDf1.meta.pendingMna===null&&!dDf1.players[0].acquiredBy);
+  const dDf2=AMDD(mkDef(8,3),defDecision);
+  ok('MNA 방어⑤ 만료 기본: ₵<10 → 상호 파괴 폴백',dDf2.stocks.VANTA===5&&dDf2.players[0].acquiredBy===1);
+  // ---- ⑦ S02 정체성 룰 — 값 핀에 동작 어서션 추가 ----
+  // mnaBotProb=1.0 배선: rand 0.99 에서 S02 봇은 선언(0.99<1.0), S01 기본(0.5)은 스킵(항등)
+  const s2npc=m2.players.find(p=>p.isNpc);
+  const s2bot=m2.players.findIndex(p=>p.kind==='bot'&&p.role==='bloc');
+  const m2b={...m2,players:m2.players.map((p,i)=>i===s2bot?{...p,stocks:{...p.stocks,[s2npc.specific]:20}}:p)};
+  const m2br=withRand(0.99,()=>EDB(m2b));
+  ok('S02 mnaBotProb=1.0 동작: rand .99 에도 봇 선언 발생',!!m2br.meta.pendingMna&&m2br.meta.pendingMna.attacker===s2bot&&m2br.meta.pendingMna.target===s2npc.specific,JSON.stringify(m2br.meta.pendingMna));
+  const sgBot=sg.players.findIndex(p=>p.kind==='bot'&&p.role==='bloc');
+  const sgb={...sg,players:sg.players.map((p,i)=>i===sgBot?{...p,stocks:{...p.stocks,[ubBloc]:20}}:p)};
+  ok('S01 mnaBotProb 폴백 0.5 동작: rand .99 → 선언 스킵(참조 동일)',withRand(0.99,()=>EDB(sgb))===sgb);
+  // mnaSerial=true 동작: 인수 완료 목표는 BOT_MARKET 에서 해제 → 재지정 (S01 은 유지)
+  const m2ser={...m2,players:m2.players.map((p,i)=>i===s2bot?{...p,mnaTarget:'HELIX',resources:{...p.resources,credit:10}}:p),meta:{...m2.meta,acquisitions:{[s2bot]:['HELIX']}}};
+  const m2serR=withRand(0.99,()=>R(m2ser,{type:'BOT_MARKET'}));
+  ok('S02 mnaSerial 동작: 인수 완료 목표 해제 → 신규 목표 재지정(₵10≥8)',!!m2serR.players[s2bot].mnaTarget&&m2serR.players[s2bot].mnaTarget!=='HELIX',`target ${m2serR.players[s2bot].mnaTarget}`);
+  const sgser={...sg,players:sg.players.map((p,i)=>i===sgBot?{...p,mnaTarget:'HELIX',resources:{...p.resources,credit:20}}:p),meta:{...sg.meta,acquisitions:{[sgBot]:['HELIX']}}};
+  ok('S01 mnaSerial 폴백 동작: 인수 완료 목표 유지 (재지정 없음)',withRand(0.99,()=>R(sgser,{type:'BOT_MARKET'})).players[sgBot].mnaTarget==='HELIX');
+  // mnaDesignateCredit=8 동작: 같은 ₵10 이 S02 에선 지정, S01(기본 14)에선 미지정
+  const sgdc={...sg,players:sg.players.map((p,i)=>i===sgBot?{...p,resources:{...p.resources,credit:10}}:p)};
+  ok('S01 mnaDesignateCredit 폴백 14 동작: ₵10 → 목표 미지정',withRand(0.99,()=>R(sgdc,{type:'BOT_MARKET'})).players[sgBot].mnaTarget==null,`target ${withRand(0.99,()=>R(sgdc,{type:'BOT_MARKET'})).players[sgBot].mnaTarget}`);
+  // ---- ③ 협상: NEGOTIATE_PHASE 봇 경로 + negoEvalAccept + negoApply ----
+  ok('NEG eval: 스왑 순가치 +2 → 수락',(e=>e.accept===true&&e.acceptValue===2)(NEA({type:'swap',give:{credit:4},get:{weapons:2}},{resources:{weapons:2}})));
+  ok('NEG eval: 지불분 미보유 → canAfford=false 거절',(e=>e.accept===false&&e.canAfford===false)(NEA({type:'swap',give:{credit:4},get:{weapons:2}},{resources:{weapons:1}})));
+  ok('NEG eval: truce 자체 가치 +2 → 수락',(e=>e.accept===true&&e.acceptValue===2)(NEA({type:'truce',give:{},get:{}},{resources:{}})));
+  const negRej=NAPP(sg,{from:1,to:2,type:'swap',give:{},get:{credit:5},value:0});
+  ok('NEG apply 거절: EV<0 → rejected 계측·자원 불변·로그',negRej.meta.negoStats.rejected===1&&negRej.meta.negoStats.accepted===0&&negRej.players[1].resources.credit===sg.players[1].resources.credit&&negRej.players[2].resources.credit===sg.players[2].resources.credit&&String((negRej.log[negRej.log.length-1]||{}).message).indexOf('협상 거절')>=0);
+  // NEGOTIATE_PHASE: 봇↔봇 스왑 1건 (P1 ₵10↔P2 🔩3 · P2는 ₵5 로 자체 후보 없음 · P3 무자원)
+  const mkNegRes=(o)=>({credit:0,weapons:0,data:0,parts:0,influence:0,rep:0,...o});
+  const negS={...sg,players:sg.players.map((p,i)=>i===1?{...p,tracks:{},resources:mkNegRes({credit:10})}:i===2?{...p,tracks:{},resources:mkNegRes({credit:5,weapons:3})}:i===3?{...p,tracks:{},resources:mkNegRes({})}:p)};
+  const negR=R(negS,{type:'NEGOTIATE_PHASE'});
+  ok('NEG phase: 봇↔봇 스왑 성사 — P1 ₵10→6·🔩0→2 / P2 ₵5→9·🔩3→1',negR.players[1].resources.credit===6&&negR.players[1].resources.weapons===2&&negR.players[2].resources.credit===9&&negR.players[2].resources.weapons===1,JSON.stringify([negR.players[1].resources,negR.players[2].resources]));
+  ok('NEG phase: 계측 proposed/accepted/swaps=1 + 인맥 트랙 +1',negR.meta.negoStats.proposed===1&&negR.meta.negoStats.accepted===1&&negR.meta.negoStats.swaps===1&&(negR.players[1].tracks||{}).party===1,JSON.stringify(negR.meta.negoStats));
+  ok('NEG phase: 인간(P0) 좌석 비관여 (봇 전용 경로)',negR.players[0].resources.credit===negS.players[0].resources.credit&&negR.players[0].resources.rep===negS.players[0].resources.rep);
+  // [v6.52 결함 수정 회귀] 커버리지 감사가 발견한 stale 스냅샷 결함: 후보 생성이 페이즈 시작 스냅샷
+  //   기준이라 선행 스왑으로 자원이 바뀐 봇이 보유량 초과 give 제안을 낼 수 있었다(음수 자원 경로).
+  //   수정 후: 후보 생성이 매 반복 최신 s.players 기준 → 2번째 제안도 현재 자원으로 성립하고,
+  //   어떤 경로에서도 자원 음수가 없어야 한다.
+  const negStale={...sg,players:sg.players.map((p,i)=>i===1?{...p,tracks:{},resources:mkNegRes({credit:10})}:i===2?{...p,tracks:{},resources:mkNegRes({weapons:3})}:i===3?{...p,tracks:{},resources:mkNegRes({})}:p)};
+  const negStR=R(negStale,{type:'NEGOTIATE_PHASE'});
+  const negNoNeg=negStR.players.every(p=>Object.values(p.resources||{}).every(v=>typeof v!=='number'||v>=0));
+  ok('NEG phase [v6.52 수정]: stale 보유량 초과 제안 소멸·재스왑 차단 — 순 스왑 1건·자원 음수 0',negStR.meta.negoStats.swaps===1&&negStR.meta.negoStats.rejected===0&&negNoNeg&&negStR.players[1].resources.credit===6&&negStR.players[1].resources.weapons===2&&negStR.players[2].resources.credit===4&&negStR.players[2].resources.weapons===1,JSON.stringify([negStR.meta.negoStats,negStR.players[1].resources,negStR.players[2].resources]));
+  // [v6.52 방어층] negoApply: from 측이 give 를 실보유하지 않으면 수락 전 무산 (음수 차감 원천 차단)
+  //   픽스처: toP EV 는 +1(수락권)이지만 fromP 가 give 🔩2 를 미보유 → 방어층에서 무산되어야 함
+  const negShort=NAPP({...sg,players:sg.players.map((p,i)=>i===1?{...p,resources:mkNegRes({weapons:1})}:i===2?{...p,resources:mkNegRes({credit:9,weapons:0})}:p)},{from:1,to:2,type:'swap',give:{weapons:2},get:{credit:1},value:5});
+  ok('NEG apply [v6.52 방어층]: give 보유 부족 → 무산 로그·자원 불변·rejected 계측',negShort.meta.negoStats.rejected===1&&negShort.meta.negoStats.accepted===0&&negShort.players[1].resources.weapons===1&&negShort.players[2].resources.credit===9&&String((negShort.log[negShort.log.length-1]||{}).message).indexOf('협상 무산')>=0,JSON.stringify(negShort.meta.negoStats));
+  // NEGO_MAX 캡: 3봇 전원 후보 보유 — 라운드당 2건에서 차단 (P3 제안 미발동)
+  const negC={...sg,players:sg.players.map((p,i)=>i===1?{...p,tracks:{},resources:mkNegRes({credit:10})}:i===2?{...p,tracks:{},resources:mkNegRes({credit:10})}:i===3?{...p,tracks:{},resources:mkNegRes({weapons:9})}:p)};
+  const negCr=R(negC,{type:'NEGOTIATE_PHASE'});
+  ok('NEG phase 캡: 후보 3건 중 NEGO_MAX(2)건만 발동 (전부 수락 스왑)',negCr.meta.negoStats.proposed===2&&negCr.meta.negoStats.accepted===2&&negCr.meta.negoStats.swaps===2,JSON.stringify(negCr.meta.negoStats));
+  // ---- ④ insertScandal 가드 + settleShortPositions 전체 흐름 ----
+  ok('SCND ghost 대상 항등(참조 동일)',INSC(sg,0,'t')===sg);
+  const scndDef={...mvS,players:mvS.players.map((p,i)=>i===0?{...p,defeated:true}:p)};
+  ok('SCND 탈락 Bloc 항등(참조 동일)',INSC(scndDef,0,'t')===scndDef);
+  const shS={...sg,stocks:{...sg.stocks,VANTA:5,IRONWALL:9},meta:{...sg.meta,lastStockSnapshot:{...sg.stocks}},players:sg.players.map((p,i)=>i===0?{...p,shortPositions:{VANTA:2,IRONWALL:1}}:i===1?{...p,shortPositions:{VANTA:9}}:p)};
+  const shR=SSP(shS);
+  ok('SHORT 정산: 하락 3pt×2계약×₵2 = ₵+12 (상승 IRONWALL 0)',shR.players[0].resources.credit===shS.players[0].resources.credit+12,`+${shR.players[0].resources.credit-shS.players[0].resources.credit}`);
+  ok('SHORT 정산: Ghost 전용 — Bloc 좌석 계약 미정산',shR.players[1].resources.credit===shS.players[1].resources.credit);
+  ok('SHORT 정산: 스냅샷 현재 종가로 갱신',shR.meta.lastStockSnapshot.VANTA===5&&shR.meta.lastStockSnapshot.IRONWALL===9);
+  ok('SHORT 정산 로그: 📉 숏 정산',shR.log.slice(-2).some(l=>String(l.message).indexOf('숏 정산')>=0&&String(l.message).indexOf('₵+12')>=0));
+  const shUp={...sg,stocks:{...sg.stocks,VANTA:10},meta:{...sg.meta,lastStockSnapshot:{...sg.stocks}},players:sg.players.map((p,i)=>i===0?{...p,shortPositions:{VANTA:2}}:p)};
+  const shUpR=SSP(shUp);
+  ok('SHORT 정산: 상승 시 무지급(옵션형) + 스냅샷만 갱신',shUpR.players[0].resources.credit===shUp.players[0].resources.credit&&shUpR.meta.lastStockSnapshot.VANTA===10);
+  const shDefd={...shS,players:shS.players.map((p,i)=>i===0?{...p,defeated:true}:p)};
+  ok('SHORT 정산: 탈락 Ghost 미정산',SSP(shDefd).players[0].resources.credit===shDefd.players[0].resources.credit);
+  // ---- ⑤ assetValue 구역·건물 가산 분기 (기존 픽스처 map:{} 사각 해소) ----
+  const avP={id:0,role:'bloc',specific:'VANTA',stocks:{VANTA:10,IRONWALL:2,HELIX:3}};
+  const avStocks={VANTA:8,IRONWALL:7,HELIX:4,AXIOM:9,CARBON:9};
+  const avState={map:{A1:{zone:'bank',owner:0,building:'hq'},A2:{zone:'club',owner:0,building:'trading'},B1:{zone:'home',owner:0},C3:{zone:'bank',owner:1,building:'factory'}}};
+  ok('AV Bloc: 타블록 주식26 + 구역15 + 건물8(자사주 제외·타인 건물 제외) = 49',assetValue(avP,avStocks,avState)===49,`got ${assetValue(avP,avStocks,avState)}`);
+  const avG={id:2,role:'ghost',specific:'BLADE',stocks:{VANTA:2}};
+  ok('AV Ghost: 주식16 + 구역5 + media4 = 25 (ghost 는 자사 제외 없음)',assetValue(avG,avStocks,{map:{A1:{zone:'bank',owner:2,building:'media'}}})===25,`got ${assetValue(avG,avStocks,{map:{A1:{zone:'bank',owner:2,building:'media'}}})}`);
+  const avAllB={map:{A1:{owner:0,building:'hq'},A2:{owner:0,building:'trading'},A3:{owner:0,building:'factory'},A4:{owner:0,building:'security'},A5:{owner:0,building:'media'}}};
+  ok('AV 건물 5종 전액: 구역25 + (5+3+2+2+4)=41',assetValue({id:0,role:'bloc',specific:'VANTA',stocks:{}},avStocks,avAllB)===41,`got ${assetValue({id:0,role:'bloc',specific:'VANTA',stocks:{}},avStocks,avAllB)}`);
+  // ---- ⑥ 리듀서 핵심 액션 ----
+  // EXECUTE_TURN — 봇 Ghost 이동(BFS)→레이드 성공 (D2 → VANTA HQ C2)
+  const mkRaidSt=(atk)=>({...mvS,players:mvS.players.map((p,i)=>i===1?{...p,role:'ghost',position:'D2',hp:8,maxHp:8,stats:{...p.stats,atk},tracks:{},converted:{gear:0,intel:0},resources:{...p.resources,weapons:0},plannedCards:['BASIC_MOVE_B'],plannedHalves:['top']}:p)});
+  const rdOk=withRand(0.99,()=>R(mkRaidSt(50),{type:'EXECUTE_TURN'}));
+  ok('EXEC 이동: D2→C2 (최근접 Bloc 구역 1스텝) + zonesVisited 기록',rdOk.players[1].position==='C2'&&rdOk.meta.zonesVisited[1]&&rdOk.meta.zonesVisited[1].has('C2'),`pos ${rdOk.players[1].position}`);
+  ok('EXEC 레이드 성공: 구역 중립화 + VANTA 주가 -3 (8→5)',rdOk.map.C2.owner===null&&rdOk.stocks.VANTA===5,`owner ${rdOk.map.C2.owner} px ${rdOk.stocks.VANTA}`);
+  ok('EXEC 레이드 성공: 렙+4 + 첫 레이드 하이라이트 ★+2 = +6 · 수배+1 · 공권력+1',rdOk.players[1].resources.rep===mvS.players[1].resources.rep+6&&rdOk.players[1].wanted===(mvS.players[1].wanted||0)+1&&rdOk.heat===mvS.heat+1,`rep ${rdOk.players[1].resources.rep} (before ${mvS.players[1].resources.rep})`);
+  ok('EXEC 레이드 성공: 카운터·스캔들·피격 배너 (rules_raidSuccessFx 경유)',rdOk.meta.raidsThisGame[1]===1&&rdOk.meta.raidDmgByBloc.VANTA===1&&(rdOk.players[0].discard||[]).includes('SCANDAL')&&(rdOk.meta.lastTargetedBy||{}).effectKey==='raid');
+  ok('EXEC 실행 후 plannedCards 전원 클리어',rdOk.players.every(p=>(p.plannedCards||[]).length===0));
+  const rdNo=withRand(0.99,()=>R(mkRaidSt(-50),{type:'EXECUTE_TURN'}));
+  ok('EXEC 레이드 실패: 구역·주가 불변 + HP-3 (8→5)',rdNo.map.C2.owner===0&&rdNo.stocks.VANTA===8&&rdNo.players[1].hp===5,`hp ${rdNo.players[1].hp}`);
+  ok('EXEC 레이드 실패: 렙 불변·수배+1·레이드 카운터 0',rdNo.players[1].resources.rep===mvS.players[1].resources.rep&&rdNo.players[1].wanted===(mvS.players[1].wanted||0)+1&&((rdNo.meta.raidsThisGame||{})[1]||0)===0);
+  ok('EXEC 공(空)실행: E14ⓐ 신규 참조 반환 (in-place 변이 아님)',R(sg,{type:'EXECUTE_TURN'})!==sg);
+  // EXECUTE_TURN — 카드 효과 대표: 비용 지불(main {cost I, weapons 3}) + 비용 부족 불발 + gen
+  const armSt={...mvS,players:mvS.players.map((p,i)=>i===0?{...p,pool:{I:1},plannedCards:['ARMS_SUPPLY'],plannedHalves:['main']}:p)};
+  const armR=withRand(0.99,()=>R(armSt,{type:'EXECUTE_TURN'}));
+  ok('EXEC 카드(ARMS_SUPPLY main): ◈I 지불 → 🔩+3 · 카드 discard',armR.players[0].resources.weapons===3&&armR.players[0].pool.I===0&&(armR.players[0].discard||[]).includes('ARMS_SUPPLY'),`w ${armR.players[0].resources.weapons} I ${armR.players[0].pool.I}`);
+  const armFz={...mvS,players:mvS.players.map((p,i)=>i===0?{...p,pool:{},plannedCards:['ARMS_SUPPLY'],plannedHalves:['main']}:p)};
+  const armFzR=withRand(0.99,()=>R(armFz,{type:'EXECUTE_TURN'}));
+  ok('EXEC 카드 비용 부족: 효과 불발 (🔩0 유지 + 불발 로그)',armFzR.players[0].resources.weapons===(mvS.players[0].resources.weapons||0)&&armFzR.log.some(l=>String(l.message).indexOf('효과 불발')>=0));
+  const genR=AEFF(mvS,0,{gen:'M:S'},'main',null);
+  ok('EXEC 카드 gen: 개인 풀 M+1 S+1',genR.players[0].pool.M===((mvS.players[0].pool||{}).M||0)+1&&genR.players[0].pool.S===((mvS.players[0].pool||{}).S||0)+1);
+  // NEXT_ROUND — 라운드 전환 + truce 만료 보상 + 만료 정리
+  const nrS={...sg,meta:{...sg.meta,promises:[{from:0,to:1,type:'truce',expiresR:sg.meta.round,status:'active'}]}};
+  const nrR=withRand(0.99,()=>R(nrS,{type:'NEXT_ROUND'}));
+  ok('NR 전환: round+1 · phase 0 · currentNews 리셋',nrR.meta.round===sg.meta.round+1&&nrR.meta.phase===0&&nrR.currentNews===null);
+  ok('NR truce 만료: 지킴 양측 ★+1 (P0 +2=지킴+허슬, P1 +1)',nrR.players[0].resources.rep===sg.players[0].resources.rep+2&&nrR.players[1].resources.rep===sg.players[1].resources.rep+1,`p0 ${nrR.players[0].resources.rep} p1 ${nrR.players[1].resources.rep}`);
+  ok('NR truce 만료: promises 정리(제거)',(nrR.meta.promises||[]).length===0);
+  ok('NR 손패 리필: 전원 6장 유지',nrR.players.every(p=>p.defeated||p.hand.length===6));
+  // NEXT_ROUND — 라운드 상한 도달 → checkVictoryByPoints 위임 (타임아웃 종료)
+  const nrLim={...sg,meta:{...sg.meta,round:12,raidsThisGame:{}},players:sg.players.map((p,i)=>i===0?{...p,resources:{...p.resources,rep:200}}:p)};
+  const nrLimR=withRand(0.99,()=>R(nrLim,{type:'NEXT_ROUND'}));
+  ok('NR 상한(11×11 R12): 타임아웃 판정 위임 → gameOver·진척 1위 승자',nrLimR.meta.gameOver===true&&nrLimR.meta.winner===0&&String(nrLimR.meta.winReason).indexOf('시간 종료')>=0,nrLimR.meta.winReason);
+  // COLLECT_INCOME — 구역 수입 + 트랙 패시브 + 건물 수익 (NR 항목의 "트랙 수입" 배선)
+  const ciSt={...m2,map:{A1:{zone:'bank',owner:0},A2:{zone:'club',owner:0,building:'trading'}},players:m2.players.map((p,i)=>i===0?{...p,tracks:{party:4},stocks:{},pool:{}}:p)};
+  const ciR=withRand(0.99,()=>R(ciSt,{type:'COLLECT_INCOME'}));
+  ok('CI 수입: 금융가3+유흥가2+거래소2+파티LV4트랙3 = ₵+10',ciR.players[0].resources.credit===ciSt.players[0].resources.credit+10,`+${ciR.players[0].resources.credit-ciSt.players[0].resources.credit}`);
+  ok('CI 구역 속성 풀 적립: M+1(금융가) S+1(유흥가)',ciR.players[0].pool.M===1&&ciR.players[0].pool.S===1,JSON.stringify(ciR.players[0].pool));
+  ok('CI 픽스처 assetValue: 구역10+거래소3 = 13 (구역·건물 분기 실행)',assetValue(ciSt.players[0],ciSt.stocks,ciSt)===13,`got ${assetValue(ciSt.players[0],ciSt.stocks,ciSt)}`);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
