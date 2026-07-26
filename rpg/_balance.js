@@ -495,9 +495,68 @@ function lateChapterGuard(rows) {
   return { perCh: perCh, chs: chs, trivLate: trivLate, pass: pass };
 }
 
+// ---- [67차] 하드모드 실패 분류표 (정직 계기판) -------------------------------
+// 하드(scale 1.25)는 spawnEnemy 의 hp/maxHp/atk 만 ceil(×1.25) 하고 def·좌표·오브젝티브
+// 임계·threatCap 은 base 와 100% 공유한다 → **하드 전용 보정 레버가 존재하지 않는다.**
+//   · 오브젝티브 러시 비용(= ceil(threshold / max(HACK,ATK)))은 scale 무관 → 임계를 건드리면
+//     base 도 반드시 같은 비율로 변한다(base 불변 제약과 양립 불가).
+//   · 좌표/배치/엄폐/threatCap 변경은 base 의 combat 정책 궤적을 즉시 바꾼다(실측: freeport 에
+//     엄폐 1칸 추가 → base BLADE 9R→12R · RIGGER reinforced 반전 · MOLE 86%→100%, 그럼에도
+//     hard RIGGER 는 여전히 패). 증원 축도 무력 — hard 에서 발동하는 미션은 base 에서도 전부 발동.
+// 따라서 잔존 실패는 '하드모드 한계'로 정직 표기하고, 원인만 분류해 계기판으로 남긴다.
+// 분류 기준(base 대응 셀과 대조):
+//   러시생존창붕괴 : base 승리가 오브젝티브 러시 + 잔여HP ≤ 40% → +25% ATK 가 생존창을 잠식.
+//   DEF임계붕괴    : base 무피해(100%) → 하드 ATK 가 DEF+엄폐 문턱을 넘어 0 피해가 유피해로 전환.
+//   마진잠식       : base 잔여HP 41~99% → 중간 마진이 잠식된 경우.
+//   교착(관통실패) : 하드 combat 정책이 timeout — 피해 관통 불가 소모전.
+function classifyHardFail(baseRep, hardCells) {
+  if (hardCells.combat.outcome === 'timeout' || hardCells.objective.outcome === 'timeout') return '교착(관통실패)';
+  if (!baseRep.win) return '기타(base 미승리)';
+  if (baseRep.hpPct >= 100) return 'DEF임계붕괴';
+  if (baseRep.hpPct <= 40) return '러시생존창붕괴';
+  return '마진잠식';
+}
+
+function printHardFailures(scnRows, hardRows) {
+  ['base', 'full'].forEach(function (key) {
+    var baseIdx = {};
+    scnRows[key].forEach(function (r) { baseIdx[r.id] = r; });
+    var list = [];
+    hardRows[key].forEach(function (r) {
+      for (var ci = 0; ci < CLASSES.length; ci++) {
+        var cls = CLASSES[ci];
+        var vd = verdict(r.cells[cls]);
+        if (vd.flags.indexOf('clearFail') < 0) continue;
+        var bRep = verdict(baseIdx[r.id].cells[cls]).rep;
+        list.push({ id: r.id, cls: cls, kind: classifyHardFail(bRep, r.cells[cls]), bRep: bRep, h: r.cells[cls] });
+      }
+    });
+    console.log('\n---- [67차] hard×' + key + ' clearFail ' + list.length + '건 분류표 (하드 전용 레버 부재 → 미보정 · 정직 고정) ----');
+    if (!list.length) { console.log('  (없음)'); return; }
+    var byKind = {}, byCls = {};
+    list.forEach(function (x) { byKind[x.kind] = (byKind[x.kind] || 0) + 1; byCls[x.cls] = (byCls[x.cls] || 0) + 1; });
+    console.log('  ' + pad('미션', 26) + pad('클래스', 9) + pad('원인', 16) + pad('base 대응셀', 22) + 'hard(combat / objective)');
+    list.forEach(function (x) {
+      console.log('  ' + pad(x.id, 26) + pad(x.cls, 9) + pad(x.kind, 16)
+        + pad((x.bRep.win ? 'W' : 'L') + x.bRep.rounds + 'R·잔여' + x.bRep.hpPct + '%·' + (x.bRep.winBy || '-'), 22)
+        + x.h.combat.outcome + x.h.combat.rounds + 'R / ' + x.h.objective.outcome + x.h.objective.rounds + 'R');
+    });
+    console.log('  원인 분포: ' + Object.keys(byKind).map(function (k) { return k + ' ' + byKind[k]; }).join(' · '));
+    console.log('  클래스 분포: ' + CLASSES.map(function (c) { return c + ' ' + (byCls[c] || 0); }).join(' · '));
+  });
+  console.log('\n  ★ 하드모드 한계(정직 표기): 하드는 base 와 모든 미션 수치를 공유하므로(적 hp/atk 배율만 상이)');
+  console.log('    base/mid/full 매트릭스 byte 불변 제약 하에서는 미션 데이터로 해소 가능한 실패가 0건이다.');
+  console.log('    해소 경로는 데이터 밖 — 하드 전용 필드(예: combat.hardOverride) 신설 또는 저HP 클래스의');
+  console.log('    생존 킷 보강이며, 둘 다 엔진/능력치 변경을 수반해 본 차수 범위(미션 데이터 한정) 밖이다.');
+  console.log('    현재 상태는 rpg/_unit.js 289~291 핀으로 집합째 고정(악화·개선 양방향 회귀 즉시 노출).');
+}
+
 function printScenarios() {
-  var scn = {};
-  for (var i = 0; i < GEAR_SCENARIOS.length; i++) scn[GEAR_SCENARIOS[i]] = aggregateScenario(runMatrix(GEAR_SCENARIOS[i]));
+  var scn = {}, scnRows = {};
+  for (var i = 0; i < GEAR_SCENARIOS.length; i++) {
+    scnRows[GEAR_SCENARIOS[i]] = runMatrix(GEAR_SCENARIOS[i]);          // [67차] 행 보존(하드 실패 대조용)
+    scn[GEAR_SCENARIOS[i]] = aggregateScenario(scnRows[GEAR_SCENARIOS[i]]);
+  }
   var b = scn.base, m = scn.mid, f = scn.full;
 
   console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×40 인카운터[30미션·2연전 enc①+enc②·캡스톤 3연전]) ================');
@@ -516,7 +575,9 @@ function printScenarios() {
   //   측정 사각 제거 — runEncounter 가 enemyScale 미전달로 scale=1 만 측정하던 것을 1.25 로 실측.
   //   오브젝티브 임계는 scale 무영향(spawnEnemy 는 hp/atk 만) → 오브젝티브 러시 경로 불변, 전멸·생존만 가중.
   var HARD_SCALE = 1.25;
-  var hardScn = { base: aggregateScenario(runMatrix('base', HARD_SCALE)), full: aggregateScenario(runMatrix('full', HARD_SCALE)) };
+  // [67차] 행(rows)을 보존해 실패 셀을 base 대응 셀과 대조 분류한다(아래 하드 실패 분류표).
+  var hardRows = { base: runMatrix('base', HARD_SCALE), full: runMatrix('full', HARD_SCALE) };
+  var hardScn = { base: aggregateScenario(hardRows.base), full: aggregateScenario(hardRows.full) };
   console.log('  ' + '-'.repeat(92));
   [['hard×base(무장비)', hardScn.base], ['hard×full(최고가)', hardScn.full]].forEach(function (pair) {
     var s = pair[1];
@@ -540,9 +601,11 @@ function printScenarios() {
   //   hard×full = 최고가 장비로 하드모드 상쇄 → clearFail 0 + 후반 트리비얼 게이트(≥3R 유지). 하드는 트리비얼을
   //   줄이므로(전멸·생존 가중) 후반 게이트는 여유로 통과 — 판정은 clearFail 0 이 핵심.
   console.log('  hard×base : +25% 적 무장비 전 조합 클리어(' + hardScn.base.clearable + '/' + hardScn.base.total + ') · clearFail ' + hardScn.base.fail
-    + ' · 후반 트리비얼 ' + hardGuardBase.trivLate + ' — ' + (hardScn.base.clearable === hardScn.base.total && hardScn.base.fail === 0 ? 'PASS(하드모드 클리어 보장 · 오브젝티브 러시 불변)' : 'FAIL(하드모드 clearFail → 밸런스 검토)'));
+    + ' · 후반 트리비얼 ' + hardGuardBase.trivLate + ' — ' + (hardScn.base.clearable === hardScn.base.total && hardScn.base.fail === 0 ? 'PASS(하드모드 클리어 보장 · 오브젝티브 러시 불변)' : 'FAIL(하드모드 한계 — 67차 조사 완료: base 불변 제약 하 미션 데이터 해소 불가 · 아래 분류표 · 유닛 289 집합 핀)'));
   console.log('  hard×full : +25% 적 최고가 상쇄 클리어(' + hardScn.full.clearable + '/' + hardScn.full.total + ') · clearFail ' + hardScn.full.fail
-    + ' · 평균종료HP ' + hardScn.full.avgHp.toFixed(1) + '% — ' + (hardScn.full.clearable === hardScn.full.total && hardScn.full.fail === 0 ? 'PASS(장비로 하드모드 흡수)' : 'FAIL(hard×full clearFail)'));
+    + ' · 평균종료HP ' + hardScn.full.avgHp.toFixed(1) + '% — ' + (hardScn.full.clearable === hardScn.full.total && hardScn.full.fail === 0 ? 'PASS(장비로 하드모드 흡수)' : 'FAIL(하드모드 한계 — 장비가 27건 중 24건 흡수 · 잔여 3건 전량 RIGGER · 유닛 290 집합 핀)'));
+
+  printHardFailures(scnRows, hardRows);
 
   console.log('\n---- 장비 유발 이상치(신규, base 대비) ----');
   var baseSet = {};

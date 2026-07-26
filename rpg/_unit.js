@@ -1493,6 +1493,133 @@ ok('283. BROKER 편성 → broker-ledger 해금·drifter-lastroad 잠김 (DRIFTE
   CAMP.isUnlocked(byId['a2-side-drifter-lastroad'], drfSideSave) === true &&
   CAMP.isUnlocked(byId['a2-side-broker-ledger'], drfSideSave) === false);
 
+// ============================================================================
+// ======  67차 — MOLE HELIX 태그 (사문 게이트 해소) + 하드모드 계기판 핀  ======
+//   ① MOLE.tags 에 HELIX 추가 → a2-side-mole-whoami [HELIX] 지름길이 소유 클래스에게
+//      실제 개방(67차 이전 = 어떤 클래스도 통과 불가한 도달 불가 게이트).
+//      원전 = mole.md Card01 COVER IDENTITY ▼BOTTOM(위장신분 다중 보유) + ECHO=검체 E-7
+//      (HELIX Dr. ELIA VOSS 설계) — 위장이 아니라 원본 소속 기록.
+//   ② 태그 게이트 전수 도달성 핀 — 블록 태그축은 전량 도달 가능, 속성명 태그축 2건은
+//      알려진 미도달(범위 밖)로 정직 고정. 신규 사문 게이트 유입 시 즉시 실패.
+//   ③ 하드모드(scale 1.25) 실패 집합 핀 — ★게이트가 아니라 계기판(회귀 감지) 핀.
+//      base 불변식(clearFail 0) 은 게이트지만, hard 는 clearFail 0 미달성 상태를
+//      '하드모드 한계'로 정직 고정한다(개선/악화 양방향 회귀 즉시 노출).
+// ============================================================================
+
+console.log('\n== [67차] MOLE HELIX 태그 — 원전 정합 · 사문 게이트 해소 ==');
+// MOLE.tags = 5대 블록(VANTA/IRONWALL/HELIX/AXIOM/CARBON) 중 4종. CARBON 만 미보유(태그 게이트 0건).
+ok('284. MOLE.tags = [VANTA,IRONWALL,HELIX,AXIOM] (67차 HELIX 추가) · 타 5클래스는 tags 없음',
+  JSON.stringify(CL.CLASSES.MOLE.tags) === '["VANTA","IRONWALL","HELIX","AXIOM"]' &&
+  ['CIPHER', 'BLADE', 'RIGGER', 'BROKER', 'DRIFTER'].every(function (k) { return !CL.CLASSES[k].tags; }) &&
+  CH.makeCharacter('MOLE').tags.indexOf('HELIX') >= 0);
+
+// 사문 게이트 해소 — mole-whoami [HELIX] 가 소유 클래스(MOLE) 에서 available.
+var mwMission = CAMP.missionData('a2-side-mole-whoami');
+var mwHelix = mwMission.dialogue.nodes.approach.choices[2];
+var mwMole = S.selectClass(S.rpgInitialState(), 'MOLE');
+mwMole.save.missionsDone = ['ch08-zero-day'];
+mwMole = S.startMission(mwMole, 'a2-side-mole-whoami');
+var mwCtx = S.dialogueCtx(mwMole);
+ok('285. a2-side-mole-whoami [HELIX 태그] 게이트 = 소유 클래스 MOLE 에서 available (67차 이전 도달불가)',
+  JSON.stringify(mwHelix.gate) === '{"tag":"HELIX"}' &&
+  DLG.evalGate(mwHelix.gate, mwCtx).ok === true && DLG.choiceState(mwHelix, mwCtx) === 'available' &&
+  DLG.choiceState(mwMission.dialogue.nodes.approach.choices[1], mwCtx) === 'gray');   // [SPD 4] 는 성장 게이트로 잔존
+
+// 지름길 완주 경로 — 전투 스킵 → outroGhost → settle 보상(무력 경로와 동일 계약).
+var mwRun = S.dialogueChoose(mwMole, 0);          // intro → approach
+mwRun = S.dialogueChoose(mwRun, 2);               // [HELIX] → skipCombat → outroGhost
+var mwGhostNode = mwRun.dialogue.nodeId, mwNoCombat = mwRun.combat === null;
+mwRun = S.dialogueChoose(mwRun, 0);               // outroGhost → choice
+mwRun = S.dialogueChoose(mwRun, 0);               // choice A → settle (applyRewards)
+ok('286. HELIX 지름길 완주: 전투 미발생 → outroGhost · helixForged/ghostedIdentity/whoAmIDone · 보상 동일(rep5·karma2)',
+  mwGhostNode === 'outroGhost' && mwNoCombat === true &&
+  mwRun.save.flags.helixForged === true && mwRun.save.flags.ghostedIdentity === true &&
+  mwRun.save.flags.whoAmIDone === true &&
+  mwRun.save.missionsDone.indexOf('a2-side-mole-whoami') >= 0 &&
+  mwMission.rewards.rep === 5 && mwMission.rewards.karma === 2 &&
+  mwMission.rewards.unlocks.indexOf('WHO AM I') >= 0);
+
+// 태그 게이트 전수 도달성 — 미션 데이터의 모든 { tag } 게이트를 6클래스 기본 빌드로 판정.
+//   블록 태그축(VANTA/IRONWALL/HELIX/AXIOM)은 전량 MOLE 통과. 잔존 미도달은 속성명 태그축
+//   2건(a2-c2 MESH · a2-side-cipher-static SHADE) — 어떤 클래스도 속성을 tags 로 갖지 않는
+//   설계상 사문(67차 범위 밖 · 정직 고정). 신규 사문 게이트가 생기면 이 핀이 즉시 실패한다.
+var tagCtxs = {};
+CL.PLAYABLE.forEach(function (k) {
+  var tc = CH.makeCharacter(k), te = CH.effectiveStats(tc);
+  tagCtxs[k] = { attrs: { hack: te.hack, atk: te.atk, def: te.def, spd: te.spd, hp: te.maxHp }, tags: tc.tags || [], flags: {}, classKey: k };
+});
+var tagGates = [], tagDead = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm || !mm.dialogue) return;
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (ch2) {
+      if (!ch2.gate || !ch2.gate.tag) return;
+      tagGates.push(reg.id + '|' + ch2.gate.tag);
+      var reach = CL.PLAYABLE.some(function (k) { return DLG.evalGate(ch2.gate, tagCtxs[k]).ok; });
+      if (!reach) tagDead.push(reg.id + '|' + ch2.gate.tag);
+    });
+  });
+});
+tagDead.sort();
+ok('287. 태그 게이트 9건 중 블록 태그축 7건 전량 도달 가능(MOLE) · 미도달 잔존 = 속성명 태그축 2건 정확히'
+  + (tagDead.length ? ' [' + tagDead.join(', ') + ']' : ''),
+  tagGates.length === 9 && tagDead.length === 2 &&
+  tagDead[0] === 'a2-c2-signal-war|MESH' && tagDead[1] === 'a2-side-cipher-static|SHADE');
+
+// tags 는 대화 게이트 전용 축 — 전투 상태(buildCombat)에 유입되지 않음(밸런스 불변의 구조적 근거).
+var mwCombatState = S.buildCombat(mwMission, CH.makeCharacter('MOLE'), 'outro');
+ok('288. tags 는 전투 상태에 유입 0 (buildCombat 산출물에 tags/HELIX 문자열 부재) — 태그 확장의 밸런스 불변 근거',
+  JSON.stringify(mwCombatState).indexOf('HELIX_MEDIC') >= 0 &&        // 적 키는 존재(대조군)
+  JSON.stringify(S.player(mwCombatState)).indexOf('tags') < 0 &&
+  S.player(mwCombatState).tags === undefined);
+
+console.log('\n== [67차] 하드모드(scale 1.25) 실패 집합 계기판 핀 — 게이트 아님(하드모드 한계 정직 고정) ==');
+// ★ 이 핀은 '통과 기준'이 아니라 '현재 한계의 정직한 스냅샷'이다. hard 축에는 전용 레버가
+//   없고(적 스탯 배율만 상이 · 오브젝티브 임계/좌표/threatCap 은 base 와 공유), 공유 수치를
+//   건드리면 base 매트릭스가 반드시 변한다(v6.46 실측 검증 — 커버 1칸 추가만으로 base
+//   BLADE 9R→12R · RIGGER reinforced 반전). 따라서 base 불변 제약 하에서 하드 실패는
+//   미션 데이터로 해소 불가 → 잔존 27건을 집합째 고정해 회귀(악화)와 개선을 모두 노출시킨다.
+var HARD_BASE_FAILS = [
+  'a2-a2-crown-throne|RIGGER', 'a2-b2-freeport#stage2|RIGGER', 'a2-b2-freeport|BROKER', 'a2-b2-freeport|RIGGER',
+  'a2-d1-scavenge#stage2|RIGGER', 'a2-d2-last-signal#stage2|RIGGER', 'a2-side-blade-vendetta|MOLE',
+  'a2-side-blade-vendetta|RIGGER', 'a2-side-broker-ledger|BROKER', 'a2-side-cipher-static|BROKER',
+  'a2-side-cipher-static|CIPHER', 'a2-side-drifter-lastroad|BROKER', 'a2-side-rigger-build|BROKER',
+  'a2-side-rigger-build|CIPHER', 'ch01-first-blood|CIPHER', 'ch02-insider-game|BROKER',
+  'ch03-martial-night|BROKER', 'ch03-martial-night|RIGGER', 'ch04-price-of-splice|BROKER',
+  'ch06-bloc-acquisition|BROKER', 'ch06-bloc-acquisition|CIPHER', 'ch07-heart-of-city|BROKER',
+  'ch07-heart-of-city|CIPHER', 'ch08-zero-day|BROKER', 'ch08-zero-day|RIGGER',
+  'side-03-chemical-raid|CIPHER', 'side-07-server-zero|BROKER',
+];
+var HARD_FULL_FAILS = ['a2-b2-freeport|RIGGER', 'a2-side-blade-vendetta|RIGGER', 'ch03-martial-night|RIGGER'];
+function hardFailSet(scn) {
+  var rws = BAL.runMatrix(scn, 1.25), acc = [];
+  rws.forEach(function (r) {
+    BAL.CLASSES.forEach(function (c) {
+      if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) acc.push(r.id + '|' + c);
+    });
+  });
+  return acc.sort();
+}
+var hbSet = hardFailSet('base'), hfSet = hardFailSet('full');
+ok('289. 계기판: hard×base clearFail 27건 = 고정 집합 일치 (BROKER12·RIGGER8·CIPHER6·MOLE1 / BLADE·DRIFTER 0)',
+  hbSet.length === 27 && JSON.stringify(hbSet) === JSON.stringify(HARD_BASE_FAILS) &&
+  hbSet.filter(function (x) { return /\|BROKER$/.test(x); }).length === 12 &&
+  hbSet.filter(function (x) { return /\|RIGGER$/.test(x); }).length === 8 &&
+  hbSet.filter(function (x) { return /\|CIPHER$/.test(x); }).length === 6 &&
+  hbSet.filter(function (x) { return /\|MOLE$/.test(x); }).length === 1 &&
+  hbSet.filter(function (x) { return /\|(BLADE|DRIFTER)$/.test(x); }).length === 0);
+ok('290. 계기판: hard×full clearFail 3건 = RIGGER 전량 (최고가 장비가 24/27 을 흡수 · 잔여는 DEF 임계 붕괴형)',
+  hfSet.length === 3 && JSON.stringify(hfSet) === JSON.stringify(HARD_FULL_FAILS) &&
+  hfSet.every(function (x) { return /\|RIGGER$/.test(x); }));
+// hard 축이 표준 난이도를 오염시키지 않음 — base 매트릭스 clearFail 0 불변식은 게이트(174) 로 유지되고,
+//   여기서는 hard 실패 집합이 base 성공 집합의 부분집합임(= 하드 전용 실패)을 고정한다.
+var baseFailSet = [];
+BAL.runMatrix('base').forEach(function (r) {
+  BAL.CLASSES.forEach(function (c) { if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) baseFailSet.push(r.id + '|' + c); });
+});
+ok('291. hard 실패 30건(base27+full3)은 전량 하드 전용 — 표준 난이도(base/full) clearFail 0 불변',
+  baseFailSet.length === 0 && aggFull.fail === 0 && aggMid.fail === 0);
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);
