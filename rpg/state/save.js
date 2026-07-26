@@ -57,6 +57,12 @@
       if (!Array.isArray(save.character.gearOwned)) save.character.gearOwned = [];
     }
     if (!save.intel || typeof save.intel !== 'object') save.intel = {};
+    // [3차 발굴 F3] 공권력(Heat) 트랙 백필(멱등) — 구세이브 heat/heatCap 부재 시 기본값(0/10),
+    //   음수 방어 + cap 클램프(허브 게이지 "96/10" 류 초과 표기 원천 차단).
+    if (typeof save.heat !== 'number' || !isFinite(save.heat)) save.heat = 0;
+    if (typeof save.heatCap !== 'number' || !isFinite(save.heatCap) || save.heatCap <= 0) save.heatCap = 10;
+    if (save.heat < 0) save.heat = 0;
+    if (save.heat > save.heatCap) save.heat = save.heatCap;
     // [57차] 엔딩 기록 스키마 백필 (멱등). 구세이브엔 endings 없음 → 빈 기록(회차 0).
     //   endings = { seen:{key:count}, byClass:{CLS:true}, runs:N }. 회차 리셋 시에도 영속.
     if (!save.endings || typeof save.endings !== 'object') save.endings = { seen: {}, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} };

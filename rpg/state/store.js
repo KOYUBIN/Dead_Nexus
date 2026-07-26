@@ -382,6 +382,8 @@
       if (plan.attack) {
         var p = player(c);
         // 실행 시점 재검증 — 은신(피격 회피) / 무적(피해 무효).
+        // [3차 발굴 F8 · 이중 안전판] ai.planEnemyTurn(alivePlayers)이 은신 대상을 애초에 계획하지
+        //   않으므로 은신 분기는 통상 도달 불가 — 계획↔실행 사이 상태 전이 대비로 유지(삭제 금지).
         if (p.status.stealth || p.hp <= 0) {
           c.log.push(e.name + ' 사격 — 대상 은신, 빗나감');
         } else if (p.status.invuln) {
@@ -599,6 +601,13 @@
     // [73차 · 74차] effect.rep / effect.karma / effect.nuyen 실지급 (선언 수치 그대로, 공용 firstRun 가드).
     //   74차에 rep 이 이 표에 합류 — 세 자원이 같은 지급·로그·재클리어 고지 경로를 탄다.
     feedLines = feedLines.concat(grantChoiceGains(s, eff, firstRun));
+    // [3차 발굴 F3] effect.wantedZero 실배선 — "현상수배 0 유지" 선언 선택지(ch01 유령 · ch02 은폐 ·
+    //   ch03 잠행)가 공권력(Heat) 트랙을 실제로 0 으로 소거한다(멱등 · farming 무관: 0 고정이라
+    //   반복 이득 없음). heat 0 이면 로그 생략 — 기존 배너 byte 불변(조용한 no-op 아님, 변화 없음).
+    if (eff.wantedZero) {
+      if ((s.save.heat || 0) > 0) feedLines.push('◈ 현상수배 소거 — 공권력(Heat) ' + s.save.heat + ' → 0');
+      s.save.heat = 0;
+    }
     if (feedLines.length) {
       s.banner = feedLines.length === 1
         ? { kind: 'growth', text: feedLines[0] }        // 단일 자원 — 72차 karma 배너와 byte 동일

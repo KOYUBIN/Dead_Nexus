@@ -74,7 +74,7 @@
       kind: 'RANGED', useHack: true, ap: 2, cooldown: 4, range: 5, loud: true,
       dmgBonus: 2, pierce: 0,
       vsMachine: { pierce: 2, stunTurns: 1 },
-      desc: 'dmg = (HACK+2) − DEF. 기계(IRON)면 +2 관통 & 1턴 STUN.',
+      desc: 'dmg = (HACK+2) − DEF. 기계면 +2 관통 & 1턴 STUN.', // [3차 발굴 F12] 실판정 = isMachine 플래그(속성 IRON 무관) — desc 정합
       lineage: '[각색 docs/04 + docs/07 §5.2]',
     },
     ZERO_TRACE: {
@@ -149,7 +149,7 @@
       kind: 'RANGED', useHack: false, ap: 2, cooldown: 4, range: 4, loud: true,
       dmgBonus: 1, pierce: 0,
       vsMachine: { pierce: 2, stunTurns: 1 },
-      desc: 'dmg = (ATK+1) − DEF. 기계·드론(IRON)이면 +2 관통 & 1턴 STUN. HACK 불요.',
+      desc: 'dmg = (ATK+1) − DEF. 기계·드론이면 +2 관통 & 1턴 STUN. HACK 불요.', // [3차 발굴 F12] 실판정 = isMachine 플래그(속성 IRON 무관) — desc 정합
       lineage: '[각색 rigger.md Card07 EMP PULSE · 드론·자율경비 무력화]',
     },
     OVERLOAD: {

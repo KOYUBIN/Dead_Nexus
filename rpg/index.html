@@ -144,8 +144,9 @@ function missionOf(state) {
 }
 function chLabel(entry) { return entry && entry.chapter ? ('CH' + (entry.chapter < 10 ? '0' + entry.chapter : entry.chapter)) : ''; }
 // [48차] 클래스 정체성 한줄 태그라인 + 킷 라벨 (4클래스 UI 표기 · 하드코딩 분기 제거).
-const CLASS_TAGLINE = { CIPHER: '정보전의 유령', BLADE: '거리의 집행관', RIGGER: '설치/제어의 정비공', MOLE: '위장/침투의 첩자' };
-const CLASS_KITLABEL = { CIPHER: '해킹 킷', BLADE: '근접 킷', RIGGER: '설치·제어 킷', MOLE: '위장·침투 킷' };
+// [3차 발굴 F10] BROKER/DRIFTER 승격(v6.45) 누락 보정 — docs/25 클래스 서술(중개·정보전/기동·충돌) 준수.
+const CLASS_TAGLINE = { CIPHER: '정보전의 유령', BLADE: '거리의 집행관', RIGGER: '설치/제어의 정비공', MOLE: '위장/침투의 첩자', BROKER: '중개/정보전의 거래인', DRIFTER: '기동/충돌의 질주자' };
+const CLASS_KITLABEL = { CIPHER: '해킹 킷', BLADE: '근접 킷', RIGGER: '설치·제어 킷', MOLE: '위장·침투 킷', BROKER: '중개·정보전 킷', DRIFTER: '기동·충돌 킷' };
 function classTagline(k) { return CLASS_TAGLINE[k] || '운영자'; }
 function classKitLabel(k) { return CLASS_KITLABEL[k] || '히어로 킷'; }
 const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -165,6 +166,8 @@ const ENEMY_SPRITE = {
   // [61차 Act2] MERIDIAN 외부 세력 + lore 보스 — 기존 17장 재활용(신규 다운로드 0).
   MERIDIAN_VANGUARD: 'px-elite', MERIDIAN_STALKER: 'px-wisp', MERIDIAN_DRONE: 'px-drone',
   MERIDIAN_WARLORD: 'px-boss', WARD_NODE: 'px-ice', ELIA_VOSS: 'px-boss', HARLAN_VOSS: 'px-boss',
+  // [3차 발굴 F9] 캡스톤 최종 보스 매핑 누락 보정 — WARLORD 와 동일 px-boss 재활용(신규 아트 0).
+  MERIDIAN_OVERLORD: 'px-boss',
 };
 function spriteForUnit(u) {
   if (!u) return null;
@@ -284,7 +287,7 @@ function LastOpPanel({ flags }) {
   if (style === 'quiet') chips.push({ t: '🕊 무흔적 추출', c: 'cyan' });
   else if (style === 'loud') chips.push({ t: '🔊 소란한 강습', c: 'magenta' });
   if (hero === 'hero') chips.push({ t: '★ 영웅 — 정체 공개 (모든 블록 적대)', c: 'magenta' });
-  else if (hero === 'ghost') chips.push({ t: '👻 유령 — 은폐 (레이드 +50%)', c: 'cyan' });
+  else if (hero === 'ghost') chips.push({ t: '👻 유령 — 은폐 (현상수배 0 · Heat 소거)', c: 'cyan' });
   if (flags.plantedBackdoor) chips.push({ t: '🚪 백도어 잠복', c: 'green' });
   return (
     <div className="lastop">
@@ -323,7 +326,7 @@ function Roster({ state, dispatch }) {
           </div>
         );
       })}
-      <p className="hint" style={{ color: 'var(--text-dim)' }}>편성 전환 시 해당 빌드로 새 운영자를 배치합니다(성장 초기화). 캠페인 진행은 유지됩니다.</p>
+      <p className="hint" style={{ color: 'var(--text-dim)' }}>편성 전환 시 해당 빌드로 새 운영자를 배치합니다(성장 초기화). 보유 ₵·평판·구매한 장비도 새 운영자 기준으로 초기화되어 사라집니다. 캠페인 진행은 유지됩니다.</p>
     </div>
   );
 }
@@ -500,7 +503,8 @@ function IntelBroker({ state, dispatch }) {
   const ch = save.character;
   const price = GEAR.INTEL_PRICE;
   const board = CAMP.boardState(save);
-  const rows = board.mains.concat(board.sides).filter(r => r.unlocked);
+  // [3차 발굴 F4] Act2 미션 인텔 포함 — mains+sides 만 나열해 Act2 인텔 구매 경로가 없던 누락 보정.
+  const rows = board.mains.concat(board.sides).concat(board.act2 || []).filter(r => r.unlocked);
   return (
     <div className="sheet">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
@@ -575,7 +579,11 @@ function Hub({ state, dispatch, openSave }) {
   const node = state.hub.node;
   const save = state.save;
   const ch = save.character;
-  const threat = CAMP.threatGauge((save.missionsDone || []).length * 3, 0, 10);
+  // [3차 발굴 F3] 위협 게이지 — save.heat/save.heatCap 실배선 (missionsDone*3 하드코딩 제거).
+  //   heatCap 은 챕터 보상 heatCapDelta 로 상향(applyRewards), heat 는 미션 정산 +1 · wantedZero 0.
+  //   cap 클램프로 "96/10" 류 초과 표기 원천 차단.
+  const heatCap = save.heatCap || 10;
+  const threat = CAMP.threatGauge(Math.min(save.heat || 0, heatCap), 0, heatCap);
   if (node === 'sheet') return <CharacterSheet state={state} dispatch={dispatch} />;
   if (node === 'roster') return <Roster state={state} dispatch={dispatch} />;
   if (node === 'save') return <SaveMenu state={state} dispatch={dispatch} back={() => dispatch({ type: 'HUB_NAV', node: 'root' })} />;
@@ -888,7 +896,8 @@ function Combat({ state, dispatch, view }) {
   const critShake = !reducedMotion && (c.floaters || []).some(f => f.crit);
   const dim = { cols: c.field.cols, rows: c.field.rows };
   // 이동 범위
-  const blocked = GRID.buildBlocked(c.field, c.units, 'cipher');
+  // [3차 발굴 F13] selfId = 플레이어 유닛 id 상수('hero') — 'cipher' 하드코딩 정합화(store.PLAYER_ID).
+  const blocked = GRID.buildBlocked(c.field, c.units, STORE.PLAYER_ID);
   const reach = GRID.bfsRange({ x: p.x, y: p.y }, p.mov, blocked, c.field.cols, c.field.rows);
   // 텔레그래프 셀
   const threatTiles = {}; const threatMoveTiles = {};
@@ -1217,7 +1226,23 @@ function Epilogue({ state, dispatch }) {
 
 // ── 앱 (씬 라우터) ──
 function App() {
-  const [state, dispatch] = useReducer(STORE.rpgReducer, undefined, STORE.rpgInitialState);
+  // [3차 발굴 F1] 부트 하이드레이트 — 마운트 직후 자동세이브 useEffect 가 초기 씬 'hub' 에서
+  //   발화해 이전 세션의 localStorage 자동세이브를 새 세이브로 덮어쓰던 진행 소실 차단.
+  //   SAVE.loadLocal()(내부 migrate = LOAD_SAVE 와 동일 마이그레이션 경로) 성공 시 그 세이브로
+  //   하이드레이트하고 배너로 가시화(조용한 실패 금지). 실패/부재/file:// 접근 불가(try/catch)
+  //   시에만 newSave 부트.
+  const [state, dispatch] = useReducer(STORE.rpgReducer, undefined, () => {
+    const fresh = STORE.rpgInitialState();
+    try {
+      const s = SAVE.loadLocal();
+      if (s) {
+        const hydrated = STORE.rpgReducer(fresh, { type: 'LOAD_SAVE', save: s });
+        hydrated.banner = { kind: 'load', text: '⟳ 자동 불러오기 — 이전 세션 세이브 복원됨' };
+        return hydrated;
+      }
+    } catch (e) {}
+    return fresh;
+  });
   const [saveOpen, setSaveOpen] = useState(false);
   // 전투 투영 뷰: 기본 아이소(섀도우런 룩), 탑다운 폴백. localStorage 영속.
   const [view, setView] = useState(() => {
@@ -1267,7 +1292,8 @@ try {
 
 <!-- 타자기 캐럿 미세 스타일 -->
 <style>.tw { cursor: pointer; } .caret { color: var(--cyan); animation: blink 1s steps(1) infinite; } @keyframes blink { 50% { opacity: 0; } }
-.topbar .home-link { color: var(--text-dim); text-decoration: none; font-size: 16px; line-height: 1; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; }
+/* [3차 발굴 F7] 홈 링크 터치 타겟 보강 — min-height 32px + 플렉스 수직 중앙(톱바 래핑 레이아웃 불변) */
+.topbar .home-link { color: var(--text-dim); text-decoration: none; font-size: 16px; line-height: 1; padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px; display: inline-flex; align-items: center; min-height: 32px; }
 .topbar .home-link:hover { color: var(--cyan); border-color: var(--cyan); }
 /* ── 미션 보드 (허브 개편) ── */
 .mboard { gap: 6px; }

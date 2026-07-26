@@ -10,7 +10,10 @@ cd sim-e2e && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install     # once (browser
 PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node run.js 3 5x5       # 3 games on the fast 5x5 map
 PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node run.js 20 11x11    # 20 games on the full 11x11 map
 ```
-`node run.js [games=10] [mapSize=11x11]`. Results are printed as a table and saved to
+`node run.js [games=10] [mapSize=11x11] [scenario=S01]`. The optional 3rd argument selects the
+scenario (`S01`~`S06`, see `docs/14-scenarios.md`) that in-page `SCENARIOS[scenario]` is read
+from (`run.js:47-51`); omit it to run the default `S01`, e.g. `node run.js 100 11x11 S02`. Results
+are printed as a table and saved to
 `sim-e2e/results/<timestamp>.json`. The three CDN libs (React/ReactDOM/Babel) are served
 offline from `sim-e2e/vendor/` via request interception, so no network is needed at run time.
 

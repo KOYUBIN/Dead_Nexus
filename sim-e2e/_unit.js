@@ -192,16 +192,16 @@ function tests(){
     const d5=R5(s5,{type:'DRAW_NEWS'});
     ok('S05 DRAW_NEWS → meta.newsDrawn 2장',(d5.meta.newsDrawn||[]).length===2,`got ${(d5.meta.newsDrawn||[]).length}`);
     ok('S05 currentNews = 마지막 장(뉴스박스 헤드라인)',!!d5.currentNews&&d5.meta.newsDrawn[1].id===d5.currentNews.id,`cur ${d5.currentNews&&d5.currentNews.id}`);
-    const news5Logs=d5.log.filter(l=>String(l.message||'').startsWith('📰')).length
-                   -s5.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+    const news5Logs=d5.log.filter(l=>String(l.message||'').startsWith('📰')&&!String(l.message||'').includes('덱 오염')).length
+                   -s5.log.filter(l=>String(l.message||'').startsWith('📰')&&!String(l.message||'').includes('덱 오염')).length;
     ok('S05 뉴스 로그 2줄 (효과 순차 적용 = 기존 경로 2회)',news5Logs===2,`got ${news5Logs}`);
     // 타 시나리오 무영향 — S01/S03/S06 은 newsDrawCount 미지정 → 1장 + newsDrawn 미설정
     for (const sid of ['S01','S03','S06']) {
       const sx=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:sid});
       ok(`${sid} newsDrawCount 미지정 → 폴백 1`,SR(sx,'newsDrawCount',1)===1);
       const dx=R5(sx,{type:'DRAW_NEWS'});
-      const nLogs=dx.log.filter(l=>String(l.message||'').startsWith('📰')).length
-                 -sx.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+      const nLogs=dx.log.filter(l=>String(l.message||'').startsWith('📰')&&!String(l.message||'').includes('덱 오염')).length
+                 -sx.log.filter(l=>String(l.message||'').startsWith('📰')&&!String(l.message||'').includes('덱 오염')).length;
       ok(`${sid} DRAW_NEWS 1줄 · newsDrawn 미설정 (2장 배선 무영향)`,nLogs===1&&dx.meta.newsDrawn===undefined,`logs ${nLogs} drawn ${JSON.stringify(dx.meta.newsDrawn)}`);
       // 격리 byte 동일성: 동일 시드에서 (a) 신규 게이트를 통과한 DRAW_NEWS 와 (b) __newsOne 로 게이트를
       //   강제 우회한 DRAW_NEWS(=패치 이전 코드 경로)의 결과 상태가 완전 동일 — 분기 미진입 실증.
@@ -891,6 +891,173 @@ function tests(){
   const oldScar6=LAS();
   ok('LEG8 하위호환: 기존 acquired 흉터 로드 유지(bloc=IRONWALL·heatDelta=0)', !!oldScar6&&oldScar6.kind==='acquired'&&oldScar6.bloc==='IRONWALL'&&oldScar6.heatDelta===0, JSON.stringify(oldScar6));
   ok('LEG8 하위호환: ch1~6 세이브 완주 아님(campaignComplete=false)', LCC(oldLoad6)===false);
+  // ============================================================
+  // v6.51 [3차 감사 1파] E1~E14 회귀 — rules_module + 리듀서 배선
+  //   러너는 실패 시 케이스명을 항상 출력(FAIL <name> [extra]) — 플레이키 재현용 (E15①).
+  // ============================================================
+  const RVP=window.rules_victoryByPoints, RVRt=window.rules_victoryRatio, CVPt=window.checkVictoryByPoints,
+        TVX=window.rules_truceViolationFx, TAB=window.rules_truceActiveBetween, RFX=window.rules_raidSuccessFx,
+        NCPI=window.rules_negoCapInfo, AEFF=window.applyEffect, NAPP=window.negoApply, INSC=window.insertScandal,
+        MNAC=window.euro_declareMnaCheck;
+  ok('E51 core fns exposed',[RVP,RVRt,CVPt,TVX,TAB,RFX,NCPI,AEFF,NAPP,INSC,MNAC].every(f=>typeof f==='function'));
+  ok('E51 NEGO_MAX 단일 소스 =2',window.RULES_NEGO_MAX===2);
+  // ---- E1: 타임아웃 승자 = 정규화 진척 비교 (필터·hlBonus·동률) ----
+  const e1b=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S01'});
+  const mkG=(over)=>({...e1b.players[0],role:'ghost',isNpc:false,defeated:false,highlightPoints:0,...over,resources:{...e1b.players[0].resources,...(over.resources||{})}});
+  const e1All=(ps,extraMeta)=>({...e1b,players:ps,meta:{...e1b.meta,raidsThisGame:{},...(extraMeta||{})}});
+  const e1=e1All([mkG({resources:{rep:200}}),mkG({resources:{rep:100}}),mkG({isNpc:true,resources:{rep:9999}}),mkG({defeated:true,resources:{rep:9999}})]);
+  const e1r=RVP(e1);
+  ok('E1 승자 = 진척 1위 (NPC·defeated 제외)',e1r.meta.gameOver===true&&e1r.meta.winner===0,`winner ${e1r.meta.winner} (${e1r.meta.winReason})`);
+  ok('E1 winReason 정규화 표기',String(e1r.meta.winReason||'').indexOf('목표 진척')>=0,e1r.meta.winReason);
+  // hlBonus 가산: P1 rep 100 + hl(round(hp×0.3)) 가 P0 rep 200 을 역전
+  const e1hl=e1All([mkG({resources:{rep:200}}),mkG({resources:{rep:100},highlightPoints:400})]);
+  ok('E1 hlBonus 가산 역전 (100+120✨ > 200)',RVP(e1hl).meta.winner===1,`winner ${RVP(e1hl).meta.winner}`);
+  // 렙배틀 경로(min 성분): 레이드 충족 + 렙배틀 초과 > 렙온리 경로
+  const gE1=GVG(e1);
+  const e1bt=e1All([mkG({resources:{rep:gE1.ghostRepOnly}}),mkG({resources:{rep:Math.ceil(gE1.ghostRepBattle*1.3)}})],{raidsThisGame:{1:gE1.ghostRaids*2}});
+  ok('E1 렙배틀 경로 min(렙,레이드) 반영',RVP(e1bt).meta.winner===1,`winner ${RVP(e1bt).meta.winner} goals ${JSON.stringify(gE1)}`);
+  // 동률 규칙: 완전 동률 → 무승부 (배열 순서로 승자 갈리지 않음)
+  const e1t=e1All([mkG({resources:{rep:120}}),mkG({resources:{rep:120}})]);
+  const e1tr=RVP(e1t);
+  ok('E1 동률 → 무승부 (winner null)',e1tr.meta.gameOver===true&&e1tr.meta.winner===null&&String(e1tr.meta.winReason).indexOf('무승부')>=0,e1tr.meta.winReason);
+  ok('E1 checkVictoryByPoints 위임 동일',CVPt(e1).meta.winner===0&&CVPt(e1t).meta.winner===null);
+  ok('E1 rules_victoryRatio NPC/defeated=-Inf',RVRt(e1.players[2],2,e1,gE1)===-Infinity&&RVRt(e1.players[3],3,e1,gE1)===-Infinity);
+  // ---- E2: effect 키당 1회 발동 + heal_all 대상 필터 ----
+  const h3=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S03'});
+  const hGj=h3.players.findIndex((p,i)=>i>0&&!p.isNpc&&p.role==='ghost');
+  const hBj=h3.players.findIndex(p=>!p.isNpc&&p.role==='bloc');
+  const hNj=h3.players.findIndex(p=>p.isNpc);
+  const hDmg={...h3,players:h3.players.map(p=>({...p,hp:1}))};
+  const hRes=AEFF(hDmg,0,{heal_all:50},'main',null);
+  const hExp=(p)=>Math.min(p.maxHp,1+Math.max(1,Math.floor(p.maxHp*0.5)));
+  ok('E2 heal_all 50%: 시전 Ghost 회복(1회만, 고정+3 중복 없음)',hRes.players[0].hp===hExp(h3.players[0]),`got ${hRes.players[0].hp} exp ${hExp(h3.players[0])}`);
+  ok('E2 heal_all: 같은 진영 Ghost 회복',hGj>0&&hRes.players[hGj].hp===hExp(h3.players[hGj]),`got ${hRes.players[hGj]&&hRes.players[hGj].hp}`);
+  ok('E2 heal_all: 타 진영(Bloc) 비회복',hBj>=0&&hRes.players[hBj].hp===1,`got ${hRes.players[hBj]&&hRes.players[hBj].hp}`);
+  ok('E2 heal_all: NPC 비회복',hNj>=0&&hRes.players[hNj].hp===1);
+  const hDef={...hDmg,players:hDmg.players.map((p,i)=>i===hGj?{...p,defeated:true}:p)};
+  ok('E2 heal_all: 탈락자 비회복',AEFF(hDef,0,{heal_all:50},'main',null).players[hGj].hp===1);
+  const h2=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:'S02'});
+  const h2b=h2.players.findIndex((p,i)=>i>0&&!p.isNpc&&p.role==='bloc');
+  const h2r=AEFF({...h2,players:h2.players.map(p=>({...p,hp:1}))},0,{heal_all:99},'main',null);
+  ok('E2 heal_all 99%: Bloc 시전 → 자기 진영 Bloc 회복·NPC 제외',h2r.players[0].hp===h2.players[0].maxHp&&(h2b<0||h2r.players[h2b].hp===h2.players[h2b].maxHp)&&h2r.players.every((p,i)=>!p.isNpc||p.hp===1),`p0 ${h2r.players[0].hp}/${h2.players[0].maxHp}`);
+  // crash_target: 총 주가 하락 = 정확히 amt (중복 분기 2회 하락 봉합) + CIPHER 보너스 1회
+  const cr0=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:null,scenario:'S01'});
+  const cr1={...cr0,players:cr0.players.map((p,i)=>i===0?{...p,tracks:{}}:p)};
+  const crSum=st=>Object.values(st.stocks).reduce((a,v)=>a+v,0);
+  const crR=AEFF(cr1,0,{crash_target:3},'main',null);
+  ok('E2 crash_target: 총 주가 하락 정확히 3 (1회 발동)',crSum(cr1)-crSum(crR)===3,`drop ${crSum(cr1)-crSum(crR)}`);
+  ok('E2 crash_target: Ghost 보너스 ★+3 📡+1 (1회)',crR.players[0].resources.rep-cr1.players[0].resources.rep===3&&crR.players[0].resources.data-cr1.players[0].resources.data===1,`rep+${crR.players[0].resources.rep-cr1.players[0].resources.rep} data+${crR.players[0].resources.data-cr1.players[0].resources.data}`);
+  // swap_ratio: 1:2 실환전만 (₵+3 폴백 중복 없음)
+  const sw1={...cr0,players:cr0.players.map((p,i)=>i===0?{...p,tracks:{},resources:{...p.resources,data:5}}:p)};
+  const swR=AEFF(sw1,0,{swap_ratio:2},'main',null);
+  ok('E2 swap_ratio: 📡-2 → ₵+4 정확 (중복 ₵+3 없음)',swR.players[0].resources.data===3&&swR.players[0].resources.credit-sw1.players[0].resources.credit===4,`data ${swR.players[0].resources.data} ₵diff ${swR.players[0].resources.credit-sw1.players[0].resources.credit}`);
+  // force_enter: BLADE 폴백 번들 1회 (★+3, 구 ★+2 분기 제거) — 인접 Bloc 없는 칸에서
+  const feFree=Object.keys(cr0.map).find(c=>cr0.map[c].owner==null&&coordsAdj(c).every(a=>!cr0.map[a]||cr0.map[a].owner==null));
+  const fe1={...cr0,players:cr0.players.map((p,i)=>i===0?{...p,tracks:{},position:feFree}:p)};
+  const feR=AEFF(fe1,0,{force_enter:1},'main',null);
+  ok('E2 force_enter: ★+3 정확 (1회 발동, +2 중복 없음)',feR.players[0].resources.rep-fe1.players[0].resources.rep===3,`rep+${feR.players[0].resources.rep-fe1.players[0].resources.rep} at ${feFree}`);
+  // ---- E3: 인간 협상 라운드당 캡 (봇 NEGO_MAX=2 동일) ----
+  const n0raw=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BROKER',humans:null,scenario:'S01'});
+  const n0={...n0raw,players:n0raw.players.map((p,i)=>i===0?{...p,tracks:{}}:p)};  // 트랙 마일스톤 ★ 노이즈 차단
+  const nTo=n0.players.findIndex((p,i)=>i>0&&!p.isNpc&&!p.defeated);
+  const nProp={from:0,to:nTo,type:'broker_deal',give:{},get:{rep:1,credit:1},value:3};
+  let nS=n0;
+  nS=R(nS,{type:'PROPOSE_NEGOTIATION',prop:nProp});
+  nS=R(nS,{type:'PROPOSE_NEGOTIATION',prop:nProp});
+  const nRep2=nS.players[0].resources.rep;
+  ok('E3 캡 전 2회 제안 정상 처리 (broker ★+2)',nRep2-n0.players[0].resources.rep===2&&(nS.meta.negoStats||{}).proposed===2,`rep+${nRep2-n0.players[0].resources.rep} proposed ${(nS.meta.negoStats||{}).proposed}`);
+  ok('E3 rules_negoCapInfo 도달 판정',NCPI(nS,0).ok===false&&NCPI(nS,0).used===2&&NCPI(n0,0).ok===true,JSON.stringify(NCPI(nS,0)));
+  const nS3=R(nS,{type:'PROPOSE_NEGOTIATION',prop:nProp});
+  ok('E3 캡 도달 3회째 거부 (자원 불변+로그, 조용한 거부 금지)',nS3.players[0].resources.rep===nRep2&&(nS3.meta.negoStats||{}).proposed===2&&String((nS3.log[nS3.log.length-1]||{}).message).indexOf('협상 제안 거부')>=0,String((nS3.log[nS3.log.length-1]||{}).message));
+  const nNext={...nS,meta:{...nS.meta,round:nS.meta.round+1}};
+  ok('E3 라운드 전환 시 캡 리셋',NCPI(nNext,0).ok===true&&NCPI(nNext,0).used===0);
+  // ---- E4: truce 위반 공통 헬퍼 (attacker,target 인자 — 봇↔봇 포함) ----
+  const t0={...n0,meta:{...n0.meta,promises:[{from:1,to:2,type:'truce',expiresR:n0.meta.round+1,status:'active'}]}};
+  const tV=TVX(t0,2,1);
+  ok('E4 위반: 공격자 ★-2(하한0)·피해자 ★+2·broken',tV.meta.promises[0].status==='broken'&&tV.players[1].resources.rep-t0.players[1].resources.rep===2&&tV.players[2].resources.rep===Math.max(0,t0.players[2].resources.rep-2),`att ${tV.players[2].resources.rep} vic ${tV.players[1].resources.rep}`);
+  ok('E4 무관 쌍 항등(참조 동일)',TVX(t0,0,3)===t0&&TVX(t0,1,1)===t0);
+  ok('E4 만료 truce 비위반(항등)',TVX({...t0,meta:{...t0.meta,promises:[{from:1,to:2,type:'truce',expiresR:n0.meta.round-1,status:'active'}]}},2,1).meta.promises[0].status==='active');
+  // ---- E7: 레이드 성공 부작용 공통화 (카운터 불변·스캔들·truce·하이라이트) ----
+  const rBj=n0.players.findIndex(p=>!p.isNpc&&p.role==='bloc');
+  const rq0={...n0,meta:{...n0.meta,promises:[{from:0,to:rBj,type:'truce',expiresR:n0.meta.round+1,status:'active'}],highlights:[]}};
+  const rqR=RFX(rq0,0,rBj,n0.players[rBj].specific);
+  ok('E7 카운터: raidsThisGame·raidDmgByBloc +1 (불변 갱신)',rqR.meta.raidsThisGame[0]===(rq0.meta.raidsThisGame[0]||0)+1&&rqR.meta.raidDmgByBloc[n0.players[rBj].specific]===1&&rq0.meta.raidsThisGame[0]===(n0.meta.raidsThisGame[0]||0),JSON.stringify(rqR.meta.raidDmgByBloc));
+  ok('E7 스캔들 오염 적용',(rqR.players[rBj].discard||[]).filter(c=>c==='SCANDAL').length===1);
+  ok('E7 truce 위반 판정 통과 경로 포함',rqR.meta.promises[0].status==='broken');
+  ok('E7 첫 레이드 하이라이트 기록',(rqR.meta.highlights||[]).some(h=>h.key==='first_raid_success'&&h.playerIdx===0));
+  // ---- E8: 동일 쌍 truce 중복 등록 거부 ----
+  let u1=NAPP(n0,{from:0,to:nTo,type:'truce',give:{},get:{},expiresR:n0.meta.round+1});
+  ok('E8 truce 1차 등록 성사',(u1.meta.promises||[]).length===1&&TAB(u1,0,nTo)===true&&TAB(u1,nTo,0)===true);
+  const u2=NAPP(u1,{from:nTo,to:0,type:'truce',give:{},get:{},expiresR:u1.meta.round+1});
+  ok('E8 동일 쌍(역방향 포함) 재등록 거부+로그',(u2.meta.promises||[]).length===1&&u2.meta.negoStats.rejected===u1.meta.negoStats.rejected+1&&String((u2.log[u2.log.length-1]||{}).message).indexOf('재등록 거부')>=0,String((u2.log[u2.log.length-1]||{}).message));
+  // ---- E9: S06 시드 스캔들 카운터 기록 (POLLUTION_CAP 우회 봉합) ----
+  const e9=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'CARBON',humans:null,scenario:'S06'});
+  ok('E9 S06 시드 오염 카운터=1 (전 Bloc 좌석)',e9.players.every((p,i)=>p.role!=='bloc'||(e9.meta.scandalsThisGame||{})[i]===1),JSON.stringify(e9.meta.scandalsThisGame));
+  const e9b=e9.players.findIndex(p=>p.role==='bloc');
+  const e9one=INSC(e9,e9b,'test');
+  const e9two=INSC(e9one,e9b,'test');
+  ok('E9 시드 1 + 삽입 1 = CAP(2) 도달 → 3번째 차단',(e9one.meta.scandalsThisGame||{})[e9b]===2&&e9two===e9one&&(e9one.players[e9b].discard||[]).filter(c=>c==='SCANDAL').length===2,`cnt ${(e9one.meta.scandalsThisGame||{})[e9b]}`);
+  ok('E9 타 시나리오 카운터 0 시작 (S01)',JSON.stringify(n0.meta.scandalsThisGame)==='{}');
+  // ---- E5: mna_freeze 게이트 = check 함수 (UI 자동 비활성+사유) ----
+  const m2=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:'S02'});
+  const mTb=m2.players.find((p,i)=>i>0&&p.role==='bloc'&&!p.isNpc);
+  const mFz={...m2,meta:{...m2.meta,mnaFrozenRound:m2.meta.round}};
+  const mChk=MNAC(mFz,0,mTb?mTb.specific:'HELIX');
+  ok('E5 freeze check: ok=false + 사유 문자열',mChk.ok===false&&String(mChk.reason).indexOf('위원회')>=0,JSON.stringify(mChk));
+  ok('E5 비동결 라운드는 freeze 사유 아님',String(MNAC(m2,0,mTb?mTb.specific:'HELIX').reason).indexOf('위원회')<0);
+  // ---- E14ⓓ: 흡수된 블록 재인수 차단 (check 에 유효 대상 검사) ----
+  const mAb={...m2,players:m2.players.map(p=>(mTb&&p.id===mTb.id)?{...p,acquiredBy:3}:p)};
+  const mAbChk=MNAC(mAb,0,mTb?mTb.specific:'HELIX');
+  ok('E14ⓓ 흡수(acquiredBy) 블록 재인수 거부',!mTb||mAbChk.ok===false&&String(mAbChk.reason).indexOf('흡수')>=0,JSON.stringify(mAbChk));
+  // ============================================================
+  // v6.52 [3차 감사 2파] V1~V13 표시↔판정 정직성 회귀 (rules_module 파생 함수)
+  // ============================================================
+  const REE=window.rules_raidExecEst,RSP=window.rules_shortPayout,SSP=window.settleShortPositions;
+  // (HRP/EPV/HLB 는 L388 기존 바인딩 재사용 — hudRaceProgress/evalPlayerVictory/euro_hlVictoryBonus)
+  const EHB=HLB;
+  ok('V52 fns exposed',[REE,RSP,HRP,EHB,EPV,SSP].every(f=>typeof f==='function'));
+  // ---- V2: 레이드 실행 성공률 단일 식 — 실판정(RESOLVE_RAID) 성분 실측 ----
+  ok('V2 기본: thr5 stat3 → needed2 → 5/6=83%',REE({threshold:5,stat:3}).faces===5&&REE({threshold:5,stat:3}).pct===83,JSON.stringify(REE({threshold:5,stat:3})));
+  ok('V2 트랙 LV5(+4): thr8 stat2 — 트랙 유 5/6 vs 무 1/6',REE({threshold:8,stat:2,track:4}).faces===5&&REE({threshold:8,stat:2}).faces===1);
+  ok('V2 MOLE 위장 -2 = 성공면 +2',REE({threshold:5,stat:2}).faces-REE({threshold:7,stat:2}).faces===2);
+  ok('V2 critImmune 상한 6/6=100% (비면역 5/6)',REE({threshold:1,stat:5,critImmune:true}).pct===100&&REE({threshold:1,stat:5}).faces===5);
+  ok('V2 atkOnce 가산 = 동가 stat 동일 (thr6: 4/6)',REE({threshold:6,stat:1,atkOnce:2}).faces===REE({threshold:6,stat:3}).faces&&REE({threshold:6,stat:3}).faces===4);
+  ok('V2 allPlus 감산 needed 산식',REE({threshold:5,stat:3,allPlus:2}).needed===4);
+  // ---- V6: 숏 정산 배수 파생 (표시=정산 동일 식) ----
+  const v6m={...sg,meta:{...sg.meta,shortMultRound:sg.meta.round,shortMultVal:2}};
+  ok('V6 변동성×2 파생 (기본 ×1)',RSP(v6m,'VANTA',3,1,2).payout===12&&RSP(sg,'VANTA',3,1,2).payout===6);
+  const e9lo={...e9,stocks:{...e9.stocks,VANTA:4}},e9hi={...e9,stocks:{...e9.stocks,VANTA:9}};
+  ok('V6 S06 저가(≤5) crashBonus ×2 / 고가 ×1',RSP(e9lo,'VANTA',2,1,2).payout===8&&RSP(e9lo,'VANTA',2,1,2).crashBonus===2&&RSP(e9hi,'VANTA',2,1,2).payout===4);
+  const stS={...e9lo,players:e9lo.players.map((p,i)=>i===0?{...p,role:'ghost',shortPositions:{VANTA:1}}:p),meta:{...e9lo.meta,lastStockSnapshot:{...e9lo.stocks,VANTA:e9lo.stocks.VANTA+2}}};
+  const stR=SSP(stS);
+  const stGain=stR.players[0].resources.credit-stS.players[0].resources.credit;
+  ok('V6 정산 실지급 = rules_shortPayout 파생값 (S06 저가 ₵+8)',stGain===RSP(stS,'VANTA',2,1,window.SHORT_CONFIG?window.SHORT_CONFIG.payoutPerPt:2).payout&&stGain===8,`gain ${stGain}`);
+  // ---- V1: 표시 = 판정 동치 핀 (rep_eff/asset_eff = base + hlBonus✨) ----
+  const gV=GVG(sg);
+  const v1p={...sg.players[0],resources:{...sg.players[0].resources,rep:gV.ghostRepOnly-3},highlightPoints:10};
+  const v1s={...sg,players:[v1p,...sg.players.slice(1)],meta:{...sg.meta,raidsThisGame:{}}};
+  ok('V1 Ghost rep_eff=rep+hl✨: 판정 충족 ⇔ HRP 100',EHB(v1p)===3&&!!EPV(v1p,0,v1s,gV)&&HRP(v1p,0,v1s,gV)===100,`hl ${EHB(v1p)} hrp ${HRP(v1p,0,v1s,gV)}`);
+  const v1q={...v1p,highlightPoints:0};
+  ok('V1 hl 미가산이면 미충족 (base -3)',!EPV(v1q,0,{...v1s,players:[v1q,...sg.players.slice(1)]},gV));
+  const gB=GVG(m2);
+  const avB=assetValue(m2.players[0],m2.stocks,m2);
+  const v1b={...m2.players[0],highlightPoints:Math.ceil((gB.blocAsset-avB)/0.3)+4};
+  const v1bs={...m2,players:[v1b,...m2.players.slice(1)]};
+  ok('V1 Bloc asset_eff=asset+hl✨: 판정 충족 ⇔ HRP 100',!!EPV(v1b,0,v1bs,gB)&&HRP(v1b,0,v1bs,gB)===100,`av ${avB} hl ${EHB(v1b)} goal ${gB.blocAsset}`);
+  // ---- V3: Ghost 진척 바 = hudRaceProgress — 렙배틀 렙 충족·레이드 0 은 min 게이트로 100% 미만 ----
+  const v3p={...sg.players[0],resources:{...sg.players[0].resources,rep:gV.ghostRepBattle},highlightPoints:0};
+  const v3s={...sg,players:[v3p,...sg.players.slice(1)],meta:{...sg.meta,raidsThisGame:{}}};
+  const v3exp=Math.min(100,Math.round(Math.max(0,gV.ghostRepBattle/gV.ghostRepOnly*100)));
+  ok('V3 min 게이트: 렙=배틀목표·레이드0 → 진척=repOnly 경로(<100, 구 표시 100 오류 핀)',HRP(v3p,0,v3s,gV)===v3exp&&v3exp<100,`hrp ${HRP(v3p,0,v3s,gV)} exp ${v3exp}`);
+  // ---- V13ⓐ: stock_buy_any 3주+ 시장 충격 (BUY_STOCK 동일 규칙) ----
+  const mbP={...m2.players[0],resources:{...m2.players[0].resources,credit:200}};
+  const mbS={...m2,players:[mbP,...m2.players.slice(1)]};
+  const mbEnt=Object.entries(mbS.stocks).filter(([bl])=>bl!==mbP.specific).sort((a,b)=>a[1]-b[1]);
+  const cheap=mbEnt[0][0];
+  const mb4=AEFF(mbS,0,{stock_buy_any:4},'main',null);
+  ok('V13ⓐ 4주 자동 매수 → 최저가 블록 주가+1(상한20)',mb4.stocks[cheap]===Math.min(20,mbS.stocks[cheap]+1)&&mb4.players[0].stocks[cheap]===(mbP.stocks[cheap]||0)+4,`${cheap} ${mbS.stocks[cheap]}→${mb4.stocks[cheap]}`);
+  const mb2=AEFF(mbS,0,{stock_buy_any:2},'main',null);
+  ok('V13ⓐ 2주 매수는 무충격',mb2.stocks[cheap]===mbS.stocks[cheap]);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }

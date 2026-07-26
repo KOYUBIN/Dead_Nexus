@@ -779,7 +779,8 @@ function euro_resolvePendingDecision(state, decisionId, choice) {
   else if (decision.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, decision, choice);
   else if (decision.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, decision, choice);
   else if (decision.type === 'mna_defense') s = euro_applyMnaDefenseChoice(s, decision, choice); // v6.11 Stage 3
-  // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
+  // v6.52 (V12): 'negotiation'은 예약 타입 — 현재 생산자 0·resolve 분기 없음 (협상은 negoApply 직접 경로).
+  //   도입 시 여기에 분기 추가 + euro_expireStaleDecisions 의 비만료 유지 조항이 함께 활성화된다.
   return s;
 }
 
@@ -982,6 +983,7 @@ function euro_checkAwardDecisions(state) {
 function euro_expireStaleDecisions(state) {
   const pending = state.meta.pendingDecisions || [];
   if (!pending.length) return state;
+  // v6.52 (V12): 'negotiation' 은 예약 타입(생산자 0) — 도입 시 비만료 유지용 데드 브랜치를 주석으로 명기.
   const keep = (d) => d.type === 'negotiation' || (d.context?.round ?? 0) >= state.meta.round;
   const fresh = pending.filter(keep);
   if (fresh.length === pending.length) return state;
@@ -1076,8 +1078,19 @@ function euro_declareMnaCheck(state, attackerIdx, bloc) {
     return { ok: false, reason: '자기 블록은 인수 불가' };
   if (state.meta && state.meta.pendingMna)
     return { ok: false, reason: '진행 중인 M&A 있음' };
+  // v6.51 (E5): mna_freeze 뉴스 게이트를 check 로 이동 — UI 버튼이 자동 비활성+사유 표기.
+  //   euro_declareMna 의 동일 검사는 이중 안전판으로 유지.
+  if (state.meta && state.meta.mnaFrozenRound === state.meta.round)
+    return { ok: false, reason: '블록 감독 위원회 — 이번 라운드 인수 불가' };
   if (euro_acquisitionsFor(state, attackerIdx).includes(bloc))
     return { ok: false, reason: '이미 인수한 블록' };
+  // v6.51 (E14ⓓ): 유효 대상 검사 — resolveMna(대상 탐색)와 동일 기준. 해당 블록 좌석이 이미
+  //   타 플레이어에게 흡수(acquiredBy)됐으면 재인수 경로 차단 (무주공 보상 반복 착취 방지).
+  {
+    const ownerP = state.players && state.players.find(p => p && p.role === 'bloc' && p.specific === bloc);
+    if (ownerP && ownerP.acquiredBy != null)
+      return { ok: false, reason: '이미 흡수된 블록 (재인수 불가)' };
+  }
   if (euro_mnaCountFor(state, attackerIdx) >= EURO_MNA_MAX_DECLARES)
     return { ok: false, reason: `선언 횟수 소진 (${EURO_MNA_MAX_DECLARES}/${EURO_MNA_MAX_DECLARES})` };
   const round = (state.meta && state.meta.round) || 0;
@@ -1444,9 +1457,7 @@ function euro_applyMnaDefenseDefault(state, decision) {
   const p0 = state.players[0];
   const credit = (p0 && p0.resources && p0.resources.credit) || 0;
   const choice = credit >= 10 ? 'rebuy' : 'scorched';
-  if (typeof logEntry === 'function' && typeof euro_applyMnaDefenseChoice === 'function') {
-    // 로그는 euro_applyMnaDefenseChoice 내부에서 남음
-  }
+  // v6.51 (E14ⓒ): 빈 if 블록 삭제 — 로그는 euro_applyMnaDefenseChoice 내부에서 남음
   return euro_applyMnaDefenseChoice(state, decision, choice);
 }
 

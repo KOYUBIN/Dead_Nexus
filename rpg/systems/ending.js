@@ -17,6 +17,17 @@
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
+  // [3차 발굴 F2/F11] 소극 의존 헬퍼 — abyss.js deps 선례를 따른 지연 해석(순수성 유지, 미로드
+  //   환경에선 null 폴백). 브라우저=window 전역 · node=require. 호출 시점 해석이라 로드 순서 무관.
+  function getClasses() {
+    if (typeof window !== 'undefined' && window.RPG_CLASSES) return window.RPG_CLASSES;
+    try { return require('../data/classes.js'); } catch (e) { return null; }
+  }
+  function getCampaign() {
+    if (typeof window !== 'undefined' && window.RPG_CAMPAIGN) return window.RPG_CAMPAIGN;
+    try { return require('./campaign.js'); } catch (e) { return null; }
+  }
+
   // [그대로] cards/legacy/chapter-08-zero-day.md §SIGNAL의 최종 출력 3행 — 원문 인용.
   var SIGNAL_FINAL = [
     '[SIGNAL] THANK YOU FOR PLAYING.',
@@ -166,13 +177,21 @@
   }
 
   // ---- 캠페인 통계 카드 (세이브에서 파생 가능한 것만) ---------------------------
-  //   missionsDone id 접두사로 메인/사이드 분리(엔진 무의존). karma 지출 = growth 합.
+  //   [3차 발굴 F11] 메인/사이드 분리를 campaign 레지스트리 기반으로 정정 — 'side' 접두사
+  //   휴리스틱은 'a2-side-*'(클래스 사이드)를 메인으로 오분류했다. 레지스트리 kind='side' 또는
+  //   act2 branch='class'(클래스 전용 사이드) = 사이드, 그 외(main·act2 갈래/framing/capstone) =
+  //   메인. 레지스트리 미해석 id 만 접두사 폴백(side-* / a2-side-*). karma 지출 = growth 합.
   function campaignStats(save) {
     save = save || {};
     var done = (save.missionsDone || []);
+    var CAMP = getCampaign();
     var mainCleared = 0, sideCleared = 0;
     for (var i = 0; i < done.length; i++) {
-      if (done[i].indexOf('side') === 0) sideCleared++; else mainCleared++;
+      var entry = (CAMP && CAMP.missionById) ? CAMP.missionById(done[i]) : null;
+      var isSide = entry
+        ? (entry.kind === 'side' || (entry.kind === 'act2' && entry.branch === 'class'))
+        : (done[i].indexOf('side') === 0 || done[i].indexOf('a2-side-') === 0);
+      if (isSide) sideCleared++; else mainCleared++;
     }
     var ch = save.character || {};
     var growth = ch.growth || {};
@@ -184,7 +203,10 @@
     if (eq.weapon) equipped.push(eq.weapon);
     if (eq.cyberware) equipped.push(eq.cyberware);
     var e = migrateEndings(save.endings);
-    var playable = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'];
+    // [3차 발굴 F2] 플레이어블 로스터 = classes.PLAYABLE 단일 출처(abyss.bestByClass 선례) —
+    //   4클래스 하드코딩이 BROKER/DRIFTER(v6.45 승격) 완주 표시를 누락하던 결함 보정.
+    var CL = getClasses();
+    var playable = (CL && CL.PLAYABLE) || ['CIPHER', 'BLADE', 'RIGGER', 'MOLE'];
     var classClears = playable.map(function (k) { return { classKey: k, done: !!e.byClass[k] }; });
     return {
       missionsCleared: done.length,
