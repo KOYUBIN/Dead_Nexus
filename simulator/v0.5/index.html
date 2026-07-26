@@ -2126,7 +2126,7 @@ const SCENARIOS = {
   S05: {
     id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다. 먼저 줍지 않으면 밟고 간다.',
     underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
-    desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향.',
+    desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향 · 뉴스 매 R 2장.',
     locked: false, maps: ['11x11'],
     startHeat: 5,                // docs/14: 시작 공권력 5 (정상)
     startStock: 13,             // docs/14: 시작 주가 13 (과열)
@@ -2134,8 +2134,14 @@ const SCENARIOS = {
     roundLimit: 8,              // docs/14: 8라운드 타임리밋 (도달 시 checkVictoryByPoints 자동 승리)
     blocAssetBonus: 25,         // docs/14: Bloc 자산 60→75 (+25%) → 사sim base 100 → +25
     zoneIncomeBonus: 1,         // docs/14 특수: 모든 구역 수입 +1 (영구, COLLECT_INCOME 훅)
-    // No-op(부분 구현 보고): 금융가 ×2 · 주가 변동폭 ±4 · 뉴스 2장 · 블랙마켓 +2 · M&A 방어 +3
-    //   — 세밀 경제 배선(구역타입별 수입 배수·주가 변동 커브·뉴스 드로우 수)은 엔진 심층부라 미배선.
+    // v6.46 (66차, docs/14 §S05 원안 확장): "뉴스 매 라운드 2장" 배선. 원안 5건 중 가장 자족적인 항목 —
+    //   기존 DRAW_NEWS 경로를 그대로 2회 순차 적용(신규 효과 경로 0). 경제 과열 시나리오의 정체성
+    //   ("도시가 돈을 뿜어낸다" = 시장 소음 2배)을 8R 스프린트 안에서 실제로 체감하게 만든다.
+    //   scenarioRule 게이팅이라 타 시나리오는 newsDrawCount 미지정 → 1장(기존 경로 그대로).
+    newsDrawCount: 2,           // docs/14 특수: 뉴스 매 라운드 2장 공개
+    // No-op 유지(보고): 금융가 ×2 · 주가 변동폭 ±4 · 블랙마켓 +2 · M&A 방어 +3
+    //   — 구역타입별 수입 배수·주가 변동 커브는 엔진 심층부(ZONE_TYPES 수입 스키마·주가 등락 커브)라
+    //   이번 범위 밖. 뉴스 2장만 기존 경로 재사용으로 자족 배선 가능해 선별 배선했다.
   },
   // --- S06: 마켓 크래시 (docs/14) — 경제 붕괴 · 공매도 전성기 (구현) ---
   S06: {
@@ -4167,6 +4173,24 @@ function reducer(state, action) {
     }
 
     case 'DRAW_NEWS': {
+      // v6.46 (S05, docs/14 §S05 원안 "뉴스 매 라운드 2장"): 뉴스 드로우 장수 시나리오 오버라이드.
+      //   [배선 원칙] 새 효과 경로를 만들지 않는다 — 기존 단일 DRAW_NEWS 경로를 N회 순차 재적용할 뿐이다.
+      //   두 장의 효과는 "차례로 적용"되므로 주가 클램프(1~20)·공권력 클램프(0~10)·덱 오염 등 모든
+      //   기존 계약이 그대로 유지된다. currentNews 는 마지막 장(뉴스 박스 헤드라인), meta.newsDrawn 은
+      //   이번 라운드에 뽑힌 전량(표시용 — 판정 무영향). __newsOne 가드로 재귀는 1단계에서 종료.
+      //   scenarioRule 게이팅: newsDrawCount 미지정 시나리오는 1 → 분기 자체를 타지 않아 byte 동일 경로.
+      if (!action.__newsOne) {
+        const drawCount = Math.max(1, scenarioRule(state, 'newsDrawCount', 1));
+        if (drawCount > 1) {
+          let s = state;
+          const drawn = [];
+          for (let i = 0; i < drawCount; i++) {
+            s = reducer(s, { type: 'DRAW_NEWS', __newsOne: true });
+            if (s.currentNews) drawn.push(s.currentNews);
+          }
+          return { ...s, meta: { ...s.meta, newsDrawn: drawn } };
+        }
+      }
       const news = rand(NEWS);
       const eff = news.effect;
       let newStocks = { ...state.stocks };
@@ -6904,7 +6928,7 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S05' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus}. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4·뉴스2장 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus} · 뉴스 매 R {scen.newsDrawCount}장. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4 미배선)
         </div>
       )}
       {scen.id === 'S06' && (
@@ -9029,6 +9053,13 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             <div className="nh">📰 뉴스 {state.currentNews.id}</div>
             <div style={{ fontWeight: 700 }}>{state.currentNews.title}</div>
             <div style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic', marginTop: 3 }}>{state.currentNews.flavor}</div>
+            {/* v6.46 (S05): 매 라운드 2장 드로우 시나리오 — 함께 뽑힌 앞장(들)도 표시 (정직성: 효과는 이미 적용됨) */}
+            {(state.meta.newsDrawn || []).length > 1 && (
+              <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 5, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                이번 라운드 {state.meta.newsDrawn.length}장 공개 ·{' '}
+                {state.meta.newsDrawn.slice(0, -1).map(n => `${n.id} ${n.title}`).join(' / ')}
+              </div>
+            )}
           </div>
         )}
 

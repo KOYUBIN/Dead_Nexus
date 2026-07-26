@@ -184,6 +184,32 @@ function tests(){
   ok('S05 blocAsset=base+adj+25',g5.blocAsset===100+adj5+25,`got ${g5.blocAsset} (adj ${adj5})`);
   ok('S05 all-seat credit +5 (bloc 8+5=13)',bloc5&&bloc5.resources.credit>=13,`got ${bloc5&&bloc5.resources.credit}`);
   ok('S05 ghostRepBattle standard (no override)',g5.ghostRepBattle===45+Math.floor(adj5/2),`got ${g5.ghostRepBattle}`);
+  // ---- v6.46 (66차): S05 뉴스 매 R 2장 드로우 (docs/14 §S05 원안 확장) ----
+  //   기존 DRAW_NEWS 경로 N회 재적용 — 게이팅(newsDrawCount)·2장 실드로우·타 시나리오 1장 불변을 핀.
+  {
+    const R5=window.reducer;
+    ok('S05 newsDrawCount=2 (원안 배선)',SR(s5,'newsDrawCount',1)===2,`got ${SR(s5,'newsDrawCount',1)}`);
+    const d5=R5(s5,{type:'DRAW_NEWS'});
+    ok('S05 DRAW_NEWS → meta.newsDrawn 2장',(d5.meta.newsDrawn||[]).length===2,`got ${(d5.meta.newsDrawn||[]).length}`);
+    ok('S05 currentNews = 마지막 장(뉴스박스 헤드라인)',!!d5.currentNews&&d5.meta.newsDrawn[1].id===d5.currentNews.id,`cur ${d5.currentNews&&d5.currentNews.id}`);
+    const news5Logs=d5.log.filter(l=>String(l.message||'').startsWith('📰')).length
+                   -s5.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+    ok('S05 뉴스 로그 2줄 (효과 순차 적용 = 기존 경로 2회)',news5Logs===2,`got ${news5Logs}`);
+    // 타 시나리오 무영향 — S01/S03/S06 은 newsDrawCount 미지정 → 1장 + newsDrawn 미설정
+    for (const sid of ['S01','S03','S06']) {
+      const sx=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:sid});
+      ok(`${sid} newsDrawCount 미지정 → 폴백 1`,SR(sx,'newsDrawCount',1)===1);
+      const dx=R5(sx,{type:'DRAW_NEWS'});
+      const nLogs=dx.log.filter(l=>String(l.message||'').startsWith('📰')).length
+                 -sx.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+      ok(`${sid} DRAW_NEWS 1줄 · newsDrawn 미설정 (2장 배선 무영향)`,nLogs===1&&dx.meta.newsDrawn===undefined,`logs ${nLogs} drawn ${JSON.stringify(dx.meta.newsDrawn)}`);
+      // 격리 byte 동일성: 동일 시드에서 (a) 신규 게이트를 통과한 DRAW_NEWS 와 (b) __newsOne 로 게이트를
+      //   강제 우회한 DRAW_NEWS(=패치 이전 코드 경로)의 결과 상태가 완전 동일 — 분기 미진입 실증.
+      const seedRun=(act)=>{const real=Math.random;let t=0x9e3779b9;Math.random=()=>{t=(t*1664525+1013904223)>>>0;return t/4294967296;};
+        try{return JSON.stringify(R5(sx,act));}finally{Math.random=real;}};
+      ok(`${sid} 격리 byte 동일 (게이트 통과 == 우회 경로, 동일 시드)`,seedRun({type:'DRAW_NEWS'})===seedRun({type:'DRAW_NEWS',__newsOne:true}));
+    }
+  }
   // ---- S06 마켓 크래시 ----
   const s6=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'CARBON',humans:null,scenario:'S06'});
   const g6=GVG(s6);

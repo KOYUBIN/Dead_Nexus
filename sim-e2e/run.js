@@ -50,6 +50,14 @@ const N = Math.max(1, parseInt(process.argv[2] || '10', 10));
 const MAP = process.argv[3] || '11x11';
 const SCENARIO = process.argv[4] || 'S01';
 if (!['5x5', '11x11'].includes(MAP)) { console.error(`mapSize must be 5x5 or 11x11 (got "${MAP}")`); process.exit(1); }
+// v6.46 [66차, B-01]: 시나리오 레버 스윕 훅 — DN_SCEN_OVERRIDE=<JSON> 이 주어지면 매 판 buildInitial
+//   직전에 in-page SCENARIOS[scenario] 위로 Object.assign 한다. 측정 전용(레포 기본값 불변);
+//   미지정 시 완전 무영향(cfg.scenOverride === null → 분기 자체를 타지 않음).
+let SCEN_OVERRIDE = null;
+if (process.env.DN_SCEN_OVERRIDE) {
+  try { SCEN_OVERRIDE = JSON.parse(process.env.DN_SCEN_OVERRIDE); }
+  catch (e) { console.error(`DN_SCEN_OVERRIDE must be JSON (got "${process.env.DN_SCEN_OVERRIDE}")`); process.exit(1); }
+}
 
 const GHOST_CLASSES = ['CIPHER', 'BLADE', 'BROKER', 'RIGGER', 'DRIFTER', 'MOLE'];
 const BLOC_CLASSES = ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM', 'CARBON'];
@@ -97,6 +105,14 @@ function inPageGame(cfg) {
     if (typeof R !== 'function' || typeof BP !== 'function' || typeof CIV !== 'function' || typeof window.buildInitial !== 'function')
       return { ok: false, error: 'engine globals missing' };
 
+    // v6.46 [66차, B-01]: 레버 스윕 오버라이드 (측정 전용). SCENARIOS 는 const 렉시컬 전역이라
+    //   window 프로퍼티가 아니지만 같은 realm 의 evaluate 스코프에서 bare 이름으로 접근된다.
+    if (cfg.scenOverride) {
+      const SC = (typeof SCENARIOS !== 'undefined') ? SCENARIOS : null;
+      const sid = cfg.scenario || 'S01';
+      if (!SC || !SC[sid]) return { ok: false, error: 'SCENARIOS unavailable for override' };
+      Object.assign(SC[sid], cfg.scenOverride);
+    }
     let s = window.buildInitial({ mode: 'solo', mapSize: cfg.mapSize, difficulty: 'normal', role: cfg.role, specific: cfg.specific, humans: null, scenario: cfg.scenario || 'S01' });
     // v6.18: 시나리오 시작 조건 실측 캡처 (변형이 실제로 적용됐는지 확인용)
     const scenApplied = {
@@ -293,7 +309,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
     const allBloc = SCENARIO === 'S02';
     const role = allBloc ? 'bloc' : (SCENARIO === 'S03' ? 'ghost' : (Math.random() < 0.5 ? 'ghost' : 'bloc'));
     const specific = pick(role === 'ghost' ? GHOST_CLASSES : BLOC_CLASSES);
-    const cfg = { mapSize: MAP, role, specific, roundGuard: ROUND_GUARD, scenario: SCENARIO };
+    const cfg = { mapSize: MAP, role, specific, roundGuard: ROUND_GUARD, scenario: SCENARIO, scenOverride: SCEN_OVERRIDE };
     const startConsole = pg.buf.console.length, startErr = pg.buf.pageerror.length;
     const gStart = Date.now();
 
@@ -394,7 +410,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   }
   const nOk = ok.length || 1;
   const summary = {
-    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, scenario: SCENARIO, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: 'simulator/v0.5 v6.18' },
+    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, scenario: SCENARIO, scenOverride: SCEN_OVERRIDE, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: 'simulator/v0.5 v6.18' },
     outcomes: {
       completed: ok.length,
       timeouts: games.filter(g => g.status === 'timeout').length,
