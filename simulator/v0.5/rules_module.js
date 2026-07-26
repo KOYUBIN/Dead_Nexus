@@ -161,6 +161,97 @@ function rules_victoryByPoints(state) {
   });
 }
 
+// ============================================================================
+// v6.44 (A2) → v6.51 이전: 협상 페이즈 (Phase 1.5) 공용 헬퍼 — docs/17 §2 원전 배선
+//   (index.html babel 인라인에서 그대로 이전 — logEntry/raiseTrack 은 호출 시점 전역 참조)
+// 원전 §2.1 거래 3종만 생성: 자원 스왑 / 비공격 약속(truce) / BROKER 중개.
+// EV-중립(지배 전략 금지): 봇 수락은 net-value ≥ 0 문턱. 지속·보상·위반은 기존 채널 재사용
+// (truce 만료 ★+1 = NEXT_ROUND, truce 위반 ★-2/피해자 ★+2 = 레이드 판정, 인맥 트랙 = raiseTrack).
+function negoTypeLabel(t) { return t === 'swap' ? '자원 스왑' : t === 'truce' ? '비공격 약속' : t === 'broker_deal' ? 'BROKER 중개' : t; }
+function negoResAbbr(k) { return ({ credit: '₵', weapons: '🔩', data: '📡', parts: '⚙', rep: '★' })[k] || (k.charAt(0).toUpperCase()); }
+
+// 원전 §2.1 3종 거래 후보 생성. from 이 남는 자원 ↔ to 가 남는 자원 = 양측 부족분 보충(win-win, EV-중립).
+function negoBuildCandidates(fromP, from, toP, to, round) {
+  const cands = [];
+  const fr = fromP.resources || {}, tr = toP.resources || {};
+  // (1) 자원 스왑 — 원전 §2.1 "크레딧↔무기, 데이터↔부품 등. 즉시 자원 교환"
+  if ((fr.credit || 0) >= 4 && (tr.weapons || 0) >= 2 && (fr.weapons || 0) < 2)
+    cands.push({ from, to, type: 'swap', give: { credit: 4 }, get: { weapons: 2 }, value: 5 });
+  if ((fr.weapons || 0) >= 2 && (tr.credit || 0) >= 4 && (fr.credit || 0) < 4)
+    cands.push({ from, to, type: 'swap', give: { weapons: 2 }, get: { credit: 4 }, value: 5 });
+  if ((fr.data || 0) >= 2 && (tr.parts || 0) >= 2 && (fr.parts || 0) < 2)
+    cands.push({ from, to, type: 'swap', give: { data: 2 }, get: { parts: 2 }, value: 4 });
+  // (2) 비공격 약속 truce — 원전 §2.1 "1R 동안 서로 raid 안 한다" (진영 다를 때만 의미)
+  if (fromP.role !== toP.role)
+    cands.push({ from, to, type: 'truce', give: {}, get: {}, expiresR: round + 1, value: 3 });
+  // (3) BROKER 중개 — 원전 §2.1/§2.3 "BROKER 클래스 한정. 매 R ★+1 ₵+1"
+  if (fromP.specific === 'BROKER')
+    cands.push({ from, to, type: 'broker_deal', give: {}, get: { rep: 1, credit: 1 }, value: 3 });
+  return cands;
+}
+
+// EV-중립 봇 수락 판정. acceptValue = (to 가 받는 것) − (to 가 내주는 것) + 관계가치.
+// prop.give = from→to 이전분(=to 수령), prop.get = to→from 이전분(=to 지불). net ≥ 0 이면 수락.
+// 지배 전략 방지: 스왑은 부족분 보충 시에만 +, truce 는 소폭 +(만료 ★+1 기대), broker 는 to 무손실.
+function negoEvalAccept(prop, toP) {
+  let acceptValue = 0;
+  for (const [, v] of Object.entries(prop.give || {})) acceptValue += v;   // to 가 수령
+  for (const [, v] of Object.entries(prop.get || {})) acceptValue -= v;    // to 가 지불
+  if (prop.type === 'truce') acceptValue += 2;        // 비공격 약속 자체 가치
+  if (prop.type === 'broker_deal') acceptValue = 1;   // 중개는 to 무손실 → 수락 (BROKER 정체성, to 지불 없음)
+  let canAfford = true;   // 스왑만 to 가 get(지불분)을 실제 보유해야 성립 (broker 의 get 은 from 보너스라 to 무지불)
+  if (prop.type === 'swap' && prop.get) for (const [k, v] of Object.entries(prop.get)) if ((toP.resources[k] || 0) < v) canAfford = false;
+  return { accept: canAfford && acceptValue >= 0, acceptValue, canAfford };
+}
+
+// 협상 처리 — 봇↔봇 자동·인간→봇 UI 공용. 발생 로그 + cap-immune 계측(meta.negoStats). 조용한 실패 금지.
+function negoApply(s, prop) {
+  const fromP = s.players[prop.from], toP = s.players[prop.to];
+  if (!fromP || !toP || fromP.defeated || toP.defeated) return s;
+  const stats = { proposed: 0, accepted: 0, rejected: 0, swaps: 0, truces: 0, broker: 0, ...(s.meta.negoStats || {}) };
+  stats.proposed += 1;
+  const evl = negoEvalAccept(prop, toP);
+  if (!evl.accept) {
+    stats.rejected += 1;
+    s = logEntry(s, `🤝 협상 거절: P${prop.from} [${fromP.specific}] → P${prop.to} [${toP.specific}] (${negoTypeLabel(prop.type)}) · EV ${evl.acceptValue}`);
+    return { ...s, meta: { ...s.meta, negoStats: stats } };
+  }
+  // v6.51 (E8): 동일 쌍 활성 truce 중복 등록 거부 — 수락 전 게이트 (거부 로그 + 계측, 조용한 중복 금지)
+  if (prop.type === 'truce' && typeof rules_truceActiveBetween === 'function' && rules_truceActiveBetween(s, prop.from, prop.to)) {
+    stats.rejected += 1;
+    s = logEntry(s, `🕊 비공격 약속 중복: P${prop.from} ↔ P${prop.to} 이미 활성 — 재등록 거부`);
+    return { ...s, meta: { ...s.meta, negoStats: stats } };
+  }
+  stats.accepted += 1;
+  const ps = [...s.players];
+  if (prop.type === 'swap') {
+    stats.swaps += 1;
+    const frr = { ...fromP.resources }, trr = { ...toP.resources };
+    for (const [k, v] of Object.entries(prop.give)) { frr[k] = (frr[k] || 0) - v; trr[k] = (trr[k] || 0) + v; }
+    for (const [k, v] of Object.entries(prop.get)) { trr[k] = (trr[k] || 0) - v; frr[k] = (frr[k] || 0) + v; }
+    ps[prop.from] = { ...fromP, resources: frr };
+    ps[prop.to] = { ...toP, resources: trr };
+    s = { ...s, players: ps };
+    const gs = Object.entries(prop.give).map(([k, v]) => `${v}${negoResAbbr(k)}`).join(' ');
+    const gt = Object.entries(prop.get).map(([k, v]) => `${v}${negoResAbbr(k)}`).join(' ');
+    s = logEntry(s, `🤝 거래 성사: P${prop.from} [${fromP.specific}] (${gs}) ↔ P${prop.to} [${toP.specific}] (${gt})`);
+    s = raiseTrack(s, prop.from, 'party', 1, '거래');
+  } else if (prop.type === 'truce') {
+    stats.truces += 1;
+    const newPromises = [...(s.meta.promises || []), { from: prop.from, to: prop.to, type: 'truce', expiresR: prop.expiresR, status: 'active' }];
+    s = { ...s, meta: { ...s.meta, promises: newPromises } };
+    s = logEntry(s, `🕊 비공격 약속: P${prop.from} ↔ P${prop.to} (R${prop.expiresR}까지 · 지킴 양측 ★+1 / 위반 ★-2·피해자 ★+2)`);
+  } else if (prop.type === 'broker_deal') {
+    stats.broker += 1;
+    const frr = { ...fromP.resources, rep: (fromP.resources.rep || 0) + 1, credit: (fromP.resources.credit || 0) + 1 };
+    ps[prop.from] = { ...fromP, resources: frr };
+    s = { ...s, players: ps };
+    s = logEntry(s, `🎙 BROKER 중개: P${prop.from} ★+1 ₵+1 (P${prop.to} 중개 성사 · 원전 §2.3)`);
+    s = raiseTrack(s, prop.from, 'party', 1, 'BROKER 중개');
+  }
+  return { ...s, meta: { ...s.meta, negoStats: stats } };
+}
+
 // HTML 글로벌 노출 (fx_module 패턴)
 if (typeof window !== 'undefined') {
   window.RULES_NEGO_MAX = RULES_NEGO_MAX;
@@ -171,4 +262,9 @@ if (typeof window !== 'undefined') {
   window.rules_raidSuccessFx = rules_raidSuccessFx;
   window.rules_victoryRatio = rules_victoryRatio;
   window.rules_victoryByPoints = rules_victoryByPoints;
+  window.negoTypeLabel = negoTypeLabel;
+  window.negoResAbbr = negoResAbbr;
+  window.negoBuildCandidates = negoBuildCandidates;
+  window.negoEvalAccept = negoEvalAccept;
+  window.negoApply = negoApply;
 }
