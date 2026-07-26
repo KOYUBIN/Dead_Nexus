@@ -11,6 +11,12 @@
   var KEY = 'dead_nexus_rpg_save_v1';
   var CURRENT_VERSION = 1;
 
+  // [72차 · d45 #4] 심연 기록 마이그레이션 위임 대상. 미로드 환경에선 null → 최소 백필 폴백.
+  function getAbyss() {
+    if (typeof window !== 'undefined' && window.RPG_ABYSS) return window.RPG_ABYSS;
+    try { return require('../systems/abyss.js'); } catch (e) { return null; }
+  }
+
   function b64encode(str) {
     if (typeof btoa !== 'undefined') return btoa(unescape(encodeURIComponent(str)));
     return Buffer.from(str, 'utf8').toString('base64'); // node
@@ -63,7 +69,12 @@
       if (!save.endings.capstoneByClass || typeof save.endings.capstoneByClass !== 'object') save.endings.capstoneByClass = {};
     }
     // [v6.44 · 과제 A1] 심연 프로토콜 최고 웨이브 기록 백필(멱등) — 구세이브엔 abyss 없음 → best 0.
-    if (!save.abyss || typeof save.abyss !== 'object') save.abyss = { best: 0 };
+    //   [72차 · d45 #4] 스키마 확장 { best } → { best, byClass, lastRun }. 백필 규칙은
+    //   systems/abyss.migrateAbyss 단일 출처(멱등·구세이브 무손상: best 보존 · byClass {} · lastRun null).
+    //   abyss.js 미로드 환경(격리 import 테스트)에선 최소 백필로 폴백 — 구 계약 그대로.
+    var ABX = getAbyss();
+    if (ABX && ABX.migrateAbyss) save.abyss = ABX.migrateAbyss(save.abyss);
+    else if (!save.abyss || typeof save.abyss !== 'object') save.abyss = { best: 0, byClass: {}, lastRun: null };
     else if (typeof save.abyss.best !== 'number' || !isFinite(save.abyss.best)) save.abyss.best = 0;
     // firstBlood(레거시 챕터1 클리어 플래그) → ch01 클리어 기록으로 추론.
     if (save.flags.firstBlood && save.missionsDone.indexOf('ch01-first-blood') < 0) {
