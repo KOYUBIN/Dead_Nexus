@@ -1437,6 +1437,17 @@ function applyGaugeHook(state, playerIdx, cardId) {
 const moleDisguiseMatch = (attacker, blocName) =>
   !!(attacker && attacker.specific === 'MOLE' && attacker.disguiseBloc && attacker.disguiseBloc === blocName);
 const moleDisguiseMod = (attacker, blocName) => (moleDisguiseMatch(attacker, blocName) ? -2 : 0);
+// v6.52 (V2): 레이드 실행 성공률 표시 어댑터 — 실판정 성분(트랙·상성·투자·atkOnce·크리 면역)을
+//   rules_module 단일 식(rules_raidExecEst)으로 계산. threshold 는 위장 -2 포함 최종값. 미로드 시 동일 수학 폴백.
+function raidExecPctView(state, p, threshold, extra) {
+  const o = { threshold, stat: 0, track: 0, weapons: 0, counter: 0, pool: 0,
+    atkOnce: state.meta.attackBonusOnce || 0, allPlus: 0,
+    critImmune: (p.tracks?.combat || 0) >= 4 || !!p.onceAbilities?.critFailImmunity, ...extra };
+  if (typeof rules_raidExecEst === 'function') return rules_raidExecEst(o);
+  const needed = o.threshold - (o.stat + o.track + o.weapons + o.counter + o.pool + o.atkOnce - o.allPlus);
+  const faces = Math.max(0, Math.min(o.critImmune ? 6 : 5, 7 - needed));
+  return { needed, faces, pct: Math.round(faces / 6 * 100) };
+}
 // 레이드 실패 시 위장 발각 처리.
 function moleRaidReveal(state, playerIdx, blocName) {
   const p = state.players[playerIdx];
@@ -1952,28 +1963,7 @@ function applyInfamyMilestone(state, playerIdx, ms) {
   return s;
 }
 
-// ============================================================================
-// 맵 크기별 특수 규칙 (v0.5.13)
-// ============================================================================
-// 5×5 튜토리얼: 좁은 맵 → 이동 가치 상향 / DRIFTER HP·ATK 보정 (이미 적용)
-// 11×11 표준: 이동 가치 정상 / DRIFTER 원래 스탯 복원 / 추가 공권력 감쇠
-// 13×13 확장: 하이웨이 강화 / M&A 빈도 증가
-const MAP_RULES = {
-  '5x5': {
-    roundLimit: 10,
-    moveMultiplier: 1.0,      // 이동 카드 기본 효율
-    driftAtkOverride: 2,       // DRIFTER atk (튜토리얼)
-    driftHpOverride: 8,
-    // v6.12 P0-1: 승리 임계는 VICTORY_GOALS 단일 소스로 이전 (기존 assetGoal/repGoal/raidGoal 폐기 — 소비처 0)
-  },
-  '11x11': {
-    roundLimit: 12,
-    moveMultiplier: 1.0,
-    driftAtkOverride: 4,       // DRIFTER 원래 스탯 (넓은 맵에서 이동 가치 정상)
-    driftHpOverride: 9,
-  },
-};
-const getMapRules = (mapSize) => MAP_RULES[mapSize] || MAP_RULES['5x5'];
+// v6.52 (V11): MAP_RULES/getMapRules 삭제 — 소비처 0 (임계=VICTORY_GOALS·roundLimit=scenarioRule 정본).
 
 // ============================================================================
 // v6.12 P0-1: 승리 임계 단일 소스 (VICTORY_GOALS)
@@ -3215,11 +3205,7 @@ const shortTotal = (p) => Object.values((p && p.shortPositions) || {}).reduce((a
 // 단일 지점 정산이라 하락 훅이 아무리 많아도 이중 정산이 없다(스냅샷 1회 비교).
 function settleShortPositions(state) {
   const snap = state.meta.lastStockSnapshot || state.stocks;
-  // v6.15: 시장 변동성 뉴스(short_settle_mult) — 이번 라운드 정산분에 배수 적용 (round 일치 시에만)
-  const mult = (state.meta.shortMultRound === state.meta.round) ? (state.meta.shortMultVal || 1) : 1;
-  // v6.20 (S06): 붕괴 저가 정산 2배 — 정산 시점 종가가 저가 임계 이하인 블록은 추가 배수 (docs/14 S06).
-  const lowMult   = scenarioRule(state, 'shortLowPriceMult', 1);
-  const lowThresh = scenarioRule(state, 'shortLowPriceThresh', 5);
+  // v6.52 (V6): 배수(v6.15 변동성·v6.20 S06 저가)는 rules_shortPayout 단일 소스 — 틱커 표시가 같은 식에서 파생.
   const logs = [];
   const ps = state.players.map(p => {
     if (p.defeated || p.role !== 'ghost') return p;
@@ -3229,11 +3215,11 @@ function settleShortPositions(state) {
       if (!qty) continue;
       const drop = (snap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
       if (drop > 0) {
-        // 저가 임계 이하(붕괴 지속)면 lowMult 추가 적용 — 미지정 시나리오는 lowMult=1(항등).
-        const crashBonus = ((state.stocks[bl] ?? 0) <= lowThresh) ? lowMult : 1;
-        const payout = drop * qty * SHORT_CONFIG.payoutPerPt * mult * crashBonus;
-        gained += payout;
-        logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${payout}${mult > 1 ? ` (변동성×${mult})` : ''}` });
+        const px = (typeof rules_shortPayout === 'function')
+          ? rules_shortPayout(state, bl, drop, qty, SHORT_CONFIG.payoutPerPt)
+          : { mult: 1, payout: drop * qty * SHORT_CONFIG.payoutPerPt };  // 축소 폴백 (미로드 — E13 배너 고지)
+        gained += px.payout;
+        logs.push({ round: state.meta.round, phase: 6, message: `📉 ${p.id === 0 ? '⭐ 당신 ' : ''}P${p.id} 숏 정산: ${bl} -${drop}pt × ${qty} = ₵+${px.payout}${px.mult > 1 ? ` (변동성×${px.mult})` : ''}` });
       }
     }
     if (gained === 0) return p;
@@ -5331,7 +5317,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
               } else {
                 s = { ...s, meta: { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, [playerIdx]: (s.meta.raidsThisGame[playerIdx] || 0) + 1 } } };
               }
-              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+${repGain}`);
+              // v6.52 (V8③): 로그 산술을 실제 합산 성분(상성·트랙 포함)으로 표기
+              s = logEntry(s, `🗡️ 레이드 성공! P${playerIdx} → [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}${counterBonus ? `+${counterBonus}상성` : ''}${tBonus ? `+${tBonus}트랙` : ''}=${raidTotal} ≥ ${threshold} — ${bloc} 주가-3, 구역 중립화, 렙+${repGain}`);
               s = raiseTrack(s, playerIdx, 'combat', 1, '봇 레이드 성공');  // v0.6.3b
               s.meta._didAutoRaid = true;
               if (blocIdx === 0 && playerIdx !== 0) {
@@ -5344,7 +5331,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
                 wanted: ps[playerIdx].wanted + scenRaidWanted(s, 1),  // v6.19 (S03): 현상수배 상승 −1
               };
               s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
-              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}=${raidTotal} < ${threshold} — HP-3, 수배+${scenRaidWanted(s, 1)}`);
+              s = logEntry(s, `❌ 레이드 실패 P${playerIdx} [${effectiveCoord} ${zoneNm}] 🎲${raidRoll}+${pAfterMove.stats.atk}${counterBonus ? `+${counterBonus}상성` : ''}${tBonus ? `+${tBonus}트랙` : ''}=${raidTotal} < ${threshold} — HP-3, 수배+${scenRaidWanted(s, 1)}`);
               s = applyDamage(s, playerIdx, 3, { attacker: blocIdx, label: '레이드 실패' });  // v6.11.4 (P0-4)
               s = moleRaidReveal(s, playerIdx, bloc);  // v6.16 (P1-2): 위장 발각
               s.meta._didAutoRaid = true;
@@ -5449,7 +5436,8 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const bloc = s.players[blocIdx].specific;
     const zName = ZONE_TYPES[atCell.zone]?.name || '';
     const raidRoll = raidBonus(curP2);  // v5.2.0: 결정론적
-    const raidTotal = raidRoll + curP2.stats.atk + trackBonus(curP2, 'atk');
+    const tBonusFx = trackBonus(curP2, 'atk');  // v6.52 (V8③): 로그 표기용 성분 분리
+    const raidTotal = raidRoll + curP2.stats.atk + tBonusFx;
     // v6.11.3 (P0-1): 고정 5 → 5 + fortified + garrison + veil. 모달 흡수(C2)는 리스크로 P0 보류, threshold만 정합.
     // v6.16 (P1-2): MOLE 위장 대상 Bloc이면 threshold -2 (내부자 이점)
     // v6.19 (S03): NPC Bloc 방어력 −1 (scenNpcDefMod) — 타 시나리오 0.
@@ -5474,7 +5462,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
         s = { ...s, meta: { ...s.meta, raidsThisGame: { ...s.meta.raidsThisGame, [playerIdx]: (s.meta.raidsThisGame[playerIdx] || 0) + 1 } } };
       }
       const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+${repGain} (누적 ${ps[playerIdx].resources.rep}), 현상수배+${scenRaidWanted(s, 1)}`);
+      s = logEntry(s, `${meTag}🗡️ 레이드 성공! [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}${tBonusFx ? `+${tBonusFx}트랙` : ''}=${raidTotal} — ${bloc} 주가-3, 구역 중립화, P${playerIdx} 렙+${repGain} (누적 ${ps[playerIdx].resources.rep}), 현상수배+${scenRaidWanted(s, 1)}`);
       s = raiseTrack(s, playerIdx, 'combat', 1, '레이드 성공');  // v0.6.3b
     } else {
       const ps = [...s.players];
@@ -5484,7 +5472,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       };
       s = { ...s, players: ps, heat: Math.min(10, s.heat + 1) };
       const meTag = playerIdx === 0 ? '⭐ 당신 ' : '';
-      s = logEntry(s, `${meTag}❌ 레이드 실패 [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+${scenRaidWanted(s, 1)}`);
+      s = logEntry(s, `${meTag}❌ 레이드 실패 [${curP2.position} ${zName}] 🎲${raidRoll}+${curP2.stats.atk}${tBonusFx ? `+${tBonusFx}트랙` : ''}=${raidTotal} < ${threshold} — P${playerIdx} HP-3, 현상수배+${scenRaidWanted(s, 1)}`);
       s = applyDamage(s, playerIdx, 3, { attacker: blocIdx, label: '레이드 실패' });  // v6.11.4 (P0-4)
       s = moleRaidReveal(s, playerIdx, bloc);  // v6.16 (P1-2): 위장 발각
     }
@@ -5816,11 +5804,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   // v6.51 (E2): heal_all 중복 분기 제거 — 위 단일 %회복 처리로 통합 (한 호출 2회 발동 봉합)
   if (effect.ghost_extra_card || effect.contracts_boost) {
     // v0.6.6b: Ghost 드로우 보너스 → ₵+5 📡+2 + mfg 트랙 (HELIX/CARBON 강화)
+    // v6.52 (V8①): 로그가 지급 수치에서 파생 — 허위 "₵+3, 📡+1" 봉합
+    const cGain = 5, dGain = 2;
     const ps = [...s.players];
-    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + 5, data: (ps[playerIdx].resources.data || 0) + 2 } };
+    ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: (ps[playerIdx].resources.credit || 0) + cGain, data: (ps[playerIdx].resources.data || 0) + dGain } };
     s = { ...s, players: ps };
     s = raiseTrack(s, playerIdx, 'mfg', 1, '계약 보너스');
-    s = logEntry(s, `📄 P${playerIdx} [${p.specific}] · 계약 보너스 ₵+3, 📡+1`);
+    s = logEntry(s, `📄 P${playerIdx} [${p.specific}] · 계약 보너스 ₵+${cGain}, 📡+${dGain}`);
   }
   if (effect.same_round_trade || effect.flash_trade) {
     // AXIOM FLASH TRADE → 크레딧 보너스
@@ -6418,11 +6408,13 @@ function applyEffect(state, playerIdx, effect, kind, card) {
     const blocs = Object.entries(s.stocks).filter(([bl]) => !(pNow.role === 'bloc' && pNow.specific === bl));
     blocs.sort((a, b) => a[1] - b[1]);
     let bought = 0;
+    const boughtBy = {};   // v6.52 (V13ⓐ): 블록별 매수량 — BUY_STOCK 과 동일한 3주+ 시장 충격 판정용
     let newPlayerStocks = { ...pNow.stocks };
     let remainingCredit = pNow.resources.credit || 0;
     for (const [bl, price] of blocs) {
       while (bought < effect.stock_buy_any && remainingCredit >= price) {
         newPlayerStocks[bl] = (newPlayerStocks[bl] || 0) + 1;
+        boughtBy[bl] = (boughtBy[bl] || 0) + 1;
         remainingCredit -= price;
         bought++;
       }
@@ -6432,7 +6424,14 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       const ps = [...s.players];
       ps[playerIdx] = { ...ps[playerIdx], resources: { ...ps[playerIdx].resources, credit: remainingCredit }, stocks: newPlayerStocks };
       s = { ...s, players: ps };
-      s = logEntry(s, `📈 P${playerIdx} [${p.specific}] · ${bought}주 자동 매수 (잔액 ₵${remainingCredit})`);
+      // v6.52 (V13ⓐ): 매수세 시장 충격 — BUY_STOCK 리듀서와 동일 규칙 (한 블록 3주+ 매수 시 주가 +1, 상한 20)
+      const surged = Object.keys(boughtBy).filter(bl => boughtBy[bl] >= 3);
+      if (surged.length > 0) {
+        const ns = { ...s.stocks };
+        surged.forEach(bl => { ns[bl] = Math.min(20, ns[bl] + 1); });
+        s = { ...s, stocks: ns };
+      }
+      s = logEntry(s, `📈 P${playerIdx} [${p.specific}] · ${bought}주 자동 매수 (잔액 ₵${remainingCredit})${surged.length ? ` — 매수세 ${surged.join('·')} 주가+1` : ''}`);
     } else {
       s = logEntry(s, `📈 P${playerIdx} · 매수 실패 (₵ 부족)`);
     }
@@ -6592,6 +6591,15 @@ const CARD_FLAVOR = {
   BOUNTY_POST: '"산 채로. 죽으면 절반."',
   ASSASSIN_HIRE: '"청부 받았습니다. 한 발 더 비쌉니다."',
   GHOST_TRACKER: '"어디 숨었든 데이터는 남는다."',
+  // v6.52 (V10): 누락 8종 — Ghost 3종(CIPHER/BLADE/BROKER) + TL5 궁극기 5종 (실효과 부합 확인)
+  PROXY_RELAY: '"추적해 봐. 서른두 개 도시를 돌게 될 테니."',
+  BREACHER: '"문이 안 열리면, 벽으로 들어간다."',
+  DBL_CONTRACT: '"계약서는 두 장. 서명은 한 번."',
+  ZERO_PROTOCOL: '"시장이 지워진다. 우리가 지운 기록처럼."',
+  ORBITAL_STRIKE: '"하늘을 봐. 그게 마지막 경고다."',
+  FULL_SPLICE: '"전원 재조립. 더 나은 버전으로."',
+  CHAOS_PROTOCOL: '"혼돈도 계산의 일부다."',
+  DARK_ENERGY: '"스위치는 우리 손에 있다. 언제나."',
 };
 
 const CARD_NAMES_KR = {
@@ -6629,6 +6637,10 @@ const CARD_NAMES_KR = {
   ZONE_FORTIFY: '구역 요새화', EXPAND_OP: '작전 확장', INVEST_HEAVY: '대규모 투자',
   COUNTER_INTEL: '방첩', CRISIS_RESPONSE: '위기 대응', HOSTILE_BID: '적대적 매수',
   SECURITY_SWEEP: '치안 소탕',
+  // v6.52 (V10): 공통 Bloc 3종 + TL5 궁극기 5종 한글명 (실효과와 부합 확인)
+  BOUNTY_POST: '현상금 공고', ASSASSIN_HIRE: '암살자 고용', GHOST_TRACKER: '고스트 추적기',
+  ZERO_PROTOCOL: '제로 프로토콜', ORBITAL_STRIKE: '궤도 타격', FULL_SPLICE: '풀 스플라이스',
+  CHAOS_PROTOCOL: '카오스 프로토콜', DARK_ENERGY: '다크 에너지',
 };
 
 function cardDisplayName(card) {
@@ -7730,20 +7742,22 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           const tokBonus = (pr.fortified || 0) + (pr.garrison || 0) + (pr.veil || 0);
           if (tokBonus > 0) { thresholdMod += tokBonus; defenseDesc.push(`방어 토큰 +${tokBonus} (요새${pr.fortified||0}/주둔${pr.garrison||0}/베일${pr.veil||0})`); }
         }
+        // v6.52 (V2): MOLE 위장 -2 — 실판정(RESOLVE_RAID)과 동일 소스
+        if (moleDisguiseMatch(me, pr.bloc)) { thresholdMod -= 2; defenseDesc.push(`🕷 내부자 위장 (${pr.bloc}, threshold -2)`); }
 
-        // 현재 예상 성공률 (크리티컬 실패 5/6만 반영)
-        let estPct = 50;
+        // v6.52 (V2): 예상 성공률 = 실판정 성분(트랙·atkOnce·위장·크리 면역 상한 6/6) — 단일 식 raidExecPctView
+        const estOnce = state.meta.attackBonusOnce || 0;
+        const spdTrack = trackBonus(me, 'spd');
+        const critImmuneV = (me.tracks?.combat || 0) >= 4 || !!me.onceAbilities?.critFailImmunity;
+        let estPct = 50, estTrack = 0;
         if (rt) {
           const stat = me.stats[rt.useStat] || 0;
+          estTrack = trackBonus(me, rt.useStat);
           const poolBonus = pr.invested.poolAttr === zoneAttr ? 2 : (pr.invested.poolAttr ? 1 : 0);
-          const execBonus = pr.invested.weapons + counterBonus - (defense.all_plus || 0);
-          const effThreshold = rt.threshold + thresholdMod;
-          const effStat = stat + execBonus + poolBonus;
-          const needed = effThreshold - effStat;
-          // d6=1은 자동 실패. 2~6 중 (6-needed+1) 성공. 단 max 5/6
-          const baseSucc = Math.max(0, Math.min(6, 7 - needed));
-          const rawSucc = Math.min(5, baseSucc);  // 1은 crit fail
-          estPct = Math.round(rawSucc / 6 * 100);
+          estPct = raidExecPctView(state, me, rt.threshold + thresholdMod, {
+            stat, track: estTrack, weapons: pr.invested.weapons, counter: counterBonus,
+            pool: poolBonus, allPlus: defense.all_plus || 0,
+          }).pct;
         }
 
         return (
@@ -7847,9 +7861,10 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                 <div style={{ marginTop: 14, background: 'var(--bg1)', borderRadius: 4, padding: 10, fontFamily: 'Share Tech Mono, monospace' }}>
                   <div style={{ color: 'var(--cyan)', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>3️⃣ 예상 판정 (3단계)</div>
                   <div style={{ fontSize: 11, lineHeight: 1.7 }}>
-                    <div>🚶 <strong>접근</strong> d6 + 📡{pr.invested.data}{defense.detect ? ' -2 감지' : ''} vs 4</div>
-                    <div>⚔️ <strong>실행</strong> d6 + {rt.useStat.toUpperCase()} {me.stats[rt.useStat]}{counterActive ? ' +1상성' : ''} + 🔩{pr.invested.weapons}{pr.invested.poolAttr ? ` +${pr.invested.poolAttr === zoneAttr ? 2 : 1}속성` : ''}{defense.all_plus ? ` -${defense.all_plus} AI` : ''} vs <strong style={{ color: 'var(--magenta)' }}>{rt.threshold + thresholdMod}</strong></div>
-                    <div>🏃 <strong>도주</strong> d6 + SPD {me.stats.spd} vs 3</div>
+                    {/* v6.52 (V2): 판정식 문구 = 실판정 성분 전부 표기 — 접근 ◈S+2 · 실행 트랙/일회/크리면역 · 도주 트랙 */}
+                    <div>🚶 <strong>접근</strong> d6 + 📡{pr.invested.data}{pr.invested.poolAttr === 'S' ? ' +2◈S' : ''}{defense.detect ? ' -2 감지' : ''} vs 4</div>
+                    <div>⚔️ <strong>실행</strong> d6 + {rt.useStat.toUpperCase()} {me.stats[rt.useStat]}{estTrack ? ` +${estTrack}트랙` : ''}{counterActive ? ' +1상성' : ''} + 🔩{pr.invested.weapons}{pr.invested.poolAttr ? ` +${pr.invested.poolAttr === zoneAttr ? 2 : 1}속성` : ''}{estOnce ? ` +${estOnce}💪일회` : ''}{defense.all_plus ? ` -${defense.all_plus} AI` : ''} vs <strong style={{ color: 'var(--magenta)' }}>{rt.threshold + thresholdMod}</strong>{critImmuneV && <span style={{ color: 'var(--green)' }}> · 크리 면역</span>}</div>
+                    <div>🏃 <strong>도주</strong> d6 + SPD {me.stats.spd}{spdTrack ? ` +${spdTrack}트랙` : ''} vs 3</div>
                   </div>
                   <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
                     <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>실행 성공률</span>
@@ -8071,7 +8086,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             </div>
           ))}
         </div>
-        <div className="round">R{state.meta.round}/{state.meta.mapSize === '11x11' ? 12 : 8}</div>
+        {/* v6.52 (V5): 라운드 상한 = NEXT_ROUND maxR 과 동일 scenarioRule 파생 (S05 8R 정직) */}
+        <div className="round">R{state.meta.round}/{scenarioRule(state, 'roundLimit', state.meta.mapSize === '11x11' ? 12 : 8)}</div>
         <div className="heat">🚨HEAT {state.heat}</div>
         {/* v6.23: S04 구출 퀘스트 진행 (구금 NPC x/5). captive 있는 판(=S04)에서만 표시. */}
         {(() => {
@@ -8152,7 +8168,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             const raids = state.meta.raidsThisGame?.[i] || 0;
             const repGoalV = vGoals.ghostRepBattle;
             const raidDone = raids >= vGoals.ghostRaids;
-            progressPct = Math.min(100, Math.round(rep / repGoalV * 100));
+            // v6.52 (V3): 진척 바 = hudRaceProgress (min 게이트·repOnly max — 레이스 HUD 동일)
+            progressPct = hudRaceProgress(p, i, state, vGoals);
             const repLeft = Math.max(0, repGoalV - rep);
             if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
@@ -8399,7 +8416,10 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             for (const [bl, q] of Object.entries(me0.shortPositions || {})) {
               if (!q) continue; shortQty += q;
               const drop = (stkSnap[bl] ?? state.stocks[bl] ?? 0) - (state.stocks[bl] ?? 0);
-              if (drop > 0) shortPnl += drop * q * SHORT_CONFIG.payoutPerPt;
+              // v6.52 (V6): 평가손익 = 정산부와 동일 배수 파생 (rules_shortPayout)
+              if (drop > 0) shortPnl += (typeof rules_shortPayout === 'function')
+                ? rules_shortPayout(state, bl, drop, q, SHORT_CONFIG.payoutPerPt).payout
+                : drop * q * SHORT_CONFIG.payoutPerPt;
             }
           }
           // ── 위협 스트립 데이터 (있을 때만) ──
@@ -8532,10 +8552,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                     const visitedByMe = state.meta.visitedBonusZones?.[0] || {};
                     const ownerP = owner;
                     if (ownerP && ownerP.role === 'bloc' && me.role === 'ghost') {
-                      // 레이드 가능 — v6.11.3 (P0-3): 고정 5 → raidThreshold(cell) 기반(방어 토큰 반영),
-                      // 크리티컬 실패(d6=1) 반영해 성공면 최대 5/6
-                      const succRolls = Math.max(0, Math.min(5, 7 - raidThreshold(cell) + me.stats.atk));
-                      const pct = Math.round(succRolls / 6 * 100);
+                      // v6.52 (V2): raidThreshold 기반 + 트랙·위장·atkOnce·크리 면역 — 실판정 성분 단일 식
+                      const pct = raidExecPctView(state, me, raidThreshold(cell) + moleDisguiseMod(me, ownerP.specific), { stat: me.stats.atk, track: trackBonus(me, 'atk') }).pct;
                       previewTag = `🗡️ ${pct}%`;
                       previewColor = pct >= 66 ? 'var(--green)' : (pct >= 33 ? 'var(--yellow)' : 'var(--magenta)');
                       raidPreview = true;
@@ -8640,11 +8658,12 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             const g = G[me.specific];
             if (g) {
               const v = me[g.key] || 0;
-              const hookCard = Object.keys(GAUGE_HOOKS).find(k => GAUGE_HOOKS[k].cls === me.specific);
+              // v6.52 (V13ⓑ): 게이지 도달 카드 전부 나열 — 첫 카드만 표기하던 find 를 filter 로
+              const hookCards = Object.keys(GAUGE_HOOKS).filter(k => GAUGE_HOOKS[k].cls === me.specific);
               return (
                 <div style={{ fontSize: 10, color: 'var(--text-dim)', padding: '2px 4px 4px', fontFamily: 'Share Tech Mono, monospace' }}>
                   {g.icon} <span style={{ color: 'var(--cyan)' }}>{g.label}</span> 게이지 <b style={{ color: 'var(--yellow)', fontSize: 12 }}>{v}</b> · {g.hint(v)}
-                  {hookCard && <span style={{ color: 'var(--green)' }}> · {CARD_NAMES_KR[hookCard] || hookCard} 플레이 시 +1 ⚡</span>}
+                  {hookCards.length > 0 && <span style={{ color: 'var(--green)' }}> · {hookCards.map(k => CARD_NAMES_KR[k] || k).join('·')} 플레이 시 +1 ⚡</span>}
                 </div>
               );
             }
@@ -9047,38 +9066,46 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           if (me.role === 'ghost') {
             const repGoal = vGoals.ghostRepBattle;
             const raidGoal = vGoals.ghostRaids;
-            const rep = me.resources.rep || 0;
+            // v6.52 (V1): 판정(evalPlayerVictory)과 동일한 rep_eff = rep + euro_hlVictoryBonus (✨ 가산 표기)
+            const hlB = euro_hlVictoryBonus(me);
+            const repBase = me.resources.rep || 0;
+            const rep = repBase + hlB;
             const raids = state.meta.raidsThisGame?.[0] || 0;
             const repPct = Math.min(100, Math.round(rep / repGoal * 100));
             const raidDone = raids >= raidGoal;
             const repDone = rep >= repGoal;
+            // v6.52 (V1): ✅ 팁 발동 = 판정 소스 그대로 (렙온리 경로 포함)
+            const winNow = !!evalPlayerVictory(me, 0, state, vGoals);
             // 가장 가까운 Bloc 구역 + 레이드 성공률 계산
             const nearest = me.position ? findNearestBlocZone(state, me.position) : null;
             const nearestDist = nearest ? (nearest === me.position ? 0 : bfsDistance(state, me.position, nearest)) : null;
-            // v6.28: 맵 프리뷰(L8000)와 동일 식 — raidThreshold(cell) 기반·크리티컬 실패 반영 상한 5/6 (정직성 통일)
+            // v6.52 (V2): 맵 프리뷰와 동일 단일 식 (트랙·위장·atkOnce·크리 면역)
             const nearestCell = nearest ? state.map[nearest] : null;
-            const succRolls = nearestCell ? Math.max(0, Math.min(5, 7 - raidThreshold(nearestCell) + me.stats.atk)) : 0;
-            const raidPct = Math.round(succRolls / 6 * 100);
-            // 승리 예측: 현재 렙 + 성공 시 +3, 레이드 목표도 충족?
+            const raidPct = nearestCell
+              ? raidExecPctView(state, me, raidThreshold(nearestCell) + moleDisguiseMod(me, state.players[nearestCell.owner]?.specific), { stat: me.stats.atk, track: trackBonus(me, 'atk') }).pct
+              : 0;
+            // v6.52 (V7): 실보상 파생 — RAID_TYPES rep 범위 × 시나리오 배수(결정 모달 택1). 배지는 최소 보상 기준.
+            const raidReps = Object.values(RAID_TYPES).map(c => scenRaidRep(state, c.success.rep));
+            const repMin = Math.min(...raidReps), repMax = Math.max(...raidReps);
             const repNeeded = Math.max(0, repGoal - rep);
             const raidsNeeded = Math.max(0, raidGoal - raids);
-            const oneRaidWins = !repDone && repNeeded <= 3 && raidsNeeded <= 1;
-            const nextTip = repDone && raidDone
+            const oneRaidWins = !winNow && repNeeded <= repMin && raidsNeeded <= 1;
+            const nextTip = winNow
               ? '✅ 승리 조건 충족 — 종료 선언! 다음 라운드 종료까지 유지하면 승리'
               : oneRaidWins && nearest
                 ? `🎯 ${nearest} 레이드 성공 시 종료 선언 (다음 R 유지 시 승리 · 성공률 ${raidPct}%, 거리 ${nearestDist}칸)`
                 : !nearest
                   ? 'Bloc 구역이 맵에 없음 — 다음 Bloc 확장 기다리기'
-                  : `${nearest} 레이드 시 렙+3 → ${rep + 3}/${repGoal} (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`;
+                  : `${nearest} 레이드 성공 시 렙+${repMin}~${repMax} → ${rep + repMin}~${rep + repMax}/${repGoal} (성공률 ${raidPct}%, 거리 ${nearestDist}칸)`;
             return (
-              <div className="pool-box" style={{ borderColor: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)'), boxShadow: oneRaidWins ? '0 0 12px rgba(255,60,140,0.3)' : undefined }}>
-                <h4 style={{ color: repDone && raidDone ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)') }}>
+              <div className="pool-box" style={{ borderColor: winNow ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)'), boxShadow: oneRaidWins ? '0 0 12px rgba(255,60,140,0.3)' : undefined }}>
+                <h4 style={{ color: winNow ? 'var(--green)' : (oneRaidWins ? 'var(--magenta)' : 'var(--yellow)') }}>
                   🎯 승리 조건 (Ghost) {oneRaidWins && <span style={{ fontSize: 9, background: 'var(--magenta)', color: 'var(--bg1)', padding: '1px 5px', borderRadius: 2, marginLeft: 4 }}>한 턴 남음</span>}
                 </h4>
                 <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
                   <div style={{ marginBottom: 4 }}>
                     <span style={{ color: repDone ? 'var(--green)' : 'var(--text)' }}>{repDone ? '✓' : '•'} 렙 </span>
-                    <strong style={{ color: repDone ? 'var(--green)' : 'var(--yellow)' }}>{rep}/{repGoal}</strong>
+                    <strong style={{ color: repDone ? 'var(--green)' : 'var(--yellow)' }}>{repBase}{hlB ? `+${hlB}✨` : ''}/{repGoal}</strong>
                     <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
                       <div style={{ height: '100%', width: `${repPct}%`, background: repDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
                     </div>
@@ -9093,9 +9120,12 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             );
           } else {
             const assetGoal = vGoals.blocAsset;
-            const asset = assetValue(me, state.stocks, state);
+            // v6.52 (V1): 판정과 동일한 asset_eff = assetValue + euro_hlVictoryBonus (✨ 가산 표기)
+            const hlB = euro_hlVictoryBonus(me);
+            const assetBase = assetValue(me, state.stocks, state);
+            const asset = assetBase + hlB;
             const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
-            const assetDone = asset >= assetGoal;
+            const assetDone = asset >= assetGoal;   // = evalPlayerVictory Bloc 게이트 (hlBonus 포함)
             // 남은 간격 계산
             const gap = Math.max(0, assetGoal - asset);
             const myZones = Object.values(state.map).filter(c => c.owner === 0).length;
@@ -9110,7 +9140,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                 <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
                   <div style={{ marginBottom: 4 }}>
                     <span style={{ color: assetDone ? 'var(--green)' : 'var(--text)' }}>{assetDone ? '✓' : '•'} 자산 </span>
-                    <strong style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>{asset}/{assetGoal}</strong>
+                    <strong style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>{assetBase}{hlB ? `+${hlB}✨` : ''}/{assetGoal}</strong>
                     <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
                       <div style={{ height: '100%', width: `${assetPct}%`, background: assetDone ? 'var(--green)' : 'var(--yellow)', transition: 'width 0.3s' }}/>
                     </div>
@@ -9176,8 +9206,10 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
               const myQty = me.stocks[bl] || 0;
               const isOwnBloc = me.role === 'bloc' && me.specific === bl;
               const canTrade = state.meta.phase === 1;
-              const canBuy = canTrade && !isOwnBloc && (me.resources.credit || 0) >= v;
-              const canSell = canTrade && !isOwnBloc && myQty > 0;
+              // v6.52 (V4): S06 거래 동결 — 리듀서 게이트와 동일 (중앙 패널 선례)
+              const tradeFrozen = state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0);
+              const canBuy = canTrade && !isOwnBloc && !tradeFrozen && (me.resources.credit || 0) >= v;
+              const canSell = canTrade && !isOwnBloc && !tradeFrozen && myQty > 0;
               return (
                 <div key={bl} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 0', borderBottom: '1px solid var(--bg3)' }}>
                   <span style={{ color: 'var(--text-dim)', width: 60 }}>{bl}{isOwnBloc ? '★' : ''}:</span>
@@ -9211,11 +9243,16 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
               );
             })}
           </div>
-          {state.meta.phase === 1 && (
+          {state.meta.phase === 1 && (state.meta.round <= scenarioRule(state, 'tradeFreezeRounds', 0) ? (
+            /* v6.52 (V4): 동결 사유 표기 — 중앙 패널 배너와 동일 근거 */
+            <div style={{ fontSize: 9, color: 'var(--yellow)', marginTop: 4 }}>
+              🧊 시장 동결 — 첫 {scenarioRule(state, 'tradeFreezeRounds', 0)}라운드 거래 불가 (R{scenarioRule(state, 'tradeFreezeRounds', 0) + 1}부터 재개)
+            </div>
+          ) : (
             <div style={{ fontSize: 9, color: 'var(--cyan)', marginTop: 4 }}>
               💡 시장 개장 중 — 매수(녹)/매도(자주) 클릭. ₵보유 {me.resources.credit || 0}
             </div>
-          )}
+          ))}
         </div>
 
         {state.currentNews && (

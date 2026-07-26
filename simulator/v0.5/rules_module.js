@@ -252,8 +252,45 @@ function negoApply(s, prop) {
   return { ...s, meta: { ...s.meta, negoStats: stats } };
 }
 
+// ============================================================================
+// v6.52 [3차 감사 2파] 표시↔판정 정직화 — 표시가 판정 식에서 파생되는 공용 함수
+// ============================================================================
+// V2: 레이드 「실행」 성공률 단일 소스 — RESOLVE_RAID 실판정과 동일한 성분 합산.
+//   실판정: execTotal = d6 + stat + track + weapons + counter + pool + atkOnce − allPlus
+//           (접근 성공 가정 — 접근 실패 -2 는 사전 표시 불가한 별도 주사위라 제외, 기존 표기와 동일)
+//   성공 눈: (눈 ≠ 1 || critImmune) && 눈 ≥ needed — 크리티컬 실패(d6=1) 면역이면 상한 6/6, 아니면 5/6.
+//   threshold 는 최종 임계(방어·토큰·MOLE 위장 -2 반영 후)를 받는다.
+//   소비처: 레이드 모달 estPct/판정식 문구 · 맵 셀 프리뷰 · 우측 패널 프리뷰 (index.html raidExecPctView).
+function rules_raidExecEst(o) {
+  o = o || {};
+  var bonus = (o.stat || 0) + (o.track || 0) + (o.weapons || 0) + (o.counter || 0) +
+              (o.pool || 0) + (o.atkOnce || 0) - (o.allPlus || 0);
+  var needed = (o.threshold || 0) - bonus;
+  var faces = 0;
+  for (var r = 1; r <= 6; r++) if ((r !== 1 || o.critImmune) && r >= needed) faces++;
+  return { bonus: bonus, needed: needed, faces: faces, pct: Math.round(faces / 6 * 100) };
+}
+
+// V6: 숏 정산 배수 단일 소스 — settleShortPositions(정산)와 마켓 틱커 평가손익(표시)이 같은 식을 쓴다.
+//   mult = 시장 변동성 뉴스(short_settle_mult, 해당 R 한정) · crashBonus = S06 저가(≤threshold) 정산 배수.
+//   scenarioRule 은 호출 시점 지연 참조(전역) — 미로드 시 항등(×1) 폴백.
+function rules_shortPayout(state, bloc, drop, qty, payoutPerPt) {
+  var meta = (state && state.meta) || {};
+  var mult = (meta.shortMultRound === meta.round) ? (meta.shortMultVal || 1) : 1;
+  var lowMult = 1, lowThresh = 5;
+  if (typeof scenarioRule === 'function') {
+    lowMult = scenarioRule(state, 'shortLowPriceMult', 1);
+    lowThresh = scenarioRule(state, 'shortLowPriceThresh', 5);
+  }
+  var price = (state && state.stocks && state.stocks[bloc] != null) ? state.stocks[bloc] : 0;
+  var crashBonus = price <= lowThresh ? lowMult : 1;
+  return { mult: mult, crashBonus: crashBonus, payout: drop * qty * payoutPerPt * mult * crashBonus };
+}
+
 // HTML 글로벌 노출 (fx_module 패턴)
 if (typeof window !== 'undefined') {
+  window.rules_raidExecEst = rules_raidExecEst;
+  window.rules_shortPayout = rules_shortPayout;
   window.RULES_NEGO_MAX = RULES_NEGO_MAX;
   window.rules_negoCapInfo = rules_negoCapInfo;
   window.rules_negoCapNote = rules_negoCapNote;

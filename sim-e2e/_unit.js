@@ -1009,6 +1009,55 @@ function tests(){
   const mAb={...m2,players:m2.players.map(p=>(mTb&&p.id===mTb.id)?{...p,acquiredBy:3}:p)};
   const mAbChk=MNAC(mAb,0,mTb?mTb.specific:'HELIX');
   ok('E14ⓓ 흡수(acquiredBy) 블록 재인수 거부',!mTb||mAbChk.ok===false&&String(mAbChk.reason).indexOf('흡수')>=0,JSON.stringify(mAbChk));
+  // ============================================================
+  // v6.52 [3차 감사 2파] V1~V13 표시↔판정 정직성 회귀 (rules_module 파생 함수)
+  // ============================================================
+  const REE=window.rules_raidExecEst,RSP=window.rules_shortPayout,SSP=window.settleShortPositions;
+  // (HRP/EPV/HLB 는 L388 기존 바인딩 재사용 — hudRaceProgress/evalPlayerVictory/euro_hlVictoryBonus)
+  const EHB=HLB;
+  ok('V52 fns exposed',[REE,RSP,HRP,EHB,EPV,SSP].every(f=>typeof f==='function'));
+  // ---- V2: 레이드 실행 성공률 단일 식 — 실판정(RESOLVE_RAID) 성분 실측 ----
+  ok('V2 기본: thr5 stat3 → needed2 → 5/6=83%',REE({threshold:5,stat:3}).faces===5&&REE({threshold:5,stat:3}).pct===83,JSON.stringify(REE({threshold:5,stat:3})));
+  ok('V2 트랙 LV5(+4): thr8 stat2 — 트랙 유 5/6 vs 무 1/6',REE({threshold:8,stat:2,track:4}).faces===5&&REE({threshold:8,stat:2}).faces===1);
+  ok('V2 MOLE 위장 -2 = 성공면 +2',REE({threshold:5,stat:2}).faces-REE({threshold:7,stat:2}).faces===2);
+  ok('V2 critImmune 상한 6/6=100% (비면역 5/6)',REE({threshold:1,stat:5,critImmune:true}).pct===100&&REE({threshold:1,stat:5}).faces===5);
+  ok('V2 atkOnce 가산 = 동가 stat 동일 (thr6: 4/6)',REE({threshold:6,stat:1,atkOnce:2}).faces===REE({threshold:6,stat:3}).faces&&REE({threshold:6,stat:3}).faces===4);
+  ok('V2 allPlus 감산 needed 산식',REE({threshold:5,stat:3,allPlus:2}).needed===4);
+  // ---- V6: 숏 정산 배수 파생 (표시=정산 동일 식) ----
+  const v6m={...sg,meta:{...sg.meta,shortMultRound:sg.meta.round,shortMultVal:2}};
+  ok('V6 변동성×2 파생 (기본 ×1)',RSP(v6m,'VANTA',3,1,2).payout===12&&RSP(sg,'VANTA',3,1,2).payout===6);
+  const e9lo={...e9,stocks:{...e9.stocks,VANTA:4}},e9hi={...e9,stocks:{...e9.stocks,VANTA:9}};
+  ok('V6 S06 저가(≤5) crashBonus ×2 / 고가 ×1',RSP(e9lo,'VANTA',2,1,2).payout===8&&RSP(e9lo,'VANTA',2,1,2).crashBonus===2&&RSP(e9hi,'VANTA',2,1,2).payout===4);
+  const stS={...e9lo,players:e9lo.players.map((p,i)=>i===0?{...p,role:'ghost',shortPositions:{VANTA:1}}:p),meta:{...e9lo.meta,lastStockSnapshot:{...e9lo.stocks,VANTA:e9lo.stocks.VANTA+2}}};
+  const stR=SSP(stS);
+  const stGain=stR.players[0].resources.credit-stS.players[0].resources.credit;
+  ok('V6 정산 실지급 = rules_shortPayout 파생값 (S06 저가 ₵+8)',stGain===RSP(stS,'VANTA',2,1,window.SHORT_CONFIG?window.SHORT_CONFIG.payoutPerPt:2).payout&&stGain===8,`gain ${stGain}`);
+  // ---- V1: 표시 = 판정 동치 핀 (rep_eff/asset_eff = base + hlBonus✨) ----
+  const gV=GVG(sg);
+  const v1p={...sg.players[0],resources:{...sg.players[0].resources,rep:gV.ghostRepOnly-3},highlightPoints:10};
+  const v1s={...sg,players:[v1p,...sg.players.slice(1)],meta:{...sg.meta,raidsThisGame:{}}};
+  ok('V1 Ghost rep_eff=rep+hl✨: 판정 충족 ⇔ HRP 100',EHB(v1p)===3&&!!EPV(v1p,0,v1s,gV)&&HRP(v1p,0,v1s,gV)===100,`hl ${EHB(v1p)} hrp ${HRP(v1p,0,v1s,gV)}`);
+  const v1q={...v1p,highlightPoints:0};
+  ok('V1 hl 미가산이면 미충족 (base -3)',!EPV(v1q,0,{...v1s,players:[v1q,...sg.players.slice(1)]},gV));
+  const gB=GVG(m2);
+  const avB=assetValue(m2.players[0],m2.stocks,m2);
+  const v1b={...m2.players[0],highlightPoints:Math.ceil((gB.blocAsset-avB)/0.3)+4};
+  const v1bs={...m2,players:[v1b,...m2.players.slice(1)]};
+  ok('V1 Bloc asset_eff=asset+hl✨: 판정 충족 ⇔ HRP 100',!!EPV(v1b,0,v1bs,gB)&&HRP(v1b,0,v1bs,gB)===100,`av ${avB} hl ${EHB(v1b)} goal ${gB.blocAsset}`);
+  // ---- V3: Ghost 진척 바 = hudRaceProgress — 렙배틀 렙 충족·레이드 0 은 min 게이트로 100% 미만 ----
+  const v3p={...sg.players[0],resources:{...sg.players[0].resources,rep:gV.ghostRepBattle},highlightPoints:0};
+  const v3s={...sg,players:[v3p,...sg.players.slice(1)],meta:{...sg.meta,raidsThisGame:{}}};
+  const v3exp=Math.min(100,Math.round(Math.max(0,gV.ghostRepBattle/gV.ghostRepOnly*100)));
+  ok('V3 min 게이트: 렙=배틀목표·레이드0 → 진척=repOnly 경로(<100, 구 표시 100 오류 핀)',HRP(v3p,0,v3s,gV)===v3exp&&v3exp<100,`hrp ${HRP(v3p,0,v3s,gV)} exp ${v3exp}`);
+  // ---- V13ⓐ: stock_buy_any 3주+ 시장 충격 (BUY_STOCK 동일 규칙) ----
+  const mbP={...m2.players[0],resources:{...m2.players[0].resources,credit:200}};
+  const mbS={...m2,players:[mbP,...m2.players.slice(1)]};
+  const mbEnt=Object.entries(mbS.stocks).filter(([bl])=>bl!==mbP.specific).sort((a,b)=>a[1]-b[1]);
+  const cheap=mbEnt[0][0];
+  const mb4=AEFF(mbS,0,{stock_buy_any:4},'main',null);
+  ok('V13ⓐ 4주 자동 매수 → 최저가 블록 주가+1(상한20)',mb4.stocks[cheap]===Math.min(20,mbS.stocks[cheap]+1)&&mb4.players[0].stocks[cheap]===(mbP.stocks[cheap]||0)+4,`${cheap} ${mbS.stocks[cheap]}→${mb4.stocks[cheap]}`);
+  const mb2=AEFF(mbS,0,{stock_buy_any:2},'main',null);
+  ok('V13ⓐ 2주 매수는 무충격',mb2.stocks[cheap]===mbS.stocks[cheap]);
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }

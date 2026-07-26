@@ -779,7 +779,8 @@ function euro_resolvePendingDecision(state, decisionId, choice) {
   else if (decision.type === 'raid_reward') s = euro_applyRaidRewardChoice(s, decision, choice);
   else if (decision.type === 'bloc_invest') s = euro_applyBlocInvestChoice(s, decision, choice);
   else if (decision.type === 'mna_defense') s = euro_applyMnaDefenseChoice(s, decision, choice); // v6.11 Stage 3
-  // type 'negotiation'은 index.html 기존 협상 핸들러가 처리 (v5.3.3에서 연결)
+  // v6.52 (V12): 'negotiation'은 예약 타입 — 현재 생산자 0·resolve 분기 없음 (협상은 negoApply 직접 경로).
+  //   도입 시 여기에 분기 추가 + euro_expireStaleDecisions 의 비만료 유지 조항이 함께 활성화된다.
   return s;
 }
 
@@ -982,6 +983,7 @@ function euro_checkAwardDecisions(state) {
 function euro_expireStaleDecisions(state) {
   const pending = state.meta.pendingDecisions || [];
   if (!pending.length) return state;
+  // v6.52 (V12): 'negotiation' 은 예약 타입(생산자 0) — 도입 시 비만료 유지용 데드 브랜치를 주석으로 명기.
   const keep = (d) => d.type === 'negotiation' || (d.context?.round ?? 0) >= state.meta.round;
   const fresh = pending.filter(keep);
   if (fresh.length === pending.length) return state;

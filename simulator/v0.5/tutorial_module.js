@@ -69,7 +69,9 @@ function tutorial_roleWinText(state) {
   var g = (typeof window !== 'undefined' && typeof window.getVictoryGoals === 'function') ? window.getVictoryGoals(state) : null;
   if (role === 'bloc') {
     var ag = g ? g.blocAsset : 73;
-    return '당신은 🏢 BLOC — 메가기업입니다. 자산(📊)을 키워 ' + ag + '에 먼저 도달하면 «종료 선언»되고, 다음 라운드 종료까지 유지하면 승리해요. 자산 = 보유 현금 + 구역 가치 + 타 블록 주식 평가액.';
+    // v6.52 (V9): 자산 정의를 실제 판정(assetValue)과 일치 — 크레딧(현금)은 자산에 포함되지 않는다.
+    //   자산 = 타 블록 주식 평가액 + 구역 가치(×5) + 건물 보너스(사옥5·미디어4·거래소3·공장2·보안2).
+    return '당신은 🏢 BLOC — 메가기업입니다. 자산(📊)을 키워 ' + ag + '에 먼저 도달하면 «종료 선언»되고, 다음 라운드 종료까지 유지하면 승리해요. 자산 = 타 블록 주식 평가액 + 구역 가치 + 건물 보너스 (크레딧 현금은 자산에 안 들어가요).';
   }
   // ghost 기본
   var rb = g ? g.ghostRepBattle : 42;
