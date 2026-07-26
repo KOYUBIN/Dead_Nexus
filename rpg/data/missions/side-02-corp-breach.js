@@ -39,6 +39,10 @@
   //                                인접 유닛의 max(HACK,ATK) 축으로 자동 차감되므로,
   //                                전투 경로에서는 CIPHER=해킹·BLADE=강습으로 같은
   //                                목표(설계도 캐시)를 다른 축으로 완주한다.
+  //   HACK 전용 코어 (68차)       [신규 68차 · 오브젝티브 변주] 설계도 캐시를 ICE_NODE 5기로
+  //                                격자 봉인 — physImmune 계약(store.applyAttack)만으로
+  //                                "HACK 축만 코어에 접근 가능"을 데이터로 성립시킨다.
+  //                                엔진/스키마 신규 필드 0. 상세 근거는 COMBAT.enemies 주석.
   //   전투 인카운터 무대          [신규] AXIOM 데이터허브 6×6, 설계도 캐시 오브젝티브.
   //   순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
@@ -84,11 +88,28 @@
       { x: 1, y: 4, type: 'light' }, { x: 4, y: 4, type: 'light' },
     ],
     // 적 배치 — key 는 data/enemies.js 참조(통합 단계에서 추가, 계획 로스터 ID만 인용).
-    //   ICE Node 는 캐시 앞 정적 수호(HACK 전용 파괴, 선택 대상 — 전멸전 없이도 승리 가능).
+    // ★[68차 오브젝티브 변주 — HACK 전용 코어] ICE_NODE 1기(캐시 앞 수호) → **5기 격자 봉인**.
+    //   캐시 (2,0) 의 인접 링 5타일 (1,0)(3,0)(1,1)(2,1)(3,1) 을 전부 ICE 로 채운다 →
+    //   차감 사거리(체비쇼프 ≤1)에 들어가려면 반드시 링을 하나 뚫어야 한다. ICE_NODE 는
+    //   physImmune(applyAttack: `tgt.physImmune && !ab.useHack → 무효`) 이므로 **useHack
+    //   능력을 가진 클래스만** 링을 뚫는다(CIPHER/MOLE/BROKER). BLADE/RIGGER/DRIFTER 는
+    //   링을 뚫을 수단이 없어 **경비 드론 전멸**이라는 다른 승리축으로 완주한다 —
+    //   같은 문제를 다르게 푸는 MFU 를 '오브젝티브 접근권' 층에서 재현(엔진 무편집·신규 필드 0).
+    //   서사 정합: OPENING 원문이 이미 "블록 구역의 베일 레벨 3 이상 해제" · approach 대사가
+    //   "베일 게이지가 3단으로 걸려 있다" 를 선언한다 — 그 3단 베일의 물리적 형상이 ICE 격자다.
+    //   [68차 밸런스 실측] base/mid/full 3시나리오 × 6클래스 clearFail 0 유지.
+    //     CIPHER 는 유일하게 objective 경로로 완주(W3→W4, 봉인 해제 AP 비용),
+    //     RIGGER W3→W6 · DRIFTER W2→W5 로 물리축 우회 비용이 실제 라운드로 계상되고,
+    //     BLADE(mid)·RIGGER(full) 의 기존 trivial 이상치 2건이 해소된다.
     enemies: [
       { key: 'AXIOM_DRONE', x: 1, y: 3 },
       { key: 'AXIOM_DRONE', x: 4, y: 3 },
-      { key: 'ICE_NODE',    x: 2, y: 1 },   // 캐시 앞 정적 수호 (SHADE, 물리무효·HACK만)
+      // 베일 3단 = 캐시를 감싼 ICE 격자(물리무효·HACK 전용). 캐시 인접 링 전 타일.
+      { key: 'ICE_NODE',    x: 1, y: 0 },
+      { key: 'ICE_NODE',    x: 3, y: 0 },
+      { key: 'ICE_NODE',    x: 1, y: 1 },
+      { key: 'ICE_NODE',    x: 2, y: 1 },   // 캐시 정면 수호 (원 배치 유지)
+      { key: 'ICE_NODE',    x: 3, y: 1 },
     ],
   };
 

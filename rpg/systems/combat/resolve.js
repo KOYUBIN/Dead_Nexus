@@ -7,6 +7,7 @@
   //   computeDamage : max(0, atkValue − (def+cover) + affinity + bonus)  [각색 docs/07 §3 STEP E]
   //                   결과 0 = "튕김"(빗맞음, HP 무변동)
   //   objectiveDamage: threshold 누적 차감 (adjacent HACK/ATK)          [각색 docs/07 §변경요약]
+  //   surviveReached: 생존형 승리 (survive:N 라운드 사수)               [신규 68차 · 데이터 구동]
   //   bleedingTick  : HP<=50% → 턴당 -1                                 [계승 docs/07 §7]
   // affinity(±1)는 호출측이 data/attributes.affinityMod 로 계산해 주입 → resolve 는 데이터 무의존.
   // ==========================================================================
@@ -53,6 +54,16 @@
     return { threshold: next, reached: next <= 0, delta: delta };
   }
 
+  // [신규 68차] 생존형 승리 판정 — 데이터 구동 win-condition (오브젝티브 차감 단일형 해소).
+  //   surviveRounds = 인카운터 데이터 `survive: N`. N라운드를 버텨내면(=라운드 카운터가
+  //   N을 넘어서면) 승리. 방어전/농성전 변주의 유일한 엔진 확장 지점.
+  //   ★하위 호환 불변식: surviveRounds 가 falsy(미지정/0/null)면 항상 false →
+  //     기존 30미션의 판정 경로는 byte 단위로 무변경(호출측이 이 false 로 단락).
+  function surviveReached(round, surviveRounds) {
+    if (!surviveRounds || surviveRounds <= 0) return false;
+    return (round || 0) > surviveRounds;
+  }
+
   // [계승 docs/07 §7] 상처/BLEEDING: 유효HP 50% 이하면 턴 시작 -1 (0 미만 방지).
   function bleedingTick(unit) {
     if (unit.hp <= 0) return { hp: unit.hp, bleeding: false };
@@ -70,6 +81,7 @@
     computeDamage: computeDamage,
     multiStrike: multiStrike,
     objectiveDamage: objectiveDamage,
+    surviveReached: surviveReached,
     bleedingTick: bleedingTick,
     inRange: inRange,
   };

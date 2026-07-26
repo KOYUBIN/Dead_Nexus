@@ -135,6 +135,10 @@
       // [B1] 정보상 인텔 플래그 — 구매 시 전투 시작 브리핑 공개(전투 수치 무변경, 표시만).
       intel: !!(opts && opts.intel),
     };
+    // [68차 §2단계 생존형] 데이터 구동 win-condition — 인카운터가 survive:N 을 선언한 경우에만
+    //   필드를 부착한다. 미선언 미션은 combat 객체에 키 자체가 생기지 않으므로 buildCombat
+    //   산출물이 byte 단위로 불변(하위 호환 불변식 — _unit.js 가 핀 고정).
+    if (c.survive) combat.survive = c.survive;
     if (combat.intel) combat.briefing = buildBriefing(D, combat);
     combat.telegraphs = computeTelegraphs(combat);
     return combat;
@@ -353,6 +357,9 @@
     if (p.hp <= 0) return 'lose';
     if (c.objective.done) return 'win';
     if (aliveEnemies(c).length === 0) return 'win';
+    // [68차 §2단계] 생존형 승리 — survive:N 선언 인카운터만. 미선언 시 c.survive 가
+    //   undefined → 단락되어 deps() 조차 호출되지 않음(기존 판정 경로 무변경).
+    if (c.survive && deps().R.surviveReached(c.round, c.survive)) return 'win';
     return null;
   }
 
@@ -389,6 +396,11 @@
     // 라운드 종료 처리: 상태 감쇠 + 상처 틱 + AP 리필 + 텔레그래프 갱신.
     tickRoundEnd(c);
     c.outcome = checkOutcome(c);
+    // [68차 §2단계] 생존형 사수 완료 로그 — 오브젝티브/전멸 승리가 아닌 '버텨서' 이긴 경우만.
+    //   survive 미선언 미션은 단락 → 로그 배열 byte 불변.
+    if (c.survive && c.outcome === 'win' && !c.objective.done && aliveEnemies(c).length > 0) {
+      c.log.push('★ 사수 완료 — ' + c.survive + '라운드 방어 성공, 적이 물러난다');
+    }
     c.telegraphs = computeTelegraphs(c);
     return c;
   }

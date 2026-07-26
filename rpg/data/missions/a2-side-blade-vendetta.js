@@ -20,11 +20,13 @@
   //                    돌린 처형 계약 원본이 잠긴 곳. Act2 미사용 무대축.
   //   단일 대형 보스전   [act2_plan.md §2 클래스 사이드] 2연전 아님 — 개인전 밀도의 단일 인카운터
   //                    (MARCUS_CRANE 보스 + IRONWALL 호위). side-06 결투 구조 계승.
-  //   MFU 게이트 다양   [계승] 전투 / [ATK5] BLADE 정체성 지름길 / [IRONWALL tag] 위장 지름길.
+  //   MFU 게이트 다양   [계승] 전투 / [ATK5] BLADE 정체성 지름길 / [DEF4] 집행관 장구 지름길.
   //                    무력 전투 경로 상시 개방 → 무력 폴백 완주 보장(4클래스 폴백 원칙).
-  //   [IRONWALL tag]    [계승 SIMPLIFIED · Act1 side-08 선례] IRONWALL 태그는 MOLE 위장 태그
-  //                    (data/classes.js MOLE.tags)만 보유 → BLADE 는 미보유 = 이 지름길 잠김
-  //                    (show:'gray' 폴백). 신규 태그 문법 0, 기존 tag 게이트 필드만 소비.
+  //   [DEF 4] 게이트    [신규 68차 · 사문 게이트 해소] 원 설계는 [IRONWALL tag] 였으나 이 미션은
+  //                    unlock.classKey:'BLADE' 전용인데 IRONWALL 태그는 MOLE 만 보유 →
+  //                    소유 클래스에서 영구 잠김(67차 발견 = 사문). 태그 축을 DEF 축으로 교체:
+  //                    "집행관 시절 방벽 장구" = RUST 의 집행관 출신 정체성을 장구로 표현.
+  //                    BLADE 기본 DEF3 → 회색 광고 유지 · IRON_SKIN(B1 장비, DEF+2) 빌드에서 개방.
   //   보상 NAME IN BLOOD [계승] cards/ghost/blade.md 레거시 해금 카드 "NAME IN BLOOD"(챕터7):
   //                    "사망한 적의 이름을 카드에 새김, 영구 ATK +0.5". rewards.unlocks 로 해금.
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
@@ -100,11 +102,23 @@
             effect: { skipCombat: true }, goto: 'outro',
             desc: 'BLADE(기본 ATK5)·"동점 자동 선공" 패시브 시너지 → 전투 스킵, 일격에 호위 돌파(지름길). 저ATK 폴백 → 전투',
           },
-          { label: '[IRONWALL 태그] 옛 집행관 인장을 앞세워 무기고를 무혈 통과한다',
-            gate: { tag: 'IRONWALL' }, show: 'gray',
+          // [68차 사문 게이트 해소] 원래 gate:{tag:'IRONWALL'} 이었으나, 이 미션은
+          //   unlock.classKey:'BLADE' 로 **BLADE 로만** 진입 가능하고 IRONWALL 태그는
+          //   MOLE 전용(data/classes.js MOLE.tags)이라 소유 클래스에서 영구 잠김 = 사문이었다
+          //   (67차 발견). 태그를 BLADE 에 부여하면 side-01/side-08/ch07 의 IRONWALL 태그
+          //   게이트 판정까지 전역으로 바뀌므로 채택하지 않고, **게이트 축을 교체**한다.
+          //   [DEF 4] = "집행관 시절의 방벽 규격 장구를 다시 걸친다" — RUST 의 집행관 출신
+          //   정체성(lore GHOST_IDENTITY)을 태그가 아니라 장구/체격으로 표현. BLADE 기본
+          //   DEF3 로는 잠기고(회색 광고 유지), **두 갈래 도달 축**이 열려 있다:
+          //     ① karma 성장 def+1 (STAT_CAP.def 8 이내) ② B1 경제 루프의 IRON_SKIN
+          //        (₵34 · DEF+2 · BLADE 장착 가능).
+          //   dialogueCtx 가 effectiveStats(성장·장비 반영)를 넘기므로 배선 신규 0.
+          //   side-07 의 [DEF 3] 대체 게이트 선례와 동일 문법.
+          { label: '[DEF 4] 집행관 시절 방벽 장구를 다시 걸치고, 인장을 앞세워 무기고를 무혈 통과한다',
+            gate: { attr: 'def', min: 4 }, show: 'gray',
             setFlags: { craneBypassed: true },
             effect: { skipCombat: true }, goto: 'outro',
-            desc: '위장/MOLE 축 태그(SIMPLIFIED · Act1 side-08 선례) — BLADE 로스터엔 IRONWALL 태그 없음 → 잠김, 전투로 폴백',
+            desc: 'BLADE 기본 DEF3 → 잠김(회색). IRON_SKIN(DEF+2) 장착 빌드에서 개방 — 무혈 통과 지름길. 미장착 시 전투로 폴백',
           },
         ],
       },

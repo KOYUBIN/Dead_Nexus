@@ -9,10 +9,14 @@
 // 순수 엔진(store.buildCombat + applyMove/applyAttack/applyHackObjective/runEnemyTurn)
 // 만으로 자동 플레이가 가능하다. sim-e2e 의 측정 규율(매트릭스+이상치 플래그)을 RPG 로 이식.
 //
-// 봇 정책 2종 (결정론 → 정책당 1런이면 충분):
+// 봇 정책 3종 (결정론 → 정책당 1런이면 충분):
 //   'combat'    : 전투형 — 최근접 접근 + 최대 피해 액션(전멸 승리 지향)
 //   'objective' : 오브젝티브형 — 오브젝티브 인접 후 우선 차감(오브젝티브 승리 지향)
-// 두 정책 모두 방어형 궁극(HP≤40%) · 관통 불가 시 디버프 폴백 · 최대피해 그리디 공유.
+//   'survive'   : [68차] 생존형 — 엄폐 유지·거리 확보(농성). survive:N 선언 인카운터에만
+//                 측정된다(SURVIVE_POLICY). 러시 정책이 '전진 중 사망'하는 방어전 유형을
+//                 하네스가 클리어 판정할 수 있게 하는 대응 정책 — 미선언 인카운터의 셀
+//                 형상(byPol = {combat, objective})은 byte 불변.
+// 세 정책 모두 방어형 궁극(HP≤40%) · 관통 불가 시 디버프 폴백 · 최대피해 그리디 공유.
 //
 // 측정 지표: 승/패 · 봇 라운드 수 · 종료 HP 잔량 % · 증원 발동 여부 · 승리 경로(오브젝/전멸).
 // 이상치 플래그: clearFail(양 정책 패) · trivial(≤2R 무피해) · attrition(≥10R/timeout).
@@ -28,6 +32,8 @@ var GEAR = require('./data/gear.js');   // [V1] 장비 반영 밸런스 재측�
 
 var CLASSES = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE', 'BROKER', 'DRIFTER'];   // [65차] BROKER·DRIFTER 승격 → 6클래스 재측정.
 var POLICIES = ['combat', 'objective'];
+// [68차] 생존형(survive:N) 인카운터에만 추가로 측정하는 정책. 기존 인카운터의 셀 형상 불변.
+var SURVIVE_POLICY = 'survive';
 var ROUND_CAP = 30;          // 봇 라운드 상한(무한 소모전 가드). 밴드 목표는 3~9.
 var TRIVIAL_ROUNDS = 2;      // ≤2R + 무피해 = 트리비얼
 var ATTRITION_ROUNDS = 10;   // ≥10R 또는 timeout = 소모전
@@ -191,6 +197,76 @@ function moveToward(c, goal) {
   return c;
 }
 
+// [68차 §1단계 봉인 코어 대응] 오브젝티브가 '봉인'되었는가 — 차감 사거리(체비쇼프 ≤1, 코어
+//   타일 자신 포함)에 해당하는 모든 타일이 벽/엄폐/생존 유닛으로 막혀 있으면 봉인이다.
+//   ★기존 30미션의 인카운터는 전부 코어 인접 타일이 열려 있으므로 이 술어는 항상 false →
+//     아래 분기가 통째로 단락되어 기존 측정치는 byte 불변(회귀 방어의 근거).
+function objectiveBlockers(c) {
+  var o = c.objective, blockers = [], open = false;
+  var blocked = G.buildBlocked(c.field, c.units, S.player(c).id);
+  // 링(체비쇼프 1) 타일만 본다 — 코어 타일 자신은 링을 통과하지 않으면 도달할 수 없으므로
+  //   링이 전부 막히면 코어 타일도 도달 불가(= 봉인).
+  for (var dx = -1; dx <= 1 && !open; dx++) {
+    for (var dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      var x = o.x + dx, y = o.y + dy;
+      if (!G.inBounds(x, y, c.field.cols, c.field.rows)) continue;
+      if (!blocked[G.key(x, y)]) { open = true; break; }
+    }
+  }
+  if (open) return null;                       // 봉인 아님 → 기존 경로 그대로(단락)
+  var es = aliveEnemyUnits(c);
+  for (var i = 0; i < es.length; i++) if (G.chebyshev(es[i], o) <= 1) blockers.push(es[i]);
+  return blockers.length ? blockers : null;
+}
+
+// 봉인 해제 시도 — 봉인 링을 이루는 유닛을 우선 타격. physImmune 링(ICE/WARD)은 useHack
+//   능력을 가진 클래스만 실제 피해가 들어가므로(applyAttack 계약), 링을 뚫는 것 자체가
+//   "HACK 전용 코어" 의 판정이 된다. 뚫지 못하는 클래스는 null → 전멸 경로로 폴백.
+function breachSeal(c) {
+  var blockers = objectiveBlockers(c);
+  if (!blockers) return null;
+  var p = S.player(c);
+  var atks = kitOfKind(p.kit, ['RANGED', 'MELEE']);
+  var before = totalEnemyHp(c), best = null;
+  for (var ai = 0; ai < atks.length; ai++) {
+    for (var bi = 0; bi < blockers.length; bi++) {
+      var res = S.applyAttack(c, blockers[bi].id, atks[ai]);
+      if (res === c) continue;
+      var dmg = before - totalEnemyHp(res);
+      if (dmg > 0 && (!best || dmg > best.dmg)) best = { combat: res, dmg: dmg };
+    }
+  }
+  return best ? best.combat : null;
+}
+
+// [68차 생존형 대응 정책] 농성 이동 — 도달 타일 중 '최근접 적 기준 엄폐 최대 → 적과의 거리
+//   최대 → 좌표'(결정론) 순으로 고른다. 현재 타일보다 나은 후보가 없으면 제자리(무이동).
+//   러시 정책의 moveToward 와 정반대 목적함수 = 방어전 유형의 클리어 경로를 하네스가 재현.
+function hunker(c) {
+  var p = S.player(c);
+  var ne = nearestEnemyUnit(c, { x: p.x, y: p.y });
+  if (!ne) return c;
+  var blocked = G.buildBlocked(c.field, c.units, p.id);
+  var reach = G.bfsRange({ x: p.x, y: p.y }, p.mov, blocked, c.field.cols, c.field.rows);
+  var curCover = coverAt(c, { x: p.x, y: p.y });
+  var curDist = G.chebyshev(p, ne);
+  var keys = Object.keys(reach), best = null, bestCover = curCover, bestDist = curDist;
+  for (var i = 0; i < keys.length; i++) {
+    if (reach[keys[i]] === 0) continue;
+    var parts = keys[i].split(',');
+    var tile = { x: parseInt(parts[0], 10), y: parseInt(parts[1], 10) };
+    var cov = coverAt(c, tile);
+    var d = G.chebyshev(tile, ne);
+    var better = cov > bestCover
+      || (cov === bestCover && d > bestDist)
+      || (cov === bestCover && d === bestDist && best && (tile.x < best.x || (tile.x === best.x && tile.y < best.y)));
+    if (better) { bestCover = cov; bestDist = d; best = tile; }
+  }
+  if (!best) return c;
+  return S.applyMove(c, best);
+}
+
 // ---- 봇 1턴 (결정론 그리디, 정책별 우선순위) --------------------------------
 // 공통: 위협 예측 시 생존 궁극. 이후 정책이 액션 우선순위를 가른다.
 //   combat    : 최대 피해 > 디버프 폴백 > 최근접 적 전진 > (교착 시 오브젝티브 차감).
@@ -207,11 +283,33 @@ function playerTurn(c, policy) {
     var u = tryUltimate(c);
     if (u) { c = u; continue; }
 
+    // [68차] 생존형 정책 — 버티는 것이 승리 조건이므로 전진 0. 엄폐 확보 → 사거리 안이면
+    //   반격 → 인접이면 오브젝티브 차감(부가 승리 경로도 막지 않음).
+    if (policy === SURVIVE_POLICY) {
+      var hk = hunker(c);
+      if (hk !== c) { c = hk; continue; }
+      var atkS = bestAttack(c);
+      if (atkS && atkS.dmg > 0) { c = atkS.combat; continue; }
+      var dbfS = bestDebuff(c);
+      if (dbfS) { c = dbfS; continue; }
+      if (!c.objective.done && G.chebyshev(p, c.objective) <= 1) {
+        var hS = S.applyHackObjective(c);
+        if (hS !== c) { c = hS; continue; }
+      }
+      break;
+    }
+
     if (policy === 'objective') {
       // 1) 인접이면 우선 차감.
       if (!c.objective.done && G.chebyshev(p, c.objective) <= 1) {
         var h = S.applyHackObjective(c);
         if (h !== c) { c = h; continue; }
+      }
+      // 1.5) [68차] 코어가 봉인된 인카운터 — 링을 먼저 뚫는다(뚫을 수단이 없으면 null → 폴백).
+      //      기존 30미션은 objectiveBlockers 가 null → 이 분기 자체가 존재하지 않던 것과 동일.
+      if (!c.objective.done) {
+        var brc = breachSeal(c);
+        if (brc) { c = brc; continue; }
       }
       // 2) 오브젝티브로 전진(적 교전 회피 — 은신으로 관통).
       if (!c.objective.done) {
@@ -279,7 +377,10 @@ function runEncounter(classKey, missionId, policy, scenario, encKey, enemyScale)
   }
   var p = S.player(c);
   var win = c.outcome === 'win';
-  var winBy = win ? (c.objective.done ? 'objective' : 'eliminate') : null;
+  // [68차] 생존형 승리 경로 식별 — 오브젝티브 미완 + 위협 적 잔존인데 승리 = survive:N 도달.
+  //   survive 미선언 인카운터(c.survive undefined)에서는 기존 2값('objective'|'eliminate') 불변.
+  var winBy = win ? (c.objective.done ? 'objective'
+    : ((c.survive && nonStaticEnemiesAlive(c) > 0) ? 'survive' : 'eliminate')) : null;
   return {
     classKey: classKey, missionId: missionId, policy: policy,
     outcome: c.outcome || 'timeout',
@@ -313,6 +414,14 @@ function encountersOf(e) {
   return list;
 }
 
+// [68차] 인카운터가 소비할 정책 목록. survive:N 선언 인카운터만 'survive' 정책을 추가로
+//   측정한다 — 미선언 인카운터는 POLICIES 그대로(셀 byPol 형상 byte 불변 → --json 회귀 방어).
+function policiesFor(missionId, encKey) {
+  var m = CAMP.missionData(missionId);
+  var cfg = encKey ? (m && m.encounters && m.encounters[encKey]) : (m && m.combat);
+  return (cfg && cfg.survive) ? POLICIES.concat([SURVIVE_POLICY]) : POLICIES;
+}
+
 function runMatrix(scenario, enemyScale) {
   var ms = orderedMissions();
   var rows = [];
@@ -322,11 +431,12 @@ function runMatrix(scenario, enemyScale) {
     for (var ei = 0; ei < encs.length; ei++) {
       var enc = encs[ei];
       var cells = {};
+      var pols = policiesFor(e.id, enc.encKey);   // [68차] 생존형만 3정책, 그 외 2정책(형상 불변).
       for (var ci = 0; ci < CLASSES.length; ci++) {
         var cls = CLASSES[ci];
         var byPol = {};
         // [65차] enemyScale 미지정 → runEncounter es=1 → byte 불변(runMatrix() 무인자 회귀 방어).
-        for (var pi = 0; pi < POLICIES.length; pi++) byPol[POLICIES[pi]] = runEncounter(cls, e.id, POLICIES[pi], scenario, enc.encKey, enemyScale);
+        for (var pi = 0; pi < pols.length; pi++) byPol[pols[pi]] = runEncounter(cls, e.id, pols[pi], scenario, enc.encKey, enemyScale);
         cells[cls] = byPol;
       }
       // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
@@ -343,9 +453,13 @@ function runMatrix(scenario, enemyScale) {
 // 실제 체감 난이도. trivial/attrition 은 이 '최적 경로' 기준(느린 정책 grind 는 플레이어 선택).
 function verdict(byPol) {
   var combat = byPol.combat, obj = byPol.objective;
+  // [68차] surv = 생존형 정책 결과(있을 때만). 미선언 인카운터에서는 undefined → 아래
+  //   분기가 전부 단락되어 기존 2정책 판정과 완전 동일(하위 호환 불변식).
+  var surv = byPol[SURVIVE_POLICY];
   var wins = [];
   if (combat.win) wins.push(combat);
   if (obj.win) wins.push(obj);
+  if (surv && surv.win) wins.push(surv);
   var clearable = wins.length > 0;
   var rep = clearable
     ? wins.reduce(function (a, b) { return b.rounds < a.rounds ? b : a; })
@@ -356,7 +470,7 @@ function verdict(byPol) {
     if (rep.rounds <= TRIVIAL_ROUNDS && rep.hpPct >= 100) flags.push('trivial');
     if (rep.rounds >= ATTRITION_ROUNDS || rep.outcome === 'timeout') flags.push('attrition');
   }
-  return { clearable: clearable, rep: rep, combat: combat, obj: obj, flags: flags };
+  return { clearable: clearable, rep: rep, combat: combat, obj: obj, surv: surv || null, flags: flags };
 }
 
 // ---- 출력 ------------------------------------------------------------------
@@ -374,7 +488,7 @@ function printMatrix(rows) {
   var line = '';
   console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 30미션 · 2연전 enc①+enc② + 캡스톤 3연전 = 40 인카운터) ================');
   console.log('셀 = 종합판정(승리 정책 대표). W=승 L=패 T=timeout · R수 · 종료HP%. ⚑=이상치. #stage2=2연전 enc②.');
-  console.log('C=combat정책 승 / O=objective정책 승 (승리 경로 표기).\n');
+  console.log('C=combat정책 승 / O=objective정책 승 / S=survive정책 승(생존형 인카운터 전용, 68차).\n');
   console.log(pad('MISSION', 26) + CLASSES.map(function (c) { return pad(c, 14); }).join('') + '  FLAGS');
   console.log('-'.repeat(26 + 14 * 4 + 12));
   var outliers = [];
@@ -385,7 +499,7 @@ function printMatrix(rows) {
     var cols = '', rowFlags = {};
     for (var ci = 0; ci < CLASSES.length; ci++) {
       var vd = verdict(r.cells[CLASSES[ci]]);
-      var path = (vd.combat.win ? 'C' : '') + (vd.obj.win ? 'O' : '');
+      var path = (vd.combat.win ? 'C' : '') + (vd.obj.win ? 'O' : '') + (vd.surv && vd.surv.win ? 'S' : '');
       var mark = vd.flags.length ? '⚑' : ' ';
       cols += pad(cellStr(vd.rep) + ' ' + pad(path, 2) + mark, 14);
       for (var f = 0; f < vd.flags.length; f++) rowFlags[vd.flags[f]] = true;
