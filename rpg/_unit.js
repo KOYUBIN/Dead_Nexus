@@ -1062,14 +1062,16 @@ ok('213. opts.combat=encounters.stage2 → enc②(8×8 · thr11 · WARLORD+WARD_
   enc2.field.cols === 8 && enc2.field.rows === 8 && enc2.objective.max === 11 &&
   enc2.units.filter(function (u) { return u.side === 'enemy'; }).length === 2);
 ok('214. enc② missionId 는 mission.id 유지(resolveCombat 라우팅 계약 불변)', enc2.missionId === 'syn-multi');
-// 인카운터 해석 표현식 계약(store.dialogueChoose): encounter 문자열 → mission.encounters[key].
-function resolveEnc(mission, startCombat) {
-  return (startCombat.encounter && mission.encounters) ? mission.encounters[startCombat.encounter] : null;
-}
-ok('215. encounter 해석: {encounter:"stage2"} → encounters.stage2 · 미지정 → null(mission.combat 폴백)',
-  resolveEnc(synMission, { encounter: 'stage2', onWin: 'outro' }) === synMission.encounters.stage2 &&
-  resolveEnc(synMission, { onWin: 'outro' }) === null &&
-  resolveEnc({ id: 'x', combat: {} }, { encounter: 'stage2' }) === null);
+// [76차 교정] 구 215는 store 의 인카운터 해석식을 지역 함수로 재구현해 자기검증했다(동어반복)
+//   → 실제 store.dialogueChoose 경로로 교체(개수 유지): a2-a1 의 interlude 선택(encounter:"stage2")
+//   이 encounters.stage2(eff thr 8 = 7+veil1)를, approach 선택(encounter 미지정)이 mission.combat
+//   (enc① thr 9)을 소비하는지 산출물 리터럴로 판정. atNode 헬퍼(후방 선언·호이스팅)로 노드 직행.
+var enc215a = S.dialogueChoose(atNode('a2-a1-crown-breach', 'interlude', 'CIPHER'), 0);
+var enc215b = S.dialogueChoose(atNode('a2-a1-crown-breach', 'approach', 'CIPHER'), 0);
+ok('215. encounter 해석(실경로): interlude {encounter:"stage2"} → thr8(7+veil1) · approach 미지정 → enc① thr9 폴백 · missionId 유지',
+  enc215a.scene === 'combat' && enc215a.combat.objective.max === 8 &&
+  enc215b.scene === 'combat' && enc215b.combat.objective.max === 9 &&
+  enc215a.combat.missionId === 'a2-a1-crown-breach' && enc215b.combat.onWin === 'interlude');
 
 console.log('\n== [61차 §3.2] 엔딩 게이트 + 클래스 게이트 해금 ==');
 function mkSave(o) { var s = { missionsDone: [], flags: {}, character: { classKey: 'CIPHER' }, endings: { seen: {}, byClass: {}, runs: 0 } }; return Object.assign(s, o || {}); }
@@ -1641,8 +1643,14 @@ ok('292. surviveReached: 미선언(undefined/null/0/음수) 은 항상 false —
 ok('293. surviveReached: N라운드 사수 경계 — round N 이하 false, N 초과 true (round>N)',
   R.surviveReached(1, 4) === false && R.surviveReached(4, 4) === false &&
   R.surviveReached(5, 4) === true && R.surviveReached(9, 4) === true);
-ok('294. surviveReached: 순수·결정론 (같은 입력 반복 = 같은 출력, 부작용 0)',
-  R.surviveReached(5, 4) === R.surviveReached(5, 4) && R.surviveReached(3, 4) === R.surviveReached(3, 4));
+// [76차 교정] 구 294는 같은 호출 둘을 서로 비교(x===x — 순수 함수라 실패 불가능한 자기비교)
+//   → 독립 수동 리터럴 전수 스윕으로 교체(개수 유지): N=4 에서 round 0~4 전부 false · 5~9 전부 true.
+var SV294_EXPECT = [false, false, false, false, false, true, true, true, true, true]; // round 0..9 (수동 리터럴 — 식 재구현 금지)
+var sv294ok = true;
+for (var r294 = 0; r294 <= 9; r294++) {
+  if (R.surviveReached(r294, 4) !== SV294_EXPECT[r294]) sv294ok = false;
+}
+ok('294. surviveReached 경계 전수(독립 리터럴): N=4 · round 0~4 → false · 5~9 → true (구 자기비교 교체)', sv294ok);
 
 console.log('\n== [68차] buildCombat/checkOutcome 배선 · 비전환 미션 byte 불변 ==');
 var svMission = CAMP.missionData('a2-c1-first-contact');
@@ -2470,6 +2478,298 @@ var thUp = threatAfterOneRound(SIG.STATES.UP);
 var thSurge = threatAfterOneRound(SIG.STATES.SURGE);
 ok('404. accrueThreat ⚡SURGE 가속: 동일 노출 라운드 UP +' + thUp + ' 대비 SURGE +' + thSurge + ' (= +1 가속)',
   thUp >= 1 && thSurge === thUp + 1);
+
+// ============================================================================
+// ======  [76차 커버리지 보강] 리듀서 액션 전수 · 실경로 매트릭스 · 경계 봉합  ====
+//   ① 리듀서 액션 인벤토리 소스 핀(22종) + 미커버 7액션 봉합(NEW_GAME · COMBAT_SELECT ·
+//      COMBAT_CLEAR_FLOATERS · SPEND_KARMA(store) · HUB_NAV · CLEAR_BANNER · default)
+//      + 디스패치 페이로드 키 계약(action.missionId/index/tile/ability/targetId/stat/
+//      slot/key/classKey/node — UI↔store 의 실제 결합면. 직접 함수 호출 테스트는 이 계약을
+//      영원히 지나친다).
+//   ② dialogueChoose 실경로: 멀티 인카운터 전이(enc① 승리→interlude→enc②) ·
+//      hardScale enc② 우선 조회 · 복합 비용 사유 우선순위(COST_KEYS 순서).
+//   ③ 전투 스텝 가드 경계(identity no-op 6종) · 전투 중 세이브 정합(순수성+왕복).
+//   ④ abyss 기록 경계(무효 웨이브·오염 lastRun/byClass) · campaignStats 분류 경계
+//      (capstone/갈래/레지스트리 미해석 폴백) · save.migrate 미지 필드 보존·heat 경계.
+//   ★ 발견 결함 2건(D1 리듀서 전투 4액션 combat null 무가드 · D2 migrate 배열 수용)은
+//     프로덕션 무수정 원칙에 따라 현행 동작을 핀으로 고정 — 상세는 각 테스트 주석.
+// ============================================================================
+
+console.log('\n== [76차 ①] 리듀서 액션 전수 인벤토리 — 소스 핀 ==');
+// 소스의 case 라벨을 실측 추출해 리터럴 22종과 대조 — 신규 액션이 테스트 없이 추가되면 즉시 실패.
+var cvStoreSrc = require('fs').readFileSync(__dirname + '/state/store.js', 'utf8');
+var cvCases = [], cvCaseRe = /case '([A-Z_]+)':/g, cvCaseM;
+while ((cvCaseM = cvCaseRe.exec(cvStoreSrc))) cvCases.push(cvCaseM[1]);
+cvCases.sort();
+var CV_ACTIONS = ['ABYSS_START', 'BUY_GEAR', 'BUY_INTEL', 'CLEAR_BANNER', 'COMBAT_ATTACK',
+  'COMBAT_CLEAR_FLOATERS', 'COMBAT_END_TURN', 'COMBAT_HACK', 'COMBAT_MOVE', 'COMBAT_RESOLVE',
+  'COMBAT_SELECT', 'DIALOGUE_CHOOSE', 'EPILOGUE_CONTINUE', 'HUB_NAV', 'LOAD_SAVE', 'NEW_GAME',
+  'NEW_GAME_PLUS', 'SELECT_CLASS', 'SPEND_KARMA', 'START_MISSION', 'TOGGLE_HARD_MODE', 'UNEQUIP_GEAR'];
+ok('405. rpgReducer 액션 인벤토리 = 22종 리터럴 일치 (소스 case 라벨 실측 — 신규 액션 무단 추가 시 실패)',
+  cvCases.length === 22 && JSON.stringify(cvCases) === JSON.stringify(CV_ACTIONS));
+
+console.log('\n== [76차 ①] 미커버 액션 봉합 — NEW_GAME · SELECT/FLOATERS · SPEND_KARMA · NAV/BANNER · default ==');
+// NEW_GAME — 에필로그 심층 상태에서 완전 초기화. NEW_GAME_PLUS 와의 계약 차이(엔딩 기록 소실)를 핀.
+var cvNgSrc = S.rpgInitialState();
+cvNgSrc.save.endings = END.recordEnding(cvNgSrc.save.endings, 'dead-nexus', 'CIPHER');
+cvNgSrc.save.missionsDone = ['ch01-first-blood'];
+cvNgSrc.scene = 'epilogue'; cvNgSrc.epilogue = { ending: 'dead-nexus' };
+var cvNgNew = S.rpgReducer(cvNgSrc, { type: 'NEW_GAME' });
+var cvNgPlus = S.rpgReducer(cvNgSrc, { type: 'NEW_GAME_PLUS' });
+ok('406. NEW_GAME: 허브 복귀 · 진행/에필로그 리셋 · 엔딩 기록도 소실(runs 0) — NEW_GAME_PLUS(runs 1 유지)와 계약 구분',
+  cvNgNew.scene === 'hub' && cvNgNew.epilogue === null && cvNgNew.save.missionsDone.length === 0 &&
+  cvNgNew.save.endings.runs === 0 && cvNgPlus.save.endings.runs === 1 &&
+  cvNgPlus.save.endings.seen['dead-nexus'] === 1);
+// COMBAT_SELECT — 해피: selectedAbility 교체(+원본 불변) / 경계: combat null 이어도 무크래시(가드 존재).
+var cvSelSrc = S.rpgInitialState();
+cvSelSrc = S.startMission(cvSelSrc, 'ch01-first-blood');
+cvSelSrc = S.dialogueChoose(cvSelSrc, 0); cvSelSrc = S.dialogueChoose(cvSelSrc, 0); // → combat
+var cvSelPrev = cvSelSrc.combat.selectedAbility;
+var cvSelAfter = S.rpgReducer(cvSelSrc, { type: 'COMBAT_SELECT', ability: 'GLITCH' });
+var cvSelNull = S.rpgReducer(S.rpgInitialState(), { type: 'COMBAT_SELECT', ability: 'GLITCH' });
+ok('407. COMBAT_SELECT: selectedAbility HACK_SHOT→GLITCH 교체 · 원본 상태 불변(clone) · combat null → 무크래시 유지',
+  cvSelPrev === 'HACK_SHOT' && cvSelAfter.combat.selectedAbility === 'GLITCH' &&
+  cvSelSrc.combat.selectedAbility === 'HACK_SHOT' && cvSelNull.combat === null);
+// COMBAT_CLEAR_FLOATERS — 해피: 적턴 후 플로터 소거 / 경계: 빈 플로터 → 동일 참조 반환(리렌더 억제 계약).
+var cvFlt = S.rpgReducer(cvSelSrc, { type: 'COMBAT_END_TURN' });
+var cvFltN = cvFlt.combat.floaters.length;
+var cvFltClr = S.rpgReducer(cvFlt, { type: 'COMBAT_CLEAR_FLOATERS' });
+ok('408. COMBAT_CLEAR_FLOATERS: 적턴 플로터(' + cvFltN + '>0) 소거 → [] · 빈 상태 재디스패치 = 동일 참조(identity no-op)',
+  cvFltN > 0 && cvFltClr.combat.floaters.length === 0 &&
+  S.rpgReducer(cvFltClr, { type: 'COMBAT_CLEAR_FLOATERS' }) === cvFltClr);
+// SPEND_KARMA(store 레벨) — CH.spendKarma(39번)와 달리 미러 동기·배너까지가 계약.
+var cvKar = S.rpgInitialState(); cvKar.save.character.karma = 2; cvKar.save.karma = 2;
+var cvKarOk = S.rpgReducer(cvKar, { type: 'SPEND_KARMA', stat: 'hack' });
+var cvKarNo = S.rpgReducer(S.rpgInitialState(), { type: 'SPEND_KARMA', stat: 'hack' });
+ok('409. SPEND_KARMA 디스패치: growth.hack 1 · save.karma 미러 1 · 배너 "HACK +1 (karma 잔여 1)" / karma 0 → blocked "karma 부족"·무성장',
+  cvKarOk.save.character.growth.hack === 1 && cvKarOk.save.karma === 1 &&
+  cvKarOk.banner.kind === 'growth' && cvKarOk.banner.text === 'HACK +1 (karma 잔여 1)' &&
+  cvKarNo.banner.kind === 'blocked' && cvKarNo.banner.text === 'karma 부족' &&
+  cvKarNo.save.character.growth.hack === 0);
+// HUB_NAV / CLEAR_BANNER — 배너 소거 계약(NAV 는 노드 이동 겸).
+var cvNav = S.rpgInitialState(); cvNav.banner = { kind: 'growth', text: 'x' };
+var cvNavTo = S.rpgReducer(cvNav, { type: 'HUB_NAV', node: 'board' });
+var cvBnr = S.rpgReducer(cvNav, { type: 'CLEAR_BANNER' });
+ok('410. HUB_NAV: hub.node root→board + 배너 소거 · CLEAR_BANNER: 배너만 소거(씬/허브 노드 유지)',
+  cvNavTo.hub.node === 'board' && cvNavTo.banner === null &&
+  cvBnr.banner === null && cvBnr.scene === 'hub' && cvBnr.hub.node === 'root');
+// default — 미지 액션은 동일 참조 반환(변이 0 · React 리렌더 억제).
+var cvDef = S.rpgInitialState();
+ok('411. 미지 액션(default): 동일 상태 참조 반환 (identity — 무변이 계약)',
+  S.rpgReducer(cvDef, { type: '__UNKNOWN_ACTION__' }) === cvDef);
+// SELECT_CLASS 동일 클래스 경계 — 재편성 리셋 없이 안내 배너만(성장 보존).
+var cvSelfCls = S.rpgInitialState();
+cvSelfCls.save.character.growth.hack = 1; cvSelfCls.save.character.karma = 3;
+var cvSelfAfter = S.selectClass(cvSelfCls, 'CIPHER');
+ok('412. SELECT_CLASS 동일 클래스: 캐릭터 리셋 없음(growth.hack 1·karma 3 보존) · "이미 편성됨" growth 배너',
+  cvSelfAfter.save.character.growth.hack === 1 && cvSelfAfter.save.character.karma === 3 &&
+  cvSelfAfter.banner.kind === 'growth' && cvSelfAfter.banner.text === 'CIPHER — 이미 편성됨');
+// UNEQUIP_GEAR 빈 슬롯 경계 — blocked 사유(조용한 no-op 금지).
+var cvUneq = S.unequipGear(S.rpgInitialState(), 'weapon');
+ok('413. UNEQUIP_GEAR 빈 슬롯: blocked "해제할 장비 없음" · 장비 상태 무변동',
+  cvUneq.banner.kind === 'blocked' && cvUneq.banner.text === '해제할 장비 없음' &&
+  cvUneq.save.character.equipment.weapon === null);
+
+console.log('\n== [76차 ①] 디스패치 페이로드 키 계약 — 코어 루프 · 전투 · 경제 전부 rpgReducer 경유 ==');
+// 코어 루프 전체를 액션 디스패치만으로 완주 — action.missionId/index/tile 페이로드 키가 실계약.
+var cvLoop = S.rpgInitialState();
+cvLoop = S.rpgReducer(cvLoop, { type: 'START_MISSION', missionId: 'ch01-first-blood' });
+cvLoop = S.rpgReducer(cvLoop, { type: 'DIALOGUE_CHOOSE', index: 0 });
+cvLoop = S.rpgReducer(cvLoop, { type: 'DIALOGUE_CHOOSE', index: 0 });
+var cvLoopCombat = cvLoop.scene === 'combat' && S.player(cvLoop.combat).ap === 2;
+cvLoop = S.rpgReducer(cvLoop, { type: 'COMBAT_MOVE', tile: { x: 1, y: 6 } });
+var cvLoopMoved = S.player(cvLoop.combat).x === 1 && S.player(cvLoop.combat).ap === 1;
+cvLoop = S.rpgReducer(cvLoop, { type: 'COMBAT_END_TURN' });
+var cvLoopRound = cvLoop.combat.round === 2;
+var cvLoopOnWin = cvLoop.combat.onWin;
+cvLoop.combat.objective.done = true; cvLoop.combat.outcome = 'win'; // 승리 강제(라우팅 검증)
+cvLoop = S.rpgReducer(cvLoop, { type: 'COMBAT_RESOLVE' });
+ok('414. 코어 루프 디스패치 완주: START_MISSION.missionId → DIALOGUE_CHOOSE.index → COMBAT_MOVE.tile → COMBAT_END_TURN → COMBAT_RESOLVE (onWin "' + cvLoopOnWin + '" 라우팅)',
+  cvLoopCombat && cvLoopMoved && cvLoopRound &&
+  cvLoop.scene === 'dialogue' && cvLoop.dialogue.nodeId === cvLoopOnWin && cvLoop.combat === null);
+// COMBAT_ATTACK.targetId/ability · COMBAT_HACK(무페이로드) 디스패치 — 결정론 수치 핀.
+var cvAtk = S.rpgInitialState();
+cvAtk = S.startMission(cvAtk, 'ch01-first-blood');
+cvAtk = S.dialogueChoose(cvAtk, 0); cvAtk = S.dialogueChoose(cvAtk, 0);
+var cvAtkTgt = cvAtk.combat.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+var cvAtkP = S.player(cvAtk.combat); cvAtkP.x = cvAtkTgt.x; cvAtkP.y = cvAtkTgt.y + 1;
+cvAtk.combat.signal = SIG.STATES.DOWN; // 결정론(mesh/HACK 미보정)
+var cvAtkAfter = S.rpgReducer(cvAtk, { type: 'COMBAT_ATTACK', targetId: cvAtkTgt.id, ability: 'HACK_SHOT' });
+var cvHck = S.rpgInitialState();
+cvHck = S.startMission(cvHck, 'ch01-first-blood');
+cvHck = S.dialogueChoose(cvHck, 0); cvHck = S.dialogueChoose(cvHck, 0);
+var cvHckP = S.player(cvHck.combat); cvHckP.x = cvHck.combat.objective.x + 1; cvHckP.y = cvHck.combat.objective.y;
+cvHck.combat.signal = SIG.STATES.DOWN;
+var cvHckAfter = S.rpgReducer(cvHck, { type: 'COMBAT_HACK' });
+ok('415. COMBAT_ATTACK.targetId/ability: 경비 HP 5→1 (HACK5−DEF1) · COMBAT_HACK: thr 6→1 (HACK5 차감) — 디스패치 경로 결정론',
+  cvAtkTgt.hp === 5 && S.findUnit(cvAtkAfter.combat, cvAtkTgt.id).hp === 1 &&
+  cvHck.combat.objective.threshold === 6 && cvHckAfter.combat.objective.threshold === 1);
+// 경제 액션 페이로드 키 — BUY_GEAR.slot/key · UNEQUIP_GEAR.slot · BUY_INTEL.missionId · SELECT_CLASS.classKey.
+var cvEco = S.rpgInitialState(); cvEco.save.character.nuyen = 60; cvEco.save.nuyen = 60;
+cvEco = S.rpgReducer(cvEco, { type: 'BUY_GEAR', slot: 'weapon', key: 'SMART_LINK' });
+var cvEcoBought = cvEco.save.character.equipment.weapon === 'SMART_LINK' && cvEco.save.character.nuyen === 38;
+cvEco = S.rpgReducer(cvEco, { type: 'UNEQUIP_GEAR', slot: 'weapon' });
+var cvEcoUneq = cvEco.save.character.equipment.weapon === null && cvEco.save.character.gearOwned.indexOf('SMART_LINK') >= 0;
+cvEco = S.rpgReducer(cvEco, { type: 'BUY_INTEL', missionId: 'ch01-first-blood' });
+var cvEcoCls = S.rpgReducer(S.rpgInitialState(), { type: 'SELECT_CLASS', classKey: 'BLADE' });
+ok('416. 경제 디스패치 계약: BUY_GEAR.slot/key(₵60→38·장착) · UNEQUIP_GEAR.slot(해제·소유 유지) · BUY_INTEL.missionId(₵38→32·intel) · SELECT_CLASS.classKey(BLADE)',
+  cvEcoBought && cvEcoUneq &&
+  cvEco.save.intel['ch01-first-blood'] === true && cvEco.save.nuyen === 32 &&
+  cvEcoCls.save.character.classKey === 'BLADE');
+
+console.log('\n== [76차 ②] dialogueChoose 실경로 — 멀티 인카운터 전이 · hardScale 우선순위 · 복합 비용 ==');
+// 2연전 실전이: a2-a1 enc① 승리 → resolveCombat 이 interlude 로 복귀(combat 해제) →
+//   interlude 선택이 enc②를 개시. HP 풀회복(인카운터별 리필)·setFlags 체인·missionId 유지까지 실측.
+var cvA1 = S.rpgInitialState();
+cvA1.save.missionsDone = ['ch08-zero-day'];
+cvA1.save.endings = END.recordEnding(cvA1.save.endings, 'corporate-eternal', 'CIPHER');
+cvA1 = S.startMission(cvA1, 'a2-a1-crown-breach');
+cvA1 = S.dialogueChoose(cvA1, 0);               // intro → approach
+cvA1 = S.dialogueChoose(cvA1, 0);               // 무력 폴백 → enc① (onWin interlude)
+var cvA1Enc1 = cvA1.scene === 'combat' && cvA1.combat.objective.max === 9 && cvA1.combat.onWin === 'interlude';
+var cvA1P = S.player(cvA1.combat); cvA1P.hp = 3; // 소모 상태 재현(리필 검증용)
+cvA1.combat.objective.done = true; cvA1.combat.outcome = 'win';
+cvA1 = S.resolveCombat(cvA1);                    // → interlude (전투 해제)
+var cvA1Inter = cvA1.scene === 'dialogue' && cvA1.dialogue.nodeId === 'interlude' && cvA1.combat === null;
+cvA1 = S.dialogueChoose(cvA1, 0);               // interlude → enc② (encounter stage2)
+ok('417. 2연전 실전이: enc①(thr9) 승리 → interlude 복귀(전투 해제) → enc②(thr8 · 적 4 · HP 풀리필 12 · onWin outro · missionId 유지)',
+  cvA1Enc1 && cvA1Inter &&
+  cvA1.scene === 'combat' && cvA1.combat.objective.max === 8 && cvA1.combat.onWin === 'outro' &&
+  cvA1.combat.missionId === 'a2-a1-crown-breach' && S.player(cvA1.combat).hp === 12 &&
+  cvA1.combat.units.filter(function (u) { return u.side === 'enemy'; }).length === 4 &&
+  cvA1.save.flags.crownBreachLoud === true && cvA1.save.flags.crownLobbyCleared === true &&
+  cvA1.save.flags.crownThroneLoud === true);
+// hardScale 인카운터별 우선순위 실경로 — 320~323 은 데이터/buildCombat 핀. 여기선 dialogueChoose 가
+//   enc② 개시 시 stage2.hardScale(1.15)을 enc①(1.20)보다 우선 조회하는지 실측(a2-b2-freeport).
+function cvHardAt(nodeId, hard) {
+  return S.dialogueChoose(atNode('a2-b2-freeport', nodeId, 'CIPHER', function (st) {
+    if (hard) st.save.flags.hardMode = true;
+  }), 0);
+}
+ok('418. hardScale 조회 우선순위(실경로): hardMode ON — enc①(approach) 1.20 · enc②(interlude→stage2) 1.15(enc② 우선) · OFF — 1',
+  cvHardAt('approach', true).combat.enemyScale === 1.20 &&
+  cvHardAt('interlude', true).combat.enemyScale === 1.15 &&
+  cvHardAt('interlude', false).combat.enemyScale === 1);
+// 복합 비용 사유 우선순위 — 둘 다 부족이면 COST_KEYS 순서(karma 먼저), karma 충족·₵ 부족이면 ₵ 사유.
+var cvCostBoth = DLG.evalCost({ label: 'x', effect: { spendKarma: 2, spendNuyen: 5 } }, { karma: 0, nuyen: 0 });
+var cvCostNuy = DLG.evalCost({ label: 'x', effect: { spendKarma: 2, spendNuyen: 5 } }, { karma: 9, nuyen: 0 });
+ok('419. 복합 비용 사유 우선순위: 둘 다 부족 → "[karma 2 지출] (보유 0)" (COST_KEYS 순) · karma 충족 → "[₵ 5 지출] (보유 0)" · cost {2,5} 노출',
+  cvCostBoth.ok === false && cvCostBoth.reason === '[karma 2 지출] (보유 0)' &&
+  cvCostNuy.ok === false && cvCostNuy.reason === '[₵ 5 지출] (보유 0)' &&
+  cvCostBoth.cost.karma === 2 && cvCostBoth.cost.nuyen === 5);
+
+console.log('\n== [76차 ③] 전투 스텝 가드 경계(identity) · 전투 중 세이브 정합 ==');
+// 가드 6종 — 전부 '입력 객체 그대로 반환'(identity) 이 계약: 클론/로그 오염 없이 무시된다.
+var cvG = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+var cvGP = S.player(cvG); var cvGT = cvG.units.filter(function (u) { return u.side === 'enemy' && u.ai !== 'static'; })[0];
+cvGP.x = cvGT.x; cvGP.y = cvGT.y + 1; cvG.signal = SIG.STATES.DOWN;
+cvGP.cooldowns.GLITCH = 2;
+var cvGuardCd = S.applyAttack(cvG, cvGT.id, 'GLITCH') === cvG;         // 쿨다운 중
+cvGP.cooldowns.GLITCH = 0; cvGP.ap = 0;
+var cvGuardAp = S.applyAttack(cvG, cvGT.id, 'HACK_SHOT') === cvG;      // AP 부족
+cvGP.ap = 2; cvGP.ultUsed = true;
+var cvGuardUlt = S.applyAttack(cvG, null, 'ZERO_TRACE') === cvG;       // 궁극 재사용
+var cvG2 = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+var cvGuardMove = S.applyMove(cvG2, { x: 0, y: 0 }) === cvG2;          // 이동범위 밖
+var cvG3 = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+cvG3.objective.done = true;
+var cvG3P = S.player(cvG3); cvG3P.x = cvG3.objective.x + 1; cvG3P.y = cvG3.objective.y;
+var cvGuardDone = S.applyHackObjective(cvG3) === cvG3;                 // 오브젝티브 완료 후
+ok('420. 가드 identity 5종: 쿨다운 중 공격 · AP 부족 · 궁극 재사용(oncePerMission) · 도달불가 이동 · 완료 오브젝티브 재해킹 — 전부 입력 그대로 반환',
+  cvGuardCd && cvGuardAp && cvGuardUlt && cvGuardMove && cvGuardDone);
+// resolveCombat 경계 — combat null 은 identity. outcome null(미해소 강제 종료)은 현행 '패배 취급' 핀:
+//   UI 는 outcome 세팅 후에만 COMBAT_RESOLVE 를 디스패치하므로 통상 도달 불가 — 회귀 감지용 현행 고정.
+var cvRvNull = S.rpgInitialState();
+var cvRvOpen = S.rpgInitialState(); cvRvOpen.scene = 'combat';
+cvRvOpen.combat = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro'); // outcome null
+var cvRvAfter = S.resolveCombat(cvRvOpen);
+ok('421. resolveCombat 경계: combat null → identity · outcome null → 현행 핀 = 패배 취급(허브 귀환 + 실패 배너)',
+  S.resolveCombat(cvRvNull) === cvRvNull &&
+  cvRvAfter.scene === 'hub' && cvRvAfter.combat === null &&
+  cvRvAfter.banner.kind === 'fail' && cvRvAfter.banner.text === '미션 실패 — 안전가옥으로 귀환');
+// 전투 중 세이브 정합 — 전투 스텝(이동·적턴)은 save 를 만지지 않고(byte 불변), 전투 씬 도중의
+//   세이브도 export/import 왕복 무손실(= 전투 도중 저장/복원해도 진행 손상 0).
+var cvPure = S.rpgInitialState();
+cvPure = S.startMission(cvPure, 'ch01-first-blood');
+cvPure = S.dialogueChoose(cvPure, 0); cvPure = S.dialogueChoose(cvPure, 0);
+var cvPureSnap = JSON.stringify(cvPure.save);
+var cvPureC = S.runEnemyTurn(S.applyMove(cvPure.combat, { x: 1, y: 6 }));
+var cvPureRt = SAVE.importString(SAVE.exportString(cvPure.save));
+ok('422. 전투 중 세이브 정합: 전투 스텝 후 save byte 불변(순수성) · 전투 씬 세이브 export/import 왕복 byte 동일(migrate no-op)',
+  cvPureC.round === 2 && JSON.stringify(cvPure.save) === cvPureSnap &&
+  cvPureRt.ok && JSON.stringify(cvPureRt.save) === cvPureSnap);
+// [v6.53 결함 수정 회귀 — 구 D1] 전투 4액션(COMBAT_MOVE/ATTACK/HACK/END_TURN)에 combat null
+//   가드 추가(SELECT/CLEAR_FLOATERS 와 대칭) — 비전투 씬 디스패치는 TypeError 대신 identity.
+var cvD1Ok = true;
+['COMBAT_MOVE', 'COMBAT_ATTACK', 'COMBAT_HACK', 'COMBAT_END_TURN'].forEach(function (t) {
+  var st0 = S.rpgInitialState();
+  try { if (S.rpgReducer(st0, { type: t, tile: { x: 1, y: 6 }, targetId: 'e0', ability: 'HACK_SHOT' }) !== st0) cvD1Ok = false; }
+  catch (e) { cvD1Ok = false; }
+});
+ok('423. [v6.53 수정] 전투 4액션 combat null 디스패치 = 전부 identity (throw 없음 · SELECT/FLOATERS 와 대칭 복원)',
+  cvD1Ok && cvSelNull.combat === null);
+
+console.log('\n== [76차 ④] abyss 기록 경계 · campaignStats 분류 경계 ==');
+// recordAbyss 무효 웨이브 — wave 0/비수치는 최고 기록을 만들지 않고 lastRun 에만 남는다.
+var cvAb0 = ABX.recordAbyss(undefined, 'CIPHER', 0, true);
+var cvAbX = ABX.recordAbyss(cvAb0, 'CIPHER', 'x', true);
+ok('424. recordAbyss 무효 웨이브 경계: wave 0/비수치 → best 0 · byClass 무기록 · lastRun 만 {wave 0} 갱신',
+  cvAb0.best === 0 && cvAb0.byClass.CIPHER === undefined &&
+  JSON.stringify(cvAb0.lastRun) === JSON.stringify({ classKey: 'CIPHER', wave: 0, cleared: true }) &&
+  cvAbX.best === 0 && cvAbX.byClass.CIPHER === undefined && cvAbX.lastRun.wave === 0);
+// migrateAbyss lastRun 오염 3형 + byClass 소수 — 338/340 의 잔여 경계(lastRun 비객체·wave 비수치·소수 절사).
+ok('425. migrateAbyss 오염 경계: lastRun 3/{wave:"x"} → null · {wave:2.9,cleared:1} → {null,2,true} · byClass 4.7 → floor 4 & best 승격 4',
+  ABX.migrateAbyss({ best: 1, lastRun: 3 }).lastRun === null &&
+  ABX.migrateAbyss({ best: 1, lastRun: { wave: 'x' } }).lastRun === null &&
+  JSON.stringify(ABX.migrateAbyss({ best: 1, lastRun: { wave: 2.9, cleared: 1 } }).lastRun) ===
+    JSON.stringify({ classKey: null, wave: 2, cleared: true }) &&
+  JSON.stringify(ABX.migrateAbyss({ best: 2, byClass: { CIPHER: 4.7 } })) ===
+    JSON.stringify({ best: 4, byClass: { CIPHER: 4 }, lastRun: null }));
+// campaignStats 분류 경계 — capstone(a2-99)·갈래(b1)는 메인, a2-side-* 는 사이드(F11 잔여 경계).
+//   레지스트리 미해석 id 는 접두사 폴백: side-*/a2-side-* → 사이드, 그 외 → 메인.
+var cvStat = END.campaignStats({ missionsDone: ['a2-99-flagship', 'a2-b1-barricade', 'side-99-unknown', 'a2-side-zzz', 'whatever'] });
+ok('426. campaignStats 분류 경계: capstone·갈래·미지id = 메인 3 · a2-side/접두사 폴백 = 사이드 2 (레지스트리 우선 + 폴백 핀)',
+  cvStat.mainCleared === 3 && cvStat.sideCleared === 2 && cvStat.missionsCleared === 5);
+
+console.log('\n== [76차 ④] save.migrate — 미지 필드 보존 · heat 경계 · 손상 입력 ==');
+// 미지 필드 보존 — migrate 는 아는 필드만 백필하고 모르는 필드를 삭제하지 않는다(전방 호환).
+var cvUk = S.newSave();
+cvUk.futureField = { x: 1 }; cvUk.character.customTrait = 'keep';
+var cvUkRt = SAVE.importString(SAVE.exportString(SAVE.migrate(JSON.parse(JSON.stringify(cvUk)))));
+ok('427. 미지 필드 보존: 최상위 futureField·character.customTrait 가 migrate+export/import 왕복을 무손실 통과 (전방 호환)',
+  cvUkRt.ok && cvUkRt.save.futureField && cvUkRt.save.futureField.x === 1 &&
+  cvUkRt.save.character.customTrait === 'keep');
+// heat/heatCap 백필 경계 — 음수 heat → 0 · 비수치 heat/heatCap → 0/10 · heatCap 0 → 10 · cap 클램프.
+function cvHeat(h, cap) {
+  return SAVE.migrate({ version: 1, character: S.newSave().character, flags: {}, heat: h, heatCap: cap });
+}
+ok('428. heat 백필 경계: heat −5→0 · heat "x"/heatCap "y" → 0/10 · heatCap 0→10 · heat 5/cap 3 → 3 클램프 (전부 멱등 대상)',
+  cvHeat(-5, 0).heat === 0 && cvHeat(-5, 0).heatCap === 10 &&
+  cvHeat('x', 'y').heat === 0 && cvHeat('x', 'y').heatCap === 10 &&
+  cvHeat(5, 3).heat === 3 && cvHeat(5, 3).heatCap === 3);
+// 손상 입력 — null/문자열/배열 JSON 전부 ok:false. [v6.53 결함 수정 회귀 — 구 D2] 배열 JSON('[]')은
+//   typeof 'object' 만 검사해 통과되던 것을 Array.isArray 거부로 봉합(abyss.js:66 선례) —
+//   배열 세이브는 백필 속성이 재-export(JSON.stringify)에서 전부 소실되는 손상 경로였음.
+function cvB64(s) { return Buffer.from(s, 'utf8').toString('base64'); }
+var cvArrImp = SAVE.importString(cvB64('[]'));
+ok('429. 손상 입력: "null"/"\\"hi\\"" → ok:false · [v6.53 수정] "[]" 배열도 ok:false "세이브 형식 오류" (백필 소실 경로 차단)',
+  SAVE.importString(cvB64('null')).ok === false &&
+  /세이브 형식 오류/.test(SAVE.importString(cvB64('null')).error) &&
+  SAVE.importString(cvB64('"hi"')).ok === false &&
+  cvArrImp.ok === false && /세이브 형식 오류/.test(cvArrImp.error));
+
+// ── [사문 필드 스키마 핀 — 주석 전용 · 테스트 억지 생성 금지 (76차 §8)] ──────────────
+//   grep 실측(rg "hackOnly|\bcrew\b|hubState" rpg/ · 2026-07-26):
+//   · enemies.*.hackOnly : data/enemies.js 정의 3종(ICE_NODE:152 · SIGNAL_ICE:159 · WARD_NODE:240)
+//     + store.spawnEnemy(state/store.js:174)가 유닛에 복사할 뿐 — 엔진 판정 소비처 0.
+//     물리 무효 판정은 physImmune 이 전담(state/store.js:266 "tgt.physImmune && !ab.useHack").
+//     세 정의 모두 physImmune 과 동반 선언이라 hackOnly 는 문서/표기용 중복 메타 — 결함 아님.
+//   · save.crew          : state/store.js:53 newSave 초기화 1곳뿐, 소비처 0. save.migrate 도
+//     백필하지 않음(구세이브에 crew 부재해도 무해 — 소비처가 없으므로).
+//   · save.hubState      : state/store.js:53 newSave 초기화 1곳뿐, 소비처 0. 허브 노드 정본은
+//     state.hub(rpgInitialState · HUB_NAV)이며 세이브에 영속되지 않는 것이 현행 계약.
+//   세 필드 모두 '죽은 스키마'로 확인 — 강제 테스트 없이 본 주석으로 핀(신규 소비처가 생기면
+//   그 배선 차수에서 테스트와 함께 이 주석을 갱신할 것).
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
