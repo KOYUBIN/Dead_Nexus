@@ -278,6 +278,10 @@
     ch.nuyen += nuyenGain; log.push('₵ +' + nuyenGain + ' (→' + ch.nuyen + ')');
     var heatCap = (saveState.heatCap || 10) + heatCapDelta;
     if (heatCapDelta) log.push('공권력 트랙 최대치 +' + heatCapDelta + ' (→' + heatCap + ')');
+    // [3차 발굴 F3 · 계승 docs/07 §8 Heat] "레이드 성공: 공권력 +1" — 미션 정산마다 heat +1,
+    //   cap 클램프(초과 금지). 소거는 대화 effect.wantedZero(store.dialogueChoose)가 담당.
+    var heat = Math.min(heatCap, (saveState.heat || 0) + 1);
+    log.push('공권력(Heat) +1 (→' + heat + '/' + heatCap + ')');
 
     // 보상 해금은 최초 클리어에만. 클래스별 시그니처로 치환 [계승 chapter-01 봉투 A].
     //   CIPHER → BACKDOOR, BLADE → VENDETTA (UNLOCK_BY_CLASS 매핑).
@@ -292,7 +296,7 @@
     }
     if (md.indexOf(mission.id) < 0) md.push(mission.id);
     return {
-      character: ch, heat: saveState.heat || 0, heatCap: heatCap,
+      character: ch, heat: heat, heatCap: heatCap,
       missionsDone: md, log: log, firstClear: firstClear,
     };
   }

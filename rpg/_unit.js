@@ -2355,6 +2355,122 @@ ok('389. juice 키프레임 ' + kfBodies74.length + '종의 애니메이션 속�
       return kfBodies74.every(function (kf) { return kf.indexOf(prop) < 0; });
     }));
 
+// ============================================================================
+// ======  [3차 발굴 감사] F1~F13 수정 회귀 — 부트 하이드레이트 · Heat 경제 · 레지스트리 정합  ==
+// ============================================================================
+console.log('\n== [3차 발굴] LOAD_SAVE 리듀서 — 구세이브 마이그레이션 하이드레이트 ==');
+// ① LOAD_SAVE: 진행 중 씬 무관 허브 복귀 + 세이브 치환 + 복원 배너(조용한 복원 금지).
+var loadSrc = S.rpgInitialState();
+loadSrc.scene = 'dialogue'; loadSrc.dialogue = { missionId: 'ch01-first-blood', nodeId: 'intro' };
+var loadedSave = SAVE.migrate({ version: 1, character: CH.makeCharacter('BLADE'), flags: { firstBlood: true } });
+var loadedSt = S.rpgReducer(loadSrc, { type: 'LOAD_SAVE', save: loadedSave });
+ok('390. LOAD_SAVE 리듀서: 허브 복귀 · dialogue/combat 해제 · 세이브 치환 · 복원 배너',
+  loadedSt.scene === 'hub' && loadedSt.dialogue === null && loadedSt.combat === null &&
+  loadedSt.save.character.classKey === 'BLADE' && loadedSt.banner && loadedSt.banner.kind === 'load');
+ok('391. LOAD_SAVE 구세이브 경로: migrate 백필(firstBlood→ch01 추론 · heat 0/heatCap 10 · endings/intel/abyss)',
+  loadedSt.save.missionsDone.indexOf('ch01-first-blood') >= 0 && loadedSt.save.heat === 0 &&
+  loadedSt.save.heatCap === 10 && typeof loadedSt.save.endings === 'object' &&
+  typeof loadedSt.save.intel === 'object' && loadedSt.save.abyss.best === 0);
+
+console.log('\n== [3차 발굴 F1] 부트 하이드레이트 — 자동세이브 덮어쓰기 방지 (localStorage mock) ==');
+(function () {
+  var mockStore = {};
+  global.localStorage = {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(mockStore, k) ? mockStore[k] : null; },
+    setItem: function (k, v) { mockStore[k] = String(v); },
+    removeItem: function (k) { delete mockStore[k]; },
+  };
+  try {
+    // 이전 세션: 진행된 자동세이브 존재.
+    var prev = S.newSave(); prev.missionsDone = ['ch01-first-blood']; prev.character.rep = 9;
+    ok('392. (사전) localStorage mock 에 이전 세션 자동세이브 기록', SAVE.saveLocal(prev) === true);
+    // index.html App 부트 시퀀스 재현: loadLocal 성공 → LOAD_SAVE 하이드레이트 → 마운트 자동세이브.
+    var boot = S.rpgInitialState();
+    var disk = SAVE.loadLocal();
+    var hydrated = disk ? S.rpgReducer(boot, { type: 'LOAD_SAVE', save: disk }) : boot;
+    SAVE.saveLocal(hydrated.save);          // 자동세이브 useEffect(scene==='hub') 재현
+    var after = SAVE.loadLocal();
+    ok('393. F1 회귀: 부트 하이드레이트 후 자동세이브가 이전 진행 보존(newSave 덮어쓰기 소실 0)',
+      hydrated.scene === 'hub' && after.missionsDone.indexOf('ch01-first-blood') >= 0 && after.character.rep === 9);
+  } finally { delete global.localStorage; }
+})();
+// UI 계약 핀 — App 부트 초기화가 loadLocal 하이드레이트 + "자동 불러오기" 배너를 실제 보유(사문 아님).
+var fixFs = require('fs').readFileSync(__dirname + '/index.html', 'utf8');
+ok('394. F1 UI 계약: App 초기화에 SAVE.loadLocal → LOAD_SAVE 하이드레이트 + 자동 불러오기 배너 실재',
+  /const s = SAVE\.loadLocal\(\);/.test(fixFs) && /\{ type: 'LOAD_SAVE', save: s \}/.test(fixFs) &&
+  /자동 불러오기/.test(fixFs));
+
+console.log('\n== [3차 발굴 F3] Heat 경제 배선 — 정산 +1 · cap 클램프 · wantedZero 소거 ==');
+var heatSave = S.newSave();
+var heatR1 = CAMP.applyRewards(heatSave, CAMP.missionData('ch01-first-blood'));
+ok('395. 미션 정산 heat +1 (계승 docs/07 §8 "레이드 성공: 공권력 +1") + 정산 로그 1줄',
+  heatR1.heat === 1 && heatR1.log.some(function (l) { return l.indexOf('공권력(Heat) +1') >= 0; }));
+var heatSave2 = S.newSave(); heatSave2.heat = 99; heatSave2.heatCap = 10; heatSave2.missionsDone = ['ch01-first-blood'];
+ok('396. heat cap 클램프 — 정산이 heatCap 을 초과하지 않음("96/10" 류 표기 원천 차단)',
+  CAMP.applyRewards(heatSave2, CAMP.missionData('ch01-first-blood')).heat === 10);
+// wantedZero 실배선: ch01 유령 선택(B)이 heat 를 0 으로 소거(가시 로그) → settle 정산 +1 이 위에 얹힘.
+var wzSt = atNode('ch01-first-blood', 'choice', 'CIPHER', function (st) { st.save.heat = 7; st.save.heatCap = 11; });
+var wzAfter = S.dialogueChoose(wzSt, 1);
+ok('397. effect.wantedZero 실배선: heat 7 → 소거 0 → settle 정산 +1 = 1 · "현상수배 소거" 로그(미배선 해소)',
+  wzAfter.save.heat === 1 &&
+  bannerLines(wzAfter).some(function (l) { return l.indexOf('현상수배 소거') >= 0; }));
+ok('398. wantedZero heat 0 경로 잡음 0 — heat 0 이면 소거 로그 미출력(기존 배너 계약 불변)',
+  bannerLines(S.dialogueChoose(atNode('ch01-first-blood', 'choice', 'CIPHER'), 1))
+    .every(function (l) { return l.indexOf('현상수배 소거') < 0; }));
+// 구세이브 백필 — heat/heatCap 부재 → 0/10, 초과분 cap 클램프(멱등).
+var heatLegacy = SAVE.migrate({ version: 1, character: S.newSave().character, flags: {} });
+var heatOver = SAVE.migrate({ version: 1, character: S.newSave().character, flags: {}, heat: 96, heatCap: 10 });
+ok('399. migrate 백필: heat/heatCap 부재 → 0/10 · 초과분 cap 클램프 · 멱등',
+  heatLegacy.heat === 0 && heatLegacy.heatCap === 10 && heatOver.heat === 10 &&
+  SAVE.migrate(JSON.parse(JSON.stringify(heatOver))).heat === 10);
+
+console.log('\n== [3차 발굴 F2/F4/F11] 레지스트리 정합 회귀 ==');
+// F2 — 에필로그 클래스별 완주 표 = classes.PLAYABLE 6종 전량(BROKER/DRIFTER 하드코딩 누락 복원).
+var f2Save = S.newSave();
+f2Save.endings = END.recordEnding(undefined, 'dead-nexus', 'BROKER');
+var f2Stat = END.campaignStats(f2Save);
+ok('400. F2 회귀: classClears = PLAYABLE ' + CL.PLAYABLE.length + '종 전량 · BROKER 완주 표시 복원',
+  f2Stat.classClears.length === CL.PLAYABLE.length &&
+  f2Stat.classClears.some(function (c) { return c.classKey === 'BROKER' && c.done === true; }) &&
+  f2Stat.classClears.some(function (c) { return c.classKey === 'DRIFTER' && c.done === false; }));
+// F4 — 정보상 목록에 board.act2 합류(UI 계약 핀) + 해금 Act2 미션 인텔 구매 실동.
+var f4St = S.rpgInitialState();
+f4St.save.missionsDone = ['ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
+  'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city', 'ch08-zero-day'];
+f4St.save.character.nuyen = 50; f4St.save.nuyen = 50;
+var f4After = S.buyIntel(f4St, 'a2-00-framing');
+ok('401. F4 회귀: 해금 Act2 미션 인텔 구매 실동 + 정보상 행 목록에 board.act2 합류(UI 핀)',
+  f4After.save.intel['a2-00-framing'] === true &&
+  /board\.mains\.concat\(board\.sides\)\.concat\(board\.act2 \|\| \[\]\)/.test(fixFs));
+// F11 — 메인/사이드 분류 레지스트리 기반: a2-side-*(branch class) = 사이드, a2 갈래/framing = 메인.
+var f11Stat = END.campaignStats({ missionsDone: ['ch01-first-blood', 'side-01-traitor-contract',
+  'a2-side-cipher-static', 'a2-00-framing', 'a2-a1-crown-breach'] });
+ok('402. F11 회귀: a2-side-* 사이드 분류(side 2) · a2 갈래/framing 메인 분류(main 3)',
+  f11Stat.mainCleared === 3 && f11Stat.sideCleared === 2);
+
+console.log('\n== [3차 발굴 F14] resolveCombat 패배 분기 · accrueThreat SURGE 가속 ==');
+// 일반 미션 패배 → 허브 귀환(재시도) + 안전가옥 배너(조용한 실패 금지).
+var loseSt = S.rpgInitialState();
+loseSt.scene = 'combat';
+loseSt.combat = S.buildCombat(MI.MISSION, CH.makeCharacter('CIPHER'), 'outro');
+loseSt.combat.outcome = 'lose';
+var loseAfter = S.resolveCombat(loseSt);
+ok('403. 일반 미션 lose 분기: 허브 귀환 · combat 해제 · "미션 실패 — 안전가옥으로 귀환" 배너',
+  loseAfter.scene === 'hub' && loseAfter.combat === null &&
+  loseAfter.banner && loseAfter.banner.kind === 'fail' &&
+  loseAfter.banner.text === '미션 실패 — 안전가옥으로 귀환');
+// SURGE 가속: 동일 노출 상황에서 UP 대비 위협 +1 추가(노출 2배 가속 분기).
+function threatAfterOneRound(sigState) {
+  var c = S.buildCombat(MI.MISSION, CH.makeCharacter('BLADE'), 'outro');
+  var p = S.player(c); p.x = 4; p.y = 7; p.hp = 99; p.maxHp = 99; // 개방 타일 노출 · 생존 고정
+  c.signal = sigState;
+  return S.runEnemyTurn(c).threat.value;
+}
+var thUp = threatAfterOneRound(SIG.STATES.UP);
+var thSurge = threatAfterOneRound(SIG.STATES.SURGE);
+ok('404. accrueThreat ⚡SURGE 가속: 동일 노출 라운드 UP +' + thUp + ' 대비 SURGE +' + thSurge + ' (= +1 가속)',
+  thUp >= 1 && thSurge === thUp + 1);
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);

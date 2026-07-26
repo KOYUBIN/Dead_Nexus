@@ -17,6 +17,8 @@
  *      텍스트('n/NN')·바(mCount / NN) 어느 쪽에도 하드코딩 리터럴이 남으면 FAIL.
  *      (과거 결함: 텍스트 '/31' ↔ 바 '/29' 로 분모가 갈려 진행률이 조기 포화)
  *   7. [v6.46 · M9] 홈 버전 스탬프(<span class="stamp">…v6.NN…)  ===  CHANGELOG.md 최신 '### v6.NN'
+ *   8. [3차 감사 D4] README.md '**현재 버전**: vX.Y' 스탬프  ===  CHANGELOG.md 최신 '### v6.NN'
+ *      (홈 스탬프 검사 §7 과 동일 선례 — 정본은 항상 CHANGELOG, README 표기만 별도로 드리프트할 수 있음)
  *
  * 실행:  node _home_check.js        (PASS→exit 0 / FAIL→exit 1)
  * 순수 node, 외부 의존 0. campaign.js/save.js 는 읽기 전용 참조.
@@ -128,6 +130,13 @@ const homeStamp = stampM && stampM[1];
 const latestVer = clM && clM[1];
 check(!!homeStamp && !!latestVer && homeStamp === latestVer,
   '홈 버전 스탬프 == CHANGELOG 최신 (홈 ' + (homeStamp || '없음') + ' ↔ CHANGELOG ' + (latestVer || '없음') + ')');
+
+// ── 8. [3차 감사 D4] README.md '현재 버전' 스탬프 == CHANGELOG 최신 ──────────────
+const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const readmeM = readme.match(/\*\*현재 버전\*\*:\s*(v[\d.]+)/);
+const readmeStamp = readmeM && readmeM[1];
+check(!!readmeStamp && !!latestVer && readmeStamp === latestVer,
+  'README 버전 스탬프 == CHANGELOG 최신 (README ' + (readmeStamp || '없음') + ' ↔ CHANGELOG ' + (latestVer || '없음') + ')');
 
 // ── 결과 리포트 ────────────────────────────────────────────────────────────
 console.log('DEAD NEXUS — 홈 ↔ campaign 드리프트 가드 (_home_check.js)\n');

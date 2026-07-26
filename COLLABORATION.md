@@ -1,6 +1,6 @@
 # DEAD NEXUS — 협업 인수인계 문서 (Claude ↔ Codex)
 
-**버전**: v6.46 기준 (2026-07-26)
+**버전**: v6.50 기준 (2026-07-26)
 **정본 원칙**: 이 리포지토리(GitHub `KOYUBIN/Dead_Nexus`, 브랜치 `main`)가 코드·규칙·작업 상태의 유일한 정본. Notion은 운영 거울(허브·밸런스 이슈 DB·협업 현황). 불일치 시 Git 우선.
 **라이브**: https://dead-nexus.vercel.app (Vercel, main 자동 배포 — 머지 = 배포)
 
@@ -66,22 +66,25 @@
 ## 4. 검증 인프라 — 머지 전 필수 게이트
 
 ```bash
-# 시뮬레이터 (327 유닛)
+# 시뮬레이터 (350 유닛, 실측 2026-07-26: `node sim-e2e/_unit.js` → ALL 350 UNIT TESTS PASSED)
 cd sim-e2e && node _unit.js                 # ALL PASSED 필수
 node run.js 5 5x5                            # e2e 스모크 — errors (none)
 node run.js 300 11x11                        # 밸런스 측정 (밴드 확인용)
 
-# RPG (271 유닛 + 검증기 + 하네스)
+# RPG (391+ 유닛¹ + 검증기 + 하네스)
 node rpg/_unit.js                            # PASS 전수
-for f in rpg/data/missions/*.js; do node rpg/_missions_check.js "$f"; done   # 30/30
+for f in rpg/data/missions/*.js; do node rpg/_missions_check.js "$f"; done   # 32/32
 node rpg/_balance.js --smoke                 # 결정론 재현 8/8
-node rpg/_balance.js                         # 전 조합 클리어 (160/160)
+node rpg/_balance.js                         # 전 조합 클리어 (252/252, 6클래스×42인카운터)
 
 # 공통
 node -c <모듈>                               # 문법
 # babel: /tmp/node_modules/@babel/core 로 index.html 최대 text/babel 블록 transformSync (preset-react)
 # Playwright: /opt/pw-browsers/chromium (playwright install 금지 — vendor 오프라인 주입)
 ```
+¹ RPG 유닛 수는 다른 에이전트의 동시 작업으로 계속 늘어날 수 있는 하한선이다. 실측 2026-07-26
+  `node rpg/_unit.js` → `PASS 391 / FAIL 0`. 머지 전에는 항상 재실행해 당시 실값으로 갱신할 것
+  (감소는 회귀, 증가는 정상).
 
 `sim-e2e/results/`는 gitignore (리포 비대화 방지 — 대표 수치는 CHANGELOG/다이제스트에 기록).
 
@@ -105,12 +108,12 @@ node -c <모듈>                               # 문법
 - 밸런스 DB 잔여 B-01~B-05 전부 "인간 플레이 데이터 필요" 상태 (봇 측정 한계 도달)
 
 **중기 후보 (원전 소재 남아 있음)**
-- RPG: 챕터별 신규 무대 확장 · BROKER/DRIFTER 플레이어블 승격 (data-only 휴면 중) · 심연 프로토콜 리더보드류
+- RPG: 챕터별 신규 무대 확장 · 심연 프로토콜 리더보드류 (BROKER/DRIFTER는 v6.45에서 플레이어블 6클래스로 승격 완료 — `rpg/data/classes.js:48` `PLAYABLE` 6종 전량, 더 이상 휴면 아님)
 - 시뮬: docs/17 잔여 시스템 점검 (NEXUS 동적 컨트롤 등 부분 배선분 심화) · S03 avgR 구조 트레이드오프 재도전 (B-01)
 - 보드게임 재개 시: 오토마 덱 설계 (봇 3인 테이블 번역) · 세션 00 실시 · docs/24 ⚠️ 8종 기법
 
 **항시**
-- 유닛·검증기·하네스 게이트 유지 (총 598 유닛 + 30 미션 검증 + 160 조합)
+- 유닛·검증기·하네스 게이트 유지 (총 741+¹ 유닛[시뮬 350 + RPG 391+] + 32 미션 검증 + 252 조합)
 
 ---
 
@@ -142,6 +145,7 @@ simulator/v0.5/
   index.html                   메인 앱 (React+Babel 단일 파일) — 리듀서·SCENARIOS·VICTORY_GOALS·협상·HUD
   euro_module.js               M&A·견제·시그니처·마일스톤 (외부 시그니처 불변)
   legacy_module.js             레거시 캠페인 영속 (dn_legacy_v1, 챕터 1~8)
+  fx_module.js                 연출 FX 판별 로직 (협상 플래시·타이틀 스팅·HUD juice, v6.50 신규)
   tutorial_module.js / lore_module.js   튜토리얼 / 인물·명대사
   vendor/ audio/               로컬 react·babel / CC0 SFX (+LICENSE.md)
 rpg/

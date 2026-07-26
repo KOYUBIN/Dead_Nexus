@@ -47,8 +47,12 @@ button { font-family: inherit; cursor: pointer; }
 .topbar .stat { font-size: 12px; color: var(--text-dim); }
 .topbar .stat b { color: var(--text); }
 .topbar .spacer { flex: 1; }
-.chip { font-size: 11px; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border);
-  color: var(--text-dim); background: var(--bg3); }
+/* [3차 발굴 F7] 톱바 칩 터치 타겟 보강 — 인터랙티브 칩(사운드/ISO/세이브)이 이 클래스를 공유하므로
+   min-height 32px + 인라인 플렉스 수직 중앙으로 상향. 패딩은 좌우만 소폭 조정 — 톱바는 flex-wrap
+   이라 높이 증가 시 줄바꿈으로 흡수(모바일 세로 뷰 파손 없음). */
+.chip { font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border);
+  color: var(--text-dim); background: var(--bg3);
+  display: inline-flex; align-items: center; min-height: 32px; }
 .chip.karma { color: var(--orange); border-color: var(--orange); }
 .chip.rep { color: var(--cyan); }
 /* [v6.44 B1] 마스터 사운드 토글 — ON=강조 · OFF(음소거)=흐림 */

@@ -174,7 +174,8 @@
           { label: 'B. 은폐 — 코어를 손안에 쥔다',
             setFlags: { insiderChoice: 'cover', raidBonusFlag: true },
             effect: { wantedZero: true }, goto: 'settle',
-            desc: '현상수배 0 유지, 향후 레이드 보상 +50% (영속 flag)',
+            // [3차 발굴 F5] "레이드 보상 +50%" 미이행 약속 정정 — 실효과(wantedZero = Heat 소거)만 서술.
+            desc: '현상수배 0 유지 — 공권력(Heat) 트랙 소거 (내분 비공개)',
           },
         ],
       },

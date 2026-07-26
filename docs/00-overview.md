@@ -136,7 +136,7 @@
 | Ghost 카드 (60장+) | ✅ 완료 |
 | 뉴스 이벤트 (웹 50종 / 인쇄 36장 `04-news-v1.html`) | ✅ 완료 |
 | 맵 보드 (11×11 정식 + 5×5 튜토리얼) | ✅ 완료 |
-| 레거시 챕터 스토리 (1~8, `cards/legacy/`) | ✅ 완료 (디지털 포팅은 Stage 1만 — `legacy_module.js`) |
+| 레거시 챕터 스토리 (1~8, `cards/legacy/`) | ✅ 완료 (디지털 포팅 8/8 챕터 완결 — `legacy_module.js`의 `TOTAL_CHAPTERS = 8`, v6.39) |
 | 프린트앤플레이 (`print-kit/` 13종 HTML) | ✅ 완료 |
 | 웹 시뮬레이터 | ✅ 라이브 배포 (https://dead-nexus.vercel.app) — 시나리오 S01~S06 전체 개방 |
 | RPG 모드 — ASH & SIGNAL (`rpg/`, 비전 `docs/25-rpg-mode.md`) | ✅ 완료 (미션 30종·4클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·캡스톤+심연 프로토콜, v6.44) |
