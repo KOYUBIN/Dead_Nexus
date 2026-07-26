@@ -1752,7 +1752,7 @@ const HIGHLIGHT_DEFS = {
   defeat_revive:        { icon: '🧬', label: '동료 부활 (CLONE_DECOY)', rep: 2,  desc: 'HELIX 클론으로 사망 동료 복귀' },
   bounty_hit:           { icon: '🎯', label: '현상금/청부 명중',         rep: 1,  desc: 'Bloc의 능동 액션 성공' },
   ten_zone_hold:        { icon: '🏙', label: '10구역 동시 점유',         rep: 3,  desc: 'Bloc 영토 확장 정점' },
-  // v6.47 [69차]: docs/14 §S06 원안 "특수 승리 루트" 경량 배선 — 신규 타이틀 시스템 대신 하이라이트 재사용
+  // v6.46 [69차]: docs/14 §S06 원안 "특수 승리 루트" 경량 배선 — 신규 타이틀 시스템 대신 하이라이트 재사용
   //   (v6.45 bounty_hit/ten_zone_hold 선례). S06 한정 발동: 판정부가 scenarioRule(reconstructThresh /
   //   liquidatorBlocs) 게이트로 막혀 키 미지정 시나리오(S01~S05)는 이 엔트리에 도달하지 못한다.
   //   원전 보상 "렙/자산 +5" · "렙 +10" → 하이라이트 네이티브 통화(rep)로 통일 (자산 보상 신설 = 창작이라 배제).
@@ -2172,7 +2172,7 @@ const SCENARIOS = {
     tradeFreezeRounds: 2,       // docs/14 특수: 첫 2R 주식 거래 동결 (매수/매도/숏 R≤2 금지, 3R 재개)
     divRecoveryMult: 2,         // docs/14 특수: 경제 회복 배당 2배 (주가 합계 threshold 도달 라운드)
     divRecoveryThresh: 50,      // 회복 임계 (원전 "주가 합계 50+" — 붕괴 5×5=25 → 회복 구간 정의)
-    // v6.47 [69차] (S06 특수 승리 루트 배선): docs/14 §S06 원안 "재건왕/청산자" — 전용 점수·타이틀 시스템
+    // v6.46 [69차] (S06 특수 승리 루트 배선): docs/14 §S06 원안 "재건왕/청산자" — 전용 점수·타이틀 시스템
     //   신설 대신 기존 하이라이트(HIGHLIGHT_DEFS + recordHighlight) 재사용으로 경량 배선.
     //   원전: 재건왕 = "파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5",
     //         청산자 = "2개 이상 블록 파산 유도 Ghost 렙 +10".
@@ -2212,7 +2212,7 @@ const scenNpcDefMod  = (state, ownerIdx) => {
   return (owner && owner.isNpc) ? scenarioRule(state, 'npcDefenseMod', 0) : 0;
 };
 // ============================================================================
-// v6.47 [69차] (S06): 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안)
+// v6.46 [69차] (S06): 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안)
 //   원전 인용: "재건왕(RECONSTRUCTOR): 파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5."
 //              "청산자: 2개 이상 블록 파산 유도 Ghost 렙 +10."
 //   전용 점수·타이틀 추적 엔티티 신설 대신 기존 하이라이트(recordHighlight) 재사용 = 경량 배선.
@@ -3531,7 +3531,7 @@ function reducer(state, action) {
       }
 
       // 맵/주식 업데이트 (성공 시)
-      // v6.47 [69차] (S06): 청산자 귀속용 행동 직전 주가 스냅샷 (타 시나리오는 s06NoteLiquidation 항등).
+      // v6.46 [69차] (S06): 청산자 귀속용 행동 직전 주가 스냅샷 (타 시나리오는 s06NoteLiquidation 항등).
       const _s06PreStocks = s.stocks;
       let newMap = s.map;
       let newStocks = s.stocks;
@@ -3552,7 +3552,7 @@ function reducer(state, action) {
       const heatDelta = (rewards.heat || 0) + (outcome === 'success' ? scenarioRule(s, 'raidHeatBonus', 0) : 0);
       const newHeat = Math.min(10, Math.max(0, s.heat + heatDelta));
       s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
-      // v6.47 [69차] (S06): 인간 Ghost 레이드가 블록을 붕괴 바닥으로 밀어넣었으면 청산자 누적 (P0 좌석).
+      // v6.46 [69차] (S06): 인간 Ghost 레이드가 블록을 붕괴 바닥으로 밀어넣었으면 청산자 누적 (P0 좌석).
       s = s06NoteLiquidation(s, 0, _s06PreStocks);
       // v6.11.4 (P0-4): 레이드 실패 HP 피해를 통합 헬퍼로 — HP0 시 STEP F (Bloc 방어자가 약탈물 수령)
       if (outcome === 'failure') s = applyDamage(s, 0, rewards.hp || 0, { attacker: pr.blocIdx, label: '레이드 실패' });
@@ -4156,7 +4156,7 @@ function reducer(state, action) {
         if (_owned >= 10) state = recordHighlight(state, 'ten_zone_hold', _pi);
       }
 
-      // v6.47 [69차] (S06): 재건왕 — 라운드 시작 주가 스냅 판정 (ten_zone_hold 와 동일 훅·1회성).
+      // v6.46 [69차] (S06): 재건왕 — 라운드 시작 주가 스냅 판정 (ten_zone_hold 와 동일 훅·1회성).
       //   파산 이력 누적 + 회복 임계(10) 도달 검사. 타 시나리오는 헬퍼 첫 줄에서 항등(참조 동일).
       state = s06CheckReconstructor(state);
 
@@ -4857,7 +4857,7 @@ function executeCards(state, playerIdx) {
   let s = { ...state };
   const p = s.players[playerIdx];
   if (!p.plannedCards || p.plannedCards.length === 0) return s;
-  // v6.47 [69차] (S06): 청산자 귀속용 카드 해결 창 직전 주가 스냅샷 — 이 좌석의 카드(레이드·주가조작·
+  // v6.46 [69차] (S06): 청산자 귀속용 카드 해결 창 직전 주가 스냅샷 — 이 좌석의 카드(레이드·주가조작·
   //   mini-raid 포함)가 바닥으로 밀어넣은 블록만 그 Ghost 에게 귀속. 타 시나리오는 헬퍼 첫 줄에서 항등.
   const _s06PreStocks = s.stocks;
 
@@ -4910,7 +4910,7 @@ function executeCards(state, playerIdx) {
     const newDiscard = [...p.discard, ...p.plannedCards];
     s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, plannedHalves: [] } : pp);
   }
-  return s06NoteLiquidation(s, playerIdx, _s06PreStocks);  // v6.47 [69차] (S06): 청산자 판정 (타 시나리오 항등)
+  return s06NoteLiquidation(s, playerIdx, _s06PreStocks);  // v6.46 [69차] (S06): 청산자 판정 (타 시나리오 항등)
 }
 
 // ============================================================================

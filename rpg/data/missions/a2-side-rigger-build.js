@@ -52,6 +52,10 @@
     //  인접 유닛 max(HACK,ATK) 자동축 → RIGGER(HACK3/ATK3) 포함 4클래스 다른 축으로 완주.
     objective: { x: 3, y: 0, threshold: 11, veil: 0, label: '최종 조립 코어', dataTB: 3.0 },
     threatCap: 10,
+    // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향). 실측 근거: 1.25 에서 CIPHER·BROKER 2건 탈락.
+    //   1.20 에서 BROKER 만 복구(1.21 이상은 2건으로 회귀 — 임계 측정치).
+    //   CIPHER(러시생존창붕괴) 는 배율 >1 인 한 미해소 — ceil 양자화 하한(§정직 표기).
+    hardScale: 1.20,
     // [카탈로그 · 각색 raidThreshold] 위협 임계 + 증원(경보 1회 스폰) — CARBON 드론 예비 라인.
     reinforcement: { key: 'CARBON_DRONE', x: 5, y: 1 },
     // [신규] 조립 라인 격벽 — 중앙 정면 접근을 끊어 좌우 우회 유도(RIGGER 지역 장악 서사).

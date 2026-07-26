@@ -538,8 +538,10 @@
       // [61차 §3.1] 멀티 인카운터 라우팅 — startCombat.encounter 문자열이 있으면
       //   mission.encounters[key] 를 enc② 오버라이드로 소비(없으면 null → mission.combat, 하위호환).
       var encCfg = (eff.startCombat.encounter && mission.encounters) ? mission.encounters[eff.startCombat.encounter] : null;
-      // [61차 §3.4] 하드모드 토글 — save.flags.hardMode 시 적 스탯 +25%(scale 1.25).
-      var scale = (s.save.flags && s.save.flags.hardMode) ? 1.25 : 1;
+      // [61차 §3.4 · 71차 확장] 하드모드 토글 — save.flags.hardMode 시 적 스탯 배율 적용.
+      //   배율은 인카운터별 옵셔널 필드 hardScale 로 조회(enc② 우선 → enc① 폴백), 미선언 시 1.25.
+      //   hardMode off 면 항상 scale 1 → hardScale 선언 여부와 무관하게 노멀 매트릭스 byte 불변.
+      var scale = (s.save.flags && s.save.flags.hardMode) ? ((encCfg || mission.combat || {}).hardScale || 1.25) : 1;
       s.combat = buildCombat(mission, s.save.character, eff.startCombat.onWin, { intel: intelOn, combat: encCfg, enemyScale: scale });
       return s;
     }

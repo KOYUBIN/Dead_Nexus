@@ -83,6 +83,10 @@
       // enc② 오브젝티브 = 잔해 코어 발굴(threshold 11, enc② 높은 밴드 — 카탈로그 §2 D1 ②).
       objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '잔해 코어 발굴', dataTB: 0 },   // [62차 밸런스] 11→10 (저HP 해커 1 해킹턴 완주)
       threatCap: 9,
+      // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향). 실측 근거: 1.25 에서 RIGGER 마진잠식 1건.
+      //   1.20 이하에서 복구(1.21 이상은 실패 — 임계 측정치) → 밴드 상한 1.20 채택(하드 강도 최대 보존).
+      //   이 인카운터는 hardScale 로 clearFail 이 완전 해소된 2건 중 하나다.
+      hardScale: 1.20,
       reinforcement: { key: 'GANG_THUG', x: 5, y: 1 },   // 카탈로그 §2 D1 enc② 증원 GANG_THUG
       // [62차 밸런스] 중앙 차단 벽 → 측면으로 이설(x=3 러시 레인 개방 · 저기동 완주 확보).
       walls: [

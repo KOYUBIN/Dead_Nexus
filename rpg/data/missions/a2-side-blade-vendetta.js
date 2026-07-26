@@ -53,6 +53,10 @@
     //   인접 유닛 max(HACK,ATK) 자동축 → BLADE 는 ATK5 축으로 차감(부가 승리 경로).
     objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '처형 단말', dataTB: 0 },   // [65차 밸런스] 9→8 — BROKER(hack2) 은신 3턴 창 내 완주(R1 잠적 → R3~R4 차감 4+4)
     threatCap: 9,
+    // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향). 실측 근거: 1.25 에서 RIGGER·MOLE 2건 탈락.
+    //   1.20 에서 MOLE(마진잠식)만 복구(1.21 이상은 2건으로 회귀 — 임계 측정치).
+    //   RIGGER 는 hard×base·hard×full 양쪽에서 어떤 배율(>1)로도 미해소 — ceil 양자화 하한(§정직 표기).
+    hardScale: 1.20,
     reinforcement: { key: 'IRONWALL_ENFORCER', x: 6, y: 1 },   // 집행관 증원(경보 1회)
     walls: [
       { x: 2, y: 4 }, { x: 4, y: 4 },   // 무기 격납 격벽 2개(중앙 대치 유도)

@@ -86,6 +86,11 @@
     objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '제로데이 코어', dataTB: 9.9 },
     // [계승 ch01~06 · 각색 raidThreshold] 위협 임계 + 증원 — 최종 챕터 최대치 12.
     threatCap: 12,
+    // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향 — hardMode off 면 scale 1 → base 매트릭스 byte 불변).
+    //   실측 근거: 1.25 에서 RIGGER 가 마진잠식으로 탈락(hard×base clearFail 2건: RIGGER·BROKER).
+    //   1.20 은 ceil 양자화 상 atk5→6(1.25 는 →7) 로 한 스텝 낮아져 RIGGER 러시 생존창이 복구된다
+    //   (1.21 이상은 다시 →7 로 올라가 실패 — 임계 측정치). BROKER 는 1.20 에서도 미해소(§정직 표기).
+    hardScale: 1.20,
     reinforcement: { key: 'NEXUS_WARDEN', x: 6, y: 1 },   // 코어 증원 (최후 수호 추가 투입)
     // [신규 docs/25 §3.4] wall×2 — 코어 지지 기둥이 게이트로의 LoS 를 일부 차단(우회 유도).
     walls: [
