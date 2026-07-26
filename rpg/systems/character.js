@@ -8,6 +8,7 @@
   //   effectiveStats: 기본 + karma 성장. MOV=SPD 파생 [신규 docs/25 §3.1]
   //   spendKarma    : karma 1점을 스탯에 직접 지출 [각색 docs/25 §5.2, 레벨 없음]
   //   payKarma      : karma N점을 '비용'으로만 소모(성장 없음) [72차 · d45 #14 대화 비용 게이트]
+  //   payNuyen      : ₵ N을 '비용'으로만 소모 [73차 대화 비용 게이트 — payKarma 와 동일 계약]
   // ==========================================================================
 
   function getClasses() {
@@ -75,18 +76,27 @@
 
   function clamp(v, cap) { return Math.min(v, cap); }
 
-  // [72차 · d45 #14] karma N점 '비용' 소모 원시연산 — 성장(growth) 없음. 대화 선택지 비용 게이트용.
-  //   spendKarma(성장 지출)와 karma 잔량 판정을 단일 출처로 공유한다(아래 spendKarma 가 이 함수를 경유).
+  // [73차] 자원 N '비용' 소모 원시연산(공통 몸통) — payKarma/payNuyen 이 이 함수를 경유한다.
+  //   field = character 의 자원 필드명, label = 사용자 노출 표기(karma / ₵).
   //   실패 시 { ok:false, reason, need, have } — 호출측이 사유를 표시할 수 있어야 한다(조용한 차감 실패 금지).
-  function payKarma(ch, n) {
-    var have = (ch && typeof ch.karma === 'number') ? ch.karma : 0;
+  function payResource(ch, field, label, n) {
+    var have = (ch && typeof ch[field] === 'number') ? ch[field] : 0;
     var cost = (n == null) ? 1 : Math.floor(n);
-    if (!(cost > 0)) return { ok: false, reason: 'karma 비용 오류', need: 0, have: have };
-    if (have < cost) return { ok: false, reason: 'karma 부족', need: cost, have: have };
+    if (!(cost > 0)) return { ok: false, reason: label + ' 비용 오류', need: 0, have: have };
+    if (have < cost) return { ok: false, reason: label + ' 부족', need: cost, have: have };
     var next = JSON.parse(JSON.stringify(ch));
-    next.karma = have - cost;
+    next[field] = have - cost;
     return { ok: true, character: next, spent: cost, need: cost, have: have };
   }
+
+  // [72차 · d45 #14] karma N점 '비용' 소모 — 성장(growth) 없음. 대화 선택지 비용 게이트용.
+  //   spendKarma(성장 지출)와 karma 잔량 판정을 단일 출처로 공유한다(아래 spendKarma 가 이 함수를 경유).
+  //   반환 reason 은 'karma 부족' / 'karma 비용 오류' 로 73차 공통화 이후에도 byte 불변.
+  function payKarma(ch, n) { return payResource(ch, 'karma', 'karma', n); }
+
+  // [73차] ₵ N '비용' 소모 — payKarma 와 완전 동일 계약(미충족 시 무차감 + 사유 노출).
+  //   대화 선택지 effect.spendNuyen 의 실차감 원시연산. 성장/보상과 무관한 단방향 지출.
+  function payNuyen(ch, n) { return payResource(ch, 'nuyen', '₵', n); }
 
   // karma 1점 → 스탯 +1 (hp 는 +1 기본HP = +2 유효HP). 실패 시 { ok:false }.
   //   [72차] 잔량 판정·차감은 payKarma 재사용(반환 reason 문자열은 기존과 byte 동일 — 39번 핀 유지).
@@ -108,7 +118,8 @@
 
   var API = {
     makeCharacter: makeCharacter, effectiveStats: effectiveStats,
-    spendKarma: spendKarma, payKarma: payKarma, unlockAbility: unlockAbility, STAT_CAP: STAT_CAP,
+    spendKarma: spendKarma, payKarma: payKarma, payNuyen: payNuyen,
+    unlockAbility: unlockAbility, STAT_CAP: STAT_CAP,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_CHARACTER = API;
