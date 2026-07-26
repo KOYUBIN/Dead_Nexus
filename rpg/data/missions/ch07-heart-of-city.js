@@ -19,13 +19,15 @@
   //   대사 버블                                           [계승 lore] loreQuote(CIPHER)/loreQuote(AXIOM) 어댑터 경유
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   //
-  // [SIMPLIFIED — 보고] ① effect.spendKarma 핸들러 부재 → HACK4 게이트 폴백.
-  //   접근 출구 ②('SIGNAL 카드 키 대가로 최상층 직행')의 설계 의도는 karma 1 자원 지출 게이트다.
-  //   그러나 store.js 의 대화 effect 소비 목록은 {rep, startCombat, returnHub}(+goto 라우팅)뿐이며
-  //   karma 지출은 SPEND_KARMA 액션(성장 소비) 전용이라 대화 선택지에서 소비되지 않는다.
-  //   → 이 출구는 실제로는 gate{attr:'hack',min:4} 로 판정(CIPHER 지름길, 엔진 무편집). effect.spendKarma:1 은
-  //     향후 대화용 karma-지출 핸들러가 추가되면 자동 결선되는 전방 호환 훅(현재 store 무시·무해)으로만 둔다.
-  //     karma-지출 대화 게이트 = 신규 메커닉(엔진 편집 필요) → 통합 단계 보고 대상.
+  // [RESOLVED 72차 · d45 #14] ① effect.spendKarma 배선 완료 — 전방 호환 훅이 실동으로 전환됐다.
+  //   접근 출구 ②('SIGNAL 카드 키 대가로 최상층 직행')의 설계 의도는 karma 1 자원 지출 게이트였고,
+  //   과거에는 store.js 의 대화 effect 소비 목록이 {rep, startCombat, returnHub}(+goto 라우팅)뿐이라
+  //   effect.spendKarma 가 조용히 폐기됐다(HACK4 게이트만 실판정). 72차에서
+  //     systems/character.payKarma  — karma N '비용' 소모 원시연산(성장 없음, spendKarma 와 판정 공유)
+  //     systems/dialogue.evalCost   — effect.spendKarma 를 게이트와 동일 계약으로 평가(부족 시 gray+사유)
+  //     state/store.dialogueChoose  — 충족 시 실차감(부족 시 flag/effect 무적용 반려)
+  //   3점을 배선하여, 이 출구는 이제 gate{attr:'hack',min:4} AND karma 1 지출 을 모두 요구한다.
+  //   (HACK4 게이트는 유지 — 제거하면 BLADE 계열까지 우회 경로가 열려 미션 라우팅/밸런스가 바뀐다.)
   // [SIMPLIFIED — 보고] ② 넥서스 3구획(B1 로비·M3 중앙 집행부·TOP 의장실)을 표준 단일 7×8 전투 스키마로 렌더.
   //   chapter-07 §2 는 구획별 별개 소규모 맵을 규정하나, 미션 파일은 기존 buildCombat 스키마(단일 그리드)만
   //   사용한다(엔진 무편집). 무대는 M3 중앙 집행부로 고정하고, TOP 의장실은 objective(대체승리 단말)로 근사한다.
@@ -121,13 +123,14 @@
             effect: { startCombat: { onWin: 'outro' } },
             desc: '전투 개시 → KAI+경비 전멸(BLADE 정면·CIPHER 해킹 모두 유효, 보스 physImmune 아님) 또는 의장실 단말 무력화(CIPHER objective-reduce). 이중 승리, 양 클래스 완주.',
           },
-          { label: '[HACK 4] SIGNAL 카드 키로 엘리베이터를 오버라이드해 최상층 직행한다',
+          { label: '[HACK 4 · karma 1] SIGNAL 카드 키로 엘리베이터를 오버라이드해 최상층 직행한다',
             gate: { attr: 'hack', min: 4 }, show: 'gray',
             setFlags: { signalCardKey: true },
-            // [SIMPLIFIED ①] 실판정=gate hack4(폴백). effect.spendKarma:1 = 향후 대화 karma-지출 핸들러용
-            //   전방 호환 훅(현 store 무시). 라우팅은 goto 가 담당(skipCombat 은 문서 필드).
+            // [RESOLVED 72차 ①] 실판정 = gate hack4 AND effect.spendKarma 1 (dialogue.evalCost).
+            //   karma 부족 시 선택지는 gray + 사유 표시로 잠기고, 진입해도 blocked 반려(무료 통과 불가).
+            //   충족 시 store.dialogueChoose 가 karma 1 을 실차감한다. 라우팅은 goto(skipCombat 은 문서 필드).
             effect: { skipCombat: true, spendKarma: 1 }, goto: 'outroChosen',
-            desc: 'SIGNAL 이 건넨 카드 키의 대가로 최상층 직행(설계 의도=karma 1 지출). 현 엔진에선 CIPHER HACK4 오버라이드로 폴백 → 전투 스킵. BLADE HACK 잠김 → 위 전투로 완주.',
+            desc: 'SIGNAL 이 건넨 카드 키의 대가로 최상층 직행 — HACK 4 오버라이드 + karma 1 실지출(전투 스킵). karma 가 없으면 잠긴다. BLADE HACK 잠김 → 위 전투로 완주.',
           },
           { label: '[flag signalChosen] SIGNAL 이 선택한 자만 상층 잠금을 해제한다',
             gate: { flag: 'signalChosen' }, show: 'gray',

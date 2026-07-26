@@ -1860,6 +1860,206 @@ ok('323. hardScale 미선언 미션(a2-00-framing) 은 기본 1.25 폴백 유지
   hsFb.combat.enemyScale === 1.25 &&
   !(CAMP.missionData('a2-00-framing').combat.hardScale));
 
+// ============================================================================
+// ======  72차 — d45 잔존 소항목 3건 (spendKarma 배선 · 심연 기록 · 온보딩)  ====
+// ============================================================================
+var ABX = require('./systems/abyss.js');
+
+console.log('\n== [72차 · d45 #14] 대화 선택지 karma 비용 — 게이트 + 실차감 ==');
+
+// ① 원시연산 payKarma — 비용 소모 전용(성장 없음). spendKarma 와 karma 판정 단일 출처.
+var pkCh = CH.makeCharacter('CIPHER'); pkCh.karma = 2;
+var pk1 = CH.payKarma(pkCh, 1);
+ok('324. payKarma(1): karma 2→1 · growth 무변동(비용은 성장이 아니다) · 인자 무변경(순수)',
+  pk1.ok === true && pk1.character.karma === 1 && pk1.spent === 1 &&
+  JSON.stringify(pk1.character.growth) === JSON.stringify(pkCh.growth) && pkCh.karma === 2);
+var pk2 = CH.payKarma(pkCh, 3);
+ok('325. payKarma 부족: karma 2 < 3 → ok:false + 사유·필요/보유 노출(조용한 실패 금지)',
+  pk2.ok === false && pk2.reason === 'karma 부족' && pk2.need === 3 && pk2.have === 2 && pk2.character === undefined);
+ok('326. spendKarma 회귀: payKarma 경유 후에도 39번 계약 불변 (karma 0 → reason "karma 부족" byte 동일)',
+  CH.spendKarma(CH.makeCharacter('CIPHER'), 'hack').ok === false &&
+  CH.spendKarma(CH.makeCharacter('CIPHER'), 'hack').reason === 'karma 부족' &&
+  CH.spendKarma(Object.assign({}, pkCh, { karma: 1 }), 'hack').character.growth.hack === 1);
+
+// ② dialogue.evalCost / choiceState — 비용 미선언 선택지는 판정 불변(무해).
+var kcChoice = { label: 'x', effect: { skipCombat: true, spendKarma: 1 }, show: 'gray' };
+ok('327. evalCost: karma 부족 → ok:false + 사유, 충족 → ok:true (비용 미선언 선택지는 항상 ok)',
+  DLG.evalCost(kcChoice, { karma: 0 }).ok === false &&
+  DLG.evalCost(kcChoice, { karma: 1 }).ok === true &&
+  DLG.evalCost({ label: 'y' }, { karma: 0 }).ok === true &&
+  DLG.evalCost({ label: 'y', effect: { startCombat: {} } }, {}).ok === true);
+ok('328. choiceState: 비용 미충족 → gray(+choiceReason 사유), 충족 → available',
+  DLG.choiceState(kcChoice, { karma: 0 }) === 'gray' &&
+  DLG.choiceState(kcChoice, { karma: 1 }) === 'available' &&
+  /karma 1 지출/.test(DLG.choiceReason(kcChoice, { karma: 0 })) &&
+  DLG.choiceReason(kcChoice, { karma: 1 }) === null);
+
+// ③ ch07 approach#1 실경로 — HACK4 게이트 AND karma 1. karma 0 이면 gray + blocked(무료 통과 불가).
+var ch07m = CAMP.missionData('ch07-heart-of-city');
+var ch07Choice = ch07m.dialogue.nodes.approach.choices[1];
+ok('329. ch07 카드 키 출구가 effect.spendKarma:1 을 실제로 보유 (배선 대상 데이터 핀)',
+  ch07Choice.effect.spendKarma === 1 && ch07Choice.gate.attr === 'hack' && ch07Choice.gate.min === 4);
+
+function ch07State(karma) {
+  var st = S.rpgInitialState();
+  st.save.character = CH.makeCharacter('CIPHER');
+  st.save.character.growth.hack = 1;         // CIPHER hack 3 → 4 (게이트 충족)
+  st.save.character.karma = karma; st.save.karma = karma;
+  st.save.missionsDone = ['ch06-bloc-acquisition'];
+  return S.startMission(st, 'ch07-heart-of-city');
+}
+var k0 = ch07State(0); k0 = S.dialogueChoose(k0, 0);              // intro → approach
+var k0ctx = S.dialogueCtx(k0);
+ok('330. dialogueCtx 가 karma 잔량을 노출 (비용 게이트 판정 입력)', k0ctx.karma === 0);
+ok('331. karma 0 · HACK4 충족 → 선택지 gray (게이트는 통과해도 비용이 잠근다)',
+  DLG.evalGate(ch07Choice.gate, k0ctx).ok === true && DLG.choiceState(ch07Choice, k0ctx) === 'gray');
+var k0after = S.dialogueChoose(k0, 1);
+ok('332. karma 0 로 진입 시도 → blocked 반려 · 노드 이동 0 · flag 미설정 · karma 무변동 (조용한 차감 실패 없음)',
+  k0after.banner.kind === 'blocked' && k0after.dialogue.nodeId === 'approach' &&
+  !k0after.save.flags.signalCardKey && k0after.save.character.karma === 0);
+
+var k1 = ch07State(1); k1 = S.dialogueChoose(k1, 0);
+ok('333. karma 1 → 선택지 available', DLG.choiceState(ch07Choice, S.dialogueCtx(k1)) === 'available');
+var k1after = S.dialogueChoose(k1, 1);
+ok('334. karma 1 충족 → 실차감(1→0) · save.karma 미러 동기 · outroChosen 라우팅 · signalCardKey 설정',
+  k1after.save.character.karma === 0 && k1after.save.karma === 0 &&
+  k1after.dialogue.nodeId === 'outroChosen' && k1after.save.flags.signalCardKey === true &&
+  k1after.save.character.growth.hack === 1);   // 비용 지출은 성장이 아니다(growth 무증가)
+// 재클리어 farming — 지출은 단방향. karma 보상은 재클리어 시 0 지급(applyRewards firstClear 가드).
+var reFarm = CAMP.applyRewards({ character: CH.makeCharacter('CIPHER'), missionsDone: ['ch07-heart-of-city'] }, ch07m);
+ok('335. 재클리어 farming 불가: 2회차 ch07 정산 karma +0 (지출만 단방향 → 같은 선택지 반복해도 순환 이득 0)',
+  reFarm.firstClear === false && reFarm.character.karma === 0 && ch07m.rewards.karma === 3);
+// 비용 미선언 선택지 전량 회귀 — 32미션 판정 불변(evalCost 도입이 기존 선택지를 건드리지 않는다).
+var costFree = 0, costGated = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm || !mm.dialogue) return;
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (cc, ci) {
+      var need = (cc.effect && cc.effect.spendKarma) || 0;
+      if (need) { costGated.push(reg.id + '/' + nid + '#' + ci); return; }
+      costFree++;
+      if (DLG.choiceState(cc, { attrs: {}, tags: [], flags: {}, karma: 0 }) !==
+          DLG.choiceState(cc, { attrs: {}, tags: [], flags: {} })) costFree = -99999;
+    });
+  });
+});
+ok('336. 전 미션 spendKarma 선언 = ch07 approach#1 정확히 1건 (grep 전수) · 비용 미선언 선택지 ' + costFree
+  + '건은 karma 유무와 무관하게 판정 불변', costGated.length === 1 &&
+  costGated[0] === 'ch07-heart-of-city/approach#1' && costFree > 200);
+
+console.log('\n== [72차 · d45 #4] 심연 기록 확장 { best, byClass, lastRun } ==');
+
+ok('337. migrateAbyss 구세이브 무손상: { best:7 } → best 7 보존 + byClass {} + lastRun null (날조 없음)',
+  JSON.stringify(ABX.migrateAbyss({ best: 7 })) === JSON.stringify({ best: 7, byClass: {}, lastRun: null }));
+ok('338. migrateAbyss 부재/오염 방어: undefined·null·배열·문자열 best → 기본 기록',
+  JSON.stringify(ABX.migrateAbyss(undefined)) === JSON.stringify({ best: 0, byClass: {}, lastRun: null }) &&
+  JSON.stringify(ABX.migrateAbyss(null)) === JSON.stringify({ best: 0, byClass: {}, lastRun: null }) &&
+  JSON.stringify(ABX.migrateAbyss([1, 2])) === JSON.stringify({ best: 0, byClass: {}, lastRun: null }) &&
+  ABX.migrateAbyss({ best: 'x', byClass: 'y', lastRun: 3 }).best === 0);
+var mig1 = ABX.migrateAbyss({ best: 4, byClass: { CIPHER: 4, BLADE: 'x', MOLE: 0 }, lastRun: { classKey: 'CIPHER', wave: 5, cleared: false } });
+ok('339. migrateAbyss 멱등: migrate(migrate(x)) === migrate(x) · 오염 byClass 항목 제거',
+  JSON.stringify(ABX.migrateAbyss(mig1)) === JSON.stringify(mig1) &&
+  mig1.byClass.BLADE === undefined && mig1.byClass.MOLE === undefined && mig1.byClass.CIPHER === 4);
+ok('340. migrateAbyss 불변식: best >= max(byClass) — 구세이브가 낮은 best 를 들고 와도 클래스 기록으로 승격',
+  ABX.migrateAbyss({ best: 2, byClass: { RIGGER: 9 } }).best === 9);
+
+var rec0 = ABX.recordAbyss(undefined, 'CIPHER', 3, true);
+var rec1 = ABX.recordAbyss(rec0, 'BLADE', 5, true);
+var rec2 = ABX.recordAbyss(rec1, 'BLADE', 2, true);      // 낮은 웨이브는 최고 기록을 낮추지 않는다
+var rec3 = ABX.recordAbyss(rec2, 'MOLE', 8, false);      // 패배 — lastRun 만 갱신
+ok('341. recordAbyss: 클래스별 최고 독립 갱신 · 전체 best = 최댓값 · 낮은 웨이브 미갱신',
+  rec0.best === 3 && rec0.byClass.CIPHER === 3 &&
+  rec1.best === 5 && rec1.byClass.BLADE === 5 && rec1.byClass.CIPHER === 3 &&
+  rec2.byClass.BLADE === 5 && rec2.best === 5);
+ok('342. recordAbyss 패배: best/byClass 무갱신(패배 웨이브는 완주가 아니다) · lastRun 은 승패 무관 항상 갱신',
+  rec3.best === 5 && rec3.byClass.MOLE === undefined &&
+  JSON.stringify(rec3.lastRun) === JSON.stringify({ classKey: 'MOLE', wave: 8, cleared: false }) &&
+  JSON.stringify(rec2.lastRun) === JSON.stringify({ classKey: 'BLADE', wave: 2, cleared: true }) &&
+  JSON.stringify(rec1) !== JSON.stringify(rec2));   // 순수 — 인자 객체 무변경
+var bbc = ABX.bestByClass(rec3);
+ok('343. bestByClass: 6클래스 전량 고정 순서(PLAYABLE) · 미기록 클래스 0/played:false (리플레이 후크)',
+  bbc.length === 6 && bbc.map(function (r) { return r.classKey; }).join() === CL.PLAYABLE.join() &&
+  bbc[0].best === 3 && bbc[0].played === true && bbc[1].best === 5 &&
+  bbc[3].best === 0 && bbc[3].played === false);
+
+// 세이브 마이그레이션 — 구세이브(abyss 부재 / 구 스칼라) 무손상 백필 + 멱등.
+var oldSave = { version: 1, character: CH.makeCharacter('CIPHER'), flags: {}, missionsDone: [] };
+var m1 = SAVE.migrate(JSON.parse(JSON.stringify(oldSave)));
+var legacySave = SAVE.migrate({ version: 1, character: CH.makeCharacter('BLADE'), flags: {}, missionsDone: [], abyss: { best: 12 } });
+ok('344. save.migrate 백필: abyss 부재 → 기본 기록 / 구 스칼라 { best:12 } → best 12 무손상 보존',
+  JSON.stringify(m1.abyss) === JSON.stringify({ best: 0, byClass: {}, lastRun: null }) &&
+  legacySave.abyss.best === 12 && JSON.stringify(legacySave.abyss.byClass) === JSON.stringify({}) &&
+  legacySave.abyss.lastRun === null);
+ok('345. save.migrate 멱등 + export/import 왕복 무손실 (확장 기록이 base64 왕복을 견딘다)',
+  JSON.stringify(SAVE.migrate(JSON.parse(JSON.stringify(legacySave)))) === JSON.stringify(legacySave) &&
+  JSON.stringify(SAVE.importString(SAVE.exportString(rec3 && legacySave)).save.abyss) === JSON.stringify(legacySave.abyss));
+
+// store 경로 — 심연 승/패 해소가 기록을 갱신하는가 (전투 엔진 무편집, 기록만).
+function abyssState(classKey, wave, outcome, prevAbyss) {
+  var st = S.rpgInitialState();
+  st.save.character = CH.makeCharacter(classKey);
+  st.save.endings = END.recordCapstone(st.save.endings, classKey);
+  if (prevAbyss) st.save.abyss = prevAbyss;
+  st = S.startAbyss(st);
+  st.combat.abyss.wave = wave; st.combat.outcome = outcome;
+  return S.resolveCombat(st);
+}
+var aw = abyssState('RIGGER', 4, 'win');
+ok('346. store 심연 승리 → best/byClass 갱신 + lastRun(cleared) · 다음 웨이브 계속',
+  aw.save.abyss.best === 4 && aw.save.abyss.byClass.RIGGER === 4 &&
+  JSON.stringify(aw.save.abyss.lastRun) === JSON.stringify({ classKey: 'RIGGER', wave: 4, cleared: true }) &&
+  aw.scene === 'combat' && aw.combat.abyss.wave === 5);
+var al = abyssState('MOLE', 6, 'lose', aw.save.abyss);
+ok('347. store 심연 패배 → 페널티 0 · best 무변동 · lastRun 만 갱신 · 허브 귀환',
+  al.save.abyss.best === 4 && al.save.abyss.byClass.MOLE === undefined &&
+  JSON.stringify(al.save.abyss.lastRun) === JSON.stringify({ classKey: 'MOLE', wave: 6, cleared: false }) &&
+  al.scene === 'hub' && al.combat === null);
+// NG+ 이월 — 확장 기록 통째 영속(구현 전에는 best 만 이월됐다).
+var ngp = S.rpgInitialState();
+ngp.save.abyss = ABX.recordAbyss(undefined, 'BROKER', 9, true);
+ngp.save.endings = END.recordEnding(ngp.save.endings, 'nexus-reborn', 'BROKER');
+var ngpAfter = S.newGamePlus(ngp);
+ok('348. NG+ 회차 이월: best·byClass·lastRun 전부 영속 (캠페인 진행만 리셋)',
+  JSON.stringify(ngpAfter.save.abyss) === JSON.stringify(ngp.save.abyss) &&
+  ngpAfter.save.abyss.byClass.BROKER === 9 && ngpAfter.save.missionsDone.length === 0);
+// startAbyss 가 구세이브를 진입 시점에 백필하는가(멱등).
+var legacyEntry = S.rpgInitialState();
+legacyEntry.save.character = CH.makeCharacter('DRIFTER');
+legacyEntry.save.endings = END.recordCapstone(legacyEntry.save.endings, 'DRIFTER');
+legacyEntry.save.abyss = { best: 3 };            // 구 스칼라 스키마
+legacyEntry = S.startAbyss(legacyEntry);
+ok('349. startAbyss 진입 백필: 구 스칼라 세이브가 확장 스키마로 정규화 · best 무손상 · 웨이브 1 개시',
+  legacyEntry.save.abyss.best === 3 && JSON.stringify(legacyEntry.save.abyss.byClass) === JSON.stringify({}) &&
+  legacyEntry.save.abyss.lastRun === null && legacyEntry.combat.abyss.wave === 1);
+// newSave 기본값 — 신규 진행도 확장 스키마.
+ok('350. newSave 기본 abyss = 확장 스키마 { best:0, byClass:{}, lastRun:null } (migrate 멱등 대상)',
+  JSON.stringify(S.newSave().abyss) === JSON.stringify({ best: 0, byClass: {}, lastRun: null }));
+
+console.log('\n== [72차 · d45 #5] 온보딩 오버레이 — 표시층 계약 ==');
+// 온보딩은 index.html 표시층(localStorage 플래그) — 엔진 무관. 여기선 '엔진을 건드리지 않았다'와
+// survive 조건 1줄의 데이터 출처(combat.survive)가 살아있는지를 핀으로 고정한다.
+var obFs = require('fs').readFileSync(__dirname + '/index.html', 'utf8');
+ok('351. 온보딩 플래그 rpg.onboardSeen 이 localStorage 로 1회성 억제 · 5줄 규칙 + survive 1줄 분기 존재',
+  /ONBOARD_KEY\s*=\s*'rpg\.onboardSeen'/.test(obFs) &&
+  /localStorage\.setItem\(ONBOARD_KEY, '1'\)/.test(obFs) &&
+  ONBOARD_RULES_COUNT(obFs) === 5 && /combat && combat\.survive/.test(obFs));
+function ONBOARD_RULES_COUNT(src) {
+  var m = /const ONBOARD_RULES = \[([\s\S]*?)\n\];/.exec(src);
+  return m ? (m[1].match(/\{ ic:/g) || []).length : -1;
+}
+ok('352. 온보딩은 표시층 전용 — 전투 엔진(systems/combat/·store 전투 스텝)에 온보딩 참조 0 · reduced-motion 존중',
+  ['./systems/combat/grid.js', './systems/combat/resolve.js', './systems/combat/ai.js', './state/store.js']
+    .every(function (f) { return !/onboard/i.test(require('fs').readFileSync(__dirname + '/' + f, 'utf8')); }) &&
+  /onboard-scrim' \+ \(reducedMotion \? ' still' : ''\)/.test(obFs));
+// survive 선언 인카운터가 실제로 존재해야 '사수 1줄'이 사문이 아니다.
+var survCount = 0;
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm) return;
+  if (mm.combat && mm.combat.survive) survCount++;
+  if (mm.encounters) Object.keys(mm.encounters).forEach(function (k) { if (mm.encounters[k].survive) survCount++; });
+});
+ok('353. survive 선언 인카운터 ' + survCount + '건 존재 — 온보딩 사수 1줄이 실제로 도달 가능(사문 아님)', survCount > 0);
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);

@@ -532,6 +532,44 @@ function IntelBroker({ state, dispatch }) {
   );
 }
 
+// ── 심연 프로토콜 카드 [72차 · d45 #4] ──
+//   { best, byClass, lastRun } 기록 스키마를 그대로 표시한다 — 전체 최고 · 클래스별 최고 표(6클래스
+//   리플레이 후크) · 직전 런. 구세이브(byClass 빈 표)는 전 클래스 '—' 로 렌더되어 무손상 표시된다.
+function AbyssCard({ save, dispatch }) {
+  const ABX = window.RPG_ABYSS;
+  const rec = ABX && ABX.migrateAbyss ? ABX.migrateAbyss(save.abyss) : (save.abyss || { best: 0, byClass: {}, lastRun: null });
+  const rows = ABX && ABX.bestByClass ? ABX.bestByClass(rec) : [];
+  const cur = save.character.classKey;
+  const lr = rec.lastRun;
+  return (
+    <div className="abyss-card">
+      <button className="ab-go" onClick={() => { SFX('ui'); dispatch({ type: 'ABYSS_START' }); }}>
+        <span className="ab-h">🌃 심연 프로토콜 — 무한 상승 계약</span>
+        <span className="ab-nt">웨이브 결정론 전투 · 적 스케일 1+0.05N · 패배 페널티 없음</span>
+        <span className="ab-best">로컬 최고 웨이브 <b>{rec.best}</b> · 탭하여 웨이브 1 개시</span>
+      </button>
+      {lr ? (
+        <div className="ab-last">
+          ↩ 직전 런 — {lr.classKey || '—'} · 웨이브 {lr.wave} {lr.cleared ? '돌파' : '에서 종료'}
+        </div>
+      ) : <div className="ab-last dim">↩ 직전 런 기록 없음 — 첫 웨이브를 개시하세요</div>}
+      {rows.length ? (
+        <div className="ab-table">
+          <div className="ab-tlab">클래스별 최고 웨이브 (6클래스 리플레이 — 편성 전환은 크루/로스터)</div>
+          <div className="ab-trow">
+            {rows.map(r => (
+              <span key={r.classKey} className={'ab-cls' + (r.played ? ' played' : '') + (r.classKey === cur ? ' cur' : '')}
+                title={r.classKey + ' 최고 웨이브 ' + (r.played ? r.best : '기록 없음')}>
+                <b>{r.classKey}</b> {r.played ? r.best : '—'}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ── 허브 ──
 function Hub({ state, dispatch, openSave }) {
   const node = state.hub.node;
@@ -584,11 +622,7 @@ function Hub({ state, dispatch, openSave }) {
       </div>
       {/* [v6.44 · 과제 A1] 심연 프로토콜 — 캡스톤(endings.capstone>0) 클리어 후 개방. 무한 상승 웨이브 전투. */}
       {(ENDING && ENDING.migrateEndings(save.endings).capstone > 0) ? (
-        <button className="abyss-card" onClick={() => dispatch({ type: 'ABYSS_START' })}>
-          <span className="ab-h">🌃 심연 프로토콜 — 무한 상승 계약</span>
-          <span className="ab-nt">웨이브 결정론 전투 · 적 스케일 1+0.05N · 패배 페널티 없음</span>
-          <span className="ab-best">로컬 최고 웨이브 <b>{(save.abyss && save.abyss.best) || 0}</b> · 탭하여 웨이브 1 개시</span>
-        </button>
+        <AbyssCard save={save} dispatch={dispatch} />
       ) : null}
       {/* [61차 §3.4] 하드 모드 토글 — NG+ 회차(runs>0)부터 노출. 켜짐 시 이후 전투의 적 스탯 +25%(hp/atk). */}
       {(ENDING && ENDING.migrateEndings(save.endings).runs > 0) ? (
@@ -749,15 +783,67 @@ function DialogueOverlay({ state, dispatch }) {
         {node.choices.map((c, i) => {
           const st = window.RPG_DIALOGUE.choiceState(c, ctx);
           if (st === 'hidden') return null;
-          const gated = !!c.gate;
+          // [72차 · d45 #14] 게이트/자원비용(effect.spendKarma) 미충족 선택지는 회색 + 사유 1줄.
+          //   조용한 차감 실패 금지 — '왜 잠겼는지'와 '무엇을 지불하는지'를 항상 보여준다.
+          const gated = !!(c.gate || (c.effect && c.effect.spendKarma));
+          const why = st === 'gray' ? window.RPG_DIALOGUE.choiceReason(c, ctx) : null;
+          const costK = (c.effect && c.effect.spendKarma) || 0;
           return (
             <button key={i} className={'choice ' + (gated ? 'gate ' : '') + (st === 'gray' ? 'gray' : '')}
               onClick={() => dispatch({ type: 'DIALOGUE_CHOOSE', index: i })}>
               {c.label}
+              {costK && st !== 'gray' ? <span className="cost-tag">◈ karma −{costK} 지출</span> : null}
+              {why ? <span className="gate-why">🔒 잠김 — {why}</span> : null}
               {c.desc ? <span className="desc">{c.desc}</span> : null}
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ── 온보딩 오버레이 [72차 · d45 #5] ──
+//   첫 전투 진입 시 1회성 규칙 카드. localStorage 플래그로 재노출 억제(다음 전투부터 안 뜬다).
+//   룰/전투 로직 완전 무관 — 표시층 전용. reduced-motion 시 페이드 없이 즉시 표시.
+const ONBOARD_KEY = 'rpg.onboardSeen';
+function onboardSeen() { try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch (e) { return false; } }
+function markOnboardSeen() { try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {} }
+// 5줄 요약 — AP · MOV 파생 · 엄폐 · 시그널 다이 · 오브젝티브 이중 승리 (엔진 실제 계약과 1:1).
+const ONBOARD_RULES = [
+  { ic: '◆', t: 'AP 2', d: '매 라운드 행동력 2. 이동·공격·해킹이 각각 AP를 소모한다 (턴 종료 시 리필).' },
+  { ic: '⚡', t: 'MOV = SPD 파생', d: '이동 칸수는 SPD에서 파생된다 — 별도 이동 스탯이 없다. SPD를 올리면 발이 빨라진다.' },
+  { ic: '▩', t: '엄폐 = DEF 보정', d: '엄폐물 뒤 대상은 DEF가 오른다(full +2 / light +1). 사선을 끊거나 엄폐를 무효화해서 뚫는다.' },
+  { ic: '🔵', t: '시그널 다이', d: '라운드마다 메시 신호 상태가 바뀐다(UP/DOWN/SURGE/BLACKOUT). 피해·상성·AP·해킹 가능 여부가 함께 흔들린다.' },
+  { ic: '🎯', t: '오브젝티브 이중 승리', d: '적 전멸로도, 오브젝티브(서버 랙) 방어도를 0으로 깎아도 승리한다 — 어느 쪽이든 완주.' },
+];
+function Onboarding({ combat, onClose }) {
+  const surv = combat && combat.survive;
+  return (
+    <div className={'onboard-scrim' + (reducedMotion ? ' still' : '')} onClick={onClose}>
+      <div className="onboard-card" onClick={e => e.stopPropagation()} role="dialog" aria-label="전투 규칙 요약">
+        <div className="ob-head">
+          <span className="ob-kick">FIRST DEPLOYMENT</span>
+          <h2 className="ob-title">전투 규칙 — 5줄 요약</h2>
+        </div>
+        <ul className="ob-list">
+          {ONBOARD_RULES.map((r, i) => (
+            <li key={i} className="ob-row">
+              <span className="ob-ic">{r.ic}</span>
+              <span className="ob-body"><b className="ob-t">{r.t}</b><span className="ob-d">{r.d}</span></span>
+            </li>
+          ))}
+          {/* 생존형 인카운터(combat.survive)일 때만 사수 조건 1줄 추가 — 데이터 구동, 미선언 미션엔 미표시. */}
+          {surv ? (
+            <li className="ob-row surv">
+              <span className="ob-ic">🛡</span>
+              <span className="ob-body"><b className="ob-t">사수 {surv}라운드</b>
+                <span className="ob-d">이 작전은 생존형이다 — {surv}라운드를 버티기만 해도 승리한다(전멸·오브젝티브 승리도 그대로 유효).</span></span>
+            </li>
+          ) : null}
+        </ul>
+        <button className="btn ob-close" onClick={onClose}>알겠다 — 작전 개시 ▶</button>
+        <div className="ob-note">이 카드는 처음 한 번만 표시됩니다 · 아무 곳이나 탭해도 닫힙니다</div>
       </div>
     </div>
   );
@@ -771,6 +857,9 @@ function Combat({ state, dispatch, view }) {
   const TILE = 56; // projection.left/top 계산용 논리 픽셀 (CSS var 로 실제 스케일)
   const mode = view === 'square' ? 'square' : 'iso'; // 기본 아이소, 폴백 탑다운
   const [briefOpen, setBriefOpen] = useState(true); // [B1] 인텔 브리핑 패널 (구매 시 노출)
+  // [72차 · d45 #5] 온보딩 — 첫 전투 진입 1회. localStorage 플래그가 이미 있으면 아예 뜨지 않는다.
+  const [onboard, setOnboard] = useState(() => !onboardSeen());
+  const closeOnboard = () => { markOnboardSeen(); setOnboard(false); };
   const theme = stageTheme(c.missionId);            // [G①] 무대 팔레트 (표시 전용)
   // [G②] 시그니처/궁극 발동 시 풀스크린 플래시 (ultUsed 전이 감지 · 룰 무관 표시).
   const ultRef = useRef(false);
@@ -889,6 +978,7 @@ function Combat({ state, dispatch, view }) {
 
   return (
     <div className={'combat stage stage-' + theme}>
+      {onboard ? <Onboarding combat={c} onClose={closeOnboard} /> : null}
       {flash ? <div className="ult-flash" key={'uf' + flash} /> : null}
       <div className="combat-top">
         {c.abyss ? <span className="rnd" style={{ color: 'var(--cyan)' }}>🌃 심연 웨이브 {c.abyss.wave}</span> : null}
@@ -1166,14 +1256,54 @@ try {
 .board-sec.act2-branch.locked { opacity: .55; border-bottom-style: dotted; }
 .mcard.locked.act2 { border-left: 2px solid var(--orange); opacity: .72; }
 .hardmode-btn.on { color: var(--orange); border-color: var(--orange); }
-/* [v6.44] 심연 프로토콜 허브 카드 */
-.abyss-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; cursor: pointer;
+/* [72차 · d45 #14] 대화 선택지 자원 비용 태그 / 잠김 사유 (기존 .choice 팔레트 계승) */
+.choice .cost-tag { display: block; margin-top: 3px; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--orange); }
+.choice .gate-why { display: block; margin-top: 3px; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--magenta); }
+
+/* [72차 · d45 #5] 온보딩 오버레이 — 첫 전투 1회성 규칙 카드 (표시층 전용) */
+.onboard-scrim { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(4,4,10,0.82); backdrop-filter: blur(2px);
+  animation: ob-in .22s ease-out both; }
+.onboard-scrim.still { animation: none; }
+@keyframes ob-in { from { opacity: 0; } to { opacity: 1; } }
+.onboard-card { width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
+  border: 1.5px solid var(--cyan); border-radius: 10px; background: var(--bg2);
+  box-shadow: 0 0 22px rgba(0,229,255,0.25); padding: 14px 16px; }
+.onboard-card .ob-kick { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--orange); letter-spacing: .14em; }
+.onboard-card .ob-title { font-family: 'Share Tech Mono', monospace; font-size: 17px; color: var(--cyan); margin: 2px 0 10px; }
+.onboard-card .ob-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.onboard-card .ob-row { display: flex; gap: 9px; align-items: flex-start; }
+.onboard-card .ob-row.surv { padding-top: 8px; border-top: 1px dashed var(--border); }
+.onboard-card .ob-ic { flex: 0 0 20px; text-align: center; color: var(--cyan); font-size: 13px; line-height: 1.5; }
+.onboard-card .ob-body { display: flex; flex-direction: column; gap: 1px; }
+.onboard-card .ob-t { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text); }
+.onboard-card .ob-row.surv .ob-t { color: var(--green); }
+.onboard-card .ob-d { font-size: 11px; color: var(--text-dim); line-height: 1.45; }
+.onboard-card .ob-close { width: 100%; }
+.onboard-card .ob-note { margin-top: 7px; text-align: center; font-size: 10px; color: var(--text-dim); }
+
+/* [v6.44] 심연 프로토콜 허브 카드 · [72차 d45#4] 클래스별 최고 표 + 직전 런 */
+.abyss-card { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
   margin-top: 10px; padding: 10px 12px; border: 1.5px solid var(--cyan); border-radius: 8px;
   background: rgba(0,229,255,0.06); color: var(--text); font-family: inherit; }
+.abyss-card .ab-go { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
+  cursor: pointer; background: none; border: 0; padding: 0; color: inherit; font: inherit; }
+.abyss-card .ab-go:hover .ab-h { text-shadow: 0 0 8px rgba(0,229,255,0.55); }
 .abyss-card:hover { background: rgba(0,229,255,0.12); box-shadow: 0 0 8px rgba(0,229,255,0.22); }
 .abyss-card .ab-h { font-family: 'Share Tech Mono', monospace; font-weight: 700; color: var(--cyan); font-size: 14px; }
 .abyss-card .ab-nt { color: var(--text-dim); font-size: 11px; }
 .abyss-card .ab-best { color: var(--orange); font-size: 12px; }
+.abyss-card .ab-last { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border);
+  color: var(--green); font-size: 11px; }
+.abyss-card .ab-last.dim { color: var(--text-dim); }
+.abyss-card .ab-tlab { color: var(--text-dim); font-size: 10px; margin: 6px 0 4px; }
+.abyss-card .ab-trow { display: flex; flex-wrap: wrap; gap: 4px; }
+.abyss-card .ab-cls { font-family: 'Share Tech Mono', monospace; font-size: 10px; padding: 2px 6px;
+  border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); }
+.abyss-card .ab-cls.played { color: var(--orange); border-color: var(--orange); }
+.abyss-card .ab-cls.cur { box-shadow: 0 0 0 1px var(--cyan) inset; }
 .mission-list { display: flex; flex-direction: column; gap: 8px; }
 .mcard { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
   border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg2);

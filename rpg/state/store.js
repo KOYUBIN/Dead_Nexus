@@ -56,7 +56,8 @@
       //   [v6.44] capstone(격파 횟수)·capstoneByClass 는 ending.migrateEndings 가 백필(별도 기록).
       endings: { seen: {}, byClass: {}, runs: 0, capstone: 0, capstoneByClass: {} },
       // [v6.44 · 과제 A1] 심연 프로토콜 로컬 최고 웨이브 기록. 캡스톤 클리어 후 해금(패배 페널티 0).
-      abyss: { best: 0 },
+      //   [72차 · d45 #4] 스키마 확장 — best(전체 최고) + byClass(클래스별 최고) + lastRun(직전 런).
+      abyss: { best: 0, byClass: {}, lastRun: null },
       karma: ch.karma, nuyen: ch.nuyen, // §5.3 명시 필드 미러(캐릭터가 정본)
     };
   }
@@ -522,8 +523,25 @@
     var ctx = dialogueCtx(s);
     var applied = D.DLG.applyChoice(choice, ctx);
     if (applied.blocked) { s.banner = { kind: 'blocked', text: '요구 조건 미충족 ' + (applied.reason || '') }; return s; }
-    if (applied.setFlags) for (var k in applied.setFlags) s.save.flags[k] = applied.setFlags[k];
     var eff = applied.effect || {};
+    // [72차 · d45 #14] 대화 선택지 karma 비용(effect.spendKarma) 실차감.
+    //   applyChoice(evalCost)가 부족분을 이미 blocked 로 반려하므로 여기 도달 = 충족. 아래는 이중
+    //   안전판이며, 실패 시 flag·effect 를 하나도 적용하지 않고 반려한다 — 그래서 setFlags 보다 먼저
+    //   실행한다(조용한 차감 실패로 효과만 공짜로 통과하는 경로 원천 차단).
+    //   재클리어 farming: karma 보상은 campaign.applyRewards 가 재클리어 시 0 지급(firstClear 가드) →
+    //   지출만 누적되는 단방향이므로 같은 선택지를 반복해도 karma 순환 이득이 생기지 않는다.
+    if (applied.cost && applied.cost.karma > 0) {
+      var paid = D.CH.payKarma(s.save.character, applied.cost.karma);
+      if (!paid.ok) {
+        s.banner = { kind: 'blocked', text: 'karma 부족 — 이 선택지는 karma ' + applied.cost.karma
+          + ' 지출이 필요합니다 (보유 ' + (paid.have || 0) + ')' };
+        return s;
+      }
+      s.save.character = paid.character;
+      s.save.karma = paid.character.karma;   // §5.3 미러
+      s.banner = { kind: 'growth', text: 'karma −' + paid.spent + ' 지출 (잔여 ' + paid.character.karma + ')' };
+    }
+    if (applied.setFlags) for (var k in applied.setFlags) s.save.flags[k] = applied.setFlags[k];
     // 서사 선택의 1회성 렙 보너스(예: 영웅 정체 공개 +5)는 최초 완주에만 적용 —
     //   재클리어 시 farming 방지 (missionsDone 은 settle applyRewards 에서 기록됨).
     if (typeof eff.rep === 'number') {
@@ -585,6 +603,9 @@
       tags: s.save.character.tags || [],
       flags: s.save.flags,
       classKey: s.save.character.classKey,
+      // [72차 · d45 #14] 대화 선택지 자원 비용(effect.spendKarma) 판정용 karma 잔량.
+      //   캐릭터가 정본(save.karma 는 §5.3 미러). 게이트 판정은 dialogue.evalCost 가 소비.
+      karma: (s.save.character && typeof s.save.character.karma === 'number') ? s.save.character.karma : 0,
     };
   }
 
@@ -613,17 +634,20 @@
     if (!(e.capstone > 0)) { s.banner = { kind: 'blocked', text: '심연 프로토콜 — 캡스톤(MERIDIAN FLAGSHIP) 클리어 후 개방' }; return s; }
     var combat = buildAbyssCombat(D, s.save.character, 1);
     if (!combat) { s.banner = { kind: 'blocked', text: '심연 데이터 미해석' }; return s; }
-    if (!s.save.abyss) s.save.abyss = { best: 0 };
+    // [72차 · d45 #4] 기록 스키마 백필(멱등) — 구세이브 { best:N } / abyss 부재 모두 여기서 정규화.
+    s.save.abyss = D.ABX.migrateAbyss(s.save.abyss);
     s.scene = 'combat'; s.combat = combat; s.dialogue = null; s.banner = null;
     return s;
   }
   // 심연 전투 종료 처리 — 승리 시 다음 웨이브(씬 유지), 패배 시 허브 귀환(페널티 0).
   //   최고 웨이브(save.abyss.best)는 '완주한 최고 웨이브' = 승리 시 max 갱신.
+  //   [72차 · d45 #4] 기록은 ABX.recordAbyss 가 담당 — 전체 최고(best) · 클래스별 최고(byClass)
+  //   · 직전 런(lastRun) 3종을 한 번에 갱신한다. 승리 시에만 최고 기록 갱신, lastRun 은 승패 무관.
   function resolveAbyss(D, s) {
     var wave = (s.combat.abyss && s.combat.abyss.wave) || 1;
-    if (!s.save.abyss) s.save.abyss = { best: 0 };
+    var cls = (s.save.character && s.save.character.classKey) || null;
     if (s.combat.outcome === 'win') {
-      if (wave > (s.save.abyss.best || 0)) s.save.abyss.best = wave;
+      s.save.abyss = D.ABX.recordAbyss(s.save.abyss, cls, wave, true);
       var next = buildAbyssCombat(D, s.save.character, wave + 1);
       if (next) {
         s.scene = 'combat'; s.combat = next;
@@ -636,8 +660,11 @@
       return s;
     }
     // 패배 — 페널티 없음. 최고 웨이브는 직전 승리들에서 이미 기록됨(웨이브-1까지).
+    //   패배 웨이브는 '완주'가 아니므로 best/byClass 를 갱신하지 않고 lastRun 에만 남는다.
+    s.save.abyss = D.ABX.recordAbyss(s.save.abyss, cls, wave, false);
     s.scene = 'hub'; s.combat = null; s.hub = { node: 'root' };
-    s.banner = { kind: 'fail', text: '심연 프로토콜 — 웨이브 ' + wave + ' 에서 종료 · 최고 웨이브 ' + (s.save.abyss.best || 0) + ' (페널티 없음)' };
+    s.banner = { kind: 'fail', text: '심연 프로토콜 — 웨이브 ' + wave + ' 에서 종료 · 최고 웨이브 ' + (s.save.abyss.best || 0)
+      + ' · ' + (cls || '—') + ' 클래스 최고 ' + ((s.save.abyss.byClass && s.save.abyss.byClass[cls]) || 0) + ' (페널티 없음)' };
     return s;
   }
 
@@ -688,9 +715,10 @@
   //   신규 진행(newSave)에 이전 세이브의 endings 만 이월 → "어느 엔딩 봤는지"는 회차를 넘어 남는다.
   function newGamePlus(state) {
     var D = deps(); var s = clone(state);
-    var prevBest = (s.save.abyss && s.save.abyss.best) || 0;   // [v6.44] 최고 웨이브 기록은 회차를 넘어 영속.
+    // [v6.44] 최고 웨이브 기록은 회차를 넘어 영속. [72차 · d45 #4] byClass·lastRun 까지 통째로 이월.
+    var prevAbyss = D.ABX.migrateAbyss(s.save.abyss);
     s.save = D.END.newGamePlus(s.save, newSave());
-    s.save.abyss = { best: prevBest };
+    s.save.abyss = prevAbyss;
     s.scene = 'hub'; s.epilogue = null; s.dialogue = null; s.combat = null;
     s.hub = { node: 'root' };
     s.banner = { kind: 'growth', text: '새 회차 시작 — 캠페인 진행 리셋 (엔딩 기록 ' + s.save.endings.runs + '회 보존)' };

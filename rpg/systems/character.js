@@ -7,6 +7,7 @@
   //   makeCharacter : 클래스 기본 스탯 → 캐릭터(성장 0). 유효HP=기본×2 [계승 docs/07 §10]
   //   effectiveStats: 기본 + karma 성장. MOV=SPD 파생 [신규 docs/25 §3.1]
   //   spendKarma    : karma 1점을 스탯에 직접 지출 [각색 docs/25 §5.2, 레벨 없음]
+  //   payKarma      : karma N점을 '비용'으로만 소모(성장 없음) [72차 · d45 #14 대화 비용 게이트]
   // ==========================================================================
 
   function getClasses() {
@@ -74,12 +75,26 @@
 
   function clamp(v, cap) { return Math.min(v, cap); }
 
-  // karma 1점 → 스탯 +1 (hp 는 +1 기본HP = +2 유효HP). 실패 시 { ok:false }.
-  function spendKarma(ch, stat) {
-    if (ch.karma < 1) return { ok: false, reason: 'karma 부족' };
-    if (!(stat in ch.growth)) return { ok: false, reason: '알 수 없는 스탯' };
+  // [72차 · d45 #14] karma N점 '비용' 소모 원시연산 — 성장(growth) 없음. 대화 선택지 비용 게이트용.
+  //   spendKarma(성장 지출)와 karma 잔량 판정을 단일 출처로 공유한다(아래 spendKarma 가 이 함수를 경유).
+  //   실패 시 { ok:false, reason, need, have } — 호출측이 사유를 표시할 수 있어야 한다(조용한 차감 실패 금지).
+  function payKarma(ch, n) {
+    var have = (ch && typeof ch.karma === 'number') ? ch.karma : 0;
+    var cost = (n == null) ? 1 : Math.floor(n);
+    if (!(cost > 0)) return { ok: false, reason: 'karma 비용 오류', need: 0, have: have };
+    if (have < cost) return { ok: false, reason: 'karma 부족', need: cost, have: have };
     var next = JSON.parse(JSON.stringify(ch));
-    next.karma -= 1;
+    next.karma = have - cost;
+    return { ok: true, character: next, spent: cost, need: cost, have: have };
+  }
+
+  // karma 1점 → 스탯 +1 (hp 는 +1 기본HP = +2 유효HP). 실패 시 { ok:false }.
+  //   [72차] 잔량 판정·차감은 payKarma 재사용(반환 reason 문자열은 기존과 byte 동일 — 39번 핀 유지).
+  function spendKarma(ch, stat) {
+    var paid = payKarma(ch, 1);
+    if (!paid.ok) return { ok: false, reason: paid.reason };
+    if (!(stat in ch.growth)) return { ok: false, reason: '알 수 없는 스탯' };
+    var next = paid.character;
     next.growth[stat] += 1;
     return { ok: true, character: next };
   }
@@ -93,7 +108,7 @@
 
   var API = {
     makeCharacter: makeCharacter, effectiveStats: effectiveStats,
-    spendKarma: spendKarma, unlockAbility: unlockAbility, STAT_CAP: STAT_CAP,
+    spendKarma: spendKarma, payKarma: payKarma, unlockAbility: unlockAbility, STAT_CAP: STAT_CAP,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_CHARACTER = API;
