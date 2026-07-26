@@ -877,10 +877,11 @@
       case 'START_MISSION': return startMission(state, action.missionId);
       case 'DIALOGUE_CHOOSE': return dialogueChoose(state, action.index);
       case 'COMBAT_SELECT': { var s2 = clone(state); if (s2.combat) s2.combat.selectedAbility = action.ability; return s2; }
-      case 'COMBAT_MOVE': { var s3 = clone(state); s3.combat = applyMove(state.combat, action.tile); return s3; }
-      case 'COMBAT_ATTACK': { var s4 = clone(state); s4.combat = applyAttack(state.combat, action.targetId, action.ability); return s4; }
-      case 'COMBAT_HACK': { var s5 = clone(state); s5.combat = applyHackObjective(state.combat); return s5; }
-      case 'COMBAT_END_TURN': { var s6 = clone(state); s6.combat = runEnemyTurn(state.combat); return s6; }
+      // v6.53: combat null 가드 — 비전투 씬에서 디스패치돼도 TypeError 대신 identity (COMBAT_SELECT/CLEAR_FLOATERS와 대칭)
+      case 'COMBAT_MOVE': { if (!state.combat) return state; var s3 = clone(state); s3.combat = applyMove(state.combat, action.tile); return s3; }
+      case 'COMBAT_ATTACK': { if (!state.combat) return state; var s4 = clone(state); s4.combat = applyAttack(state.combat, action.targetId, action.ability); return s4; }
+      case 'COMBAT_HACK': { if (!state.combat) return state; var s5 = clone(state); s5.combat = applyHackObjective(state.combat); return s5; }
+      case 'COMBAT_END_TURN': { if (!state.combat) return state; var s6 = clone(state); s6.combat = runEnemyTurn(state.combat); return s6; }
       case 'COMBAT_CLEAR_FLOATERS': { if (!state.combat || !state.combat.floaters || !state.combat.floaters.length) return state; var s6b = clone(state); s6b.combat.floaters = []; return s6b; }
       case 'COMBAT_RESOLVE': return resolveCombat(state);
       case 'ABYSS_START': return startAbyss(state);

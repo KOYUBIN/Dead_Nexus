@@ -45,7 +45,7 @@
   //   ③ 클리어한 미션의 오프닝은 이미 열람한 것으로 간주(openingsSeen 병합).
   //   ④ [B1] 장비 경제 필드 보장 — character.equipment/gearOwned · save.intel (구세이브 하위 호환).
   function migrate(save) {
-    if (!save || typeof save !== 'object') throw new Error('세이브 형식 오류');
+    if (!save || typeof save !== 'object' || Array.isArray(save)) throw new Error('세이브 형식 오류'); // v6.53: 배열 거부 (abyss.js Array.isArray 방어 선례 — 배열이면 백필 속성이 재직렬화에서 전부 소실)
     if (save.version == null) save.version = CURRENT_VERSION;
     if (!save.flags || typeof save.flags !== 'object') save.flags = {};
     if (!Array.isArray(save.missionsDone)) save.missionsDone = [];
