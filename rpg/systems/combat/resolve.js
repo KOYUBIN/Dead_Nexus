@@ -74,8 +74,9 @@
     return { hp: unit.hp, bleeding: false };
   }
 
-  // 사거리 내인가 (원거리 무기/능력). chebyshev 는 grid 에서 계산해 넘김.
-  function inRange(distance, range) { return distance <= range; }
+  // [M7 v6.46] inRange(distance, range) 제거 — 소비처 0(리포 전역 grep). 사거리 판정은
+  //   호출부가 grid.chebyshev(...) <= range 로 직접 수행한다. 죽은 export 를 남겨두면
+  //   "여기가 사거리 정본" 이라는 잘못된 신호를 준다.
 
   var API = {
     computeDamage: computeDamage,
@@ -83,7 +84,6 @@
     objectiveDamage: objectiveDamage,
     surviveReached: surviveReached,
     bleedingTick: bleedingTick,
-    inRange: inRange,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_RESOLVE = API;

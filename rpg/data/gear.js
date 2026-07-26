@@ -117,14 +117,15 @@
     return m;
   }
 
-  function priceOf(key) { var it = ITEMS[key]; return it ? it.cost : 0; }
+  // [M7 v6.46] priceOf(key) 제거 — 소비처 0(리포 전역 grep). 상점 UI 는 ITEMS[key].cost 를
+  //   직접 읽는다. 가격 정본은 ITEMS 이며, 얇은 래퍼가 두 번째 정본처럼 보이는 것을 막는다.
 
   // 미션 인텔 정찰 가격 (정보상). 전투 수치 무변경 — 사전 브리핑 공개만. 재구매 없음(1회 영구).
   var INTEL_PRICE = 6;
 
   var API = {
     SLOTS: SLOTS, ITEMS: ITEMS, BY_SLOT: BY_SLOT, INTEL_PRICE: INTEL_PRICE,
-    canEquip: canEquip, aggregateMods: aggregateMods, priceOf: priceOf,
+    canEquip: canEquip, aggregateMods: aggregateMods,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   if (typeof window !== 'undefined') window.RPG_GEAR = API;

@@ -224,7 +224,7 @@
       <div class="label">ASHGRID 2091 · NEXUS PORTAL</div>
       <h1 data-text="DEAD_NEXUS">DEAD<span class="accent">_</span>NEXUS</h1>
       <p class="tagline">사이버펑크 <span class="hl">비대칭 시장 전쟁</span> — 레이드가 곧 주가 포지션이 된다</p>
-      <span class="stamp">SIMULATOR <b>v6.44</b> · 3-TRACK BUILD</span>
+      <span class="stamp">SIMULATOR <b>v6.46</b> · 3-TRACK BUILD</span>
     </section>
 
     <nav class="tracks" aria-label="트랙 선택">
@@ -247,9 +247,11 @@
       <a class="card rpg" href="rpg/index.html">
         <div class="icon">⚔</div>
         <div class="ttl">RPG — ASH &amp; SIGNAL<span class="sub">GHOSTGRID</span></div>
-        <div class="desc">챕터 1: First Blood · 턴제 전술 + 내러티브. CIPHER STATIC으로 서버 랙을 뚫는 수직 슬라이스.</div>
+        <div class="desc">턴제 전술 + 내러티브. 미션 32종 · 6클래스 · 4엔딩+New Game+ · Act 2 &amp; 캡스톤.</div>
         <div class="badges">
           <span class="badge new">NEW</span>
+          <span class="badge">미션 32종</span>
+          <span class="badge">6클래스</span>
           <span class="badge">모바일</span>
         </div>
         <div class="progress" id="prog-rpg" hidden aria-label="RPG 진행 상태">
@@ -294,7 +296,9 @@
     //   RPG 스키마: rpg/state/save.js 의 localStorage 'dead_nexus_rpg_save_v1'
     //     { missionsDone: string[], endings: { seen: {key:count}, capstone: number } }.
     //   미션/엔딩 ID 목록은 rpg/systems/campaign.js MISSIONS·rpg/systems/ending.js ORDER 와
-    //   동기(캡스톤 a2-99-flagship 은 31종에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
+    //   동기(캡스톤 a2-99-flagship 은 목록에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
+    //   표시 분모는 리터럴 금지 — RPG_MISSION_IDS.length / RPG_ENDING_KEYS.length 파생만
+    //   사용한다(_home_check.js 항목 9 가 하드코딩 잔존을 검출).
     // ==========================================================================
     (function () {
       try {
@@ -330,7 +334,7 @@
           }
         } catch (eSim) { /* 시뮬 배지만 숨김 유지, RPG 배지는 계속 시도 */ }
 
-        // ── RPG 카드: 미션 n/31 · 엔딩 n/4 · 캡스톤 여부 ──
+        // ── RPG 카드: 미션 n/총계 · 엔딩 n/총계 · 캡스톤 여부 (분모는 배열 길이 파생) ──
         try {
           var RPG_MISSION_IDS = [
             'ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
@@ -365,9 +369,12 @@
               var rpgText = document.getElementById('prog-rpg-text');
               var rpgBar = document.getElementById('prog-rpg-bar');
               if (rpgBox && rpgText && rpgBar) {
-                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/31 · 엔딩 ' + eCount + '/4' +
+                // [H1 v6.46] 텍스트 분모·바 분모는 단일 소스(RPG_MISSION_IDS.length) 파생.
+                //   과거: 텍스트 '/31' ↔ 바 '/29' 리터럴 불일치로 100% 도달 전 바가 포화.
+                var mTotal = RPG_MISSION_IDS.length || 1;
+                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/' + mTotal + ' · 엔딩 ' + eCount + '/' + RPG_ENDING_KEYS.length +
                   (capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
-                var rpgPct = Math.round(Math.min(100, (mCount / 29) * 100));
+                var rpgPct = Math.round(Math.min(100, (mCount / mTotal) * 100));
                 rpgBar.style.width = rpgPct + '%';
                 rpgBar.setAttribute('aria-valuenow', String(rpgPct)); // [a11y] progressbar 값 동기
                 rpgBox.hidden = false;

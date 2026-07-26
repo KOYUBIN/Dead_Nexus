@@ -2,8 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<!-- [d45 #21 · WCAG 1.4.4] maximum-scale=1 제거 — 확대 차단은 저시력 사용자 배제. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#06060e" />
+<!-- [d45 #28] 홈 포털(index.html)과 동일한 메타 패턴 — 공유 카드/검색 스니펫 정합. -->
+<meta name="description" content="DEAD NEXUS — ASH &amp; SIGNAL. 사이버펑크 턴제 전술 RPG: 미션 32종 · 6클래스 · 4엔딩+New Game+ · Act 2 &amp; 캡스톤." />
+<meta property="og:title" content="DEAD NEXUS — ASH &amp; SIGNAL (RPG)" />
+<meta property="og:description" content="사이버펑크 턴제 전술 RPG — 미션 32종 · 6클래스 · 4엔딩+New Game+" />
+<meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%91%BB%3C/text%3E%3C/svg%3E" />
 <title>DEAD NEXUS — ASH &amp; SIGNAL (RPG)</title>
 <link rel="stylesheet" href="./styles/palette.css" />
@@ -58,7 +64,9 @@
 <script src="./data/enemies.js"></script>
 <script src="./data/weapons.js"></script>
 <script src="./data/gear.js"></script>
-<!-- 미션 데이터 (메인 8 + 사이드 8 = 16, campaign 레지스트리가 소비) -->
+<!-- 미션 데이터 32종 (Act 1: 메인 8 + 사이드 8 / Act 2: 프레이밍 1 + 메인 8 + 사이드 6 + 캡스톤 1)
+     campaign 레지스트리가 소비. 여기 목록 == core/loader.js heal == campaign.js MISSIONS —
+     rpg/_wiring_check.js 가 4집합 동치를 강제(누락 시 RED). -->
 <script src="./data/missions/ch01-first-blood.js"></script>
 <script src="./data/missions/ch02-insider-game.js"></script>
 <script src="./data/missions/ch03-martial-night.js"></script>
