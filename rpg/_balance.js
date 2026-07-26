@@ -417,11 +417,29 @@ function encountersOf(e) {
 // [68차] 인카운터가 소비할 정책 목록. survive:N 선언 인카운터만 'survive' 정책을 추가로
 //   측정한다 — 미선언 인카운터는 POLICIES 그대로(셀 byPol 형상 byte 불변 → --json 회귀 방어).
 function policiesFor(missionId, encKey) {
-  var m = CAMP.missionData(missionId);
-  var cfg = encKey ? (m && m.encounters && m.encounters[encKey]) : (m && m.combat);
+  var cfg = encConfig(missionId, encKey);
   return (cfg && cfg.survive) ? POLICIES.concat([SURVIVE_POLICY]) : POLICIES;
 }
 
+// 인카운터 config 조회 — enc②(encounters[key]) 우선, 미지정 시 enc①(mission.combat).
+function encConfig(missionId, encKey) {
+  var m = CAMP.missionData(missionId);
+  return encKey ? (m && m.encounters && m.encounters[encKey]) : (m && m.combat);
+}
+
+// [71차 M6+M8] 하드모드 배율의 per-encounter 조회 — store.js dialogueChoose 와 동일 규칙
+//   ((encCfg || mission.combat).hardScale || 1.25). 하네스가 하드 축을 실측할 때 이 값을
+//   enemyScale 로 주입하므로, 미션 데이터의 hardScale 선언이 곧 실측 대상이 된다(표시=판정).
+var HARD_SCALE_DEFAULT = 1.25;
+function hardScaleFor(missionId, encKey) {
+  var cfg = encConfig(missionId, encKey);
+  return (cfg && cfg.hardScale) || HARD_SCALE_DEFAULT;
+}
+
+// enemyScale 인자는 3형태를 받는다:
+//   미지정/1  → scale 1 (노멀 매트릭스 · byte 불변)
+//   숫자      → 전 인카운터 동일 배율 (구 하드 축 호출 형태 — 하위호환)
+//   'hard'    → [71차] 인카운터별 hardScale 조회(hardScaleFor) = 런타임 store.js 와 동일 규칙
 function runMatrix(scenario, enemyScale) {
   var ms = orderedMissions();
   var rows = [];
@@ -432,11 +450,12 @@ function runMatrix(scenario, enemyScale) {
       var enc = encs[ei];
       var cells = {};
       var pols = policiesFor(e.id, enc.encKey);   // [68차] 생존형만 3정책, 그 외 2정책(형상 불변).
+      var es = (enemyScale === 'hard') ? hardScaleFor(e.id, enc.encKey) : enemyScale;
       for (var ci = 0; ci < CLASSES.length; ci++) {
         var cls = CLASSES[ci];
         var byPol = {};
         // [65차] enemyScale 미지정 → runEncounter es=1 → byte 불변(runMatrix() 무인자 회귀 방어).
-        for (var pi = 0; pi < pols.length; pi++) byPol[pols[pi]] = runEncounter(cls, e.id, pols[pi], scenario, enc.encKey, enemyScale);
+        for (var pi = 0; pi < pols.length; pi++) byPol[pols[pi]] = runEncounter(cls, e.id, pols[pi], scenario, enc.encKey, es);
         cells[cls] = byPol;
       }
       // 시나리오는 행에 부착하지 않는다 — base(runMatrix()) 의 JSON 형상 byte 불변 유지(--json 회귀 방어).
@@ -477,6 +496,44 @@ function verdict(byPol) {
 function pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
 function padL(s, n) { s = String(s); while (s.length < n) s = ' ' + s; return s; }
 
+// [71차 H4] 계기판 열 폭 — 라벨 32 는 최장 행(a2-side-drifter-lastroad#stage2 = 30자)을 자르지 않는 폭.
+var LABEL_W = 32, CELL_W = 14, FLAG_W = 12;
+
+// [71차 H4] 표 제목의 수치는 전부 매트릭스에서 파생한다 — 클래스/미션/인카운터 수 하드코딩 0.
+//   (구 제목은 '4클래스 × 30미션 … 40 인카운터' 로 고정돼 6클래스·32미션·42인카운터 확장 후 오표기였다.)
+function matrixShape(rows) {
+  var missions = {}, extra = 0;
+  for (var i = 0; i < rows.length; i++) { missions[rows[i].baseId] = true; if (rows[i].encKey) extra++; }
+  var nm = Object.keys(missions).length;
+  return { classes: CLASSES.length, missions: nm, encounters: rows.length, extra: extra,
+           cells: rows.length * CLASSES.length };
+}
+function shapeCaption(rows) {
+  var s = matrixShape(rows);
+  return s.classes + '클래스 × ' + s.encounters + ' 인카운터(' + s.missions + '미션 enc① + 추가 enc '
+    + s.extra + ') = ' + s.cells + '셀';
+}
+
+// [71차 L1+L3] 행 종류 라벨 — 구 로직은 kind!=='main' 을 전부 'side' 로 찍어 Act 2 16미션이
+//   사이드로 오표기됐다. act2 는 act2, 그중 branch 'capstone' 은 cap 으로 분리 표기한다.
+//   행 객체에 branch 를 부착하지 않고 campaign 에서 조회 — runMatrix 반환 형상 byte 불변 유지.
+// branch 는 미션 모듈이 아니라 **레지스트리 엔트리**(CAMP.MISSIONS)에 붙어 있다 — missionData()
+//   로는 조회되지 않으므로 id 색인을 따로 만든다(이 오조회가 전 Act 2 행을 '?' 로 만들었다).
+var REG_BY_ID = null;
+function regOf(id) {
+  if (!REG_BY_ID) {
+    REG_BY_ID = {};
+    for (var i = 0; i < CAMP.MISSIONS.length; i++) REG_BY_ID[CAMP.MISSIONS[i].id] = CAMP.MISSIONS[i];
+  }
+  return REG_BY_ID[String(id).split('#')[0]] || null;
+}
+function branchOf(id) { var r = regOf(id); return (r && r.branch) || null; }
+function rowTag(kind, chapter, id) {
+  if (kind === 'main') return 'ch' + (chapter < 10 ? '0' + chapter : chapter);
+  if (kind !== 'act2') return kind;
+  return branchOf(id) === 'capstone' ? 'cap' : 'act2';
+}
+
 function cellStr(v) {
   // W=승 L=패 T=timeout. 예: "W5·88%" (승리·5R·HP88%) / "L3" (패·3R)
   if (v.win) return 'W' + v.rounds + '·' + v.hpPct + '%';
@@ -486,22 +543,23 @@ function cellStr(v) {
 
 function printMatrix(rows) {
   var line = '';
-  console.log('\n================ 전투 밸런스 매트릭스 (4클래스 × 30미션 · 2연전 enc①+enc② + 캡스톤 3연전 = 40 인카운터) ================');
+  console.log('\n================ 전투 밸런스 매트릭스 (' + shapeCaption(rows) + ') ================');
   console.log('셀 = 종합판정(승리 정책 대표). W=승 L=패 T=timeout · R수 · 종료HP%. ⚑=이상치. #stage2=2연전 enc②.');
+  console.log('행 접두 chNN=메인 · side=사이드 · act2=Act 2 · cap=캡스톤.');
   console.log('C=combat정책 승 / O=objective정책 승 / S=survive정책 승(생존형 인카운터 전용, 68차).\n');
-  console.log(pad('MISSION', 26) + CLASSES.map(function (c) { return pad(c, 14); }).join('') + '  FLAGS');
-  console.log('-'.repeat(26 + 14 * 4 + 12));
+  console.log(pad('MISSION', LABEL_W) + CLASSES.map(function (c) { return pad(c, CELL_W); }).join('') + '  FLAGS');
+  console.log('-'.repeat(LABEL_W + CELL_W * CLASSES.length + FLAG_W));
   var outliers = [];
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
-    var tag = r.kind === 'main' ? ('ch' + (r.chapter < 10 ? '0' + r.chapter : r.chapter)) : 'side';
-    var label = pad(tag + ' ' + r.id.replace(/^(ch\d\d|side)-/, ''), 26);
+    var tag = rowTag(r.kind, r.chapter, r.baseId);
+    var label = pad(tag + ' ' + r.id.replace(/^(ch\d\d|side|a2)-/, ''), LABEL_W);
     var cols = '', rowFlags = {};
     for (var ci = 0; ci < CLASSES.length; ci++) {
       var vd = verdict(r.cells[CLASSES[ci]]);
       var path = (vd.combat.win ? 'C' : '') + (vd.obj.win ? 'O' : '') + (vd.surv && vd.surv.win ? 'S' : '');
       var mark = vd.flags.length ? '⚑' : ' ';
-      cols += pad(cellStr(vd.rep) + ' ' + pad(path, 2) + mark, 14);
+      cols += pad(cellStr(vd.rep) + ' ' + pad(path, 3) + mark, CELL_W);
       for (var f = 0; f < vd.flags.length; f++) rowFlags[vd.flags[f]] = true;
       if (vd.flags.length) outliers.push({ mission: r.id, cls: CLASSES[ci], flags: vd.flags.slice(), rep: vd.rep, combat: vd.combat, obj: vd.obj });
     }
@@ -526,23 +584,52 @@ function printOutliers(outliers) {
 //   fightR= 전투 정책(전멸)이 승리한 클래스의 라운드 평균 — 적 강도에 따른 '실전투' 난이도.
 // 러시는 오브젝티브 임계에 캡되고(저HP 생존창), 전투는 적 HP/구성에 비례해 상승 — 후자가
 // 챕터 순 난이도 상승을 더 직접 반영한다(NEXUS ch08 이 최장 전투).
+// [71차 H4] 한 행(인카운터)의 rush/fight 집계 — 메인 챕터 행과 Act 2 램프 행이 공유한다.
+function trendAgg(rowsIn) {
+  var a = { rSum: 0, rN: 0, worst: 0, fSum: 0, fN: 0, fWorst: 0, cells: 0 };
+  for (var i = 0; i < rowsIn.length; i++) {
+    for (var ci = 0; ci < CLASSES.length; ci++) {
+      var byPol = rowsIn[i].cells[CLASSES[ci]];
+      var vd = verdict(byPol);
+      a.cells++;
+      if (vd.clearable) { a.rSum += vd.rep.rounds; a.rN++; if (vd.rep.rounds > a.worst) a.worst = vd.rep.rounds; }
+      if (byPol.combat.win) { a.fSum += byPol.combat.rounds; a.fN++; if (byPol.combat.rounds > a.fWorst) a.fWorst = byPol.combat.rounds; }
+    }
+  }
+  return a;
+}
+function trendLine(label, a) {
+  var rAvg = a.rN ? (a.rSum / a.rN).toFixed(1) : 'NA';
+  var fAvg = a.fN ? (a.fSum / a.fN).toFixed(1) : 'NA';
+  // [71차 L1] 분모는 '/4' 하드코딩이 아니라 실제 집계 셀 수(클래스 수 × 행 수) 파생.
+  return '  ' + pad(label, 10)
+    + '  rushR=' + pad(rAvg, 5) + '(worst' + pad(a.worst, 2) + ')  fightR=' + pad(fAvg, 5)
+    + '(worst' + pad(a.fWorst, 2) + ',win' + frac(a.fN, a.cells) + ')'
+    + '  clear=' + frac(a.rN, a.cells);
+}
+function frac(n, d) { return n + '/' + d; }
+
 function printTrend(rows) {
   console.log('\n================ 메인 챕터 난이도 경향 (rush=최속승리 · fight=전멸승리 라운드) ================');
+  console.log('  분모 = 해당 구간의 집계 셀 수(클래스 ' + CLASSES.length + ' × 인카운터 행 수).');
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     if (r.kind !== 'main') continue;
-    var rSum = 0, rN = 0, worst = 0, fSum = 0, fN = 0, fWorst = 0;
-    for (var ci = 0; ci < CLASSES.length; ci++) {
-      var byPol = r.cells[CLASSES[ci]];
-      var vd = verdict(byPol);
-      if (vd.clearable) { rSum += vd.rep.rounds; rN++; if (vd.rep.rounds > worst) worst = vd.rep.rounds; }
-      if (byPol.combat.win) { fSum += byPol.combat.rounds; fN++; if (byPol.combat.rounds > fWorst) fWorst = byPol.combat.rounds; }
-    }
-    var rAvg = rN ? (rSum / rN).toFixed(1) : 'NA';
-    var fAvg = fN ? (fSum / fN).toFixed(1) : 'NA';
-    console.log('  ch' + (r.chapter < 10 ? '0' + r.chapter : r.chapter)
-      + '  rushR=' + pad(rAvg, 5) + '(worst' + pad(worst, 2) + ')  fightR=' + pad(fAvg, 5) + '(worst' + pad(fWorst, 2) + ',win' + fN + '/4)'
-      + '  clear=' + rN + '/4');
+    console.log(trendLine('ch' + (r.chapter < 10 ? '0' + r.chapter : r.chapter), trendAgg([r])));
+  }
+  // [71차 H4] Act 2 램프 — Act 2 16미션(42 인카운터 중 act2 행)이 계기판에서 완전히 누락돼
+  //   있었다(메인 8챕터만 출력). 분기(framing/A~D/class/capstone) 단위로 램프를 노출한다.
+  var branches = [], byBr = {};
+  for (var j = 0; j < rows.length; j++) {
+    if (rows[j].kind !== 'act2') continue;
+    var br = branchOf(rows[j].baseId) || '?';
+    if (!byBr[br]) { byBr[br] = []; branches.push(br); }
+    byBr[br].push(rows[j]);
+  }
+  if (!branches.length) return;
+  console.log('\n---- Act 2 분기 램프 (kind=act2 · 챕터 없음 → branch 단위 집계) ----');
+  for (var k = 0; k < branches.length; k++) {
+    console.log(trendLine(branches[k], trendAgg(byBr[branches[k]])) + '  (' + byBr[branches[k]].length + ' 인카운터)');
   }
 }
 
@@ -609,17 +696,25 @@ function lateChapterGuard(rows) {
   return { perCh: perCh, chs: chs, trivLate: trivLate, pass: pass };
 }
 
-// ---- [67차] 하드모드 실패 분류표 (정직 계기판) -------------------------------
-// 하드(scale 1.25)는 spawnEnemy 의 hp/maxHp/atk 만 ceil(×1.25) 하고 def·좌표·오브젝티브
-// 임계·threatCap 은 base 와 100% 공유한다 → **하드 전용 보정 레버가 존재하지 않는다.**
+// ---- [67차 → 71차 개정] 하드모드 실패 분류표 (정직 계기판) --------------------
+// [67차 진단] 하드는 spawnEnemy 의 hp/maxHp/atk 만 ceil(×scale) 하고 def·좌표·오브젝티브
+//   임계·threatCap 은 base 와 100% 공유하므로, 당시엔 '하드 전용 보정 레버가 없다' 고 기록했다.
 //   · 오브젝티브 러시 비용(= ceil(threshold / max(HACK,ATK)))은 scale 무관 → 임계를 건드리면
 //     base 도 반드시 같은 비율로 변한다(base 불변 제약과 양립 불가).
 //   · 좌표/배치/엄폐/threatCap 변경은 base 의 combat 정책 궤적을 즉시 바꾼다(실측: freeport 에
 //     엄폐 1칸 추가 → base BLADE 9R→12R · RIGGER reinforced 반전 · MOLE 86%→100%, 그럼에도
 //     hard RIGGER 는 여전히 패). 증원 축도 무력 — hard 에서 발동하는 미션은 base 에서도 전부 발동.
-// 따라서 잔존 실패는 '하드모드 한계'로 정직 표기하고, 원인만 분류해 계기판으로 남긴다.
+// [71차 M6+M8 개정] 그 레버를 신설했다 — 인카운터별 옵셔널 `hardScale`(store.js dialogueChoose
+//   가 조회, 이 하네스가 'hard' 센티널로 동일 조회). hardMode off 면 scale 1 이므로 base/mid/full
+//   매트릭스는 구조적으로 불변이고, 하드 축만 인카운터 단위로 낮출 수 있다.
+//   그러나 레버의 **유효 해상도가 낮다**: spawnEnemy 가 Math.ceil 을 쓰고 적 atk 가 3~7 의
+//   작은 정수라서, (1.0, 1.25] 구간의 어떤 배율도 atk 를 최소 +1 올린다(3→4·4→5 는 1.05 든
+//   1.25 든 동일). 실패 원인 1위인 '러시생존창붕괴' 는 바로 그 +1 ATK 가 만드는 것이므로,
+//   배율을 낮춰도 scale 을 1(=하드모드 무효화)로 만들지 않는 한 해소되지 않는다.
+//   → hardScale 로 실제 해소되는 건은 상단 양자화 스텝(atk 5→7·6→8 이나 hp 큰 값)이 원인인
+//     소수 셀뿐이다. 해소분은 미션 데이터에 반영했고, 잔존분은 아래 표에 정직 고정한다.
 // 분류 기준(base 대응 셀과 대조):
-//   러시생존창붕괴 : base 승리가 오브젝티브 러시 + 잔여HP ≤ 40% → +25% ATK 가 생존창을 잠식.
+//   러시생존창붕괴 : base 승리가 오브젝티브 러시 + 잔여HP ≤ 40% → 하드 ATK 가 생존창을 잠식.
 //   DEF임계붕괴    : base 무피해(100%) → 하드 ATK 가 DEF+엄폐 문턱을 넘어 0 피해가 유피해로 전환.
 //   마진잠식       : base 잔여HP 41~99% → 중간 마진이 잠식된 경우.
 //   교착(관통실패) : 하드 combat 정책이 timeout — 피해 관통 불가 소모전.
@@ -642,26 +737,38 @@ function printHardFailures(scnRows, hardRows) {
         var vd = verdict(r.cells[cls]);
         if (vd.flags.indexOf('clearFail') < 0) continue;
         var bRep = verdict(baseIdx[r.id].cells[cls]).rep;
-        list.push({ id: r.id, cls: cls, kind: classifyHardFail(bRep, r.cells[cls]), bRep: bRep, h: r.cells[cls] });
+        list.push({ id: r.id, cls: cls, kind: classifyHardFail(bRep, r.cells[cls]), bRep: bRep, h: r.cells[cls],
+          scale: hardScaleFor(r.baseId, r.encKey) });
       }
     });
-    console.log('\n---- [67차] hard×' + key + ' clearFail ' + list.length + '건 분류표 (하드 전용 레버 부재 → 미보정 · 정직 고정) ----');
+    console.log('\n---- [71차] hard×' + key + ' clearFail ' + list.length + '건 분류표 (hardScale 적용 후 잔존 · 정직 고정) ----');
     if (!list.length) { console.log('  (없음)'); return; }
     var byKind = {}, byCls = {};
     list.forEach(function (x) { byKind[x.kind] = (byKind[x.kind] || 0) + 1; byCls[x.cls] = (byCls[x.cls] || 0) + 1; });
-    console.log('  ' + pad('미션', 26) + pad('클래스', 9) + pad('원인', 16) + pad('base 대응셀', 22) + 'hard(combat / objective)');
+    console.log('  ' + pad('미션', LABEL_W) + pad('클래스', 9) + pad('배율', 7) + pad('원인', 16) + pad('base 대응셀', 22) + 'hard(combat / objective)');
     list.forEach(function (x) {
-      console.log('  ' + pad(x.id, 26) + pad(x.cls, 9) + pad(x.kind, 16)
+      console.log('  ' + pad(x.id, LABEL_W) + pad(x.cls, 9) + pad(x.scale.toFixed(2), 7) + pad(x.kind, 16)
         + pad((x.bRep.win ? 'W' : 'L') + x.bRep.rounds + 'R·잔여' + x.bRep.hpPct + '%·' + (x.bRep.winBy || '-'), 22)
         + x.h.combat.outcome + x.h.combat.rounds + 'R / ' + x.h.objective.outcome + x.h.objective.rounds + 'R');
     });
     console.log('  원인 분포: ' + Object.keys(byKind).map(function (k) { return k + ' ' + byKind[k]; }).join(' · '));
     console.log('  클래스 분포: ' + CLASSES.map(function (c) { return c + ' ' + (byCls[c] || 0); }).join(' · '));
   });
-  console.log('\n  ★ 하드모드 한계(정직 표기): 하드는 base 와 모든 미션 수치를 공유하므로(적 hp/atk 배율만 상이)');
-  console.log('    base/mid/full 매트릭스 byte 불변 제약 하에서는 미션 데이터로 해소 가능한 실패가 0건이다.');
-  console.log('    해소 경로는 데이터 밖 — 하드 전용 필드(예: combat.hardOverride) 신설 또는 저HP 클래스의');
-  console.log('    생존 킷 보강이며, 둘 다 엔진/능력치 변경을 수반해 본 차수 범위(미션 데이터 한정) 밖이다.');
+  // [71차] hardScale 선언 현황 — 어떤 인카운터가 기본 1.25 를 벗어났는지 계기판에 노출.
+  var tuned = [];
+  hardRows.base.forEach(function (r) {
+    var s = hardScaleFor(r.baseId, r.encKey);
+    if (s !== HARD_SCALE_DEFAULT) tuned.push(r.id + ' ' + s.toFixed(2));
+  });
+  console.log('\n  ● hardScale 선언 인카운터 ' + tuned.length + '건 (미선언 = 기본 ' + HARD_SCALE_DEFAULT.toFixed(2) + '): '
+    + (tuned.length ? tuned.join(' · ') : '(없음)'));
+  console.log('\n  ★ 하드모드 한계(정직 표기 · 71차 개정): 하드 전용 레버 hardScale 은 신설됐고 노멀 축은');
+  console.log('    구조적으로 불변이다(hardMode off → scale 1). 다만 spawnEnemy 의 Math.ceil 양자화 때문에');
+  console.log('    적 atk(3~7 의 작은 정수)는 배율이 1 을 넘는 순간 최소 +1 이 되고, 이 +1 이 최다 실패 원인인');
+  console.log('    러시생존창붕괴를 그대로 만든다 — 즉 배율을 낮춰서 해소되는 셀은 상단 양자화 스텝이 원인인');
+  console.log('    소수뿐이며, 나머지는 scale 1(=하드모드 무효화) 외에 미션 데이터로 도달할 수 없다.');
+  console.log('    잔존분의 해소 경로는 여전히 데이터 밖 — 저HP 클래스 생존 킷 보강 또는 스케일 정수화 규칙');
+  console.log('    (ceil → round/floor) 변경이며, 둘 다 엔진/능력치 변경을 수반해 본 차수 범위 밖이다.');
   console.log('    현재 상태는 rpg/_unit.js 289~291 핀으로 집합째 고정(악화·개선 양방향 회귀 즉시 노출).');
 }
 
@@ -673,7 +780,7 @@ function printScenarios() {
   }
   var b = scn.base, m = scn.mid, f = scn.full;
 
-  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 4클래스×40 인카운터[30미션·2연전 enc①+enc②·캡스톤 3연전]) ================');
+  console.log('\n================ 장비 시나리오 매트릭스 [V1] (base · mid · full — 각 ' + shapeCaption(scnRows.base) + ') ================');
   console.log('base=무장비(불변 재확인) · mid=슬롯당 최저가(SMART_LINK+MOOD_CHIP) · full=슬롯당 최고가(HAIR_TRIGGER+NEURAL_JACK/BLADE는 IRON_SKIN).');
   console.log(pad('시나리오', 16) + pad('클리어', 9) + pad('밴드무플래그', 14) + pad('트리비얼', 10) + pad('소모전', 8) + pad('clearFail', 11) + pad('평균종료HP%', 13) + '평균최속R');
   console.log('-'.repeat(94));
@@ -685,12 +792,13 @@ function printScenarios() {
       + padL(s.avgHp.toFixed(1), 8) + pad('', 5) + padL(s.avgRepR.toFixed(2), 6));
   });
 
-  // [65차 하드모드 축] hard×base · hard×full (적 스탯 scale 1.25 = store.js save.flags.hardMode 실측).
-  //   측정 사각 제거 — runEncounter 가 enemyScale 미전달로 scale=1 만 측정하던 것을 1.25 로 실측.
+  // [65차 하드모드 축] hard×base · hard×full (적 스탯 배율 = store.js save.flags.hardMode 실측).
+  //   측정 사각 제거 — runEncounter 가 enemyScale 미전달로 scale=1 만 측정하던 것을 하드 배율로 실측.
+  //   [71차] 배율은 더 이상 상수 1.25 가 아니라 인카운터별 hardScale 조회('hard' 센티널) —
+  //   store.js dialogueChoose 와 동일 규칙이므로 하네스 수치 = 런타임 수치(표시=판정).
   //   오브젝티브 임계는 scale 무영향(spawnEnemy 는 hp/atk 만) → 오브젝티브 러시 경로 불변, 전멸·생존만 가중.
-  var HARD_SCALE = 1.25;
   // [67차] 행(rows)을 보존해 실패 셀을 base 대응 셀과 대조 분류한다(아래 하드 실패 분류표).
-  var hardRows = { base: runMatrix('base', HARD_SCALE), full: runMatrix('full', HARD_SCALE) };
+  var hardRows = { base: runMatrix('base', 'hard'), full: runMatrix('full', 'hard') };
   var hardScn = { base: aggregateScenario(hardRows.base), full: aggregateScenario(hardRows.full) };
   console.log('  ' + '-'.repeat(92));
   [['hard×base(무장비)', hardScn.base], ['hard×full(최고가)', hardScn.full]].forEach(function (pair) {
@@ -701,12 +809,14 @@ function printScenarios() {
   });
 
   var guard = lateChapterGuard(runMatrix('full'));
-  var hardGuardBase = lateChapterGuard(runMatrix('base', HARD_SCALE));
+  var hardGuardBase = lateChapterGuard(runMatrix('base', 'hard'));
   console.log('\n---- 수용 판정 (docs/25 §8 정직화 · 표시=판정) ----');
-  // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식). 트리비얼은
-  //   전량 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) — 문서화 허용(51차 선례).
+  // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식).
+  // [71차 L5] 잔존 트리비얼 2건(ch02·a2-d1 의 BLADE 2R 무피해 러시)을 배치 레버(격벽/잔해)로
+  //   해소 → base 트리비얼 0. 문구도 실측 연동으로 바꿔, 0 일 때 '허용' 사유를 출력하지 않는다.
   console.log('  base : 무장비 전 조합 클리어(' + b.clearable + '/' + b.total + ') · clearFail ' + b.fail
-    + ' · 트리비얼 ' + b.trivial + '(enc① 워밍업/ch02 계승 · 허용) — ' + (b.clearable === b.total && b.fail === 0 ? 'PASS' : 'CHECK'));
+    + ' · 트리비얼 ' + b.trivial + (b.trivial ? '(enc① 워밍업 · 문서화 허용)' : '(해소 완료)')
+    + ' — ' + (b.clearable === b.total && b.fail === 0 ? 'PASS' : 'CHECK'));
   var midMargin = (m.clearable === b.clearable) && (m.avgHp >= b.avgHp);
   console.log('  mid  : 클리어율 동일(' + m.clearable + '/' + m.total + '=base) · 여유 증가(평균종료HP ' + b.avgHp.toFixed(1) + '→' + m.avgHp.toFixed(1) + '%) — ' + (midMargin ? 'PASS' : 'CHECK'));
   var chStr = guard.chs.map(function (c) { return 'ch0' + c + ' min=' + guard.perCh[c].min; }).join(' · ');
@@ -714,10 +824,10 @@ function printScenarios() {
   // [65차 하드모드] hard×base = 무장비 +25% 적, 전 조합 클리어 가능 + clearFail 0(하드모드 램프 불변식).
   //   hard×full = 최고가 장비로 하드모드 상쇄 → clearFail 0 + 후반 트리비얼 게이트(≥3R 유지). 하드는 트리비얼을
   //   줄이므로(전멸·생존 가중) 후반 게이트는 여유로 통과 — 판정은 clearFail 0 이 핵심.
-  console.log('  hard×base : +25% 적 무장비 전 조합 클리어(' + hardScn.base.clearable + '/' + hardScn.base.total + ') · clearFail ' + hardScn.base.fail
-    + ' · 후반 트리비얼 ' + hardGuardBase.trivLate + ' — ' + (hardScn.base.clearable === hardScn.base.total && hardScn.base.fail === 0 ? 'PASS(하드모드 클리어 보장 · 오브젝티브 러시 불변)' : 'FAIL(하드모드 한계 — 67차 조사 완료: base 불변 제약 하 미션 데이터 해소 불가 · 아래 분류표 · 유닛 289 집합 핀)'));
-  console.log('  hard×full : +25% 적 최고가 상쇄 클리어(' + hardScn.full.clearable + '/' + hardScn.full.total + ') · clearFail ' + hardScn.full.fail
-    + ' · 평균종료HP ' + hardScn.full.avgHp.toFixed(1) + '% — ' + (hardScn.full.clearable === hardScn.full.total && hardScn.full.fail === 0 ? 'PASS(장비로 하드모드 흡수)' : 'FAIL(하드모드 한계 — 장비가 27건 중 24건 흡수 · 잔여 3건 전량 RIGGER · 유닛 290 집합 핀)'));
+  console.log('  hard×base : 하드 배율 적 무장비 전 조합 클리어(' + hardScn.base.clearable + '/' + hardScn.base.total + ') · clearFail ' + hardScn.base.fail
+    + ' · 후반 트리비얼 ' + hardGuardBase.trivLate + ' — ' + (hardScn.base.clearable === hardScn.base.total && hardScn.base.fail === 0 ? 'PASS(하드모드 클리어 보장 · 오브젝티브 러시 불변)' : 'FAIL(하드모드 한계 — 71차: hardScale 레버 신설·적용 후 잔존 · ceil 양자화 하한 · 아래 분류표 · 유닛 289 집합 핀)'));
+  console.log('  hard×full : 하드 배율 적 최고가 상쇄 클리어(' + hardScn.full.clearable + '/' + hardScn.full.total + ') · clearFail ' + hardScn.full.fail
+    + ' · 평균종료HP ' + hardScn.full.avgHp.toFixed(1) + '% — ' + (hardScn.full.clearable === hardScn.full.total && hardScn.full.fail === 0 ? 'PASS(장비로 하드모드 흡수)' : 'FAIL(하드모드 한계 — 장비가 hard×base 실패 대부분을 흡수하나 잔여분 존재 · 유닛 290 집합 핀)'));
 
   printHardFailures(scnRows, hardRows);
 
@@ -729,8 +839,8 @@ function printScenarios() {
     var news = s.flagged.filter(function (x) { return !baseSet[x.id + '|' + x.cls]; });
     console.log('  ' + key + ' 신규 이상치 ' + news.length + '건 (후반 ch06~08: ' + news.filter(function (x) { return x.kind === 'main' && x.chapter >= 6; }).length + '건):');
     news.forEach(function (x) {
-      var loc = (x.kind === 'main' ? 'ch0' + x.chapter : 'side');
-      console.log('    ' + pad(loc + ' ' + x.id, 30) + pad(x.cls, 8) + '[' + x.flags.join(',') + '] rep=' + cellStr(x.rep));
+      var loc = rowTag(x.kind, x.chapter, x.id);   // [71차 L1] act2/cap 을 side 로 뭉개던 표기 분리.
+      console.log('    ' + pad(loc + ' ' + x.id, LABEL_W + 4) + pad(x.cls, 8) + '[' + x.flags.join(',') + '] rep=' + cellStr(x.rep));
     });
   });
   console.log('  해설: 트리비얼은 전량 초반/사이드(엔드게임 장비의 정상적 하위콘텐츠 파워) · 후반 챕터 0.');

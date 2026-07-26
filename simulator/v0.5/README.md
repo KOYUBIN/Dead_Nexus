@@ -1,6 +1,7 @@
 # DEAD NEXUS Simulator (v0.5 라인 → v1.0.5-fix)
 
-**1~5인 플레이 가능한 웹 시뮬레이터.** 솔로(1H+봇3) / 핫시트(2~5H) / 봇 전용 모드.
+**1~5인 플레이 가능한 웹 시뮬레이터.** 솔로(1H+봇3) / 핫시트(2~5H).
+전원 봇 대전은 UI 모드가 아니라 헤드리스 러너(`sim-e2e`) 전용이다.
 React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
 
 현재 라인 버전: **v1.0.5-fix** (디렉토리명만 `v0.5/` — 발전사적 유산)
@@ -8,7 +9,7 @@ React 18 + Babel Standalone, 단일 HTML, Chrome/Safari `file://` 직접 실행.
 ## 현재 스코프 (v1.0+ 완료)
 
 - **맵**: 🎓 5×5 튜토리얼 + 🏙 11×11 정식 (메뉴에서 선택)
-- **모드**: 🎮 솔로 · 👥 핫시트 (2~5인) · 🤖 봇 전용 시뮬
+- **모드**: 🎮 솔로 · 👥 핫시트 (2~5인)  ※ UI 모드는 이 2종. 🤖 전원 봇 자동 대전은 헤드리스 러너(sim-e2e) 전용
 - **난이도** (솔로): 🟢 EASY / 🟡 NORMAL / 🔴 HARD
 - **Ghost 클래스 6**: CIPHER · BLADE · RIGGER · BROKER · DRIFTER · MOLE
 - **Bloc 5**: VANTA · IRONWALL · HELIX · AXIOM · CARBON
@@ -140,7 +141,7 @@ Phase 6 결산     → 승리 체크 → 다음 라운드
 ## 사용 방법
 
 1. `index.html`을 **Chrome/Safari**에서 열기 (file:// 도 OK)
-2. **모드** 선택: 🎮 솔로 (1H+봇3) · 👥 핫시트 (2~5H) · 🤖 봇 전용
+2. **모드** 선택: 🎮 솔로 (1H+봇3) · 👥 핫시트 (2~5H)  — UI 상 선택지는 이 2종
 3. **맵 크기**: 🎓 5×5 튜토리얼 (첫 플레이 권장) · 🏙 11×11 정식
 4. (솔로) **난이도** 🟢 EASY · 🟡 NORMAL · 🔴 HARD
 5. **역할** 👻 Ghost (BLADE 추천) · 🏢 Bloc (HELIX/AXIOM 추천) + 클래스/블록

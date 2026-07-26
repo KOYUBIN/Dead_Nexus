@@ -284,7 +284,7 @@ function tests(){
   const s1r1={...s1,meta:{...s1.meta,round:1},players:s1.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:50}}:p)};
   const s1buy=R(s1r1,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1});
   ok('S01 R1 BUY_STOCK not frozen (works)',s1buy!==s1r1&&(s1buy.players[0].stocks.VANTA||0)===1,`VANTA ${s1buy.players[0].stocks.VANTA}`);
-  // ==== v6.47 [69차]: S06 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안) ====
+  // ==== v6.46 [69차]: S06 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안) ====
   //   원전: 재건왕 = 파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5
   //         청산자 = 2개 이상 블록 파산 유도 Ghost 렙 +10
   //   엔진 매핑: 주가 하한이 1(Math.max(1,…)) → "파산(0)"=crashBottomThresh(1). 보상은 하이라이트 rep.

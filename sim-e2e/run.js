@@ -265,6 +265,11 @@ function inPageGame(cfg) {
       npcEnd: (s.meta.npcs || []).length,          // 종료 시점 잔존 NPC 수
       gaugeHooks: s.meta.gaugeHooks || 0,          // 카드→게이지 훅 발동 총수 (cap-immune meta counter)
       moleReveals: s.meta.moleReveals || 0,        // MOLE 위장 발각 총수
+      // v6.46 [71차 M11]: meta.highlights 발동 계측 — HIGHLIGHT_DEFS 엔트리별 실제 발동 횟수.
+      //   S06 특수 승리 루트(reconstructor/liquidator)가 실측 대역을 갖도록 하는 것이 1차 목적이나,
+      //   지표는 키 무관 일반(모든 하이라이트 死엔트리 탐지에 재사용). recordHighlight 는 1회성이라
+      //   판당 (key,playerIdx) 유일 → 키별 카운트 = "그 판에서 그 하이라이트를 받은 좌석 수".
+      highlightKeys: (s.meta.highlights || []).map(h => h.key),
       rigMilestones: sum(rigByRound),              // RIGGER 함정 발동 ★+2 (euro+훅 합산)
       brokerMemo5: sum(memoByRound),               // BROKER 메모 5 도달
       cipherHackNodes: sum(hackByRound),           // CIPHER 해킹 노드 활성
@@ -300,6 +305,26 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
 
   const browser = await chromium.launch({ headless: true, executablePath: '/opt/pw-browsers/chromium' });
   let pg = await makePage(browser, port);
+
+  // v6.46 [71차 H8]: build 스탬프 동적화 — 구 'simulator/v0.5 v6.18' 하드코딩은 v6.4x 출하 후에도
+  //   갱신되지 않아 결과 JSON 이 매 회차 오기재됐다. 페이지의 자체 버전 표기에서 추출하고,
+  //   git rev-parse 로 커밋을 덧붙인다(둘 다 실패해도 러너는 계속 — 스탬프만 'unknown').
+  //   추출 규칙: 페이지에 등장하는 v6.x[.y] 스탬프 중 **최댓값**(문서 순서 첫 매치가 아니라) —
+  //   구버전 주석(v6.44 CSS 주석 등)이 앞에 오므로 first-match 는 오히려 오기재를 낳는다.
+  const PAGE_BUILD = await pg.page.evaluate(() => {
+    const all = document.documentElement.innerHTML.match(/v6\.\d+(?:\.\d+)?/g) || [];
+    if (!all.length) return null;
+    //   major/minor/patch 를 고정 자릿수로 정규화해 비교 — 자릿수가 다른 'v6.13.1' 이
+    //   'v6.46' 보다 커 보이는 오비교를 막는다(누적 곱셈 방식의 함정).
+    const key = (v) => { const p = v.slice(1).split('.').map(Number); return (p[0] || 0) * 1e6 + (p[1] || 0) * 1e3 + (p[2] || 0); };
+    return all.reduce((a, b) => (key(b) > key(a) ? b : a));
+  }).catch(() => null);
+  const GIT_REV = (() => {
+    try { return require('child_process').execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); }
+    catch (_) { return null; }
+  })();
+  const BUILD_STAMP = `simulator/v0.5 ${PAGE_BUILD || 'unknown'}${GIT_REV ? ` @${GIT_REV}` : ''}`;
+  console.log(`[e2e] build stamp: ${BUILD_STAMP}`);
 
   const games = [];
   const t0 = Date.now();
@@ -358,6 +383,8 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   let gaugeTot = 0, moleRevTot = 0, rigMs = 0, memo5 = 0, hackTot = 0, disgTot = 0;
   let policeFightsTot = 0, policeKillsTot = 0, gamesWithPolice = 0, gamesWithFight = 0, npcStartSum = 0;
   let rescuesTot = 0, gamesWithRescue = 0, gamesAllRescued = 0, captiveGames = 0;   // v6.23: 구출 계측
+  // v6.46 [71차 M11]: 하이라이트 발동 계측 — 키별 총 발동수 + 발동한 판 수(≥1).
+  const hlFireTot = {}, hlFireGames = {};
   // TL distribution instrumentation
   const tlSeatDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };   // per-seat final TL histogram
   let tlSeatTotal = 0;
@@ -392,6 +419,10 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
         if ((g.rescues || 0) > 0) gamesWithRescue++;
         if (g.rescuedAll) gamesAllRescued++;
       }
+      // v6.46 [71차 M11]: 하이라이트 발동 집계 (키별 총수 · 발동 판 수).
+      const hlSeen = {};
+      for (const hk of (g.highlightKeys || [])) { hlFireTot[hk] = (hlFireTot[hk] || 0) + 1; hlSeen[hk] = 1; }
+      for (const hk of Object.keys(hlSeen)) hlFireGames[hk] = (hlFireGames[hk] || 0) + 1;
       gaugeTot += (g.gaugeHooks || 0); moleRevTot += (g.moleReveals || 0);
       rigMs += (g.rigMilestones || 0); memo5 += (g.brokerMemo5 || 0); hackTot += (g.cipherHackNodes || 0); disgTot += (g.moleDisguises || 0);
       // TL distribution
@@ -410,7 +441,7 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   }
   const nOk = ok.length || 1;
   const summary = {
-    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, scenario: SCENARIO, scenOverride: SCEN_OVERRIDE, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: 'simulator/v0.5 v6.18' },
+    meta: { generatedAt: new Date().toISOString(), games: N, mapSize: MAP, scenario: SCENARIO, scenOverride: SCEN_OVERRIDE, elapsedMs: Date.now() - t0, engine: 'headless reducer drive (all seats botPickCards)', build: BUILD_STAMP },
     outcomes: {
       completed: ok.length,
       timeouts: games.filter(g => g.status === 'timeout').length,
@@ -427,6 +458,8 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
       victoryReleasesTotal: releaseTot, releaseGames,
       reversalRateOfDecl: +(releaseGames / (declGames || 1)).toFixed(4),
       reversalRateOfAll: +(releaseGames / nOk).toFixed(4),
+      // v6.46 [71차 M11]: 하이라이트 발동 계측 (키별 총 발동수 · 발동 판 수).
+      highlightFires: hlFireTot, highlightFireGames: hlFireGames,
       // v6.27 (B-06, docs/22 P1-6): highlightPoints 실측
       hlPtsMaxAvg: +(hlMaxSum / nOk).toFixed(2), hlPtsSumAvg: +(hlSumTot / nOk).toFixed(2), winnerHlPtsAvg: +(winnerHlSum / nOk).toFixed(2),
       shortEntriesTotal: shEntry, shortEntriesPerGame: +(shEntry / nOk).toFixed(2),
@@ -506,6 +539,16 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
     console.log(`    rescues              ${o.rescuesTotal} total  (${o.rescuesPerCaptiveGame}/game)`);
     console.log(`    rescue occur rate    ${(o.rescueOccurRate * 100).toFixed(1)}%  (≥1 구출)`);
     console.log(`    all-5 rescued rate   ${(o.allRescuedRate * 100).toFixed(1)}%  (렙+10 보너스)`);
+  }
+  // v6.46 [71차 M11]: 하이라이트 발동 계기판 — 死엔트리(0회) 를 숨기지 않고 함께 출력한다.
+  //   S06 의 reconstructor/liquidator 는 이 대역으로만 실증된다(타 시나리오는 구조적 0 이 정상).
+  console.log('  ---- highlight fires (meta.highlights · v6.46 [71차 M11]) ----');
+  {
+    const keys = Object.keys(hlFireTot).sort((a, b) => (hlFireTot[b] - hlFireTot[a]) || a.localeCompare(b));
+    if (!keys.length) console.log('    (발동 0 — 이 시나리오/표본에서 어떤 하이라이트도 발동하지 않음)');
+    for (const k of keys) {
+      console.log(`    ${k.padEnd(22)} ${String(hlFireTot[k]).padStart(5)} fires  · ${String(hlFireGames[k]).padStart(4)} games (${((hlFireGames[k] / nOk) * 100).toFixed(1)}%)`);
+    }
   }
   console.log('  ---- class personality loop (P1-2) ----');
   console.log(`    gauge hooks (card→gauge)  ${o.gaugeHooksTotal} total  (${o.gaugeHooksPerGame}/game)`);

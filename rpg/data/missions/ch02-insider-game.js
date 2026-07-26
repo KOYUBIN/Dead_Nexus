@@ -53,7 +53,15 @@
     // [계승 ch01 · 각색 raidThreshold] 위협 임계 + 증원(경보 시 1회 스폰) — 페이싱 실동.
     threatCap: 8,
     reinforcement: { key: 'AXIOM_DRONE', x: 5, y: 1 },
-    walls: [],
+    // [71차 L5] 이사회 격벽 2개 — 트리비얼 이상치(BLADE 2R 무피해 러시) 해소용 배치 레버.
+    //   BLADE 는 mov3×ap2 = 라운드당 6칸이라 시작(2,6)→코어(2,0) 체비쇼프 6 을 R1 에 주파했다
+    //   (코어는 이미 그리드 최원거리라 '코어 이설' 로는 해소 불가 — 측정 확인). 좌측 직선 레인을
+    //   막아 우회를 강제하면 러시가 R3 로 늘어 트리비얼 밴드(≤2R·무피해)를 벗어난다.
+    //   실측 파급: 이 미션 3셀만 변동(BLADE 2R→3R · RIGGER 3R→5R · MOLE 2R79%→5R100%),
+    //   신규 clearFail/attrition 0 · 타 미션 0 셀.
+    walls: [
+      { x: 1, y: 2 }, { x: 2, y: 2 },   // 이사회층 격벽 — 중앙 직선 접근 차단(우측 우회 강제)
+    ],
     // [신규 docs/25 §3.4] 엄폐 플랫 보정: light=DEF+1, full=DEF+2
     cover: [
       { x: 1, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },

@@ -43,6 +43,11 @@
     playerStart: { x: 3, y: 7 },
     objective: { x: 3, y: 0, threshold: 10, veil: 0, label: '항만 셔터', dataTB: 0 },
     threatCap: 9,
+    // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향 — hardMode off 면 scale 1 → base 매트릭스 byte 불변).
+    //   실측 근거: 1.25 에서 RIGGER(DEF임계붕괴)·BROKER 2건 탈락 + hard×full 에서도 RIGGER 탈락.
+    //   1.20 은 ceil 양자화 한 스텝 아래로 내려가 RIGGER 를 base·full 양쪽에서 복구한다
+    //   (1.21 이상은 실패로 회귀 — 임계 측정치). BROKER 는 1.20 에서도 미해소(§정직 표기).
+    hardScale: 1.20,
     reinforcement: { key: 'MERIDIAN_DRONE', x: 6, y: 1 },
     walls: [
       { x: 2, y: 4 }, { x: 4, y: 4 },   // 컨테이너 2열(중앙 통로 협착 → 좌우 우회)
@@ -66,6 +71,10 @@
     playerStart: { x: 3, y: 7 },
     objective: { x: 3, y: 0, threshold: 8, veil: 0, label: '약탈 기함 코어', dataTB: 0 },   // [62차 밸런스] 12→10 · [65차 밸런스] 10→8 (BROKER hack2 은신 3턴 창 내 완주 — R2 잠적 후 R3~R4 차감 4+4)
     threatCap: 10,
+    // [71차 M6+M8] 하드모드 전용 배율(노멀 무영향). 실측 근거: 1.25 에서 RIGGER 러시생존창붕괴 1건.
+    //   1.16 이하에서 복구(1.17 이상은 실패 — 임계 측정치) → 밴드 하한 1.15 채택. 이 인카운터는
+    //   hardScale 로 clearFail 이 완전 해소된 2건 중 하나다.
+    hardScale: 1.15,
     reinforcement: { key: 'MERIDIAN_DRONE', x: 0, y: 1 },   // 증원(경보 1회) — 카탈로그 지정
     walls: [
       { x: 1, y: 4 }, { x: 5, y: 4 },   // 기함 격벽 2개(측면 차단 → 중앙 보스 대치 유도)

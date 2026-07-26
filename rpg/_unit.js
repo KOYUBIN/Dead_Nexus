@@ -1575,26 +1575,31 @@ ok('288. tags 는 전투 상태에 유입 0 (buildCombat 산출물에 tags/HELIX
   JSON.stringify(S.player(mwCombatState)).indexOf('tags') < 0 &&
   S.player(mwCombatState).tags === undefined);
 
-console.log('\n== [67차] 하드모드(scale 1.25) 실패 집합 계기판 핀 — 게이트 아님(하드모드 한계 정직 고정) ==');
-// ★ 이 핀은 '통과 기준'이 아니라 '현재 한계의 정직한 스냅샷'이다. hard 축에는 전용 레버가
-//   없고(적 스탯 배율만 상이 · 오브젝티브 임계/좌표/threatCap 은 base 와 공유), 공유 수치를
-//   건드리면 base 매트릭스가 반드시 변한다(v6.46 실측 검증 — 커버 1칸 추가만으로 base
-//   BLADE 9R→12R · RIGGER reinforced 반전). 따라서 base 불변 제약 하에서 하드 실패는
-//   미션 데이터로 해소 불가 → 잔존 27건을 집합째 고정해 회귀(악화)와 개선을 모두 노출시킨다.
+console.log('\n== [67차 → 71차 갱신] 하드모드 실패 집합 계기판 핀 — 게이트 아님(하드모드 한계 정직 고정) ==');
+// ★ 이 핀은 '통과 기준'이 아니라 '현재 한계의 정직한 스냅샷'이다.
+// [67차] 당시엔 hard 전용 레버가 없었다(적 스탯 배율만 상이 · 오브젝티브 임계/좌표/threatCap 은
+//   base 와 공유). 공유 수치를 건드리면 base 매트릭스가 반드시 변한다(v6.46 실측 — 커버 1칸
+//   추가만으로 base BLADE 9R→12R · RIGGER reinforced 반전) → 27건을 그대로 고정했다.
+// [71차 M6+M8] 인카운터별 옵셔널 `hardScale` 을 신설했다(store.js dialogueChoose 조회 · 하네스
+//   'hard' 센티널 동일 조회). hardMode off 면 scale 1 이라 노멀 축은 구조적으로 불변이다.
+//   실측 6건에 1.15~1.20 을 선별 적용 → hard×base 27→21 · hard×full 3→2 로 해소.
+//   **전부 해소는 불가**: spawnEnemy 가 Math.ceil 이고 적 atk 가 3~7 의 작은 정수라 배율이 1 을
+//   넘는 순간 atk 는 최소 +1 이 된다(3→4·4→5 는 1.05 든 1.25 든 동일). 최다 실패 원인인
+//   '러시생존창붕괴' 는 바로 그 +1 이 만들므로, scale 1(=하드모드 무효화) 외에는 도달 불가다.
+//   → 잔존 21/2 건을 집합째 고정해 회귀(악화)와 개선을 모두 노출시킨다.
 var HARD_BASE_FAILS = [
-  'a2-a2-crown-throne|RIGGER', 'a2-b2-freeport#stage2|RIGGER', 'a2-b2-freeport|BROKER', 'a2-b2-freeport|RIGGER',
-  'a2-d1-scavenge#stage2|RIGGER', 'a2-d2-last-signal#stage2|RIGGER', 'a2-side-blade-vendetta|MOLE',
+  'a2-a2-crown-throne|RIGGER', 'a2-b2-freeport|BROKER', 'a2-d2-last-signal#stage2|RIGGER',
   'a2-side-blade-vendetta|RIGGER', 'a2-side-broker-ledger|BROKER', 'a2-side-cipher-static|BROKER',
-  'a2-side-cipher-static|CIPHER', 'a2-side-drifter-lastroad|BROKER', 'a2-side-rigger-build|BROKER',
-  'a2-side-rigger-build|CIPHER', 'ch01-first-blood|CIPHER', 'ch02-insider-game|BROKER',
-  'ch03-martial-night|BROKER', 'ch03-martial-night|RIGGER', 'ch04-price-of-splice|BROKER',
-  'ch06-bloc-acquisition|BROKER', 'ch06-bloc-acquisition|CIPHER', 'ch07-heart-of-city|BROKER',
-  'ch07-heart-of-city|CIPHER', 'ch08-zero-day|BROKER', 'ch08-zero-day|RIGGER',
-  'side-03-chemical-raid|CIPHER', 'side-07-server-zero|BROKER',
+  'a2-side-cipher-static|CIPHER', 'a2-side-drifter-lastroad|BROKER', 'a2-side-rigger-build|CIPHER',
+  'ch01-first-blood|CIPHER', 'ch02-insider-game|BROKER', 'ch03-martial-night|BROKER',
+  'ch03-martial-night|RIGGER', 'ch04-price-of-splice|BROKER', 'ch06-bloc-acquisition|BROKER',
+  'ch06-bloc-acquisition|CIPHER', 'ch07-heart-of-city|BROKER', 'ch07-heart-of-city|CIPHER',
+  'ch08-zero-day|BROKER', 'side-03-chemical-raid|CIPHER', 'side-07-server-zero|BROKER',
 ];
-var HARD_FULL_FAILS = ['a2-b2-freeport|RIGGER', 'a2-side-blade-vendetta|RIGGER', 'ch03-martial-night|RIGGER'];
+var HARD_FULL_FAILS = ['a2-side-blade-vendetta|RIGGER', 'ch03-martial-night|RIGGER'];
 function hardFailSet(scn) {
-  var rws = BAL.runMatrix(scn, 1.25), acc = [];
+  // [71차] 상수 1.25 가 아니라 'hard' 센티널 — 인카운터별 hardScale 을 조회해 런타임과 동일 배율로 측정.
+  var rws = BAL.runMatrix(scn, 'hard'), acc = [];
   rws.forEach(function (r) {
     BAL.CLASSES.forEach(function (c) {
       if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) acc.push(r.id + '|' + c);
@@ -1603,15 +1608,14 @@ function hardFailSet(scn) {
   return acc.sort();
 }
 var hbSet = hardFailSet('base'), hfSet = hardFailSet('full');
-ok('289. 계기판: hard×base clearFail 27건 = 고정 집합 일치 (BROKER12·RIGGER8·CIPHER6·MOLE1 / BLADE·DRIFTER 0)',
-  hbSet.length === 27 && JSON.stringify(hbSet) === JSON.stringify(HARD_BASE_FAILS) &&
-  hbSet.filter(function (x) { return /\|BROKER$/.test(x); }).length === 12 &&
-  hbSet.filter(function (x) { return /\|RIGGER$/.test(x); }).length === 8 &&
+ok('289. 계기판: hard×base clearFail 21건 = 고정 집합 일치 (BROKER11·CIPHER6·RIGGER4 / BLADE·MOLE·DRIFTER 0) — 71차 hardScale 로 27→21',
+  hbSet.length === 21 && JSON.stringify(hbSet) === JSON.stringify(HARD_BASE_FAILS) &&
+  hbSet.filter(function (x) { return /\|BROKER$/.test(x); }).length === 11 &&
   hbSet.filter(function (x) { return /\|CIPHER$/.test(x); }).length === 6 &&
-  hbSet.filter(function (x) { return /\|MOLE$/.test(x); }).length === 1 &&
-  hbSet.filter(function (x) { return /\|(BLADE|DRIFTER)$/.test(x); }).length === 0);
-ok('290. 계기판: hard×full clearFail 3건 = RIGGER 전량 (최고가 장비가 24/27 을 흡수 · 잔여는 DEF 임계 붕괴형)',
-  hfSet.length === 3 && JSON.stringify(hfSet) === JSON.stringify(HARD_FULL_FAILS) &&
+  hbSet.filter(function (x) { return /\|RIGGER$/.test(x); }).length === 4 &&
+  hbSet.filter(function (x) { return /\|(BLADE|MOLE|DRIFTER)$/.test(x); }).length === 0);
+ok('290. 계기판: hard×full clearFail 2건 = RIGGER 전량 (최고가 장비가 21건 중 19건 흡수) — 71차 hardScale 로 3→2',
+  hfSet.length === 2 && JSON.stringify(hfSet) === JSON.stringify(HARD_FULL_FAILS) &&
   hfSet.every(function (x) { return /\|RIGGER$/.test(x); }));
 // hard 축이 표준 난이도를 오염시키지 않음 — base 매트릭스 clearFail 0 불변식은 게이트(174) 로 유지되고,
 //   여기서는 hard 실패 집합이 base 성공 집합의 부분집합임(= 하드 전용 실패)을 고정한다.
@@ -1619,7 +1623,7 @@ var baseFailSet = [];
 BAL.runMatrix('base').forEach(function (r) {
   BAL.CLASSES.forEach(function (c) { if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) baseFailSet.push(r.id + '|' + c); });
 });
-ok('291. hard 실패 30건(base27+full3)은 전량 하드 전용 — 표준 난이도(base/full) clearFail 0 불변',
+ok('291. hard 실패 23건(base21+full2)은 전량 하드 전용 — 표준 난이도(base/full) clearFail 0 불변',
   baseFailSet.length === 0 && aggFull.fail === 0 && aggMid.fail === 0);
 
 // ============================================================================
@@ -1738,12 +1742,18 @@ mrx68.forEach(function (r) {
 });
 ok('311. 3정책 측정 행 = 생존형 1행 [a2-c1-first-contact] · 나머지 ' + pol2 + '행은 2정책(형상 불변)',
   pol3.length === 1 && pol3[0] === 'a2-c1-first-contact' && pol2 === mrx68.length - 1);
-// 매트릭스 회귀 — 전 조합 클리어 유지 + 68차로 base 트리비얼 3 → 2 (a2-c1 BLADE 해소).
+// 매트릭스 회귀 — 전 조합 클리어 유지 + 트리비얼 램프: 65차 3 → 68차 2(a2-c1 BLADE) → 71차 0.
+//   [71차 L5] 잔존 2건(ch02·a2-d1 의 BLADE 2R 무피해 러시)을 배치 레버로 해소:
+//   코어가 이미 그리드 최원거리라 '코어 이설' 은 무효(BLADE mov3×ap2 = 6칸/R 이 거리를 덮음) →
+//   직선 진입 레인을 격벽/붕괴잔해로 막아 우회를 강제(러시 2R→3R). survive:N 전환은 서사 부적합으로 배제.
 var agg68 = BAL.aggregateScenario(mrx68);
-ok('312. 68차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 2(65차 3건에서 1건 해소)',
-  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 2);
-ok('313. 해소된 트리비얼은 a2-c1-first-contact — 잔존 2건에 미포함',
-  agg68.flagged.filter(function (f) { return f.id === 'a2-c1-first-contact'; }).length === 0);
+ok('312. 71차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 0 · 전 조합 무플래그(bandOk 252)',
+  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 0 &&
+  agg68.attrition === 0 && agg68.bandOk === 252);
+ok('313. 해소된 트리비얼 3건 [a2-c1-first-contact(68차) · ch02-insider-game · a2-d1-scavenge(71차)] 전량 flagged 부재',
+  ['a2-c1-first-contact', 'ch02-insider-game', 'a2-d1-scavenge'].every(function (id) {
+    return agg68.flagged.filter(function (f) { return f.id === id; }).length === 0;
+  }));
 
 console.log('\n== [68차] blade-vendetta 사문 게이트 해소 ([IRONWALL 태그] → [DEF 4]) ==');
 var bvM = CAMP.missionData('a2-side-blade-vendetta');
@@ -1799,6 +1809,56 @@ ok('318. 클래스 전용 사이드의 attr 게이트 전량 성장 상한(STAT_
 ok('319. 소유 클래스 tag 사문 = 1건 [a2-side-cipher-static|SHADE] 정확히 (68차 blade-vendetta 해소분 제외)'
   + (ownerTagDead.length ? ' [' + ownerTagDead.join(', ') + ']' : ''),
   ownerTagDead.length === 1 && ownerTagDead[0] === 'a2-side-cipher-static|SHADE');
+
+// ============================================================================
+// ======  71차 — 하드모드 전용 레버 hardScale (M6+M8)  ========================
+//   인카운터별 옵셔널 배율. store.js dialogueChoose 가 ((encCfg||mission.combat).hardScale
+//   || 1.25) 로 조회하고, _balance 하네스는 'hard' 센티널로 동일 규칙을 재현한다.
+//   핵심 불변식: hardMode OFF 면 hardScale 선언 여부와 무관하게 scale 1 → 노멀 매트릭스 불변.
+// ============================================================================
+console.log('\n== [71차 M6+M8] 하드모드 전용 레버 hardScale — 선언/폴백/노멀 불변 ==');
+
+// hardScale 을 선언한 인카운터 목록(측정 근거로 6건 선별 적용). 미선언은 기본 1.25 폴백.
+var HS_DECLARED = {
+  'ch08-zero-day': 1.20, 'a2-b2-freeport': 1.20, 'a2-b2-freeport#stage2': 1.15,
+  'a2-d1-scavenge#stage2': 1.20, 'a2-side-blade-vendetta': 1.20, 'a2-side-rigger-build': 1.20,
+};
+var hsFound = {};
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id);
+  if (!mm) return;
+  if (mm.combat && mm.combat.hardScale) hsFound[reg.id] = mm.combat.hardScale;
+  if (mm.encounters) Object.keys(mm.encounters).forEach(function (k) {
+    if (mm.encounters[k].hardScale) hsFound[reg.id + '#' + k] = mm.encounters[k].hardScale;
+  });
+});
+ok('320. hardScale 선언 인카운터 = 6건 정확히 (ch08 1.20 · freeport 1.20/stage2 1.15 · scavenge#stage2 1.20 · blade-vendetta 1.20 · rigger-build 1.20)',
+  JSON.stringify(Object.keys(hsFound).sort()) === JSON.stringify(Object.keys(HS_DECLARED).sort()) &&
+  Object.keys(HS_DECLARED).every(function (k) { return hsFound[k] === HS_DECLARED[k]; }));
+
+// 선언 배율이 실제 전투 빌드에 반영되는가 — hardScale 1.20 인 ch08 enc① 을 직접 빌드해 대조.
+var ch08m = CAMP.missionData('ch08-zero-day');
+var hsOn  = S.buildCombat(ch08m, CH.makeCharacter('RIGGER'), 'outro', { enemyScale: ch08m.combat.hardScale });
+var hs125 = S.buildCombat(ch08m, CH.makeCharacter('RIGGER'), 'outro', { enemyScale: 1.25 });
+function enemyAtks(c) { return c.units.filter(function (u) { return u.side === 'enemy'; }).map(function (u) { return u.atk; }); }
+ok('321. hardScale 1.20 빌드 ≠ 1.25 빌드 (ceil 양자화가 실제로 한 스텝 낮아짐 — 레버가 무의미하지 않음)',
+  JSON.stringify(enemyAtks(hsOn)) !== JSON.stringify(enemyAtks(hs125)));
+
+// ★ 핵심 불변식: hardMode OFF 면 hardScale 선언 인카운터도 scale 1 → 노멀 전투 byte 불변.
+var nmOff = S.rpgInitialState(); nmOff.save.character = CH.makeCharacter('RIGGER');
+var plain = S.buildCombat(ch08m, CH.makeCharacter('RIGGER'), 'outro');
+var plain2 = S.buildCombat(ch08m, CH.makeCharacter('RIGGER'), 'outro', { enemyScale: 1 });
+ok('322. hardMode OFF → hardScale 선언 미션도 scale 1 · buildCombat 산출물 byte 불변(노멀 밸런스 무영향)',
+  JSON.stringify(plain) === JSON.stringify(plain2) &&
+  plain.enemyScale === 1 && enemyAtks(plain).join() !== enemyAtks(hsOn).join());
+
+// dialogueChoose 경로 실측 — hardScale 미선언 미션은 기존 1.25 폴백을 그대로 유지(하위호환).
+var hsFb = S.rpgInitialState(); hsFb.save.missionsDone = ['ch08-zero-day']; hsFb.save.character = CH.makeCharacter('RIGGER');
+hsFb.save.flags.hardMode = true;
+hsFb = S.startMission(hsFb, 'a2-00-framing'); hsFb = S.dialogueChoose(hsFb, 0); hsFb = S.dialogueChoose(hsFb, 0);
+ok('323. hardScale 미선언 미션(a2-00-framing) 은 기본 1.25 폴백 유지 — 232 핀과 동일 수치(하위호환)',
+  hsFb.combat.enemyScale === 1.25 &&
+  !(CAMP.missionData('a2-00-framing').combat.hardScale));
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
