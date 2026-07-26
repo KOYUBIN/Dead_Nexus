@@ -887,6 +887,7 @@ function Combat({ state, dispatch, view }) {
         <span className="rnd">ROUND {c.round}</span>
         <span className={'sigpill sig-' + sig.key} title={sig.desc}>{sig.sym} {sig.label}</span>
         <span className="obj">🎯 방어도 {c.objective.done ? '돌파✔' : c.objective.threshold}</span>
+        {c.survive ? <span className="obj surv" title="이 인카운터는 생존형 — N라운드를 버티면 승리한다(차감/전멸 승리도 그대로 유효).">🛡 사수 {Math.min(c.round - 1, c.survive)}/{c.survive}R</span> : null}
         <span>❤ {p.hp}/{p.maxHp}</span>
         <span className="spacer" />
         {p.status && p.status.stealth ? <span style={{color:'var(--cyan)'}}>👻 은신</span> : null}
@@ -928,7 +929,11 @@ function Combat({ state, dispatch, view }) {
           <div className="banner" style={{ borderColor: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', color: c.outcome === 'win' ? 'var(--green)' : 'var(--magenta)', margin: 0 }}>
             {c.abyss
               ? (c.outcome === 'win' ? ('★ 웨이브 ' + c.abyss.wave + ' 돌파 — 다음 웨이브로') : ('심연 종료 — 웨이브 ' + c.abyss.wave + ' 다운 (페널티 없음)'))
-              : (c.outcome === 'win' ? ('★ 미션 성공' + (c.objective && c.objective.dataTB ? ' — ' + c.objective.dataTB + 'TB 유출' : ' — 목표 달성')) : '미션 실패 — 다운')}
+              : (c.outcome === 'win'
+                  ? (c.survive && !c.objective.done && c.round > c.survive
+                      ? ('★ 미션 성공 — ' + c.survive + '라운드 사수 완료')
+                      : ('★ 미션 성공' + (c.objective && c.objective.dataTB ? ' — ' + c.objective.dataTB + 'TB 유출' : ' — 목표 달성')))
+                  : '미션 실패 — 다운')}
           </div>
           <button className="btn" onClick={() => dispatch({ type: 'COMBAT_RESOLVE' })}>{c.abyss ? (c.outcome === 'win' ? '다음 웨이브' : '허브로') : '계속'}</button>
         </div>

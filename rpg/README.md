@@ -34,8 +34,11 @@ node rpg/_unit.js          # 순수 로직 유닛 테스트 200건 (Stage 1: 1~4
                            #   51차 밸런스 하네스 스모크/핀: 124~143(140~143 아이소 projection seam) ·
                            #   55차 B1 경제 루프(장비 상점·정보상): 144~170 ·
                            #   55차 장비 밸런스 게이트(base/mid/full 64/64): 171~176 ·
-                           #   57차 4엔딩+New Game+: 177~200)
-node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (16/16, 16개 파일)
+                           #   57차 4엔딩+New Game+: 177~200 ·
+                           #   68차 오브젝티브 다양성(생존형 win-condition·HACK 전용 코어·
+                           #     하네스 survive 정책·blade-vendetta 사문 게이트 해소): 292~319)
+node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (32/32, 32개 파일)
+                           #   [68차] combat.survive:N(생존형 win-condition) 범위·밴드 검증 포함
 node rpg/_balance.js       # 전투 밸런스 매트릭스 (4클래스 × 16미션 × 2정책 = 64조합) — 아래 §밸런스 하네스
                            #   ★ 장비는 옵트인 파워 → 무장비 기준 매트릭스는 B1 전후 byte 동일
 ```
@@ -52,14 +55,18 @@ node rpg/_balance.js --json    # 기계 판독 JSON (매트릭스 원본)
 node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 = 같은 결과)
 ```
 
-**봇 정책 2종** (결정론 → 정책당 1런이면 충분):
+**봇 정책 3종** (결정론 → 정책당 1런이면 충분):
 - `combat` — 전투형: 최대 피해 액션 우선 → 최근접 적 접근(전멸 승리 지향).
 - `objective` — 오브젝티브형: 오브젝티브로 전진 → 인접 시 우선 차감(오브젝티브 승리 지향).
+  코어가 **봉인**된 인카운터(차감 사거리 링이 전부 막힘, 68차 side-02)에서는 링을 먼저 뚫는다 —
+  `physImmune` 링은 `useHack` 능력 보유 클래스만 뚫리므로, 뚫지 못하면 전멸 경로로 폴백한다.
+- `survive` — **생존형(68차)**: 러시 대신 엄폐 유지·거리 확보(농성). `survive:N` 을 선언한
+  인카운터에만 추가로 측정된다 → 미선언 인카운터의 셀 형상(`{combat, objective}`)은 byte 불변.
 - 공통: 위협 예측 기반 생존 궁극(HP≤40% 또는 큰 피격 예상 시 은신/무적), 엄폐 인지 이동,
   관통 피해 0 시 디버프 폴백. 이동/공격 평가는 엔진 실측(피해식 재구현 0).
 
-**셀 표기**: `W5·88% CO` = 승리·5라운드·종료HP88% / 승리 정책 `C`(combat)·`O`(objective).
-`L3`=패(3R) · `T`=timeout. `⚑`=이상치.
+**셀 표기**: `W5·88% CO` = 승리·5라운드·종료HP88% / 승리 정책 `C`(combat)·`O`(objective)·
+`S`(survive, 생존형 인카운터 전용). `L3`=패(3R) · `T`=timeout. `⚑`=이상치.
 
 **이상치 플래그**: `clearFail`(양 정책 패) · `trivial`(최속 승리 ≤2R 무피해) · `attrition`(최속 승리 ≥10R/timeout).
 종합 판정 = **어느 정책이든 승리면 클리어 가능**, 대표 라운드 = 최속(최적) 승리 정책.
@@ -71,13 +78,33 @@ node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 
 빌드 스텝 0. React 18 + Babel Standalone(브라우저 내 JSX 트랜스파일). 상태 = 단일
 `useReducer`(`state/store.js`) + 씬 라우터(hub / dialogue / combat).
 
+## 오브젝티브 유형 카탈로그 [68차]
+
+v6.45 발굴 감사가 지적한 "30미션 전부 threshold 차감 단일형"을 **소수 미션 선택 전환**으로 해소한다
+(밸런스 검증된 나머지 미션은 무편집 — 매트릭스 byte 불변).
+
+| 유형 | 승리 조건 | 구현층 | 적용 |
+|---|---|---|---|
+| 차감형(기본) | `objective.threshold` 0 도달 (인접 유닛 `max(HACK,ATK)`) | 기존 | 전 미션 |
+| 전멸형(기본) | 위협 적(`ai!=='static'`) 전멸 | 기존 | 전 미션(이중 승리) |
+| **HACK 전용 코어** | 차감형이되 **코어 인접 링을 `physImmune` ICE 격자로 봉인** → `useHack` 능력 보유 클래스(CIPHER/MOLE/BROKER)만 코어 접근, 나머지는 전멸축으로 완주 | **데이터만** (엔진·스키마 신규 0) | `side-02-corp-breach` |
+| **생존형** | `combat.survive: N` — **N라운드 사수** 시 승리 (차감/전멸에 **더해지는** 축 → 완주 가능성 단조 증가) | 엔진 최소 확장 (`resolve.surviveReached` + `store.checkOutcome` 1줄 + HUD) | `a2-c1-first-contact` enc① |
+
+**하위 호환 불변식**: `survive` 미선언 인카운터는 `buildCombat` 산출물에 키 자체가 생기지 않고
+(`_unit.js` 298), `checkOutcome` 의 새 분기는 `c.survive` falsy 로 단락된다(292) → 비전환 29미션의
+전투 상태·밸런스 셀은 byte 불변. 확산 방지 핀: survive 선언 인카운터 = 정확히 1건(299).
+
+**미지원(정직 보고)**: **다중 코어**(한 인카운터에 오브젝티브 2개 이상)는 현 스키마가 단일
+`combat.objective` 를 전제하므로(`buildCombat`/`applyHackObjective`/`checkOutcome`/HUD 전부 단수 참조)
+데이터만으로는 불가 — 별도 엔진 확장이 필요하며 본 차수 범위(win-condition 1종) 밖이다.
+
 ## 아키텍처 (docs/25 §6)
 
 | 층 | 파일 | 순도 |
 |---|---|---|
 | `core/` | `loader.js`(heal 로더 G11) · `projection.js`(좌표→스크린 seam G1) | 순수/DOM(loader만) |
 | `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(장비 10종, B1) + `missions/`(ch01~ch08 + side-01~08, 16개) | 순수 리터럴 (DOM/리액트 0) |
-| `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
+| `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5 + `surviveReached` 생존형 판정, 68차) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
 | `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) · `ending`(4엔딩 판정·에필로그·New Game+, 57차) | 순수 함수 |
 | `state/` | `store`(리듀서+전투 오케스트레이션) · `save`(localStorage+base64 export/import G11) | 순수 로직 |
 | `lore/` | `lore_module.snapshot.js`(read-only 벤더링 G3) · `lore-adapter.js`(`window.RPG_LORE` 유일 seam) | 어댑터 |

@@ -1752,6 +1752,12 @@ const HIGHLIGHT_DEFS = {
   defeat_revive:        { icon: '🧬', label: '동료 부활 (CLONE_DECOY)', rep: 2,  desc: 'HELIX 클론으로 사망 동료 복귀' },
   bounty_hit:           { icon: '🎯', label: '현상금/청부 명중',         rep: 1,  desc: 'Bloc의 능동 액션 성공' },
   ten_zone_hold:        { icon: '🏙', label: '10구역 동시 점유',         rep: 3,  desc: 'Bloc 영토 확장 정점' },
+  // v6.47 [69차]: docs/14 §S06 원안 "특수 승리 루트" 경량 배선 — 신규 타이틀 시스템 대신 하이라이트 재사용
+  //   (v6.45 bounty_hit/ten_zone_hold 선례). S06 한정 발동: 판정부가 scenarioRule(reconstructThresh /
+  //   liquidatorBlocs) 게이트로 막혀 키 미지정 시나리오(S01~S05)는 이 엔트리에 도달하지 못한다.
+  //   원전 보상 "렙/자산 +5" · "렙 +10" → 하이라이트 네이티브 통화(rep)로 통일 (자산 보상 신설 = 창작이라 배제).
+  reconstructor:        { icon: '🏗', label: '재건왕 RECONSTRUCTOR',    rep: 5,  desc: '붕괴 바닥 블록을 주가 10↑로 재건' },
+  liquidator:           { icon: '💀', label: '청산자 LIQUIDATOR',       rep: 10, desc: '2개 이상 블록을 붕괴 바닥으로 유도' },
 };
 
 // v0.9.3: NEXUS 동적 컨트롤 — 누가 NEXUS 점유 중인지에 따라 글로벌 룰 변동
@@ -2126,7 +2132,7 @@ const SCENARIOS = {
   S05: {
     id: 'S05', name: '골드러시', tagline: '도시가 돈을 뿜어낸다. 먼저 줍지 않으면 밟고 간다.',
     underdogRelief: false,       // v6.25: 설계 편향 시나리오 — 언더독 임계 완화 제외 (개성 보존)
-    desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향.',
+    desc: '경제 과열 · 8R 단축. 시작 주가 13 · 전원 크레딧 +5 · 구역 수입 +1 · 자산 목표 상향 · 뉴스 매 R 2장.',
     locked: false, maps: ['11x11'],
     startHeat: 5,                // docs/14: 시작 공권력 5 (정상)
     startStock: 13,             // docs/14: 시작 주가 13 (과열)
@@ -2134,8 +2140,14 @@ const SCENARIOS = {
     roundLimit: 8,              // docs/14: 8라운드 타임리밋 (도달 시 checkVictoryByPoints 자동 승리)
     blocAssetBonus: 25,         // docs/14: Bloc 자산 60→75 (+25%) → 사sim base 100 → +25
     zoneIncomeBonus: 1,         // docs/14 특수: 모든 구역 수입 +1 (영구, COLLECT_INCOME 훅)
-    // No-op(부분 구현 보고): 금융가 ×2 · 주가 변동폭 ±4 · 뉴스 2장 · 블랙마켓 +2 · M&A 방어 +3
-    //   — 세밀 경제 배선(구역타입별 수입 배수·주가 변동 커브·뉴스 드로우 수)은 엔진 심층부라 미배선.
+    // v6.46 (66차, docs/14 §S05 원안 확장): "뉴스 매 라운드 2장" 배선. 원안 5건 중 가장 자족적인 항목 —
+    //   기존 DRAW_NEWS 경로를 그대로 2회 순차 적용(신규 효과 경로 0). 경제 과열 시나리오의 정체성
+    //   ("도시가 돈을 뿜어낸다" = 시장 소음 2배)을 8R 스프린트 안에서 실제로 체감하게 만든다.
+    //   scenarioRule 게이팅이라 타 시나리오는 newsDrawCount 미지정 → 1장(기존 경로 그대로).
+    newsDrawCount: 2,           // docs/14 특수: 뉴스 매 라운드 2장 공개
+    // No-op 유지(보고): 금융가 ×2 · 주가 변동폭 ±4 · 블랙마켓 +2 · M&A 방어 +3
+    //   — 구역타입별 수입 배수·주가 변동 커브는 엔진 심층부(ZONE_TYPES 수입 스키마·주가 등락 커브)라
+    //   이번 범위 밖. 뉴스 2장만 기존 경로 재사용으로 자족 배선 가능해 선별 배선했다.
   },
   // --- S06: 마켓 크래시 (docs/14) — 경제 붕괴 · 공매도 전성기 (구현) ---
   S06: {
@@ -2160,8 +2172,15 @@ const SCENARIOS = {
     tradeFreezeRounds: 2,       // docs/14 특수: 첫 2R 주식 거래 동결 (매수/매도/숏 R≤2 금지, 3R 재개)
     divRecoveryMult: 2,         // docs/14 특수: 경제 회복 배당 2배 (주가 합계 threshold 도달 라운드)
     divRecoveryThresh: 50,      // 회복 임계 (원전 "주가 합계 50+" — 붕괴 5×5=25 → 회복 구간 정의)
-    // No-op 유지(보고): 재건왕/청산자 특수 타이틀 — 파산 복구/유도 조건부 ★ 타이틀 + 렙/자산 보너스는
-    //   전용 점수·타이틀 시스템(달성 추적 엔티티) 의존이라 미배선. docs/14 §S06 판단.
+    // v6.47 [69차] (S06 특수 승리 루트 배선): docs/14 §S06 원안 "재건왕/청산자" — 전용 점수·타이틀 시스템
+    //   신설 대신 기존 하이라이트(HIGHLIGHT_DEFS + recordHighlight) 재사용으로 경량 배선.
+    //   원전: 재건왕 = "파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5",
+    //         청산자 = "2개 이상 블록 파산 유도 Ghost 렙 +10".
+    //   엔진 매핑: 주가는 전역 Math.max(1, …) 하한이라 "주가 0"이 도달 불가 → 붕괴 바닥 = 1 로 매핑
+    //   (shortLowPriceThresh 5 = 원전 "−5 이하", divRecoveryThresh 50 = 원전 "합계 50+" 와 동일한 선례).
+    crashBottomThresh: 1,       // 원전 "파산(주가 0)" → 엔진 주가 하한 1 (붕괴 바닥)
+    reconstructThresh: 10,      // 원전 "주가 10↑로 복구" (직접 매핑)
+    liquidatorBlocs: 2,         // 원전 "2개 이상 블록 파산 유도"
     //   공매도 자체는 기존 시스템(SHORT_CONFIG)으로 상시 활성 → 붕괴 저가에서 정산 2배로 실효.
   },
 };
@@ -2192,6 +2211,68 @@ const scenNpcDefMod  = (state, ownerIdx) => {
   const owner = (ownerIdx != null && state.players) ? state.players[ownerIdx] : null;
   return (owner && owner.isNpc) ? scenarioRule(state, 'npcDefenseMod', 0) : 0;
 };
+// ============================================================================
+// v6.47 [69차] (S06): 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안)
+//   원전 인용: "재건왕(RECONSTRUCTOR): 파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5."
+//              "청산자: 2개 이상 블록 파산 유도 Ghost 렙 +10."
+//   전용 점수·타이틀 추적 엔티티 신설 대신 기존 하이라이트(recordHighlight) 재사용 = 경량 배선.
+//   전부 scenarioRule 게이트(crashBottomThresh / reconstructThresh / liquidatorBlocs). 타 시나리오는
+//   키 미지정 → 0 폴백 → 첫 줄에서 인자 state 를 그대로 반환(참조 동일 = byte 불변 항등).
+//   function 선언 = 전역(window) 노출 → 유닛 테스트 직접 검증 가능.
+// ----------------------------------------------------------------------------
+// 붕괴 바닥(=파산) 도달 이력 기록. 주가는 전역 Math.max(1, …) 하한이라 원전 "주가 0"은 도달 불가 →
+//   crashBottomThresh(S06=1) 이하를 "파산"으로 매핑. 원인 무관(뉴스·레이드·매도) — 복구 판정의 전제.
+function s06MarkCrashBottom(state) {
+  const bottom = scenarioRule(state, 'crashBottomThresh', 0);
+  if (!bottom) return state;
+  const cur = state.meta.s06CrashedBlocs || {};
+  let next = null;
+  for (const bl of Object.keys(state.stocks || {})) {
+    if ((state.stocks[bl] ?? 99) <= bottom && !cur[bl]) { next = next || { ...cur }; next[bl] = true; }
+  }
+  return next ? { ...state, meta: { ...state.meta, s06CrashedBlocs: next } } : state;
+}
+// 재건왕 — 파산 이력이 있는 블록의 주가가 reconstructThresh(원전 10) 이상으로 회복되면 해당 블록의
+//   Bloc 플레이어에게 하이라이트. 귀속 근거: 엔진에 "누가 주가를 올렸는가" 신호가 없고(뉴스·배당·다중 매수),
+//   플레이어에 결정적으로 귀속되는 주가 상승 신호는 자사 매수(BUY_STOCK/봇 매집 = 주가 +1)뿐이므로
+//   원전의 "복구한 플레이어"를 자사 블록 소유 Bloc 좌석으로 매핑한다. NPC Bloc·탈락 좌석 제외.
+function s06CheckReconstructor(state) {
+  const thresh = scenarioRule(state, 'reconstructThresh', 0);
+  if (!thresh) return state;
+  let s = s06MarkCrashBottom(state);
+  const crashed = s.meta.s06CrashedBlocs || {};
+  for (let i = 0; i < s.players.length; i++) {
+    const p = s.players[i];
+    if (!p || p.role !== 'bloc' || p.defeated || p.isNpc) continue;
+    if (crashed[p.specific] && (s.stocks[p.specific] || 0) >= thresh) s = recordHighlight(s, 'reconstructor', i);
+  }
+  return s;
+}
+// 청산자 — 한 Ghost 의 행동 창(카드 해결 1회분 / 레이드 1회) 안에서 바닥 위 → 바닥 이하로 밀려난 블록만
+//   그 Ghost 의 "파산 유도"로 귀속·누적. 누적 블록 수가 liquidatorBlocs(원전 2) 이상이면 하이라이트.
+//   preStocks = 행동 직전 state.stocks 스냅샷. Bloc·NPC 는 role 게이트로 제외.
+function s06NoteLiquidation(state, playerIdx, preStocks) {
+  const need = scenarioRule(state, 'liquidatorBlocs', 0);
+  if (!need || !preStocks) return state;
+  const p = state.players[playerIdx];
+  if (!p || p.role !== 'ghost') return state;
+  const bottom = scenarioRule(state, 'crashBottomThresh', 1);
+  const byP = state.meta.s06LiquidatedBy || {};
+  const mine = byP[playerIdx] || [];
+  let add = null;
+  for (const bl of Object.keys(state.stocks || {})) {
+    const before = preStocks[bl], after = state.stocks[bl];
+    if (before != null && before > bottom && after <= bottom && mine.indexOf(bl) === -1 && !(add && add.indexOf(bl) !== -1)) {
+      add = add || []; add.push(bl);
+    }
+  }
+  if (!add) return state;
+  const nextMine = [...mine, ...add];
+  let s = { ...state, meta: { ...state.meta, s06LiquidatedBy: { ...byP, [playerIdx]: nextMine } } };
+  s = s06MarkCrashBottom(s);
+  if (nextMine.length >= need) s = recordHighlight(s, 'liquidator', playerIdx);
+  return s;
+}
 // 시작 구역 확장용: origin 좌표에서 가장 가까운 미소유 일반(비-NEXUS) 구역 1칸을 찾는다.
 //   좌표 = 열문자(A..)+행숫자(1..). 맵에 존재·owner null·zone!=='nex' 조건.
 function nearestUnownedZone(map, origin) {
@@ -3450,6 +3531,8 @@ function reducer(state, action) {
       }
 
       // 맵/주식 업데이트 (성공 시)
+      // v6.47 [69차] (S06): 청산자 귀속용 행동 직전 주가 스냅샷 (타 시나리오는 s06NoteLiquidation 항등).
+      const _s06PreStocks = s.stocks;
       let newMap = s.map;
       let newStocks = s.stocks;
       let destroyedBuilding = null;
@@ -3469,6 +3552,8 @@ function reducer(state, action) {
       const heatDelta = (rewards.heat || 0) + (outcome === 'success' ? scenarioRule(s, 'raidHeatBonus', 0) : 0);
       const newHeat = Math.min(10, Math.max(0, s.heat + heatDelta));
       s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
+      // v6.47 [69차] (S06): 인간 Ghost 레이드가 블록을 붕괴 바닥으로 밀어넣었으면 청산자 누적 (P0 좌석).
+      s = s06NoteLiquidation(s, 0, _s06PreStocks);
       // v6.11.4 (P0-4): 레이드 실패 HP 피해를 통합 헬퍼로 — HP0 시 STEP F (Bloc 방어자가 약탈물 수령)
       if (outcome === 'failure') s = applyDamage(s, 0, rewards.hp || 0, { attacker: pr.blocIdx, label: '레이드 실패' });
 
@@ -4071,6 +4156,10 @@ function reducer(state, action) {
         if (_owned >= 10) state = recordHighlight(state, 'ten_zone_hold', _pi);
       }
 
+      // v6.47 [69차] (S06): 재건왕 — 라운드 시작 주가 스냅 판정 (ten_zone_hold 와 동일 훅·1회성).
+      //   파산 이력 누적 + 회복 임계(10) 도달 검사. 타 시나리오는 헬퍼 첫 줄에서 항등(참조 동일).
+      state = s06CheckReconstructor(state);
+
       // v0.9.2: 만료된 truce 약속 — 지킴(active)이면 양측 ★+1
       const promisesNow = state.meta.promises || [];
       const expired = promisesNow.filter(pm => pm.expiresR < newRound);
@@ -4167,6 +4256,24 @@ function reducer(state, action) {
     }
 
     case 'DRAW_NEWS': {
+      // v6.46 (S05, docs/14 §S05 원안 "뉴스 매 라운드 2장"): 뉴스 드로우 장수 시나리오 오버라이드.
+      //   [배선 원칙] 새 효과 경로를 만들지 않는다 — 기존 단일 DRAW_NEWS 경로를 N회 순차 재적용할 뿐이다.
+      //   두 장의 효과는 "차례로 적용"되므로 주가 클램프(1~20)·공권력 클램프(0~10)·덱 오염 등 모든
+      //   기존 계약이 그대로 유지된다. currentNews 는 마지막 장(뉴스 박스 헤드라인), meta.newsDrawn 은
+      //   이번 라운드에 뽑힌 전량(표시용 — 판정 무영향). __newsOne 가드로 재귀는 1단계에서 종료.
+      //   scenarioRule 게이팅: newsDrawCount 미지정 시나리오는 1 → 분기 자체를 타지 않아 byte 동일 경로.
+      if (!action.__newsOne) {
+        const drawCount = Math.max(1, scenarioRule(state, 'newsDrawCount', 1));
+        if (drawCount > 1) {
+          let s = state;
+          const drawn = [];
+          for (let i = 0; i < drawCount; i++) {
+            s = reducer(s, { type: 'DRAW_NEWS', __newsOne: true });
+            if (s.currentNews) drawn.push(s.currentNews);
+          }
+          return { ...s, meta: { ...s.meta, newsDrawn: drawn } };
+        }
+      }
       const news = rand(NEWS);
       const eff = news.effect;
       let newStocks = { ...state.stocks };
@@ -4750,6 +4857,9 @@ function executeCards(state, playerIdx) {
   let s = { ...state };
   const p = s.players[playerIdx];
   if (!p.plannedCards || p.plannedCards.length === 0) return s;
+  // v6.47 [69차] (S06): 청산자 귀속용 카드 해결 창 직전 주가 스냅샷 — 이 좌석의 카드(레이드·주가조작·
+  //   mini-raid 포함)가 바닥으로 밀어넣은 블록만 그 Ghost 에게 귀속. 타 시나리오는 헬퍼 첫 줄에서 항등.
+  const _s06PreStocks = s.stocks;
 
   if (p.role === 'ghost') {
     // plannedHalves[i] = 'top' | 'bot' — 각 카드에서 어느 반쪽을 쓸지
@@ -4800,7 +4910,7 @@ function executeCards(state, playerIdx) {
     const newDiscard = [...p.discard, ...p.plannedCards];
     s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, plannedHalves: [] } : pp);
   }
-  return s;
+  return s06NoteLiquidation(s, playerIdx, _s06PreStocks);  // v6.47 [69차] (S06): 청산자 판정 (타 시나리오 항등)
 }
 
 // ============================================================================
@@ -6904,12 +7014,12 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S05' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus}. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4·뉴스2장 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus} · 뉴스 매 R {scen.newsDrawCount}장. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4 미배선)
         </div>
       )}
       {scen.id === 'S06' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult} · 첫 {scen.tradeFreezeRounds}R 거래 동결 · 뉴스 상승 ×{scen.newsStockUpMult}/하락 ×{scen.newsStockDownMult}. (부분 구현: 재건왕/청산자 타이틀 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 붕괴 · 11×11 전용 · 시작 공권력 {scen.startHeat} · 전 주가 {scen.startStock} · 전원 크레딧 −3·인플루언스 −1 · 블록별 스캔들 1장 시작 · 공매도 저가 정산 ×{scen.shortLowPriceMult} · 첫 {scen.tradeFreezeRounds}R 거래 동결 · 뉴스 상승 ×{scen.newsStockUpMult}/하락 ×{scen.newsStockDownMult} · 🏗 재건왕(파산 블록 주가 {scen.reconstructThresh}↑ 재건 ★+5) · 💀 청산자(Ghost가 {scen.liquidatorBlocs}개 블록 파산 유도 ★+10).
         </div>
       )}
 
@@ -9029,6 +9139,13 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             <div className="nh">📰 뉴스 {state.currentNews.id}</div>
             <div style={{ fontWeight: 700 }}>{state.currentNews.title}</div>
             <div style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic', marginTop: 3 }}>{state.currentNews.flavor}</div>
+            {/* v6.46 (S05): 매 라운드 2장 드로우 시나리오 — 함께 뽑힌 앞장(들)도 표시 (정직성: 효과는 이미 적용됨) */}
+            {(state.meta.newsDrawn || []).length > 1 && (
+              <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 5, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                이번 라운드 {state.meta.newsDrawn.length}장 공개 ·{' '}
+                {state.meta.newsDrawn.slice(0, -1).map(n => `${n.id} ${n.title}`).join(' / ')}
+              </div>
+            )}
           </div>
         )}
 

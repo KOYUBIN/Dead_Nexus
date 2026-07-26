@@ -21,6 +21,10 @@
   //                    HP 는 buildCombat 이 매 인카운터 리필(풀회복) · 하드모드 자동 스케일.
   //   MFU 접근 게이트   [계승 docs/25 §4.4 · a2-00 관례] enc① [HACK 4] / enc② [DEF 3]·[flag
   //                    ascendEnding] — 전부 전투 폴백 상존(4클래스 무력 완주 보장).
+  //   생존형 enc①       [신규 68차 · 오브젝티브 변주] enc① 에 survive:4 부여 — "외벽 방어망을
+  //                    4라운드 사수하면 MERIDIAN 정찰이 물러난다". 원 대사("사수한다" ·
+  //                    "이 밤을 지켜다오")가 이미 방어전을 요구했으므로 서사 정합 무편집.
+  //                    대화 노드·보상 리터럴은 byte 불변 — combat 수치 2개(threshold·survive)만 변경.
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
   // SIMPLIFIED: WARD_NODE(GRID·physImmune·hackOnly)는 오브젝티브 수호 정적 노드다 — ch05
@@ -49,12 +53,25 @@
   // ---- 전투 인카운터 ① = MISSION.combat (외벽 방어망 · 관제층 7열 × 8행) -----------
   //  좌표 {x:열 0..6, y:행 0..7}. row0=상단(외벽 방어망 노드), row7=하단(관제층 진입).
   //  [신규] 재건된 넥서스 관제층 무대. wall=붕괴 잔존 격벽, cover=관제 콘솔 엄폐.
+  //  ★[68차 오브젝티브 변주 — 생존형 방어전] enc① 을 "차감 단일형"에서 **사수형**으로 전환.
+  //    서사 정합: approach 선택지 원문이 이미 "드론을 걷어내고 외벽 방어망을 **사수**한다" ·
+  //    OPENING 의 SIGNAL 의뢰가 "저들은 외벽 방어망부터 시험할 것이다 … 이 밤을 지켜다오" —
+  //    원 대사가 요구하는 것이 '탈취'가 아니라 '버티기'였으므로, survive:N 이 오히려 원전
+  //    정합이다(대화·보상 텍스트 무편집, 수치 2개만 변경).
   var COMBAT = {
     cols: 7, rows: 8,
     playerStart: { x: 3, y: 7 },
     // 오브젝티브 = 외벽 방어망(threshold 누적 차감 = objective-reduce). [계승 store applyHackObjective]
-    //  인접 유닛 max(HACK,ATK) 자동축 → 4클래스 모두 다른 축으로 완주(부가 승리 경로).
-    objective: { x: 3, y: 0, threshold: 9, veil: 0, label: '외벽 방어망', dataTB: 2.0 },
+    //  인접 유닛 max(HACK,ATK) 자동축 → 6클래스 모두 다른 축으로 완주(부가 승리 경로).
+    //  [68차] 9 → 16: 바깥의 손이 방어망 격자 전체에 얹혀 있다 — 차감 완주는 '느린 정답'으로
+    //  밀어내고(러시 지배 해소), 사수(survive)를 이 무대의 주 승리축으로 세운다.
+    //  부수 효과: 65차부터 고정 잔존이던 BLADE trivial(W2·100% 러시) 이상치가 해소된다.
+    objective: { x: 3, y: 0, threshold: 16, veil: 0, label: '외벽 방어망', dataTB: 2.0 },
+    // ★[68차 신규 win-condition] survive:N — N라운드를 버티면 승리(MERIDIAN 정찰이 물러난다).
+    //   판정은 systems/combat/resolve.js surviveReached(순수) → store.checkOutcome 이 소비.
+    //   기존 두 승리(오브젝티브 차감 / 위협 적 전멸)는 그대로 살아 있는 **추가** 승리축이므로
+    //   완주 가능성은 단조 증가(clearFail 은 구조적으로 늘어날 수 없다).
+    survive: 4,
     threatCap: 9,
     // enc① 증원 없음(카탈로그: 증원은 enc②). MERIDIAN 정찰 압박은 STALKER 없는 소규모 탐색.
     walls: [

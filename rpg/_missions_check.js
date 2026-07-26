@@ -21,6 +21,7 @@
 //   ④ 스탯 게이트 필드 — attr∈{hack,atk,def,spd,hp}(evalGate/dialogueCtx 계약), tag/flag 문자열
 //   ⑤ 인카운터 필수 필드 — buildCombat 소비 스키마(그리드·playerStart·objective·walls·cover·enemies),
 //        좌표 그리드 내, 적 key 가 로스터(enemies.js ∪ 계획 로스터 ∪ --roster) 화이트리스트에 존재
+//        + [68차] survive:N (선택) — 생존형 win-condition 의 범위·밴드 검증
 //   ⑥ 보상 필드 타입 — applyRewards 소비(rep/karma/nuyen 수치, heatCapDelta 수치, unlocks 문자열배열)
 // ============================================================================
 
@@ -397,6 +398,20 @@ function checkEncounterConfig(c, prefix, R, roster) {
   // threatCap (선택 — 기본 8)
   if (c.threatCap != null && (!isNum(c.threatCap) || c.threatCap < 1)) {
     R.err('combat', P + 'threatCap 이 양수가 아님.');
+  }
+
+  // [68차] survive (선택 — 생존형 win-condition). N라운드 사수 시 승리.
+  //   store.buildCombat 이 truthy 일 때만 combat.survive 로 부착하고
+  //   store.checkOutcome 이 resolve.surviveReached(round, N) 으로 소비한다.
+  //   미지정 = 기존 동작(차감/전멸 승리만) — 필드가 없는 미션은 완전 무영향.
+  if (c.survive != null) {
+    if (!isInt(c.survive) || c.survive < 1) {
+      R.err('combat', P + 'survive 가 1 이상 정수가 아님 — 생존형 라운드 수(N라운드 사수 시 승리).');
+    } else {
+      if (c.survive < 3) R.warn('combat', P + 'survive=' + c.survive + ' — 2라운드 이하 사수는 트리비얼 이상치 위험(밴드 목표 3~9).');
+      if (c.survive > 9) R.warn('combat', P + 'survive=' + c.survive + ' — 10라운드 이상 사수는 소모전(attrition) 이상치 위험.');
+      R.info('combat', P + 'survive=' + c.survive + ' (생존형 인카운터 — 차감/전멸에 더해 N라운드 사수 승리축 추가).');
+    }
   }
 
   // enemies (필수 배열)

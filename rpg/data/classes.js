@@ -30,8 +30,18 @@
     // [65차] DRIFTER 기동·보급형 — 고 HP(9)+고 SPD(4). 차량 돌진 ASH 근접 + 추적불가 질주로 기동 브루저. 킷 = drifter.md 계승.
     DRIFTER: { key: 'DRIFTER', hp: 9,  atk: 4, def: 2, spd: 4, hack: 1, primary: 'ASH',   secondary: 'GRID',  signalFavor: 'iron', icon: '🚗', codename: 'FLINT',  passive: '멈추면 표적 — 차량 돌진 근접·추적불가 질주 기동', note: '고 HP + 고 SPD, 기동형' },
     // [48차] MOLE 위장·침투형 — 위장 신분(tags)으로 블록 인물태그 게이트 통과. 무소음 킷으로 발각 리스크 관리.
-    //   tags: [계승 mole.md Card01 COVER IDENTITY] 블록 소속 위장 → tag 게이트(VANTA/IRONWALL/AXIOM) 통과. SIMPLIFIED(상시 유지).
-    MOLE:    { key: 'MOLE',    hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'SHADE', secondary: 'MESH',  signalFavor: 'mesh', icon: '🕵', codename: 'ECHO',   passive: '위장 신분 — 인물태그 게이트 통과 · 무소음 침투', tags: ['VANTA', 'IRONWALL', 'AXIOM'], note: '균형, 유연성' },
+    //   tags: [계승 mole.md Card01 COVER IDENTITY] 블록 소속 위장 → tag 게이트(VANTA/IRONWALL/HELIX/AXIOM) 통과. SIMPLIFIED(상시 유지).
+    //   [67차] HELIX 추가 — 위장 신분이 아니라 '원본 신분'. mole.md 대표 인물 ECHO(MIRA SHADE) 의
+    //     정체성 원전 = lore GHOST_IDENTITY.MOLE "자신이 제품이었음을 깨닫고 사라진 침투 요원" +
+    //     mole.md Card09 IDENTITY COLLAPSE 계열 정체성 붕괴 모티프. HELIX 수장 ELIA VOSS(DR.,
+    //     lore LORE_BLOCS.HELIX)가 ECHO 를 '검체 E-7'로 설계·관리한 인물(a2-side-mole-whoami 원전
+    //     앵커) → ECHO 의 HELIX 소속 기록은 위조가 아니라 실재. Card01 COVER IDENTITY ▼BOTTOM
+    //     "위장신분 추가 획득. 동시에 2개 블록 소속 가능" 이 태그 다중 보유의 원전 근거이며,
+    //     RPG 각색에서 tags 는 상시 유지 목록(SIMPLIFIED) 이므로 장수 제한 메커닉 미이식
+    //     (레거시 TRIPLE AGENT 는 abilities.js 에서 objectiveBonus+1 로 별도 각색 — tags 수와 무관).
+    //     효과: a2-side-mole-whoami [HELIX 태그] 지름길이 소유 클래스(MOLE) 에게 실제로 열린다
+    //     (67차 이전 = 전 클래스 도달 불가 사문 게이트). 전투 엔진은 tags 를 읽지 않음 → 밸런스 불변.
+    MOLE:    { key: 'MOLE',    hp: 7,  atk: 2, def: 3, spd: 3, hack: 3, primary: 'SHADE', secondary: 'MESH',  signalFavor: 'mesh', icon: '🕵', codename: 'ECHO',   passive: '위장 신분 — 인물태그 게이트 통과 · 무소음 침투', tags: ['VANTA', 'IRONWALL', 'HELIX', 'AXIOM'], note: '균형, 유연성' },
   };
 
   // 플레이어블 로스터 (허브 크루/로스터에서 선택 가능). [44차] CIPHER·BLADE → [48차] RIGGER·MOLE → [65차] BROKER·DRIFTER = 6클래스(전량).

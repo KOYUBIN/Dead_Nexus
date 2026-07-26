@@ -138,6 +138,8 @@ button { font-family: inherit; cursor: pointer; }
 .combat-top { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); flex-wrap: wrap; }
 .combat-top .obj { color: var(--green); }
 .combat-top .rnd { color: var(--yellow); }
+/* [68차] 생존형(survive:N) 인카운터 사수 카운터 — 차감 오브젝티브와 색으로 구분. */
+.combat-top .obj.surv { color: var(--cyan); }
 .board-wrap { display: flex; justify-content: center; overflow-x: auto; }
 .board { position: relative; --tile: min(15vw, 56px); }
 .tile { position: absolute; width: var(--tile); height: var(--tile); border: 1px solid #202042;

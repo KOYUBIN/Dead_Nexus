@@ -1493,6 +1493,313 @@ ok('283. BROKER 편성 → broker-ledger 해금·drifter-lastroad 잠김 (DRIFTE
   CAMP.isUnlocked(byId['a2-side-drifter-lastroad'], drfSideSave) === true &&
   CAMP.isUnlocked(byId['a2-side-broker-ledger'], drfSideSave) === false);
 
+// ============================================================================
+// ======  67차 — MOLE HELIX 태그 (사문 게이트 해소) + 하드모드 계기판 핀  ======
+//   ① MOLE.tags 에 HELIX 추가 → a2-side-mole-whoami [HELIX] 지름길이 소유 클래스에게
+//      실제 개방(67차 이전 = 어떤 클래스도 통과 불가한 도달 불가 게이트).
+//      원전 = mole.md Card01 COVER IDENTITY ▼BOTTOM(위장신분 다중 보유) + ECHO=검체 E-7
+//      (HELIX Dr. ELIA VOSS 설계) — 위장이 아니라 원본 소속 기록.
+//   ② 태그 게이트 전수 도달성 핀 — 블록 태그축은 전량 도달 가능, 속성명 태그축 2건은
+//      알려진 미도달(범위 밖)로 정직 고정. 신규 사문 게이트 유입 시 즉시 실패.
+//   ③ 하드모드(scale 1.25) 실패 집합 핀 — ★게이트가 아니라 계기판(회귀 감지) 핀.
+//      base 불변식(clearFail 0) 은 게이트지만, hard 는 clearFail 0 미달성 상태를
+//      '하드모드 한계'로 정직 고정한다(개선/악화 양방향 회귀 즉시 노출).
+// ============================================================================
+
+console.log('\n== [67차] MOLE HELIX 태그 — 원전 정합 · 사문 게이트 해소 ==');
+// MOLE.tags = 5대 블록(VANTA/IRONWALL/HELIX/AXIOM/CARBON) 중 4종. CARBON 만 미보유(태그 게이트 0건).
+ok('284. MOLE.tags = [VANTA,IRONWALL,HELIX,AXIOM] (67차 HELIX 추가) · 타 5클래스는 tags 없음',
+  JSON.stringify(CL.CLASSES.MOLE.tags) === '["VANTA","IRONWALL","HELIX","AXIOM"]' &&
+  ['CIPHER', 'BLADE', 'RIGGER', 'BROKER', 'DRIFTER'].every(function (k) { return !CL.CLASSES[k].tags; }) &&
+  CH.makeCharacter('MOLE').tags.indexOf('HELIX') >= 0);
+
+// 사문 게이트 해소 — mole-whoami [HELIX] 가 소유 클래스(MOLE) 에서 available.
+var mwMission = CAMP.missionData('a2-side-mole-whoami');
+var mwHelix = mwMission.dialogue.nodes.approach.choices[2];
+var mwMole = S.selectClass(S.rpgInitialState(), 'MOLE');
+mwMole.save.missionsDone = ['ch08-zero-day'];
+mwMole = S.startMission(mwMole, 'a2-side-mole-whoami');
+var mwCtx = S.dialogueCtx(mwMole);
+ok('285. a2-side-mole-whoami [HELIX 태그] 게이트 = 소유 클래스 MOLE 에서 available (67차 이전 도달불가)',
+  JSON.stringify(mwHelix.gate) === '{"tag":"HELIX"}' &&
+  DLG.evalGate(mwHelix.gate, mwCtx).ok === true && DLG.choiceState(mwHelix, mwCtx) === 'available' &&
+  DLG.choiceState(mwMission.dialogue.nodes.approach.choices[1], mwCtx) === 'gray');   // [SPD 4] 는 성장 게이트로 잔존
+
+// 지름길 완주 경로 — 전투 스킵 → outroGhost → settle 보상(무력 경로와 동일 계약).
+var mwRun = S.dialogueChoose(mwMole, 0);          // intro → approach
+mwRun = S.dialogueChoose(mwRun, 2);               // [HELIX] → skipCombat → outroGhost
+var mwGhostNode = mwRun.dialogue.nodeId, mwNoCombat = mwRun.combat === null;
+mwRun = S.dialogueChoose(mwRun, 0);               // outroGhost → choice
+mwRun = S.dialogueChoose(mwRun, 0);               // choice A → settle (applyRewards)
+ok('286. HELIX 지름길 완주: 전투 미발생 → outroGhost · helixForged/ghostedIdentity/whoAmIDone · 보상 동일(rep5·karma2)',
+  mwGhostNode === 'outroGhost' && mwNoCombat === true &&
+  mwRun.save.flags.helixForged === true && mwRun.save.flags.ghostedIdentity === true &&
+  mwRun.save.flags.whoAmIDone === true &&
+  mwRun.save.missionsDone.indexOf('a2-side-mole-whoami') >= 0 &&
+  mwMission.rewards.rep === 5 && mwMission.rewards.karma === 2 &&
+  mwMission.rewards.unlocks.indexOf('WHO AM I') >= 0);
+
+// 태그 게이트 전수 도달성 — 미션 데이터의 모든 { tag } 게이트를 6클래스 기본 빌드로 판정.
+//   블록 태그축(VANTA/IRONWALL/HELIX/AXIOM)은 전량 MOLE 통과. 잔존 미도달은 속성명 태그축
+//   2건(a2-c2 MESH · a2-side-cipher-static SHADE) — 어떤 클래스도 속성을 tags 로 갖지 않는
+//   설계상 사문(67차 범위 밖 · 정직 고정). 신규 사문 게이트가 생기면 이 핀이 즉시 실패한다.
+var tagCtxs = {};
+CL.PLAYABLE.forEach(function (k) {
+  var tc = CH.makeCharacter(k), te = CH.effectiveStats(tc);
+  tagCtxs[k] = { attrs: { hack: te.hack, atk: te.atk, def: te.def, spd: te.spd, hp: te.maxHp }, tags: tc.tags || [], flags: {}, classKey: k };
+});
+var tagGates = [], tagDead = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm || !mm.dialogue) return;
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (ch2) {
+      if (!ch2.gate || !ch2.gate.tag) return;
+      tagGates.push(reg.id + '|' + ch2.gate.tag);
+      var reach = CL.PLAYABLE.some(function (k) { return DLG.evalGate(ch2.gate, tagCtxs[k]).ok; });
+      if (!reach) tagDead.push(reg.id + '|' + ch2.gate.tag);
+    });
+  });
+});
+tagDead.sort();
+// [68차] 태그 게이트 총량 9 → 8 (a2-side-blade-vendetta 의 [IRONWALL 태그] 를 [DEF 4] 로 교체 —
+//   소유 클래스 사문 해소, 아래 294~296 참고). 블록 태그축 6건 전량 MOLE 통과 유지.
+ok('287. 태그 게이트 8건 중 블록 태그축 6건 전량 도달 가능(MOLE) · 미도달 잔존 = 속성명 태그축 2건 정확히'
+  + (tagDead.length ? ' [' + tagDead.join(', ') + ']' : ''),
+  tagGates.length === 8 && tagDead.length === 2 &&
+  tagDead[0] === 'a2-c2-signal-war|MESH' && tagDead[1] === 'a2-side-cipher-static|SHADE');
+
+// tags 는 대화 게이트 전용 축 — 전투 상태(buildCombat)에 유입되지 않음(밸런스 불변의 구조적 근거).
+var mwCombatState = S.buildCombat(mwMission, CH.makeCharacter('MOLE'), 'outro');
+ok('288. tags 는 전투 상태에 유입 0 (buildCombat 산출물에 tags/HELIX 문자열 부재) — 태그 확장의 밸런스 불변 근거',
+  JSON.stringify(mwCombatState).indexOf('HELIX_MEDIC') >= 0 &&        // 적 키는 존재(대조군)
+  JSON.stringify(S.player(mwCombatState)).indexOf('tags') < 0 &&
+  S.player(mwCombatState).tags === undefined);
+
+console.log('\n== [67차] 하드모드(scale 1.25) 실패 집합 계기판 핀 — 게이트 아님(하드모드 한계 정직 고정) ==');
+// ★ 이 핀은 '통과 기준'이 아니라 '현재 한계의 정직한 스냅샷'이다. hard 축에는 전용 레버가
+//   없고(적 스탯 배율만 상이 · 오브젝티브 임계/좌표/threatCap 은 base 와 공유), 공유 수치를
+//   건드리면 base 매트릭스가 반드시 변한다(v6.46 실측 검증 — 커버 1칸 추가만으로 base
+//   BLADE 9R→12R · RIGGER reinforced 반전). 따라서 base 불변 제약 하에서 하드 실패는
+//   미션 데이터로 해소 불가 → 잔존 27건을 집합째 고정해 회귀(악화)와 개선을 모두 노출시킨다.
+var HARD_BASE_FAILS = [
+  'a2-a2-crown-throne|RIGGER', 'a2-b2-freeport#stage2|RIGGER', 'a2-b2-freeport|BROKER', 'a2-b2-freeport|RIGGER',
+  'a2-d1-scavenge#stage2|RIGGER', 'a2-d2-last-signal#stage2|RIGGER', 'a2-side-blade-vendetta|MOLE',
+  'a2-side-blade-vendetta|RIGGER', 'a2-side-broker-ledger|BROKER', 'a2-side-cipher-static|BROKER',
+  'a2-side-cipher-static|CIPHER', 'a2-side-drifter-lastroad|BROKER', 'a2-side-rigger-build|BROKER',
+  'a2-side-rigger-build|CIPHER', 'ch01-first-blood|CIPHER', 'ch02-insider-game|BROKER',
+  'ch03-martial-night|BROKER', 'ch03-martial-night|RIGGER', 'ch04-price-of-splice|BROKER',
+  'ch06-bloc-acquisition|BROKER', 'ch06-bloc-acquisition|CIPHER', 'ch07-heart-of-city|BROKER',
+  'ch07-heart-of-city|CIPHER', 'ch08-zero-day|BROKER', 'ch08-zero-day|RIGGER',
+  'side-03-chemical-raid|CIPHER', 'side-07-server-zero|BROKER',
+];
+var HARD_FULL_FAILS = ['a2-b2-freeport|RIGGER', 'a2-side-blade-vendetta|RIGGER', 'ch03-martial-night|RIGGER'];
+function hardFailSet(scn) {
+  var rws = BAL.runMatrix(scn, 1.25), acc = [];
+  rws.forEach(function (r) {
+    BAL.CLASSES.forEach(function (c) {
+      if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) acc.push(r.id + '|' + c);
+    });
+  });
+  return acc.sort();
+}
+var hbSet = hardFailSet('base'), hfSet = hardFailSet('full');
+ok('289. 계기판: hard×base clearFail 27건 = 고정 집합 일치 (BROKER12·RIGGER8·CIPHER6·MOLE1 / BLADE·DRIFTER 0)',
+  hbSet.length === 27 && JSON.stringify(hbSet) === JSON.stringify(HARD_BASE_FAILS) &&
+  hbSet.filter(function (x) { return /\|BROKER$/.test(x); }).length === 12 &&
+  hbSet.filter(function (x) { return /\|RIGGER$/.test(x); }).length === 8 &&
+  hbSet.filter(function (x) { return /\|CIPHER$/.test(x); }).length === 6 &&
+  hbSet.filter(function (x) { return /\|MOLE$/.test(x); }).length === 1 &&
+  hbSet.filter(function (x) { return /\|(BLADE|DRIFTER)$/.test(x); }).length === 0);
+ok('290. 계기판: hard×full clearFail 3건 = RIGGER 전량 (최고가 장비가 24/27 을 흡수 · 잔여는 DEF 임계 붕괴형)',
+  hfSet.length === 3 && JSON.stringify(hfSet) === JSON.stringify(HARD_FULL_FAILS) &&
+  hfSet.every(function (x) { return /\|RIGGER$/.test(x); }));
+// hard 축이 표준 난이도를 오염시키지 않음 — base 매트릭스 clearFail 0 불변식은 게이트(174) 로 유지되고,
+//   여기서는 hard 실패 집합이 base 성공 집합의 부분집합임(= 하드 전용 실패)을 고정한다.
+var baseFailSet = [];
+BAL.runMatrix('base').forEach(function (r) {
+  BAL.CLASSES.forEach(function (c) { if (BAL.verdict(r.cells[c]).flags.indexOf('clearFail') >= 0) baseFailSet.push(r.id + '|' + c); });
+});
+ok('291. hard 실패 30건(base27+full3)은 전량 하드 전용 — 표준 난이도(base/full) clearFail 0 불변',
+  baseFailSet.length === 0 && aggFull.fail === 0 && aggMid.fail === 0);
+
+// ============================================================================
+// ======  68차 — RPG 오브젝티브 다양성 (생존형 win-condition · HACK 전용 코어)  ======
+//   ① resolve.surviveReached 순수 판정 + 하위 호환 불변식(미선언 = 완전 무영향)
+//   ② buildCombat/checkOutcome 배선 + 비전환 미션 byte 불변
+//   ③ side-02 HACK 전용 코어(ICE 격자 봉인) — 데이터만·엔진 무편집
+//   ④ _balance survive 정책/봉인 대응 + 매트릭스 회귀(clearFail 0 · trivial 감소)
+//   ⑤ blade-vendetta 사문 게이트 해소([IRONWALL 태그] → [DEF 4])
+// ============================================================================
+console.log('\n== [68차] 생존형 win-condition — resolve.surviveReached 순수 판정 ==');
+ok('292. surviveReached: 미선언(undefined/null/0/음수) 은 항상 false — 하위 호환 불변식',
+  R.surviveReached(99, undefined) === false && R.surviveReached(99, null) === false &&
+  R.surviveReached(99, 0) === false && R.surviveReached(99, -3) === false);
+ok('293. surviveReached: N라운드 사수 경계 — round N 이하 false, N 초과 true (round>N)',
+  R.surviveReached(1, 4) === false && R.surviveReached(4, 4) === false &&
+  R.surviveReached(5, 4) === true && R.surviveReached(9, 4) === true);
+ok('294. surviveReached: 순수·결정론 (같은 입력 반복 = 같은 출력, 부작용 0)',
+  R.surviveReached(5, 4) === R.surviveReached(5, 4) && R.surviveReached(3, 4) === R.surviveReached(3, 4));
+
+console.log('\n== [68차] buildCombat/checkOutcome 배선 · 비전환 미션 byte 불변 ==');
+var svMission = CAMP.missionData('a2-c1-first-contact');
+ok('295. a2-c1 enc① 데이터: survive:4 · 임계 16 (차감 단일형 → 사수형 전환)',
+  svMission.combat.survive === 4 && svMission.combat.objective.threshold === 16 &&
+  (svMission.combat.objective.veil || 0) === 0);
+ok('296. enc②(stage2) 는 비전환 — survive 미선언(2연전 후반은 기존 차감형 유지)',
+  svMission.encounters.stage2.survive === undefined);
+var svCombat = S.buildCombat(svMission, CH.makeCharacter('BLADE'), 'outro');
+ok('297. buildCombat: 생존형 인카운터만 combat.survive 부착(=4)', svCombat.survive === 4);
+// ★하위 호환 불변식 — survive 미선언 미션의 buildCombat 산출물에 survive 키가 존재하지 않는다.
+var nonSv = S.buildCombat(CAMP.missionData('ch01-first-blood'), CH.makeCharacter('CIPHER'), 'outro');
+ok('298. 비전환 미션 buildCombat 산출물에 survive 키 부재 (JSON byte 불변의 구조적 근거)',
+  !('survive' in nonSv) && JSON.stringify(nonSv).indexOf('"survive"') < 0);
+// 전 32미션 × 전 인카운터 중 survive 선언은 정확히 1건(a2-c1 enc①) — 확산 방지 핀.
+var svDecl = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var m = CAMP.missionData(reg.id); if (!m) return;
+  if (m.combat && m.combat.survive) svDecl.push(reg.id);
+  if (m.encounters) Object.keys(m.encounters).forEach(function (k) {
+    if (m.encounters[k].survive) svDecl.push(reg.id + '#' + k);
+  });
+});
+ok('299. survive 선언 인카운터 = 정확히 1건 [a2-c1-first-contact] (엔진 확장 1종 한정 준수)',
+  svDecl.length === 1 && svDecl[0] === 'a2-c1-first-contact');
+
+// checkOutcome 실측 — 아무것도 하지 않고 라운드만 넘겨도 4라운드 사수 시 승리.
+//   (BLADE 는 MERIDIAN_DRONE atk3 ≤ def3 → 피해 0 → 순수 사수 경로 관측에 적합)
+var svRun = svCombat, svRounds = 0;
+while (!svRun.outcome && svRounds < 12) { svRun = S.runEnemyTurn(svRun); svRounds++; }
+ok('300. 무행동 사수: 4라운드 경과 시 outcome=win (오브젝티브 미완 · 위협 적 잔존)',
+  svRun.outcome === 'win' && svRounds === 4 && svRun.objective.done === false &&
+  svRun.units.filter(function (u) { return u.side === 'enemy' && u.hp > 0 && u.ai !== 'static'; }).length > 0);
+ok('301. 사수 승리 로그 1줄 삽입 (차감/전멸 승리와 구분되는 서사 피드백)',
+  svRun.log.filter(function (l) { return l.indexOf('사수 완료') >= 0; }).length === 1);
+// 비전환 미션은 같은 절차로 승리하지 않는다(라운드 경과만으로는 승패 없음) — 대조군.
+var nsRun = nonSv, nsRounds = 0;
+while (!nsRun.outcome && nsRounds < 12) { nsRun = S.runEnemyTurn(nsRun); nsRounds++; }
+ok('302. 대조군: 비전환 미션은 라운드 경과만으로 승리하지 않음 (survive 분기 미유입)',
+  nsRun.outcome !== 'win' &&
+  nsRun.log.filter(function (l) { return l.indexOf('사수 완료') >= 0; }).length === 0);
+
+console.log('\n== [68차] side-02 HACK 전용 코어 (ICE 격자 봉인 · 데이터만) ==');
+var s02 = CAMP.missionData('side-02-corp-breach');
+var s02Ice = s02.combat.enemies.filter(function (e) { return e.key === 'ICE_NODE'; });
+var s02Ring = {};
+s02Ice.forEach(function (e) { s02Ring[e.x + ',' + e.y] = true; });
+var ringTiles = [], oo = s02.combat.objective;
+for (var rdx = -1; rdx <= 1; rdx++) for (var rdy = -1; rdy <= 1; rdy++) {
+  if (rdx === 0 && rdy === 0) continue;
+  var rx = oo.x + rdx, ry = oo.y + rdy;
+  if (G.inBounds(rx, ry, s02.combat.cols, s02.combat.rows)) ringTiles.push(rx + ',' + ry);
+}
+ok('303. 캐시 인접 링 ' + ringTiles.length + '타일 전량 ICE_NODE 봉인 (HACK 전용 코어 성립 조건)',
+  ringTiles.length === 5 && ringTiles.every(function (t) { return s02Ring[t]; }) && s02Ice.length === 5);
+ok('304. ICE_NODE 는 physImmune·hackOnly·static — 링 돌파는 useHack 능력 보유 클래스 한정',
+  EN.ENEMIES.ICE_NODE.physImmune === true && EN.ENEMIES.ICE_NODE.hackOnly === true &&
+  EN.ENEMIES.ICE_NODE.ai === 'static');
+// 클래스별 링 돌파 가능성 = 킷에 useHack 공격 능력이 있는가 (applyAttack: physImmune && !useHack → 무효).
+function canBreach(k) {
+  return CH.makeCharacter(k).kit.some(function (a) {
+    var ab = AB.ABILITIES[a];
+    return ab && ab.useHack && (ab.kind === 'RANGED' || ab.kind === 'MELEE');
+  });
+}
+var breachers = CL.PLAYABLE.filter(canBreach).sort();
+ok('305. 링 돌파 가능 = HACK 축 3클래스 [BROKER,CIPHER,MOLE] · 물리축 3클래스는 전멸 승리로 완주'
+  + ' [' + breachers.join(',') + ']',
+  JSON.stringify(breachers) === JSON.stringify(['BROKER', 'CIPHER', 'MOLE']));
+// 실측: 봉인 이후에도 6클래스 전원 클리어 가능(전멸 폴백) · CIPHER 는 오브젝티브 축으로 완주.
+var s02Cells = {};
+BAL.CLASSES.forEach(function (cl) {
+  s02Cells[cl] = { combat: BAL.runEncounter(cl, 'side-02-corp-breach', 'combat'),
+                   objective: BAL.runEncounter(cl, 'side-02-corp-breach', 'objective') };
+});
+ok('306. 봉인 후 6클래스 전원 클리어 가능(clearFail 0) — 전멸 승리축이 물리 클래스 폴백',
+  BAL.CLASSES.every(function (cl) { return BAL.verdict(s02Cells[cl]).clearable; }));
+ok('307. CIPHER 는 봉인을 뚫고 objective 경로로 완주(winBy=objective) — HACK 축 우대 실증',
+  s02Cells.CIPHER.objective.win === true && s02Cells.CIPHER.objective.winBy === 'objective');
+ok('308. BLADE(물리축)는 objective 정책으로도 전멸 승리로만 완주(winBy=eliminate) — 코어 접근 차단 실증',
+  s02Cells.BLADE.combat.win === true && s02Cells.BLADE.combat.winBy === 'eliminate' &&
+  (!s02Cells.BLADE.objective.win || s02Cells.BLADE.objective.winBy === 'eliminate'));
+
+console.log('\n== [68차] 하네스 대응 — survive 정책 · 봉인 코어 · 매트릭스 회귀 ==');
+var svPolRes = BAL.runEncounter('CIPHER', 'a2-c1-first-contact', 'survive');
+ok('309. survive 정책(농성) 자체 결정론 + 생존형 인카운터 클리어',
+  svPolRes.win === true &&
+  JSON.stringify(svPolRes) === JSON.stringify(BAL.runEncounter('CIPHER', 'a2-c1-first-contact', 'survive')));
+ok('310. survive 정책은 6클래스 전원 사수 완주 (신규 유형의 하네스 클리어 판정 성립)',
+  BAL.CLASSES.every(function (cl) { return BAL.runEncounter(cl, 'a2-c1-first-contact', 'survive').win; }));
+// 셀 형상 — 생존형 행만 3정책, 그 외 전 행은 2정책(기존 --json 형상 byte 불변).
+var mrx68 = BAL.runMatrix();
+var pol3 = [], pol2 = 0;
+mrx68.forEach(function (r) {
+  var keys = Object.keys(r.cells.CIPHER).sort();
+  if (keys.length === 3) pol3.push(r.id); else pol2++;
+});
+ok('311. 3정책 측정 행 = 생존형 1행 [a2-c1-first-contact] · 나머지 ' + pol2 + '행은 2정책(형상 불변)',
+  pol3.length === 1 && pol3[0] === 'a2-c1-first-contact' && pol2 === mrx68.length - 1);
+// 매트릭스 회귀 — 전 조합 클리어 유지 + 68차로 base 트리비얼 3 → 2 (a2-c1 BLADE 해소).
+var agg68 = BAL.aggregateScenario(mrx68);
+ok('312. 68차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 2(65차 3건에서 1건 해소)',
+  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 2);
+ok('313. 해소된 트리비얼은 a2-c1-first-contact — 잔존 2건에 미포함',
+  agg68.flagged.filter(function (f) { return f.id === 'a2-c1-first-contact'; }).length === 0);
+
+console.log('\n== [68차] blade-vendetta 사문 게이트 해소 ([IRONWALL 태그] → [DEF 4]) ==');
+var bvM = CAMP.missionData('a2-side-blade-vendetta');
+var bvChoices = bvM.dialogue.nodes.approach.choices;
+ok('314. approach 3출구 유지 · IRONWALL 태그 게이트 소멸 · [DEF 4] attr 게이트로 교체',
+  bvChoices.length === 3 &&
+  bvChoices.every(function (ch3) { return !(ch3.gate && ch3.gate.tag); }) &&
+  bvChoices.filter(function (ch3) { return ch3.gate && ch3.gate.attr === 'def' && ch3.gate.min === 4; }).length === 1);
+// 소유 클래스(BLADE) 기준 도달성 — 무장비는 잠김(회색 광고), IRON_SKIN 장착 시 개방.
+var bvBase = CH.makeCharacter('BLADE');
+var bvGeared = CH.makeCharacter('BLADE'); bvGeared.equipment = { weapon: null, cyberware: 'IRON_SKIN' };
+function defCtx(chx) { var ef = CH.effectiveStats(chx); return { attrs: { hack: ef.hack, atk: ef.atk, def: ef.def, spd: ef.spd, hp: ef.maxHp }, tags: chx.tags || [], flags: {} }; }
+var bvGate = { attr: 'def', min: 4 };
+ok('315. 소유 클래스 BLADE: 무장비 DEF3 → 잠김(gray 광고) · IRON_SKIN(DEF+2) → 개방 (사문 아님)',
+  DLG.evalGate(bvGate, defCtx(bvBase)).ok === false &&
+  DLG.evalGate(bvGate, defCtx(bvGeared)).ok === true &&
+  DLG.choiceState(bvChoices[2], defCtx(bvBase)) === 'gray' &&
+  DLG.choiceState(bvChoices[2], defCtx(bvGeared)) === 'available');
+ok('316. IRON_SKIN 은 BLADE 장착 가능(classReq 통과) — 개방 경로가 실제 경제 루프로 도달 가능',
+  GEAR.canEquip(GEAR.ITEMS.IRON_SKIN, bvBase) === true && GEAR.ITEMS.IRON_SKIN.mods.def === 2);
+ok('317. [DEF 4] 는 karma 성장 축으로도 도달 (장비 없이도 def+1 1회 지출로 개방)',
+  DLG.evalGate(bvGate, defCtx(CH.spendKarma(
+    (function () { var t = CH.makeCharacter('BLADE'); t.karma = 1; return t; })(), 'def').character)).ok === true);
+
+// ★소유 클래스 사문 전수 — unlock.classKey 가 걸린 클래스 전용 사이드의 모든 게이트를
+//   그 소유 클래스 기준으로 판정한다. 두 축을 나눠 본다:
+//     · attr 게이트 : karma 성장(STAT_CAP 이내) 또는 장비로 언제나 도달 가능 → 사문 아님.
+//     · tag  게이트 : 성장·장비로 얻을 수 없는 고정 축 → 소유 클래스가 태그를 갖지 못하면 사문.
+//   68차에서 blade-vendetta 의 [IRONWALL 태그] 를 attr 축으로 옮겨 소유 사문 2건 → 1건.
+//   잔존 1건은 "속성명(SHADE) 을 태그로 쓴" 설계상 사문(어떤 클래스도 속성을 tags 로 갖지
+//   않음, 287 과 동일 근거)이며 67차와 마찬가지로 집합째 정직 고정한다.
+var ownerAttrDead = [], ownerTagDead = [];
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id);
+  var ownerKey = reg.unlock && reg.unlock.classKey;
+  if (!mm || !mm.dialogue || !ownerKey) return;
+  var oc = CH.makeCharacter(ownerKey);
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (ch4) {
+      var g4 = ch4.gate;
+      if (!g4 || g4.flag) return;                       // flag 게이트는 前 미션 계승축(범위 밖)
+      if (g4.attr) {                                    // 성장 상한 안이면 도달 가능
+        var capKey = g4.attr === 'hp' ? 'hp' : g4.attr;
+        if (!(CH.STAT_CAP[capKey] >= g4.min)) ownerAttrDead.push(reg.id + '|' + g4.attr + g4.min);
+        return;
+      }
+      if (g4.tag && !DLG.evalGate(g4, defCtx(oc)).ok) ownerTagDead.push(reg.id + '|' + g4.tag);
+    });
+  });
+});
+ok('318. 클래스 전용 사이드의 attr 게이트 전량 성장 상한(STAT_CAP) 이내 — 성장 도달 불가 0'
+  + (ownerAttrDead.length ? ' [' + ownerAttrDead.join(', ') + ']' : ''), ownerAttrDead.length === 0);
+ok('319. 소유 클래스 tag 사문 = 1건 [a2-side-cipher-static|SHADE] 정확히 (68차 blade-vendetta 해소분 제외)'
+  + (ownerTagDead.length ? ' [' + ownerTagDead.join(', ') + ']' : ''),
+  ownerTagDead.length === 1 && ownerTagDead[0] === 'a2-side-cipher-static|SHADE');
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);

@@ -184,6 +184,32 @@ function tests(){
   ok('S05 blocAsset=base+adj+25',g5.blocAsset===100+adj5+25,`got ${g5.blocAsset} (adj ${adj5})`);
   ok('S05 all-seat credit +5 (bloc 8+5=13)',bloc5&&bloc5.resources.credit>=13,`got ${bloc5&&bloc5.resources.credit}`);
   ok('S05 ghostRepBattle standard (no override)',g5.ghostRepBattle===45+Math.floor(adj5/2),`got ${g5.ghostRepBattle}`);
+  // ---- v6.46 (66차): S05 뉴스 매 R 2장 드로우 (docs/14 §S05 원안 확장) ----
+  //   기존 DRAW_NEWS 경로 N회 재적용 — 게이팅(newsDrawCount)·2장 실드로우·타 시나리오 1장 불변을 핀.
+  {
+    const R5=window.reducer;
+    ok('S05 newsDrawCount=2 (원안 배선)',SR(s5,'newsDrawCount',1)===2,`got ${SR(s5,'newsDrawCount',1)}`);
+    const d5=R5(s5,{type:'DRAW_NEWS'});
+    ok('S05 DRAW_NEWS → meta.newsDrawn 2장',(d5.meta.newsDrawn||[]).length===2,`got ${(d5.meta.newsDrawn||[]).length}`);
+    ok('S05 currentNews = 마지막 장(뉴스박스 헤드라인)',!!d5.currentNews&&d5.meta.newsDrawn[1].id===d5.currentNews.id,`cur ${d5.currentNews&&d5.currentNews.id}`);
+    const news5Logs=d5.log.filter(l=>String(l.message||'').startsWith('📰')).length
+                   -s5.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+    ok('S05 뉴스 로그 2줄 (효과 순차 적용 = 기존 경로 2회)',news5Logs===2,`got ${news5Logs}`);
+    // 타 시나리오 무영향 — S01/S03/S06 은 newsDrawCount 미지정 → 1장 + newsDrawn 미설정
+    for (const sid of ['S01','S03','S06']) {
+      const sx=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:sid});
+      ok(`${sid} newsDrawCount 미지정 → 폴백 1`,SR(sx,'newsDrawCount',1)===1);
+      const dx=R5(sx,{type:'DRAW_NEWS'});
+      const nLogs=dx.log.filter(l=>String(l.message||'').startsWith('📰')).length
+                 -sx.log.filter(l=>String(l.message||'').startsWith('📰')).length;
+      ok(`${sid} DRAW_NEWS 1줄 · newsDrawn 미설정 (2장 배선 무영향)`,nLogs===1&&dx.meta.newsDrawn===undefined,`logs ${nLogs} drawn ${JSON.stringify(dx.meta.newsDrawn)}`);
+      // 격리 byte 동일성: 동일 시드에서 (a) 신규 게이트를 통과한 DRAW_NEWS 와 (b) __newsOne 로 게이트를
+      //   강제 우회한 DRAW_NEWS(=패치 이전 코드 경로)의 결과 상태가 완전 동일 — 분기 미진입 실증.
+      const seedRun=(act)=>{const real=Math.random;let t=0x9e3779b9;Math.random=()=>{t=(t*1664525+1013904223)>>>0;return t/4294967296;};
+        try{return JSON.stringify(R5(sx,act));}finally{Math.random=real;}};
+      ok(`${sid} 격리 byte 동일 (게이트 통과 == 우회 경로, 동일 시드)`,seedRun({type:'DRAW_NEWS'})===seedRun({type:'DRAW_NEWS',__newsOne:true}));
+    }
+  }
   // ---- S06 마켓 크래시 ----
   const s6=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'CARBON',humans:null,scenario:'S06'});
   const g6=GVG(s6);
@@ -258,6 +284,64 @@ function tests(){
   const s1r1={...s1,meta:{...s1.meta,round:1},players:s1.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:50}}:p)};
   const s1buy=R(s1r1,{type:'BUY_STOCK',playerIdx:0,bloc:'VANTA',qty:1});
   ok('S01 R1 BUY_STOCK not frozen (works)',s1buy!==s1r1&&(s1buy.players[0].stocks.VANTA||0)===1,`VANTA ${s1buy.players[0].stocks.VANTA}`);
+  // ==== v6.47 [69차]: S06 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안) ====
+  //   원전: 재건왕 = 파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5
+  //         청산자 = 2개 이상 블록 파산 유도 Ghost 렙 +10
+  //   엔진 매핑: 주가 하한이 1(Math.max(1,…)) → "파산(0)"=crashBottomThresh(1). 보상은 하이라이트 rep.
+  const MCB=window.s06MarkCrashBottom, CRK=window.s06CheckReconstructor, NLQ=window.s06NoteLiquidation;
+  const HD=(typeof HIGHLIGHT_DEFS!=='undefined')?HIGHLIGHT_DEFS:null;
+  ok('S06 crashBottomThresh=1 (원전 "파산(주가 0)" → 엔진 주가 하한)',SR(s6,'crashBottomThresh',0)===1);
+  ok('S06 reconstructThresh=10 (원전 "주가 10↑로 복구")',SR(s6,'reconstructThresh',0)===10);
+  ok('S06 liquidatorBlocs=2 (원전 "2개 이상 블록 파산 유도")',SR(s6,'liquidatorBlocs',0)===2);
+  ok('S06 HIGHLIGHT_DEFS reconstructor(rep5)/liquidator(rep10) 등록',!!HD&&!!HD.reconstructor&&HD.reconstructor.rep===5&&!!HD.liquidator&&HD.liquidator.rep===10,JSON.stringify(HD&&{r:HD.reconstructor,l:HD.liquidator}));
+  ok('S06 헬퍼 3종 window 노출',typeof MCB==='function'&&typeof CRK==='function'&&typeof NLQ==='function');
+  // ---- 파산(바닥) 이력 기록 ----
+  const s6crash={...s6,stocks:{...s6.stocks,VANTA:1}};
+  const mcb1=MCB(s6crash);
+  ok('S06 파산 이력: 주가1 블록 기록',!!(mcb1.meta.s06CrashedBlocs&&mcb1.meta.s06CrashedBlocs.VANTA===true),JSON.stringify(mcb1.meta.s06CrashedBlocs));
+  ok('S06 파산 이력: 멱등 재호출 항등(참조 동일)',MCB(mcb1)===mcb1);
+  ok('S06 파산 이력: 바닥 미도달(주가5) 항등(참조 동일)',MCB(s6)===s6);
+  // ---- 재건왕 ----
+  const b6=s6.players[0].specific;  // P0 = 인간 Bloc 좌석 (CARBON)
+  const s6rec={...s6,stocks:{...s6.stocks,[b6]:10},meta:{...s6.meta,s06CrashedBlocs:{[b6]:true},highlights:[]}};
+  const rec1=CRK(s6rec);
+  const recHl=(rec1.meta.highlights||[]).filter(h=>h.key==='reconstructor');
+  ok('S06 재건왕: 파산 이력 블록 주가10 회복 → 자사 Bloc 좌석 하이라이트 1건',recHl.length===1&&recHl[0].playerIdx===0,JSON.stringify(recHl));
+  ok('S06 재건왕: ★+5 지급 (원전 렙 +5)',rec1.players[0].resources.rep===s6.players[0].resources.rep+5,`got ${rec1.players[0].resources.rep}`);
+  ok('S06 재건왕: 1회성 (재호출 무증분)',(CRK(rec1).meta.highlights||[]).filter(h=>h.key==='reconstructor').length===1);
+  const s6noHist={...s6,stocks:{...s6.stocks,[b6]:10},meta:{...s6.meta,s06CrashedBlocs:{},highlights:[]}};
+  ok('S06 재건왕: 파산 이력 없으면 주가10 이어도 미발동',((CRK(s6noHist).meta.highlights)||[]).length===0);
+  const s6partial={...s6,stocks:{...s6.stocks,[b6]:9},meta:{...s6.meta,s06CrashedBlocs:{[b6]:true},highlights:[]}};
+  ok('S06 재건왕: 회복 임계 미달(주가9) 미발동',((CRK(s6partial).meta.highlights)||[]).length===0);
+  // ---- 청산자 ----
+  const pre6={...s6.stocks};  // 전 블록 5 (S06 시작가)
+  const s6liq={...s6g,stocks:{...s6g.stocks,VANTA:1,IRONWALL:1},meta:{...s6g.meta,highlights:[],s06LiquidatedBy:{}}};
+  const liq1=NLQ(s6liq,0,pre6);
+  const liqHl=(liq1.meta.highlights||[]).filter(h=>h.key==='liquidator');
+  ok('S06 청산자: Ghost 1행동으로 2블록 바닥 유도 → 하이라이트 1건',liqHl.length===1&&liqHl[0].playerIdx===0,JSON.stringify(liqHl));
+  ok('S06 청산자: ★+10 지급 (원전 렙 +10)',liq1.players[0].resources.rep===s6g.players[0].resources.rep+10,`got ${liq1.players[0].resources.rep}`);
+  ok('S06 청산자: 귀속 누적 2블록 기록',((liq1.meta.s06LiquidatedBy||{})[0]||[]).length===2,JSON.stringify(liq1.meta.s06LiquidatedBy));
+  const step1=NLQ({...s6g,stocks:{...s6g.stocks,VANTA:1},meta:{...s6g.meta,highlights:[],s06LiquidatedBy:{}}},0,pre6);
+  ok('S06 청산자: 1블록만이면 미발동(누적만)',((step1.meta.highlights)||[]).length===0&&((step1.meta.s06LiquidatedBy||{})[0]||[]).length===1);
+  const step2=NLQ({...step1,stocks:{...step1.stocks,IRONWALL:1}},0,step1.stocks);
+  ok('S06 청산자: 후속 행동으로 2번째 블록 누적 → 발동',((step2.meta.highlights)||[]).filter(h=>h.key==='liquidator').length===1);
+  const s6liqBloc={...s6,stocks:{...s6.stocks,VANTA:1,IRONWALL:1},meta:{...s6.meta,highlights:[],s06LiquidatedBy:{}}};
+  ok('S06 청산자: Bloc 좌석은 귀속 제외(항등·참조 동일)',NLQ(s6liqBloc,0,pre6)===s6liqBloc);
+  const s6liqNoDrop={...s6g,meta:{...s6g.meta,highlights:[],s06LiquidatedBy:{}}};
+  ok('S06 청산자: 바닥 유도 없으면 항등(참조 동일)',NLQ(s6liqNoDrop,0,pre6)===s6liqNoDrop);
+  // ---- 격리: 타 시나리오 무영향 (키 미지정 → 0 폴백 → 헬퍼 첫 줄 항등) ----
+  ok('S01 crashBottomThresh fallback 0',SR(s1,'crashBottomThresh',0)===0);
+  ok('S01 reconstructThresh fallback 0',SR(s1,'reconstructThresh',0)===0);
+  ok('S01 liquidatorBlocs fallback 0',SR(s1,'liquidatorBlocs',0)===0);
+  const s1bot={...s1,stocks:Object.fromEntries(Object.keys(s1.stocks).map(k=>[k,1])),meta:{...s1.meta,highlights:[]}};
+  ok('S01 s06MarkCrashBottom 항등(참조 동일)',MCB(s1bot)===s1bot);
+  ok('S01 s06CheckReconstructor 항등(참조 동일)',CRK(s1bot)===s1bot);
+  ok('S01 s06NoteLiquidation 항등(참조 동일)',NLQ(s1bot,0,s1.stocks)===s1bot);
+  for(const sid of ['S02','S03','S04','S05']){
+    const sx=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:sid});
+    const xb={...sx,stocks:Object.fromEntries(Object.keys(sx.stocks).map(k=>[k,1])),meta:{...sx.meta,highlights:[]}};
+    ok(`${sid} S06 타이틀 룰 미침투 (3키 0 폴백 + 헬퍼 3종 항등)`,SR(sx,'crashBottomThresh',0)===0&&SR(sx,'reconstructThresh',0)===0&&SR(sx,'liquidatorBlocs',0)===0&&MCB(xb)===xb&&CRK(xb)===xb&&NLQ(xb,0,sx.stocks)===xb);
+  }
   // ==== v6.25: 언더독 승리 임계 스케일 (docs/23 갭#1 — 구성 결정론 완화) ====
   const UDS=window.euro_underdogGoalScale;
   const mkS=(roles,scen)=>({players:roles.map((r,i)=>({role:r,defeated:false,isNpc:false,id:i})),meta:{scenario:scen||'S01',mapSize:'11x11'}});

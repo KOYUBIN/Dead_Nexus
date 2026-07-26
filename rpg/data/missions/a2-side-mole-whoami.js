@@ -7,7 +7,7 @@
   // ──────────────────────────────────────────────────────────────────────────
   // 계보 표 (act2_plan.md §2 클래스 사이드 S-MOLE):
   //   클래스 MOLE       [계승 data/classes.js] MOLE = ECHO(MIRA SHADE) HP7/ATK2/DEF3/SPD3/
-  //                    HACK3 · tags:[VANTA,IRONWALL,AXIOM]. 개인전 밀도 = 단일 대형 전투(2연전 아님).
+  //                    HACK3 · tags:[VANTA,IRONWALL,HELIX,AXIOM] (67차 HELIX 추가). 개인전 밀도 = 단일 대형 전투(2연전 아님).
   //                    해금 = classKey:'MOLE' + missionsDone:['ch08-zero-day'] (campaign.js §3.2).
   //   주인공 서사        [계승 cards/ghost/mole.md · lore_module.snapshot] MOLE 스냅샷
   //                    "자신이 제품이었음을 깨닫고 사라진 침투 요원. 다섯 개의 얼굴 중 어느 것도
@@ -21,13 +21,17 @@
   //   레거시 해금        [계승 mole.md §레거시] rewards.unlocks:['WHO AM I'] — mole.md ch8
   //                    "캠페인 종료 시점 본명·과거 밝히지 않고 엔딩" 카드.
   //   MFU 3출구          [계승 §4.4 · side-06 골격] 무력 / [SPD4] / [HELIX tag] 세 출구가 outro
-  //                    합류. MOLE(SPD3·HELIX 미보유)은 두 지름길 모두 미충족 → 무력 폴백으로
-  //                    완주(MFU 4클래스 완주 원칙 · 카탈로그 게이트 수치 그대로).
+  //                    합류. [67차] MOLE tags 에 HELIX 추가(classes.js) → [HELIX 태그] 지름길이
+  //                    소유 클래스에게 실제 개방(67차 이전엔 전 클래스 도달 불가 사문 게이트).
+  //                    [SPD4] 는 MOLE 기본 SPD3 → 여전히 성장 게이트. 무력 폴백 상존
+  //                    (MFU 완주 원칙 · 카탈로그 게이트 수치 그대로 · 전투 데이터 무변경).
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
-  // SIMPLIFIED: [HELIX tag] 게이트 — MOLE tags 는 VANTA/IRONWALL/AXIOM 뿐(classes.js), HELIX
-  //   미보유 → MOLE 기본 빌드는 이 지름길 잠김(회색), 무력/[SPD4↑ 성장] 폴백 상존. Act1
-  //   side-08 CHECKPOINT BRIBE 태그게이트 SIMPLIFIED 선례 준수(신규 태그축, 폴백 보장).
+  // SIMPLIFIED: [HELIX tag] 게이트 — [67차] classes.js MOLE.tags 에 HELIX 추가 → MOLE 기본
+  //   빌드에서 개방(available). 원전 근거 = mole.md Card01 COVER IDENTITY ▼BOTTOM(위장신분 다중
+  //   보유) + ECHO 가 HELIX 검체 E-7 로 설계된 인물이라는 본 미션 원전 앵커(ELIA VOSS 대사).
+  //   67차 이전에는 어떤 클래스도 HELIX 태그를 보유하지 않아 이 지름길이 도달 불가(사문)였다.
+  //   무력 폴백은 그대로 상존(플레이어 선택) — Act1 side-08 태그게이트 SIMPLIFIED 선례 준수.
   // SIMPLIFIED: [SPD 4] 게이트 — MOLE 기본 SPD3 < 4 → 잠김. karma 성장으로 SPD4 도달 시 개방.
   //   미충족 시 무력 전투 폴백(단일 대형 전투는 killable 로스터 + 오브젝티브 이중승리).
   // SIMPLIFIED: MISSION.kind='act2' / unlock.classKey 는 campaign.js §3.2 확장 게이트가 소비
@@ -91,8 +95,9 @@
           { label: '양성 시설 심부, 정체성 원본 서버로 향한다', goto: 'approach' },
         ],
       },
-      // ★심장 MFU 노드 — 무력 / [SPD4] / [HELIX tag] 세 출구. MOLE 기본 빌드는 두 지름길
-      //  미충족 → 무력 폴백으로 완주(상단 SIMPLIFIED 참고). 셋 다 outro/outroGhost 합류.
+      // ★심장 MFU 노드 — 무력 / [SPD4] / [HELIX tag] 세 출구. [67차] HELIX 지름길이 MOLE 기본
+      //  빌드에서 개방 · [SPD4] 는 성장 게이트 · 무력 폴백 상존(상단 SIMPLIFIED 참고).
+      //  셋 다 outro/outroGhost 합류 — 보상/전투 계약 무변경.
       approach: {
         id: 'approach', speaker: 'ELIA_VOSS', portrait: 'bloc',
         text: 'HELIX 양성 시설 심부. 검체 캡슐이 벽을 따라 늘어서고, 그 끝에 원본 서버가 빛난다.\n' +
@@ -113,7 +118,7 @@
             gate: { tag: 'HELIX' }, show: 'gray',
             setFlags: { helixForged: true },
             effect: { skipCombat: true }, goto: 'outroGhost',
-            desc: 'HELIX 위장신분(mole.md COVER IDENTITY 확장 태그축) → 전투 스킵. MOLE 기본 태그(VANTA/IRONWALL/AXIOM) 미보유 → 잠김 → 무력 폴백',
+            desc: 'HELIX 신분(mole.md COVER IDENTITY 다중 위장 + ECHO=검체 E-7 원본 소속) → 전투 스킵. [67차] MOLE 기본 태그에 HELIX 포함 → 개방',
           },
         ],
       },
