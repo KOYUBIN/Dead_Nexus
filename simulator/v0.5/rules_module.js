@@ -216,6 +216,16 @@ function negoApply(s, prop) {
     s = logEntry(s, `🤝 협상 거절: P${prop.from} [${fromP.specific}] → P${prop.to} [${toP.specific}] (${negoTypeLabel(prop.type)}) · EV ${evl.acceptValue}`);
     return { ...s, meta: { ...s.meta, negoStats: stats } };
   }
+  // v6.52: from 측 give 보유량 검사 — 후보 생성 시점과 적용 시점 사이에 자원이 바뀌어도 음수 차감 불가 (방어층)
+  if (prop.type === 'swap' && prop.give) {
+    for (const [k, v] of Object.entries(prop.give)) {
+      if ((fromP.resources[k] || 0) < v) {
+        stats.rejected += 1;
+        s = logEntry(s, `🤝 협상 무산: P${prop.from} [${fromP.specific}] 지불분 부족 (${v}${negoResAbbr(k)} 필요) — 제안 철회`);
+        return { ...s, meta: { ...s.meta, negoStats: stats } };
+      }
+    }
+  }
   // v6.51 (E8): 동일 쌍 활성 truce 중복 등록 거부 — 수락 전 게이트 (거부 로그 + 계측, 조용한 중복 금지)
   if (prop.type === 'truce' && typeof rules_truceActiveBetween === 'function' && rules_truceActiveBetween(s, prop.from, prop.to)) {
     stats.rejected += 1;
