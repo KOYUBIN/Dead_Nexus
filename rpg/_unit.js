@@ -2060,6 +2060,198 @@ CAMP.MISSIONS.forEach(function (reg) {
 });
 ok('353. survive 선언 인카운터 ' + survCount + '건 존재 — 온보딩 사수 1줄이 실제로 도달 가능(사문 아님)', survCount > 0);
 
+// ============================================================================
+// ======  73차 — 미소비 대화 효과 6건 배선 (spendNuyen 비용 1 · karma 지급 4 · ₵ 지급 1)  ==
+// ============================================================================
+
+console.log('\n== [73차] 대화 선택지 ₵ 비용 (effect.spendNuyen) — 게이트 + 실차감 ==');
+
+// ① 원시연산 payNuyen — payKarma 와 동일 계약. 성장/보상 무관 단방향 지출.
+var pnCh = CH.makeCharacter('BLADE'); pnCh.nuyen = 5;
+var pn1 = CH.payNuyen(pnCh, 3);
+ok('354. payNuyen(3): ₵ 5→2 · growth/karma 무변동 · 인자 무변경(순수)',
+  pn1.ok === true && pn1.character.nuyen === 2 && pn1.spent === 3 &&
+  pn1.character.karma === pnCh.karma &&
+  JSON.stringify(pn1.character.growth) === JSON.stringify(pnCh.growth) && pnCh.nuyen === 5);
+var pn2 = CH.payNuyen(pnCh, 9);
+ok('355. payNuyen 부족: ₵ 5 < 9 → ok:false + 사유 "₵ 부족" · need/have 노출 · character 미반환(무차감)',
+  pn2.ok === false && pn2.reason === '₵ 부족' && pn2.need === 9 && pn2.have === 5 && pn2.character === undefined);
+ok('356. payKarma 회귀(73차 공통 몸통 payResource 경유 후에도 byte 불변): 사유 문자열·0 방어·성장 지출',
+  CH.payKarma(CH.makeCharacter('CIPHER'), 1).ok === false &&
+  CH.payKarma(CH.makeCharacter('CIPHER'), 1).reason === 'karma 부족' &&
+  CH.payKarma(CH.makeCharacter('CIPHER'), 0).reason === 'karma 비용 오류' &&
+  CH.payNuyen(CH.makeCharacter('CIPHER'), 0).reason === '₵ 비용 오류' &&
+  CH.spendKarma(CH.makeCharacter('CIPHER'), 'hack').reason === 'karma 부족');
+
+// ② dialogue.evalCost 확장 — karma 사유 표기 byte 불변 + ₵ 신규.
+var nc = { label: 'x', effect: { skipCombat: true, spendNuyen: 3 }, show: 'gray' };
+ok('357. evalCost: ₵ 부족 → ok:false, 충족 → ok:true · cost {karma,nuyen} 노출 · 미선언은 항상 ok',
+  DLG.evalCost(nc, { nuyen: 2 }).ok === false && DLG.evalCost(nc, { nuyen: 3 }).ok === true &&
+  DLG.evalCost(nc, {}).ok === false &&                       // 구 컨텍스트(₵ 미제공) → 부족 판정(안전)
+  DLG.evalCost(nc, { nuyen: 3 }).cost.nuyen === 3 && DLG.evalCost(nc, { nuyen: 3 }).cost.karma === 0 &&
+  DLG.evalCost({ label: 'y' }, { nuyen: 0 }).ok === true &&
+  DLG.evalCost({ label: 'y' }, { nuyen: 0 }).cost.nuyen === 0);
+ok('358. choiceState/Reason ₵: 미충족 → gray + "[₵ 3 지출] (보유 2)" · 충족 → available/null · karma 사유 byte 불변',
+  DLG.choiceState(nc, { nuyen: 2 }) === 'gray' && DLG.choiceState(nc, { nuyen: 3 }) === 'available' &&
+  DLG.choiceReason(nc, { nuyen: 2 }) === '[₵ 3 지출] (보유 2)' &&
+  DLG.choiceReason(nc, { nuyen: 3 }) === null &&
+  DLG.choiceReason({ label: 'z', effect: { spendKarma: 1 } }, { karma: 0 }) === '[karma 1 지출] (보유 0)');
+
+// ③ side-08 실경로 — 폴백 gate{def3} 회수 후 ₵3 단독 판정.
+var s08 = CAMP.missionData('side-08-harbor-run');
+var s08Choice = s08.dialogue.nodes.approach.choices[2];
+ok('359. side-08 뇌물 출구 데이터 핀: effect.spendNuyen:3 보유 · 폴백 gate(def3) 제거됨(라벨=₵3 와 판정 일치)',
+  s08Choice.effect.spendNuyen === 3 && s08Choice.gate === undefined && s08Choice.show === 'gray' &&
+  s08Choice.effect.skipCombat === true && s08Choice.goto === 'outro');
+
+// 대화 노드 직접 진입 헬퍼 — 해금/전투를 거치지 않고 선택 시점 상태만 세운다(라우팅 계약 검사용).
+function atNode(missionId, nodeId, classKey, mut) {
+  var st = S.rpgInitialState();
+  st.save.character = CH.makeCharacter(classKey || 'CIPHER');
+  st.save.karma = st.save.character.karma; st.save.nuyen = st.save.character.nuyen;
+  st.dialogue = { missionId: missionId, nodeId: nodeId, openingSeen: true };
+  st.scene = 'dialogue';
+  if (mut) mut(st);
+  return st;
+}
+var n0 = atNode('side-08-harbor-run', 'approach', 'CIPHER', function (st) {
+  st.save.character.nuyen = 2; st.save.nuyen = 2;
+});
+ok('360. dialogueCtx 가 ₵ 잔량을 노출 · ₵ 2 < 3 → 선택지 gray (DEF 무관 — CIPHER DEF1 도 돈만 있으면 열린다)',
+  S.dialogueCtx(n0).nuyen === 2 && DLG.choiceState(s08Choice, S.dialogueCtx(n0)) === 'gray' &&
+  DLG.choiceState(s08Choice, S.dialogueCtx(atNode('side-08-harbor-run', 'approach', 'CIPHER',
+    function (st) { st.save.character.nuyen = 3; st.save.nuyen = 3; }))) === 'available');
+var n0after = S.dialogueChoose(n0, 2);
+ok('361. ₵ 2 로 진입 시도 → blocked 반려 · 노드 이동 0 · flag 미설정 · ₵ 무변동 (조용한 차감 실패 없음)',
+  n0after.banner.kind === 'blocked' && n0after.dialogue.nodeId === 'approach' &&
+  !n0after.save.flags.checkpointBribed && n0after.save.character.nuyen === 2 && n0after.save.nuyen === 2);
+var n1 = atNode('side-08-harbor-run', 'approach', 'CIPHER', function (st) {
+  st.save.character.nuyen = 4; st.save.nuyen = 4;
+});
+var n1after = S.dialogueChoose(n1, 2);
+ok('362. ₵ 4 충족 → 실차감(4→1) · save.nuyen 미러 동기 · outro 라우팅 · checkpointBribed 설정 · karma 무변동',
+  n1after.save.character.nuyen === 1 && n1after.save.nuyen === 1 &&
+  n1after.dialogue.nodeId === 'outro' && n1after.save.flags.checkpointBribed === true &&
+  n1after.save.character.karma === 0);
+
+console.log('\n== [73차] 대화 선택지 karma/₵ 지급 (effect.karma · effect.nuyen) — firstRun 가드 ==');
+
+// ④ 데이터 핀 — 배선 대상 5건이 실제로 선언돼 있는지(사문 아님) + 전수 스캔 개수 일치.
+var GIVE = [
+  { id: 'a2-d2-last-signal', node: 'choice', idx: 1, res: 'karma', n: 1 },
+  { id: 'a2-side-mole-whoami', node: 'choice', idx: 0, res: 'karma', n: 1 },
+  { id: 'a2-side-broker-ledger', node: 'choice', idx: 0, res: 'karma', n: 1 },
+  { id: 'a2-side-drifter-lastroad', node: 'choice', idx: 1, res: 'karma', n: 1 },
+  { id: 'a2-d1-scavenge', node: 'choice', idx: 1, res: 'nuyen', n: 6 },
+];
+ok('363. 지급 5건 데이터 핀: karma 4건(d2/mole/broker/drifter) + ₵ 1건(d1-scavenge) · 선언 수치 그대로',
+  GIVE.every(function (g) {
+    var c = CAMP.missionData(g.id).dialogue.nodes[g.node].choices[g.idx];
+    return c && c.effect && c.effect[g.res] === g.n && c.goto === 'settle';
+  }));
+
+// 전 미션 전수 — 비용/지급 선언 집합이 정확히 6건(72차 karma 비용 1건 + 73차 6건 중 비용 1은 중복 제외).
+var costGated73 = [], giveGated73 = [], costFree73 = 0;
+CAMP.MISSIONS.forEach(function (reg) {
+  var mm = CAMP.missionData(reg.id); if (!mm || !mm.dialogue) return;
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (cc, ci) {
+      var e = cc.effect || {}, where = reg.id + '/' + nid + '#' + ci;
+      if (e.spendKarma || e.spendNuyen) costGated73.push(where);
+      if (typeof e.karma === 'number' || typeof e.nuyen === 'number') giveGated73.push(where);
+      if (e.spendKarma || e.spendNuyen) return;
+      costFree73++;
+      // 비용 미선언 선택지는 karma/₵ 보유량과 무관하게 판정 불변(evalCost 확장이 기존 판정을 안 건드린다).
+      if (DLG.choiceState(cc, { attrs: {}, tags: [], flags: {}, karma: 0, nuyen: 0 }) !==
+          DLG.choiceState(cc, { attrs: {}, tags: [], flags: {} })) costFree73 = -99999;
+    });
+  });
+});
+ok('364. 전 미션 비용 선언 = 2건(ch07 spendKarma · side-08 spendNuyen) · 지급 선언 = 5건 (grep 전수 일치)',
+  costGated73.length === 2 && costGated73.indexOf('ch07-heart-of-city/approach#1') >= 0 &&
+  costGated73.indexOf('side-08-harbor-run/approach#2') >= 0 && giveGated73.length === 5);
+ok('365. 비용 미선언 선택지 ' + costFree73 + '건은 karma/₵ 보유량과 무관하게 판정 불변 (기존 32미션 회귀)',
+  costFree73 > 200);
+
+// ⑤ 실지급 — karma 4건 · ₵ 1건. 선택 직후 settle(applyRewards)가 미션 정산을 얹으므로
+//   '지급 배선'만 분리 측정한다: 같은 노드의 형제 선택지(지급 미선언)와의 델타 = 선언 수치.
+function pickDelta(id, node, giveIdx, siblingIdx, res, replay) {
+  function run(i) {
+    return S.dialogueChoose(atNode(id, node, 'CIPHER', function (st) {
+      if (replay) st.save.missionsDone = [id];
+    }), i);
+  }
+  var a = run(giveIdx), b = run(siblingIdx);
+  return { delta: a.save.character[res] - b.save.character[res], state: a, sibling: b };
+}
+var gk = pickDelta('a2-d2-last-signal', 'choice', 1, 0, 'karma');
+ok('366. a2-d2-last-signal B → karma 델타 정확히 +1 (형제 선택지 대비) · save.karma 미러 · ruinDeterrent · settle 라우팅',
+  gk.delta === 1 && gk.state.save.karma === gk.state.save.character.karma &&
+  gk.state.save.flags.ruinDeterrent === true && gk.state.dialogue.nodeId === 'settle');
+var gn = pickDelta('a2-d1-scavenge', 'choice', 1, 0, 'nuyen');
+ok('367. a2-d1-scavenge B → ₵ 델타 정확히 +6 (선언 수치 그대로, 가감 0) · save.nuyen 미러 · ruinExitFund',
+  gn.delta === 6 && gn.state.save.nuyen === gn.state.save.character.nuyen &&
+  gn.state.save.flags.ruinExitFund === true &&
+  CAMP.missionData('a2-d1-scavenge').dialogue.nodes.choice.choices[1].effect.nuyen === 6);
+// 지급 4건 전량 실동 — karma 선언 미션 4종이 모두 실제로 +1 델타를 남긴다(배선 누락 1건도 없음).
+var KARMA_GIVE = [
+  { id: 'a2-d2-last-signal', give: 1, sib: 0 }, { id: 'a2-side-mole-whoami', give: 0, sib: 1 },
+  { id: 'a2-side-broker-ledger', give: 0, sib: 1 }, { id: 'a2-side-drifter-lastroad', give: 1, sib: 0 },
+];
+ok('368. karma 지급 4건 전량 실동: d2-last-signal · mole-whoami · broker-ledger · drifter-lastroad 각 델타 +1',
+  KARMA_GIVE.every(function (g) { return pickDelta(g.id, 'choice', g.give, g.sib, 'karma').delta === 1; }));
+
+// ⑥ farming 차단 — 재클리어(missionsDone 포함) 시 지급 생략 + 로그 1줄. rep 선례와 동일 가드.
+var rk = pickDelta('a2-d2-last-signal', 'choice', 1, 0, 'karma', true);
+var rn = pickDelta('a2-d1-scavenge', 'choice', 1, 0, 'nuyen', true);
+ok('369. 재클리어 farming 차단: 대화 재통과해도 karma/₵ 델타 0 (missionsDone 포함 → firstRun false)',
+  rk.delta === 0 && rn.delta === 0 &&
+  KARMA_GIVE.every(function (g) { return pickDelta(g.id, 'choice', g.give, g.sib, 'karma', true).delta === 0; }));
+ok('370. 재클리어 시 조용한 무시 금지 — 정산 로그에 "재클리어 … 미지급" 1줄이 남는다',
+  !!rk.state.banner && Array.isArray(rk.state.banner.lines) &&
+  rk.state.banner.lines.filter(function (l) { return /재클리어 — 대화 선택 보상 미지급/.test(l); }).length === 1 &&
+  rk.sibling.banner.lines.filter(function (l) { return /재클리어 — 대화 선택 보상 미지급/.test(l); }).length === 0);
+ok('371. 지급은 flag/라우팅과 독립 — 재클리어에서도 서사 flag·settle 라우팅은 그대로 (분기 소실 없음)',
+  rk.state.save.flags.ruinDeterrent === true && rk.state.dialogue.nodeId === 'settle' &&
+  rn.state.save.flags.ruinExitFund === true && rn.state.dialogue.nodeId === 'settle');
+ok('372. 지급 로그가 settle 정산 배너에 흡수되지 않고 맨 앞에 합류 (얻은 것/낸 것이 화면에서 사라지지 않음)',
+  Array.isArray(gk.state.banner.lines) && /^◈ karma \+1 \(→/.test(gk.state.banner.lines[0]) &&
+  gk.state.banner.lines.length > 1 &&
+  /^◈ ₵ \+6 \(→6\)$/.test(gn.state.banner.lines[0]));
+// rep 선례 회귀 — 73차 firstRun 공용화 후에도 rep 지급 가드가 그대로.
+var repD = pickDelta('a2-d2-last-signal', 'choice', 0, 1, 'rep');
+var repR = pickDelta('a2-d2-last-signal', 'choice', 0, 1, 'rep', true);
+ok('373. rep 선례 회귀: 최초 완주 델타 +4 · 재클리어 델타 0 (73차 firstRun 공용화가 기존 rep 가드를 안 바꾼다)',
+  repD.delta === 4 && repR.delta === 0);
+
+// ⑦ 마이그레이션 무관 — 73차 배선은 세이브 스키마를 늘리지 않는다(기존 필드만 소비).
+var m73 = SAVE.migrate(JSON.parse(JSON.stringify(gk.state.save)));
+ok('374. 마이그레이션 무관: 지급 후 세이브가 migrate 멱등 · karma/₵ 무손상 · export/import 왕복 동일',
+  JSON.stringify(SAVE.migrate(JSON.parse(JSON.stringify(m73)))) === JSON.stringify(m73) &&
+  m73.character.karma === gk.state.save.character.karma && m73.karma === m73.character.karma &&
+  JSON.stringify(SAVE.importString(SAVE.exportString(m73)).save) === JSON.stringify(m73));
+var newKeys = Object.keys(S.rpgInitialState().save).sort().join(',');
+ok('375. 세이브 스키마 무증설: newSave 최상위 키 집합에 73차 신규 필드 0 (karma/nuyen 기존 미러만 사용)',
+  newKeys === Object.keys(SAVE.migrate(JSON.parse(JSON.stringify(S.rpgInitialState().save)))).sort().join(',') &&
+  newKeys.indexOf('karma') >= 0 && newKeys.indexOf('nuyen') >= 0);
+
+// ⑧ 원자성 — 한 자원이라도 모자라면 어떤 자원도 깎이지 않는다(반쪽 차감 금지).
+var bothCh = CH.makeCharacter('CIPHER'); bothCh.karma = 5; bothCh.nuyen = 1;
+var bothCost = DLG.applyChoice({ label: 'b', effect: { spendKarma: 1, spendNuyen: 3 } },
+  { attrs: {}, karma: 5, nuyen: 1 });
+ok('376. 복합 비용 원자성: karma 충족 + ₵ 부족 → applyChoice blocked (부족한 쪽 사유) · 어느 자원도 미차감',
+  bothCost.blocked === true && bothCost.reason === '[₵ 3 지출] (보유 1)' &&
+  bothCh.karma === 5 && bothCh.nuyen === 1 &&
+  DLG.applyChoice({ label: 'b', effect: { spendKarma: 1, spendNuyen: 3 } },
+    { attrs: {}, karma: 5, nuyen: 3 }).cost.nuyen === 3);
+
+// ⑨ UI 계약 핀 — 지출/지급 태그와 재클리어 표기가 표시층에 실재(사문 아님).
+var uiFs = require('fs').readFileSync(__dirname + '/index.html', 'utf8');
+ok('377. UI 태그 실재: 지출 태그(◈ … 지출) · 지급 태그(gain-tag ◈) · 재클리어 미지급 표기 · ₵/karma 양자 처리',
+  /cost-tag/.test(uiFs) && /gain-tag/.test(uiFs) && /재클리어 미지급/.test(uiFs) &&
+  /ce\.spendNuyen/.test(uiFs) && /ce\.spendKarma/.test(uiFs) &&
+  /'₵ \+' \+ ce\.nuyen/.test(uiFs) && /'karma \+' \+ ce\.karma/.test(uiFs));
+
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));
 process.exit(fail ? 1 : 0);

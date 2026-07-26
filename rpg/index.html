@@ -762,6 +762,8 @@ function DialogueOverlay({ state, dispatch }) {
     ? ((mission.refrain || mission.subtitle || node.text.split('\n')[0]))
     : node.text;
   const theme = stageTheme(state.dialogue.missionId); // [G①] 무대 팔레트 (표시 전용)
+  // [73차] 이미 완주한 미션 재플레이 여부 — 선택지 지급 태그를 '미지급'으로 표기(farming 가드 반영).
+  const replayed = (state.save.missionsDone || []).indexOf(state.dialogue.missionId) >= 0;
   return (
     <div className={'dialogue stage stage-' + theme}>
       <div className="portrait-row">
@@ -783,16 +785,27 @@ function DialogueOverlay({ state, dispatch }) {
         {node.choices.map((c, i) => {
           const st = window.RPG_DIALOGUE.choiceState(c, ctx);
           if (st === 'hidden') return null;
-          // [72차 · d45 #14] 게이트/자원비용(effect.spendKarma) 미충족 선택지는 회색 + 사유 1줄.
+          // [72차 · d45 #14 · 73차] 게이트/자원비용(spendKarma·spendNuyen) 미충족 선택지는 회색 + 사유 1줄.
           //   조용한 차감 실패 금지 — '왜 잠겼는지'와 '무엇을 지불하는지'를 항상 보여준다.
-          const gated = !!(c.gate || (c.effect && c.effect.spendKarma));
+          const ce = c.effect || {};
+          const costs = [
+            ce.spendKarma ? 'karma −' + ce.spendKarma : null,
+            ce.spendNuyen ? '₵ −' + ce.spendNuyen : null,
+          ].filter(Boolean);
+          const gated = !!(c.gate || costs.length);
           const why = st === 'gray' ? window.RPG_DIALOGUE.choiceReason(c, ctx) : null;
-          const costK = (c.effect && c.effect.spendKarma) || 0;
+          // [73차] 선택지 지급(effect.karma/nuyen) 태그 — 재클리어(missionsDone 포함)엔 미지급이므로
+          //   그 사실까지 라벨에 드러낸다(store.grantChoiceGains 의 firstRun 가드와 1:1).
+          const gains = [
+            typeof ce.karma === 'number' && ce.karma ? 'karma +' + ce.karma : null,
+            typeof ce.nuyen === 'number' && ce.nuyen ? '₵ +' + ce.nuyen : null,
+          ].filter(Boolean);
           return (
             <button key={i} className={'choice ' + (gated ? 'gate ' : '') + (st === 'gray' ? 'gray' : '')}
               onClick={() => dispatch({ type: 'DIALOGUE_CHOOSE', index: i })}>
               {c.label}
-              {costK && st !== 'gray' ? <span className="cost-tag">◈ karma −{costK} 지출</span> : null}
+              {costs.length && st !== 'gray' ? <span className="cost-tag">◈ {costs.join(' · ')} 지출</span> : null}
+              {gains.length ? <span className={'gain-tag' + (replayed ? ' spent' : '')}>◈ {gains.join(' · ')}{replayed ? ' — 재클리어 미지급' : ''}</span> : null}
               {why ? <span className="gate-why">🔒 잠김 — {why}</span> : null}
               {c.desc ? <span className="desc">{c.desc}</span> : null}
             </button>
@@ -1261,6 +1274,10 @@ try {
   font-size: 10px; color: var(--orange); }
 .choice .gate-why { display: block; margin-top: 3px; font-family: 'Share Tech Mono', monospace;
   font-size: 10px; color: var(--magenta); }
+/* [73차] 대화 선택지 지급 태그 (effect.karma / effect.nuyen) — 재클리어 시 미지급 표기(.spent) */
+.choice .gain-tag { display: block; margin-top: 3px; font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; color: var(--green); }
+.choice .gain-tag.spent { color: var(--text-dim); text-decoration: line-through; }
 
 /* [72차 · d45 #5] 온보딩 오버레이 — 첫 전투 1회성 규칙 카드 (표시층 전용) */
 .onboard-scrim { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;

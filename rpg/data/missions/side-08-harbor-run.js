@@ -58,15 +58,17 @@
   //                                ===0→win 두 native 조건이 그대로 공존(신규 로직 0).
   //   순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
-  // SIMPLIFIED — 보고 ①: approach 선택지 ③('CHECKPOINT BRIBE로 검문 1회 무력화')의
-  //   설계 의도는 ₵(nuyen) 3 지출 게이트다. 그러나 _missions_check.js VALID_GATE_ATTRS
-  //   와 store.js dialogueCtx.attrs 는 {hack, atk, def, spd, hp} 5종만 게이트로 지원하고,
-  //   대화 selection 의 effect 소비 목록도 {rep, startCombat, returnHub}(+goto 라우팅)뿐이라
-  //   nuyen 지출은 대화 선택지에서 소비되지 않는다(ch07-heart-of-city.js effect.spendKarma
-  //   SIMPLIFIED 선례와 동일 계약 한계). → 이 출구는 실제로는 gate{attr:'def',min:3} 로
-  //   판정(BLADE 기본 DEF3 지름길, 엔진 무편집)한다. effect.spendNuyen:3 은 향후 대화용
-  //   nuyen-지출 핸들러가 추가되면 자동 결선되는 전방 호환 훅(현재 store 무시·무해)으로만
-  //   둔다. nuyen-지출 대화 게이트 = 신규 메커닉(엔진 편집 필요) → 통합 단계 보고 대상.
+  // [RESOLVED 73차] 보고 ①: approach 선택지 ③('CHECKPOINT BRIBE로 검문 1회 무력화')의
+  //   설계 의도인 ₵(nuyen) 3 지출이 실배선됐다 — dialogue.evalCost 가 effect.spendNuyen 을
+  //   spendKarma 와 동일 계약(미충족 gray+사유 / 반려 시 무적용 / 실차감 + save 미러)으로
+  //   판정하고, store.dialogueChoose 가 character.payNuyen 으로 차감한다. 이 파일이 예고한
+  //   "향후 nuyen-지출 핸들러가 추가되면 자동 결선되는 전방 호환 훅"이 그대로 실동 전환됐다.
+  //   함께 폴백 gate{attr:'def',min:3} 를 제거한다 — 그 게이트는 nuyen 비용을 표현할 수단이
+  //   없던 시절의 대역(代役)이었고, 원전(chapter-03 CHECKPOINT BRIBE)의 판정은 '₵ 3'뿐이다.
+  //   AND 로 남기면 ① 원전에 없던 DEF 요구가 영구화되고 ② 라벨('₵ 3로 …')과 잠김 사유
+  //   ('[DEF 3] (보유 1)')가 어긋나며 ③ 돈으로 사는 뇌물이 근력 게이트가 되어 CIPHER 는
+  //   ₵ 를 아무리 쥐어도 잠긴다 — 세 가지 모두 원전 이탈이라 대역을 회수한다.
+  //   (전투 경로 approach#1 은 무조건 열려 있으므로 ₵ 부족 시에도 완주 경로는 항상 존재.)
   // SIMPLIFIED — 보고 ②: ghost.md G-E01 "그리드 탈출"의 실제 메타 승리조건(현상수배 3
   //   이상 상태에서 항구 경유 비통제구역 탈출 → 대체 승리, 메타 "OFF THE GRID")은 엔진에
   //   현상수배 누적 추적도, combat 밖 대체승리 판정도 없어 이 미션 범위에서 구현하지 않는다.
@@ -154,12 +156,12 @@
             desc: 'CIPHER(기본 SPD4) 직행 지름길 — 순찰 교대 틈으로 질주 통과, 전투 스킵. BLADE(SPD3)는 미충족 → 위 전투 경로로 폴백',
           },
           { label: '[CHECKPOINT BRIBE] ₵ 3로 검문을 1회 무력화한다',
-            gate: { attr: 'def', min: 3 }, show: 'gray',
+            show: 'gray',
             setFlags: { checkpointBribed: true },
-            // [SIMPLIFIED 보고①] 실판정=gate def3(폴백, BLADE 지름길). effect.spendNuyen:3 은
-            //   향후 대화용 nuyen-지출 핸들러용 전방 호환 훅(현 store 무시). 라우팅은 goto 담당.
+            // [RESOLVED 73차 ①] 실판정 = effect.spendNuyen 3 (dialogue.evalCost) — 폴백 DEF3 게이트 회수.
+            //   ₵ 부족 시 gray + 사유, 진입 시 실차감. 라우팅은 goto 담당.
             effect: { skipCombat: true, spendNuyen: 3 }, goto: 'outro',
-            desc: '[계승 chapter-03 CHECKPOINT BRIBE(₵3 검문 1회 무력화)] 설계 의도=₵3 지출. 현 엔진에선 BLADE 기본 DEF3 "몸으로 무력화" 폴백으로 대체(전투 스킵). CIPHER(DEF1)는 미충족 → 위 전투 경로로 폴백',
+            desc: '[계승 chapter-03 CHECKPOINT BRIBE(₵3 검문 1회 무력화)] ₵ 3 실지출로 검문을 사서 통과 — 전투 스킵. ₵ 가 3 미만이면 잠긴다 → 위 전투 경로로 완주(클래스 무관)',
           },
         ],
       },

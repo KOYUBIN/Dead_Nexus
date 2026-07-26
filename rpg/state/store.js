@@ -514,6 +514,54 @@
     }
   }
 
+  // [73차] 대화 선택지 자원 비용 일괄 차감 — 전부 성공 아니면 전부 미적용(원자적).
+  //   dialogue.evalCost 가 이미 부족분을 blocked 로 반려하므로 여기 도달 = 충족. 이 함수는
+  //   이중 안전판이며, 한 자원이라도 모자라면 어떤 자원도 깎지 않고 { ok:false } 를 돌려준다
+  //   (karma 만 깎이고 ₵ 가 모자라 반려되는 '반쪽 차감' 원천 차단).
+  //   반환 lines = 사용자 노출 1줄/자원. 자원별 원시연산은 character.payKarma/payNuyen.
+  function payChoiceCosts(D, character, cost) {
+    var PAYERS = [
+      { res: 'karma', label: 'karma', pay: D.CH.payKarma },
+      { res: 'nuyen', label: '₵', pay: D.CH.payNuyen },
+    ];
+    var ch = character, lines = [];
+    for (var i = 0; i < PAYERS.length; i++) {
+      var p = PAYERS[i], need = (cost && cost[p.res]) || 0;
+      if (!(need > 0)) continue;
+      var paid = p.pay(ch, need);
+      if (!paid.ok) {
+        return { ok: false, reason: p.label + ' 부족 — 이 선택지는 ' + p.label + ' ' + need
+          + ' 지출이 필요합니다 (보유 ' + (paid.have || 0) + ')' };
+      }
+      ch = paid.character;
+      lines.push(p.label + ' −' + paid.spent + ' 지출 (잔여 ' + ch[p.res] + ')');
+    }
+    return { ok: true, character: ch, lines: lines };
+  }
+
+  // [73차] 대화 선택지 서사 보상(effect.karma / effect.nuyen) 지급 — 최초 완주 1회만.
+  //   farming 차단 근거: 이 지급은 미션 정산(applyRewards) 밖이라 firstClear 가드가 닿지 않는다.
+  //   그래서 같은 함수 안의 effect.rep 선례를 그대로 따라 missionsDone 포함 여부로 게이트한다
+  //   (missionsDone 은 settle 노드 onEnter.applyRewards 가 기록 → 선택 시점엔 1회차만 미포함).
+  //   재클리어 시엔 지급을 생략하고 로그 1줄만 남긴다 — 조용한 무시 금지.
+  function grantChoiceGains(s, eff, firstRun) {
+    var GAINS = [{ res: 'karma', label: 'karma' }, { res: 'nuyen', label: '₵' }];
+    var lines = [], declared = false;
+    for (var i = 0; i < GAINS.length; i++) {
+      var g = GAINS[i], n = eff[g.res];
+      if (typeof n !== 'number' || n === 0) continue;
+      declared = true;
+      if (!firstRun) continue;
+      s.save.character[g.res] += n;
+      lines.push('◈ ' + g.label + ' +' + n + ' (→' + s.save.character[g.res] + ')');
+    }
+    if (!declared) return lines;
+    // §5.3 미러 재동기 (캐릭터가 정본).
+    s.save.karma = s.save.character.karma; s.save.nuyen = s.save.character.nuyen;
+    if (!firstRun) lines.push('↻ 재클리어 — 대화 선택 보상 미지급 (karma/₵ +0)');
+    return lines;
+  }
+
   function dialogueChoose(state, choiceIndex) {
     var D = deps(); var s = clone(state);
     var mission = missionFor(D, s.dialogue && s.dialogue.missionId);
@@ -524,29 +572,33 @@
     var applied = D.DLG.applyChoice(choice, ctx);
     if (applied.blocked) { s.banner = { kind: 'blocked', text: '요구 조건 미충족 ' + (applied.reason || '') }; return s; }
     var eff = applied.effect || {};
-    // [72차 · d45 #14] 대화 선택지 karma 비용(effect.spendKarma) 실차감.
+    // [72차 · d45 #14 · 73차 확장] 대화 선택지 자원 비용(effect.spendKarma / effect.spendNuyen) 실차감.
     //   applyChoice(evalCost)가 부족분을 이미 blocked 로 반려하므로 여기 도달 = 충족. 아래는 이중
     //   안전판이며, 실패 시 flag·effect 를 하나도 적용하지 않고 반려한다 — 그래서 setFlags 보다 먼저
     //   실행한다(조용한 차감 실패로 효과만 공짜로 통과하는 경로 원천 차단).
-    //   재클리어 farming: karma 보상은 campaign.applyRewards 가 재클리어 시 0 지급(firstClear 가드) →
-    //   지출만 누적되는 단방향이므로 같은 선택지를 반복해도 karma 순환 이득이 생기지 않는다.
-    if (applied.cost && applied.cost.karma > 0) {
-      var paid = D.CH.payKarma(s.save.character, applied.cost.karma);
-      if (!paid.ok) {
-        s.banner = { kind: 'blocked', text: 'karma 부족 — 이 선택지는 karma ' + applied.cost.karma
-          + ' 지출이 필요합니다 (보유 ' + (paid.have || 0) + ')' };
-        return s;
-      }
+    //   재클리어 farming: 지출은 단방향이고 karma/₵ 보상은 재클리어 시 축소(applyRewards firstClear
+    //   가드: karma 0 · ₵ 50%)이므로 같은 선택지를 반복해도 순환 이득이 생기지 않는다.
+    var feedLines = [];
+    if (applied.cost && (applied.cost.karma > 0 || applied.cost.nuyen > 0)) {
+      var paid = payChoiceCosts(D, s.save.character, applied.cost);
+      if (!paid.ok) { s.banner = { kind: 'blocked', text: paid.reason }; return s; }
       s.save.character = paid.character;
-      s.save.karma = paid.character.karma;   // §5.3 미러
-      s.banner = { kind: 'growth', text: 'karma −' + paid.spent + ' 지출 (잔여 ' + paid.character.karma + ')' };
+      s.save.karma = paid.character.karma; s.save.nuyen = paid.character.nuyen;   // §5.3 미러
+      feedLines = feedLines.concat(paid.lines);
     }
     if (applied.setFlags) for (var k in applied.setFlags) s.save.flags[k] = applied.setFlags[k];
-    // 서사 선택의 1회성 렙 보너스(예: 영웅 정체 공개 +5)는 최초 완주에만 적용 —
+    // 서사 선택의 1회성 보너스(렙/karma/₵)는 최초 완주에만 적용 —
     //   재클리어 시 farming 방지 (missionsDone 은 settle applyRewards 에서 기록됨).
+    var firstRun = (s.save.missionsDone || []).indexOf(mission.id) < 0;
     if (typeof eff.rep === 'number') {
-      var firstRun = (s.save.missionsDone || []).indexOf(mission.id) < 0;
       if (firstRun) s.save.character.rep += eff.rep;
+    }
+    // [73차] effect.karma / effect.nuyen 실지급 (선언 수치 그대로, rep 와 동일한 firstRun 가드).
+    feedLines = feedLines.concat(grantChoiceGains(s, eff, firstRun));
+    if (feedLines.length) {
+      s.banner = feedLines.length === 1
+        ? { kind: 'growth', text: feedLines[0] }        // 단일 자원 — 72차 karma 배너와 byte 동일
+        : { kind: 'growth', lines: feedLines.slice() };
     }
 
     // 전투 개시. [B1] 정보상 인텔 구매 미션이면 브리핑 공개(opts.intel).
@@ -591,6 +643,11 @@
     if (applied.goto) {
       s.dialogue.nodeId = applied.goto;
       applyOnEnter(s, mission, mission.dialogue.nodes[applied.goto]);
+      // [73차] 선택 직후 이동한 노드가 settle(applyRewards)이면 정산 배너가 방금 만든 지급/지출
+      //   배너를 덮어쓴다 → 정산 로그 맨 앞에 합류시켜 "무엇을 얻고 무엇을 냈는지"를 잃지 않는다.
+      if (feedLines.length && s.banner && s.banner.kind === 'rewards') {
+        s.banner.lines = feedLines.concat(s.banner.lines);
+      }
     }
     return s;
   }
@@ -603,9 +660,10 @@
       tags: s.save.character.tags || [],
       flags: s.save.flags,
       classKey: s.save.character.classKey,
-      // [72차 · d45 #14] 대화 선택지 자원 비용(effect.spendKarma) 판정용 karma 잔량.
-      //   캐릭터가 정본(save.karma 는 §5.3 미러). 게이트 판정은 dialogue.evalCost 가 소비.
+      // [72차 · d45 #14 · 73차] 대화 선택지 자원 비용(spendKarma/spendNuyen) 판정용 잔량.
+      //   캐릭터가 정본(save.karma/save.nuyen 은 §5.3 미러). 판정은 dialogue.evalCost 가 소비.
       karma: (s.save.character && typeof s.save.character.karma === 'number') ? s.save.character.karma : 0,
+      nuyen: (s.save.character && typeof s.save.character.nuyen === 'number') ? s.save.character.nuyen : 0,
     };
   }
 
