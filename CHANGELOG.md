@@ -12,7 +12,7 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 
 ---
 
-## 릴리스 이력 — v6.1 ~ v6.27 (전부 main 머지·프로덕션 배포 완료)
+## 릴리스 이력 (전부 main 머지·프로덕션 배포 완료 — 최신이 위)
 
 아래 v6.x 항목은 각각 PR 스쿼시 머지로 라이브(dead-nexus.vercel.app)에 배포된 릴리스입니다.
 (감사 지적 반영: 종전에는 [Unreleased] 아래 묶여 있어 릴리스 상태가 오표기됐음 — 2026-07-17 승격)
@@ -32,7 +32,7 @@ DEAD NEXUS 프로젝트의 모든 주요 변경사항을 기록합니다.
 - **시뮬 계기판 정직화·정리**: 건물 desc↔판정 정합(거래소 ₵+2)·NEXUS 룰 desc 실효화·하이라이트 死엔트리 2종 배선(bounty_hit·ten_zone_hold)·dispatch 0 데드코드 6케이스 제거(BOT_SHOP ~40줄 포함)·SCENARIOS stale 주석 정정 · **접근성**: 맵 셀 키보드 접근(role/tabIndex/onKeyDown)·reduced-motion 커버리지 확장·head 메타 보강 · 유닛 307/307
 - **홈 PWA**: manifest.webmanifest + PNG 아이콘(순수 파이썬 zlib 자체 생성) — 홈 화면 추가 설치 가능 · 푸터 대비 AA(4.83:1) · 진행 배지 ARIA progressbar · **_home_check.js 드리프트 가드 신설** (첫 실행에서 미션 2종 추가 드리프트를 실제로 적발·정정 — 동적 카운트로 개선, 8/8)
 - **print-kit 외부 폰트 CDN 제거** (14파일 — 전 트랙 외부 요청 0 완성, Playwright 오프라인 실증) · **문서 현행화** (README v6.44·docs/00·docs/25 — RPG "구현 전" 오표기 해소)
-- rpg/README 현행화·HUB_NODES 데드코드 제거·RPG 뷰포트 줌 봉인 해제(WCAG 1.4.4)·RPG meta description
+- HUB_NODES 데드코드 제거 (~~rpg/README 현행화·뷰포트 줌 해제·meta description~~ — opus 중단으로 미실행이 완료로 오기재됐던 것을 70차 감사가 적발, v6.47에서 실구현)
 - **Deferred (정직 이월)**: B-01 S03 2-레버 스윕(opus 중단 — 측정 하네스 미완)·hard×구클래스 기존 실패 15건(v6.44 이전부터, 게이트 밖)·오브젝티브 다양성 신규 승리모드·S05/S06 원안 확장·MOLE HELIX 태그
 
 ### v6.44 — 대규모 업데이트: 캡스톤·협상 페이즈·사운드 (63차 워크플로, 유저 "워크플로 구성해서 대규모업데이트 또") 🔊
