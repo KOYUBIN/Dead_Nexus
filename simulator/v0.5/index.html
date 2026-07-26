@@ -5987,8 +5987,10 @@ function applyEffect(state, playerIdx, effect, kind, card) {
   }
   if (effect.assassin_contract && p.role === 'bloc') {
     // 청부 살인: 가장 hp 높은 Ghost 1명 → HP-4 + 자기 평판 +2 + ₵-3 (비용)
+    // v6.51 (E14ⓑ): 비용 검사를 차감 시점과 동일한 현재 자원(s.players)으로 — 함수 시작 시점의
+    //   낡은 p 참조로 검사하면 앞선 효과가 ₵을 소모한 경우 잔고 음수 가능.
     const ghosts = s.players.filter(pp => pp.role === 'ghost' && !pp.defeated);
-    if (ghosts.length > 0 && (p.resources.credit || 0) >= 3) {
+    if (ghosts.length > 0 && (s.players[playerIdx].resources.credit || 0) >= 3) {
       ghosts.sort((a, b) => b.hp - a.hp);
       const target = ghosts[0];
       const tIdx = s.players.indexOf(target);
