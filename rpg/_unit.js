@@ -1742,12 +1742,18 @@ mrx68.forEach(function (r) {
 });
 ok('311. 3정책 측정 행 = 생존형 1행 [a2-c1-first-contact] · 나머지 ' + pol2 + '행은 2정책(형상 불변)',
   pol3.length === 1 && pol3[0] === 'a2-c1-first-contact' && pol2 === mrx68.length - 1);
-// 매트릭스 회귀 — 전 조합 클리어 유지 + 68차로 base 트리비얼 3 → 2 (a2-c1 BLADE 해소).
+// 매트릭스 회귀 — 전 조합 클리어 유지 + 트리비얼 램프: 65차 3 → 68차 2(a2-c1 BLADE) → 71차 0.
+//   [71차 L5] 잔존 2건(ch02·a2-d1 의 BLADE 2R 무피해 러시)을 배치 레버로 해소:
+//   코어가 이미 그리드 최원거리라 '코어 이설' 은 무효(BLADE mov3×ap2 = 6칸/R 이 거리를 덮음) →
+//   직선 진입 레인을 격벽/붕괴잔해로 막아 우회를 강제(러시 2R→3R). survive:N 전환은 서사 부적합으로 배제.
 var agg68 = BAL.aggregateScenario(mrx68);
-ok('312. 68차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 2(65차 3건에서 1건 해소)',
-  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 2);
-ok('313. 해소된 트리비얼은 a2-c1-first-contact — 잔존 2건에 미포함',
-  agg68.flagged.filter(function (f) { return f.id === 'a2-c1-first-contact'; }).length === 0);
+ok('312. 71차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 0 · 전 조합 무플래그(bandOk 252)',
+  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 0 &&
+  agg68.attrition === 0 && agg68.bandOk === 252);
+ok('313. 해소된 트리비얼 3건 [a2-c1-first-contact(68차) · ch02-insider-game · a2-d1-scavenge(71차)] 전량 flagged 부재',
+  ['a2-c1-first-contact', 'ch02-insider-game', 'a2-d1-scavenge'].every(function (id) {
+    return agg68.flagged.filter(function (f) { return f.id === id; }).length === 0;
+  }));
 
 console.log('\n== [68차] blade-vendetta 사문 게이트 해소 ([IRONWALL 태그] → [DEF 4]) ==');
 var bvM = CAMP.missionData('a2-side-blade-vendetta');

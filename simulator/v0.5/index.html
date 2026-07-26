@@ -1616,10 +1616,13 @@ function trackBonus(p, kind) {
 // v0.6.3e: Bloc 건물 건설 시스템 (산업 트랙형 + Gallerist 영감)
 // 자사 구역에 건물 1개 건설 → 영구 패시브. Ghost 레이드로 파괴 가능
 const BUILDINGS = {
-  factory:   { name: '공장',     icon: '🏭', tl: 1, cost: { credit: 4, parts: 2 }, desc: '매 라운드 부품 +2' },
+  // v6.46 [71차 L4]: desc 에 자산 기여를 전부 명시 — assetValue() 의 buildingValue 는 5종 전부에
+  //   가산하는데 desc 는 hq/media 만 '자산 +N' 을 적어, 공장·보안센터·거래소의 자산 기여가 UI 에서
+  //   보이지 않았다(구매 판단이 실제 효과와 어긋남). 수치는 assetValue 의 맵과 동일 출처.
+  factory:   { name: '공장',     icon: '🏭', tl: 1, cost: { credit: 4, parts: 2 }, desc: '매 라운드 부품 +2 · 자산 +2' },
   hq:        { name: '사옥',     icon: '🏢', tl: 2, cost: { credit: 6 },           desc: '자산 +5 영구, 매 라운드 인플루언스 +1' },
-  security:  { name: '보안센터', icon: '🛡', tl: 1, cost: { credit: 3, parts: 1 }, desc: '구역 요새화 +2 영구 (레이드 방어)' },
-  trading:   { name: '거래소',   icon: '📈', tl: 2, cost: { credit: 5 },           desc: '매 라운드 크레딧 +2' },
+  security:  { name: '보안센터', icon: '🛡', tl: 1, cost: { credit: 3, parts: 1 }, desc: '구역 요새화 +2 영구 (레이드 방어) · 자산 +2' },
+  trading:   { name: '거래소',   icon: '📈', tl: 2, cost: { credit: 5 },           desc: '매 라운드 크레딧 +2 · 자산 +3' },
   media:     { name: '미디어허브', icon: '📡', tl: 3, cost: { credit: 5, parts: 2 }, desc: '자산 +4 (건설 보너스)' },
 };
 function canBuildBuilding(state, playerIdx, key, coord) {
@@ -2623,8 +2626,10 @@ const assetValue = (p, stocks, state) => {
       if (cell.owner === p.id && cell.building) total += (buildingValue[cell.building] || 0);
     });
   }
-  // v0.5.16 결론: 자산 구성은 순수하게 (타 블록 주식 + 구역)만 유지.
-  // Bloc/Ghost P0 격차는 assetGoal 이 아닌 Ghost 승리 루트 수 문제.
+  // v6.46 [71차 M10]: 아래 주석은 v0.5.16 당시 결론이었으나 v0.6.3e 에서 건물 자산 보너스가
+  //   추가되며 코드와 어긋났다(주석은 "주식+구역만"이라 하는데 바로 위에서 건물값을 가산).
+  //   현재 자산 구성 = 타 블록 주식 + 구역(×5) + 건물(hq5·media4·trading3·factory2·security2).
+  //   유지되는 부분: Bloc/Ghost P0 격차는 assetGoal 이 아닌 Ghost 승리 루트 수 문제라는 판단.
   return Math.floor(total);
 };
 
@@ -7014,7 +7019,7 @@ function SetupScreen({ onStart }) {
       )}
       {scen.id === 'S05' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
-          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus} · 뉴스 매 R {scen.newsDrawCount}장. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현: 금융가×2·변동폭±4 미배선)
+          ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus} · 뉴스 매 R {scen.newsDrawCount}장. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현 — 원안 No-op 4건 전부 미배선: 금융가 수입 ×2 · 주가 변동폭 ±4 · 블랙마켓 +2 · M&A 방어 +3)
         </div>
       )}
       {scen.id === 'S06' && (

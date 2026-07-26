@@ -314,7 +314,9 @@ const BENIGN = (t) => t.includes('in-browser Babel transformer'); // known dev-m
   const PAGE_BUILD = await pg.page.evaluate(() => {
     const all = document.documentElement.innerHTML.match(/v6\.\d+(?:\.\d+)?/g) || [];
     if (!all.length) return null;
-    const key = (v) => v.slice(1).split('.').map(Number).reduce((a, n) => a * 1000 + n, 0);
+    //   major/minor/patch 를 고정 자릿수로 정규화해 비교 — 자릿수가 다른 'v6.13.1' 이
+    //   'v6.46' 보다 커 보이는 오비교를 막는다(누적 곱셈 방식의 함정).
+    const key = (v) => { const p = v.slice(1).split('.').map(Number); return (p[0] || 0) * 1e6 + (p[1] || 0) * 1e3 + (p[2] || 0); };
     return all.reduce((a, b) => (key(b) > key(a) ? b : a));
   }).catch(() => null);
   const GIT_REV = (() => {

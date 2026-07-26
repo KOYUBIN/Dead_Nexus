@@ -517,11 +517,21 @@ function shapeCaption(rows) {
 // [71차 L1+L3] 행 종류 라벨 — 구 로직은 kind!=='main' 을 전부 'side' 로 찍어 Act 2 16미션이
 //   사이드로 오표기됐다. act2 는 act2, 그중 branch 'capstone' 은 cap 으로 분리 표기한다.
 //   행 객체에 branch 를 부착하지 않고 campaign 에서 조회 — runMatrix 반환 형상 byte 불변 유지.
+// branch 는 미션 모듈이 아니라 **레지스트리 엔트리**(CAMP.MISSIONS)에 붙어 있다 — missionData()
+//   로는 조회되지 않으므로 id 색인을 따로 만든다(이 오조회가 전 Act 2 행을 '?' 로 만들었다).
+var REG_BY_ID = null;
+function regOf(id) {
+  if (!REG_BY_ID) {
+    REG_BY_ID = {};
+    for (var i = 0; i < CAMP.MISSIONS.length; i++) REG_BY_ID[CAMP.MISSIONS[i].id] = CAMP.MISSIONS[i];
+  }
+  return REG_BY_ID[String(id).split('#')[0]] || null;
+}
+function branchOf(id) { var r = regOf(id); return (r && r.branch) || null; }
 function rowTag(kind, chapter, id) {
   if (kind === 'main') return 'ch' + (chapter < 10 ? '0' + chapter : chapter);
   if (kind !== 'act2') return kind;
-  var m = CAMP.missionData(String(id).split('#')[0]);
-  return (m && m.branch === 'capstone') ? 'cap' : 'act2';
+  return branchOf(id) === 'capstone' ? 'cap' : 'act2';
 }
 
 function cellStr(v) {
@@ -612,8 +622,7 @@ function printTrend(rows) {
   var branches = [], byBr = {};
   for (var j = 0; j < rows.length; j++) {
     if (rows[j].kind !== 'act2') continue;
-    var m = CAMP.missionData(rows[j].baseId);
-    var br = (m && m.branch) || '?';
+    var br = branchOf(rows[j].baseId) || '?';
     if (!byBr[br]) { byBr[br] = []; branches.push(br); }
     byBr[br].push(rows[j]);
   }
@@ -802,10 +811,12 @@ function printScenarios() {
   var guard = lateChapterGuard(runMatrix('full'));
   var hardGuardBase = lateChapterGuard(runMatrix('base', 'hard'));
   console.log('\n---- 수용 판정 (docs/25 §8 정직화 · 표시=판정) ----');
-  // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식). 트리비얼은
-  //   전량 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) — 문서화 허용(51차 선례).
+  // [62차] base 수용 = 무장비 전 인카운터 클리어 가능 + clearFail 0(램프 불변식).
+  // [71차 L5] 잔존 트리비얼 2건(ch02·a2-d1 의 BLADE 2R 무피해 러시)을 배치 레버(격벽/잔해)로
+  //   해소 → base 트리비얼 0. 문구도 실측 연동으로 바꿔, 0 일 때 '허용' 사유를 출력하지 않는다.
   console.log('  base : 무장비 전 조합 클리어(' + b.clearable + '/' + b.total + ') · clearFail ' + b.fail
-    + ' · 트리비얼 ' + b.trivial + '(enc① 워밍업/ch02 계승 · 허용) — ' + (b.clearable === b.total && b.fail === 0 ? 'PASS' : 'CHECK'));
+    + ' · 트리비얼 ' + b.trivial + (b.trivial ? '(enc① 워밍업 · 문서화 허용)' : '(해소 완료)')
+    + ' — ' + (b.clearable === b.total && b.fail === 0 ? 'PASS' : 'CHECK'));
   var midMargin = (m.clearable === b.clearable) && (m.avgHp >= b.avgHp);
   console.log('  mid  : 클리어율 동일(' + m.clearable + '/' + m.total + '=base) · 여유 증가(평균종료HP ' + b.avgHp.toFixed(1) + '→' + m.avgHp.toFixed(1) + '%) — ' + (midMargin ? 'PASS' : 'CHECK'));
   var chStr = guard.chs.map(function (c) { return 'ch0' + c + ' min=' + guard.perCh[c].min; }).join(' · ');
