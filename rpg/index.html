@@ -64,7 +64,8 @@
 <script src="./data/enemies.js"></script>
 <script src="./data/weapons.js"></script>
 <script src="./data/gear.js"></script>
-<!-- 미션 데이터 32종 (Act 1: 메인 8 + 사이드 8 / Act 2: 프레이밍 1 + 메인 8 + 사이드 6 + 캡스톤 1)
+<!-- 미션 데이터 38종 (Act 1: 메인 8 + 사이드 8 / Act 2: 프레이밍 1 + 메인 8 + 사이드 6 + 캡스톤 1
+     / Act 3: 프레이밍 1 + 메인 2 + 종결 1 + 사이드 2)
      campaign 레지스트리가 소비. 여기 목록 == core/loader.js heal == campaign.js MISSIONS —
      rpg/_wiring_check.js 가 4집합 동치를 강제(누락 시 RED). -->
 <script src="./data/missions/ch01-first-blood.js"></script>
@@ -102,6 +103,13 @@
 <script src="./data/missions/a2-side-drifter-lastroad.js"></script>
 <!-- [v6.44 · 과제 A1] ACT 2 캡스톤 — MERIDIAN FLAGSHIP (3연전) -->
 <script src="./data/missions/a2-99-flagship.js"></script>
+<!-- [v6.54] ACT 3 "SIGNAL DEBT" — 프레이밍 1 + 메인 2(2연전) + 종결 1(3연전) + 클래스 사이드 2 -->
+<script src="./data/missions/a3-00-framing.js"></script>
+<script src="./data/missions/a3-01-collateral.js"></script>
+<script src="./data/missions/a3-02-interest.js"></script>
+<script src="./data/missions/a3-03-finale.js"></script>
+<script src="./data/missions/a3-side-broker-callin.js"></script>
+<script src="./data/missions/a3-side-rigger-relay.js"></script>
 <script src="./lore/lore_module.snapshot.js"></script>
 <script src="./lore/lore-adapter.js"></script>
 <script src="./systems/combat/grid.js"></script>
@@ -168,6 +176,10 @@ const ENEMY_SPRITE = {
   MERIDIAN_WARLORD: 'px-boss', WARD_NODE: 'px-ice', ELIA_VOSS: 'px-boss', HARLAN_VOSS: 'px-boss',
   // [3차 발굴 F9] 캡스톤 최종 보스 매핑 누락 보정 — WARLORD 와 동일 px-boss 재활용(신규 아트 0).
   MERIDIAN_OVERLORD: 'px-boss',
+  // [v6.54 Act3] MERIDIAN 청산관리단 3종 — 기존 17장 재활용(신규 다운로드 0 · 이모지 폴백 금지).
+  //   ASSESSOR=사정관(px-guard, 대인 요원 라인) · COLLECTOR=추심관(px-elite, 중장 근접 라인) ·
+  //   LIQUIDATOR=청산인(px-boss, 네임드 보스 라인).
+  MERIDIAN_ASSESSOR: 'px-guard', MERIDIAN_COLLECTOR: 'px-elite', MERIDIAN_LIQUIDATOR: 'px-boss',
 };
 function spriteForUnit(u) {
   if (!u) return null;
@@ -220,6 +232,13 @@ const STAGE_THEME = {
   'a2-side-mole-whoami': 'helix',        // HELIX G6 HQ 양성시설 — 바이오 녹
   'a2-99-flagship': 'zeroday',           // [v6.44] MERIDIAN 기함 결전 — 결전 마젠타
   'abyss': 'nexus',                      // [v6.44] 심연 프로토콜 — 시안
+  // [v6.54] ACT 3 "SIGNAL DEBT" — 무대 팔레트 재활용(표시 전용).
+  'a3-00-framing': 'nexus',              // 넥서스 하부 메시 중계탑 — 시안
+  'a3-01-collateral': 'axiom',           // 넥서스 지하 담보 원장고 — 데이터 보라
+  'a3-02-interest': 'helix',             // HELIX 슬럼 상환 창구 — 바이오 녹
+  'a3-03-finale': 'zeroday',             // 넥서스 최상층 청산 법정 — 결전 마젠타
+  'a3-side-broker-callin': 'nightlife',  // 유흥가 장부실 — 네온 핫핑크
+  'a3-side-rigger-relay': 'carbon',      // CARBON 공업지구 34번 중계탑 — 황동
 };
 function stageTheme(id) { return (id && STAGE_THEME[id]) || 'vanta'; }
 
@@ -343,6 +362,15 @@ const ACT2_BRANCHES = [
   { key: 'capstone', icon: '🌃', label: 'CAPSTONE — MERIDIAN FLAGSHIP (최종 결전)', gateHint: '4갈래 종결전 전부 클리어 필요' },
 ];
 
+// [v6.54] ACT 3 그룹 메타 — 선형 체인(프레이밍 → 메인 2 → 종결) + 클래스 사이드.
+//   Act2 와 달리 엔딩 게이트가 없다 — 캡스톤 클리어 하나로 아크 전체가 열리고, 이후는 순차 해금.
+const ACT3_BRANCHES = [
+  { key: 'framing', icon: '🧾', label: 'PROLOGUE — SIGNAL DEBT (장부의 주인 SILK)', gateHint: 'ACT 2 캡스톤 클리어 필요' },
+  { key: 'main', icon: '⛓', label: 'MAIN — 담보 · 이자 (청산관리단 회수 전선)', gateHint: '프레이밍 클리어 필요' },
+  { key: 'finale', icon: '⚖', label: 'FINALE — SETTLEMENT DAY (청산 법정 3연전)', gateHint: '메인 2종 클리어 필요' },
+  { key: 'class', icon: '🧬', label: '클래스 전용 사이드', gateHint: '해당 클래스로 편성 필요' },
+];
+
 // ── 미션 카드 (메인 체인 / 사이드 보드 공용) ──
 //  row = { id, kind, chapter, branch, unlocked, cleared, hint }  (CAMP.boardState 산출)
 function MissionCard({ row, current, dispatch }) {
@@ -354,6 +382,7 @@ function MissionCard({ row, current, dispatch }) {
     let lockedTtl;
     if (row.kind === 'side') lockedTtl = '??? — 미해금 계약';
     else if (row.kind === 'act2') lockedTtl = '??? — ACT 2 미개방';
+    else if (row.kind === 'act3') lockedTtl = '??? — ACT 3 미개방';
     else lockedTtl = chLabel(entry);
     return (
       <div className={'mcard locked ' + row.kind}>
@@ -385,6 +414,8 @@ function MissionBoard({ state, dispatch }) {
   const sideVisible = board.sides.filter(s => s.unlocked).length;
   const act2 = board.act2 || [];
   const act2Visible = act2.filter(a => a.unlocked).length;
+  const act3 = board.act3 || [];
+  const act3Visible = act3.filter(a => a.unlocked).length;
   return (
     <div className="sheet mboard">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>
@@ -413,6 +444,32 @@ function MissionBoard({ state, dispatch }) {
             return (
               <React.Fragment key={br.key}>
                 <div className={'board-sec act2-branch' + (allLocked ? ' locked' : '')}>
+                  {br.icon} {br.label}{" "}
+                  <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>
+                    ({grpVisible}/{rows.length}){allLocked ? ' · 🔒 ' + br.gateHint : ''}
+                  </span>
+                </div>
+                <div className="mission-list">
+                  {rows.map(row => <MissionCard key={row.id} row={row} current={board.current} dispatch={dispatch} />)}
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </React.Fragment>
+      ) : null}
+      {act3.length ? (
+        <React.Fragment>
+          <div className="board-sec act3-sec">🧾 ACT 3 — SIGNAL DEBT ({act3Visible}/{act3.length} 개방){" "}
+            <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>· 기함 격추 이후 · MERIDIAN 청산관리단 · 캡스톤 클리어로 개방(선형 체인)</span>
+          </div>
+          {ACT3_BRANCHES.map(br => {
+            const rows = act3.filter(r => (r.branch || 'framing') === br.key);
+            if (!rows.length) return null;
+            const grpVisible = rows.filter(r => r.unlocked).length;
+            const allLocked = grpVisible === 0;
+            return (
+              <React.Fragment key={br.key}>
+                <div className={'board-sec act3-branch' + (allLocked ? ' locked' : '')}>
                   {br.icon} {br.label}{" "}
                   <span style={{ color: 'var(--text-dim)', fontWeight: 'normal' }}>
                     ({grpVisible}/{rows.length}){allLocked ? ' · 🔒 ' + br.gateHint : ''}
@@ -504,7 +561,7 @@ function IntelBroker({ state, dispatch }) {
   const price = GEAR.INTEL_PRICE;
   const board = CAMP.boardState(save);
   // [3차 발굴 F4] Act2 미션 인텔 포함 — mains+sides 만 나열해 Act2 인텔 구매 경로가 없던 누락 보정.
-  const rows = board.mains.concat(board.sides).concat(board.act2 || []).filter(r => r.unlocked);
+  const rows = board.mains.concat(board.sides).concat(board.act2 || []).concat(board.act3 || []).filter(r => r.unlocked);
   return (
     <div className="sheet">
       <button className="btn ghost" onClick={() => dispatch({ type: 'HUB_NAV', node: 'root' })}>← 허브</button>

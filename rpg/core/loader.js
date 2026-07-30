@@ -30,7 +30,7 @@
     heal('data/enemies.js', 'RPG_ENEMIES');
     heal('data/weapons.js', 'RPG_WEAPONS');
     heal('data/gear.js', 'RPG_GEAR');
-    // 미션 데이터 (32종: 메인 8 + 사이드 8 + Act 2 15 + 캡스톤 1) — 각 전역 마커별 개별 heal.
+    // 미션 데이터 (38종: 메인 8 + 사이드 8 + Act 2 15 + 캡스톤 1 + Act 3 6) — 각 전역 마커별 개별 heal.
     heal('data/missions/ch01-first-blood.js', 'RPG_MISSION_CH01');
     heal('data/missions/ch02-insider-game.js', 'RPG_MISSION_CH02');
     heal('data/missions/ch03-martial-night.js', 'RPG_MISSION_CH03');
@@ -64,6 +64,13 @@
     heal('data/missions/a2-side-broker-ledger.js', 'RPG_MISSION_A2_SIDE_BROKER_LEDGER');
     heal('data/missions/a2-side-drifter-lastroad.js', 'RPG_MISSION_A2_SIDE_DRIFTER_LASTROAD');
     heal('data/missions/a2-99-flagship.js', 'RPG_MISSION_A2_99_FLAGSHIP');   // [v6.44] 캡스톤
+    // [v6.54] ACT 3 "SIGNAL DEBT" (프레이밍 1 + 메인 2 + 종결 1 + 클래스 사이드 2 = 6)
+    heal('data/missions/a3-00-framing.js', 'RPG_MISSION_A3_00_FRAMING');
+    heal('data/missions/a3-01-collateral.js', 'RPG_MISSION_A3_01_COLLATERAL');
+    heal('data/missions/a3-02-interest.js', 'RPG_MISSION_A3_02_INTEREST');
+    heal('data/missions/a3-03-finale.js', 'RPG_MISSION_A3_03_FINALE');
+    heal('data/missions/a3-side-broker-callin.js', 'RPG_MISSION_A3_SIDE_BROKER_CALLIN');
+    heal('data/missions/a3-side-rigger-relay.js', 'RPG_MISSION_A3_SIDE_RIGGER_RELAY');
     heal('systems/abyss.js', 'RPG_ABYSS');                                    // [v6.44] 심연 프로토콜
     heal('systems/combat/grid.js', 'RPG_GRID');
     heal('systems/combat/resolve.js', 'RPG_RESOLVE');

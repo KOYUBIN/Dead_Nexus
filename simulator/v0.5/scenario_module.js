@@ -58,6 +58,20 @@ var BLACKOUT_ORDER = [
   'D6', 'H6',    // R10 — 중앙 데이터허브 마무리
 ];
 
+// 좌표(열문자+행숫자)의 4방 인접 칸 중 owner 소유가 하나라도 있는가 — 복구 자격 판정용.
+function blackout_adjacentTo(map, coord, owner) {
+  var col = coord.charCodeAt(0), row = parseInt(coord.slice(1), 10);
+  var cand = [
+    String.fromCharCode(col - 1) + row, String.fromCharCode(col + 1) + row,
+    String.fromCharCode(col) + (row - 1), String.fromCharCode(col) + (row + 1),
+  ];
+  for (var i = 0; i < cand.length; i++) {
+    var c = map[cand[i]];
+    if (c && c.owner === owner) return true;
+  }
+  return false;
+}
+
 // 시나리오 룰 조회 — index.html 의 scenarioRule 을 호출 시점에 지연 참조(미로드 시 fallback).
 function blackout_rule(state, key, fallback) {
   return (typeof scenarioRule === 'function') ? scenarioRule(state, key, fallback) : fallback;
@@ -140,7 +154,16 @@ function blackout_advance(state) {
     lit.push(c);
   }
 
-  // ② Bloc 복구 — 정전 칸 소유 실참 Bloc 이 부품을 내고 점등·경화.
+  // ② Bloc 복구 — 자사 구역이거나 **자사 구역에 인접한** 정전 칸을 부품으로 점등·경화.
+  //   [인접까지 넓힌 이유 — 측정 근거] 소유 칸으로만 제한한 1차 구현은 복구 발생 1.5회/판에
+  //   그쳤다. 캐스케이드 18칸이 5 Bloc 의 HQ·support 를 의도적으로 비껴가므로(대칭 밸런스
+  //   보증) Bloc 이 정전 칸을 소유하는 일 자체가 드물었던 것. docs/14 §S04 구출 퀘스트가
+  //   0.26회/판으로 사실상 죽은 콘텐츠가 된 전례를 반복하지 않으려면 발화 조건을 Bloc 의
+  //   자연스러운 반경 안에 둬야 한다 — "복구 인프라를 뻗는다"는 원안 서술과도 맞는다.
+  //   [영토 획득] 복구한 칸이 무주공산이면 복구자가 가져간다. 원안 "정전 복구 = 자산 가치"의
+  //   가장 직접적인 구현 — 구역은 곧 수입이고 수입은 곧 assetValue 다.
+  //   [페이싱] 좌석당 라운드 1칸으로 제한. 부품이 쌓인 Bloc 이 한 라운드에 도시를 통째로
+  //   되살려 캐스케이드를 무의미하게 만드는 폭주를 막는다.
   var needParts = blackout_rule(state, 'blackoutRepairParts', 0);
   var payCredit = blackout_rule(state, 'blackoutRepairCredit', 0);
   var players = state.players.slice();
@@ -150,22 +173,23 @@ function blackout_advance(state) {
       var p = players[pi];
       if (!p || p.role !== 'bloc' || p.defeated || p.isNpc) continue;
       var res = Object.assign({}, p.resources);
-      var changed = false;
+      if ((res.parts || 0) < needParts) continue;
       var darkKeys = Object.keys(dark);   // 스냅샷 — 아래에서 dark 를 지우므로 for-in 금지
       for (var di = 0; di < darkKeys.length; di++) {
         var coord = darkKeys[di];
-        if (!dark[coord]) continue;
-        if (!map[coord] || map[coord].owner !== pi) continue;
-        if ((res.parts || 0) < needParts) break;   // 이번 라운드 예산 소진
+        if (!dark[coord] || !map[coord]) continue;
+        if (map[coord].owner !== pi && !blackout_adjacentTo(map, coord, pi)) continue;
         res.parts = (res.parts || 0) - needParts;
         res.credit = (res.credit || 0) + payCredit;
         delete dark[coord];
         hardened[coord] = true;
-        map[coord] = Object.assign({}, map[coord], { blackout: false, boDef: 0 });
+        var relit = { blackout: false, boDef: 0 };
+        if (map[coord].owner == null) relit.owner = pi;   // 무주공산이면 복구자 귀속
+        map[coord] = Object.assign({}, map[coord], relit);
         fixed.push('P' + pi + '→' + coord);
-        changed = true;
+        players[pi] = Object.assign({}, p, { resources: res });
+        break;   // 좌석당 라운드 1칸
       }
-      if (changed) players[pi] = Object.assign({}, p, { resources: res });
     }
   }
 
@@ -348,6 +372,7 @@ if (typeof window !== 'undefined') {
   window.blackout_darkCount = blackout_darkCount;
   window.blackout_hardenedCount = blackout_hardenedCount;
   window.blackout_advance = blackout_advance;
+  window.blackout_adjacentTo = blackout_adjacentTo;
   window.s06MarkCrashBottom = s06MarkCrashBottom;
   window.s06CheckReconstructor = s06CheckReconstructor;
   window.s06NoteLiquidation = s06NoteLiquidation;

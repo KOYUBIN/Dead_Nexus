@@ -4903,6 +4903,10 @@ const LEADER_BREAK_BONUS1 = 3;    // 자산 1위 소유 구역 거리 보정
 const LEADER_BREAK_BONUS2 = 1;    // 자산 2위 소유 구역 거리 보정
 const LEADER_BREAK_DECLARER = 6;  // v6.12 P0-1: 종료 선언자 소유 구역 거리 보정 (최우선)
 const LEADER_BREAK_SCANCAP = 12;  // BFS 탐색 상한 (성능·과도한 원정 방지)
+// v6.53 (S07): 정전 구역 유인 — 봇 Ghost 가 "어둠을 골라 친다"(방어 −2)를 실제 경로 선택으로
+//   실행하게 하는 거리 보정. cell.blackout 은 S07 에서만 기입되므로 타 시나리오는 구조적으로 0.
+//   LEADER_BREAK_BONUS1(3)과 같은 크기 — 자산 1위 견제와 대등한 유인이지, 선언자(6)를 덮지는 않는다.
+const BLACKOUT_RAID_PULL = 3;
 function findRaidTargetZone(state, fromCoord) {
   const nearest = findNearestBlocZone(state, fromCoord);
   if (!nearest) return null;
@@ -4935,7 +4939,7 @@ function findRaidTargetZone(state, fromCoord) {
       if (cell.owner !== null && cell.owner !== undefined) {
         const owner = state.players[cell.owner];
         if (owner?.role === 'bloc') {
-          const score = dist - bonusOf(cell.owner);
+          const score = dist - bonusOf(cell.owner) - (cell.blackout ? BLACKOUT_RAID_PULL : 0);  // v6.53 (S07)
           if (score < bestScore) { bestScore = score; best = c; }
         }
       }
