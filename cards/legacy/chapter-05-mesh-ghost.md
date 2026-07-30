@@ -57,7 +57,7 @@ CIPHER가 먼저 발견하지만, 머잖아 모든 Ghost와 Bloc이 메시의 �
 
 ### 3. 새로운 카드 (7장)
 - **MESH DIVE** (CIPHER 강화): 메시 내 이동력 2배
-- **GHOST PROTOCOL** (CIPHER 강화): 메시 내 이니셔티브 −10
+- **MESH PROTOCOL** (CIPHER 강화): 메시 내 이니셔티브 −10
 - **SIGNAL WHISPER** (전체 공용): SIGNAL과 접촉 시 1회 무료 대화
 - **DEEP DIVE** (Ghost 공용): 메시 안에서만 사용 가능한 전용 공격, ATK +4
 - **COLD BOOT** (Bloc 공용): 자사 베일 전역 1라운드 완전 차단 (자사 카드 사용도 제한)
@@ -139,4 +139,4 @@ CIPHER가 먼저 발견하지만, 머잖아 모든 Ghost와 Bloc이 메시의 �
 - **메인 캠페인 가이드**: `docs/12-legacy-campaign.md`
 - **이전 챕터**: `legacy/chapter-04-price-of-splice.md`
 - **다음 챕터**: `legacy/chapter-06-bloc-acquisition.md`
-- **관련 시스템**: `docs/10-map-zones.md` §8 (메시 맵), `docs/05-card-system.md`
+- **관련 시스템**: `docs/10-map-zones.md` §13 (메시 맵), `docs/05-card-system.md`

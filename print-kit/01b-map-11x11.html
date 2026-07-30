@@ -99,7 +99,7 @@
   <h1>ASHGRID 11×11 정식 맵</h1>
   <div class="meta">
     DEAD NEXUS v1.0 · 121 셀 · NEXUS 중앙 F6<br/>
-    Bloc 5종 외곽 분산 · Ghost 시작 6위치
+    Bloc 5종 Ring 1(넥서스 인접) 사방 배치 · Ghost 시작 6위치 (Ring 5 변두리)
   </div>
 </div>
 
@@ -110,14 +110,15 @@
   <table style="margin-top:1mm;">
     <thead><tr><th>Bloc</th><th>HQ</th><th>Support</th><th>색</th><th>NEXUS 룰 (점유 시)</th></tr></thead>
     <tbody>
-      <tr><td>VANTA</td><td>C2</td><td>B2, C1</td><td style="background:#1a1a1a; color:white;">검정</td><td>info_open: NPC 시그널 +1, 정찰 +1</td></tr>
-      <tr><td>AXIOM</td><td>I2</td><td>I1, J2</td><td style="background:#2d6fff; color:white;">청색</td><td>algo_market: 데이터 +1/R, 주가 변동 ×2</td></tr>
-      <tr><td>HELIX</td><td>F4</td><td>F3, E4</td><td style="background:#8ab57c;">녹색</td><td>biocode: 모든 플레이어 HP +1/R</td></tr>
-      <tr><td>IRONWALL</td><td>C10</td><td>B10, C11</td><td style="background:#4a5d23; color:white;">군녹</td><td>martial: ATK +1, Ghost 수배 +1/R</td></tr>
-      <tr><td>CARBON</td><td>I10</td><td>J10, I11</td><td style="background:#8b5a2b; color:white;">갈색</td><td>energy_grid: 자사 구역 수입 +1 ₵</td></tr>
+      <tr><td>VANTA</td><td>F5</td><td>E4, F4</td><td style="background:#1a1a1a; color:white;">검정</td><td>info_open: NPC 시그널 +1, 정찰 +1</td></tr>
+      <tr><td>AXIOM</td><td>G5</td><td>G4, H4</td><td style="background:#2d6fff; color:white;">청색</td><td>algo_market: 데이터 +1/R, 주가 변동 ×2</td></tr>
+      <tr><td>HELIX</td><td>G6</td><td>H5, H6</td><td style="background:#8ab57c;">녹색</td><td>biocode: 모든 플레이어 HP +1/R</td></tr>
+      <tr><td>IRONWALL</td><td>F7</td><td>E8, F8</td><td style="background:#4a5d23; color:white;">군녹</td><td>martial: ATK +1, Ghost 수배 +1/R</td></tr>
+      <tr><td>CARBON</td><td>E6</td><td>D5, D6</td><td style="background:#8b5a2b; color:white;">갈색</td><td>energy_grid: 자사 구역 수입 +1 ₵</td></tr>
     </tbody>
   </table>
-  <div style="margin-top:2mm;"><strong>Ghost 시작:</strong> CIPHER A6 / BLADE F1 / BROKER K6 / RIGGER F11 / DRIFTER A1 / MOLE K11</div>
+  <div style="margin-top:1mm; font-size:8pt; color:#666;">NEXUS 부속(공용, 보호 기간 없음): E5(로비), E7(지하 서버팜), G7(이사회 상층)</div>
+  <div style="margin-top:2mm;"><strong>Ghost 시작:</strong> CIPHER(STATIC) A2 / BROKER(SILK) B2 / DRIFTER(FLINT) K1 / RIGGER(PATCH) J10 / BLADE(RUST) K11 / MOLE(ECHO) H6 (HELIX 내부 위장)</div>
   <div style="margin-top:1mm; font-size:8pt; color:#666;">
     승리 조건: Bloc 자산 100 / Ghost 평판 45+raid2 또는 평판 70 단독 / max 12R / 최소 5R 보장
   </div>
@@ -144,9 +145,9 @@ const ZONES = [
   'home','aux','work','arms','data','home','data','arms','work','aux','home',
   'ruin','work','heal','club','aux','heal','aux','club','heal','work','ruin',
   'aux','arms','club','port','work','data','work','port','club','arms','aux',
-  'data','data','aux','work','heal','arms','heal','work','aux','data','data',
-  'bank','home','heal','data','arms','nex','arms','data','heal','home','bank',
-  'data','data','aux','work','heal','arms','heal','work','aux','data','data',
+  'data','data','aux','work','aux','data','data','work','aux','data','data',
+  'bank','home','heal','data','work','nex','heal','data','heal','home','bank',
+  'data','data','aux','work','aux','arms','aux','work','aux','data','data',
   'aux','arms','club','port','work','data','work','port','club','arms','aux',
   'ruin','work','heal','club','aux','heal','aux','club','heal','work','ruin',
   'home','aux','work','arms','data','home','data','arms','work','aux','home',

@@ -162,6 +162,54 @@ function rules_victoryByPoints(state) {
 }
 
 // ============================================================================
+// v6.53 [B] 봇 전략 깊이 — 승리 진척 기반 우선순위 (근시안 스코어링 교정)
+//
+//   [진단 — 코드 실측]
+//     scoreGhostCard 는 승리 근접도를 이렇게 판정하고 있었다:
+//         const repNeeded  = Math.max(0, 16 - rep);
+//         const raidNeeded = Math.max(0, 2 - raids);
+//         const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
+//     ① 16·2 는 실제 임계가 아니다. VICTORY_GOALS 는 ghostRepBattle 45(11×11)/42(5×5),
+//        ghostRepOnly 70/60, ghostRaids 2. 즉 closeToWin 은 rep 13 — 목표의 **약 29%**
+//        지점에서 켜져 사실상 상시 참이었다(= 신호 소실).
+//     ② 시나리오·구성 보정을 전부 무시한다. getVictoryGoals 가 적용하는 인원수 adj ·
+//        blocAssetBonus · ghostRepBattleOverride(S03=25) · ghostRaidsOverride(S03=3) ·
+//        언더독 스케일 · euro_hlVictoryBonus 중 어느 것도 반영되지 않는다. 특히 S03 은
+//        레이드 목표가 3인데 상수 2 를 보므로 **게이트 미충족 상태에서 충족으로 오판**한다.
+//     ③ scoreBlocCard 에는 승리 인지 항이 아예 없었다(자산 목표와 무관하게 카드 고름).
+//
+//   [처방] 판정과 동일 소스를 재사용한다 — 새 임계 수학을 만들지 않는다.
+//     rules_victoryRatio(= 타임아웃 승자 판정 E1 의 진척 함수, getVictoryGoals·assetValue·
+//     raidsThisGame·euro_hlVictoryBonus 를 그대로 사용)를 그대로 호출해 0~1 진척을 얻고,
+//     남은 레이드 수·남은 자산은 같은 goals 에서 파생한다. 결과적으로 "봇이 보는 승리 거리"
+//     = "엔진이 판정하는 승리 거리" = "HUD 가 그리는 승리 거리" 가 단일 소스로 수렴한다.
+//
+//   [보수적 설계] 스코어 가중치 자체는 기존 값을 유지하고 **게이트 조건만 정직화**한다.
+//     밸런스 붕괴를 피하려는 의도적 제약 — 봇이 더 똑똑해지는 방향은 "언제 공격 모드로
+//     전환하는가"의 타이밍 교정이지, 새 가중치 도입이 아니다.
+// ============================================================================
+var RULES_BOT_CLOSE_PCT = 0.72;   // 승리 근접 판정 임계(목표 대비 진척). 기존 상수 16/45≈0.29 → 정직화
+
+function rules_botGoalGap(state, p, idx) {
+  var out = { pct: 0, close: false, raidNeed: 0, assetNeed: 0 };
+  if (!p || !state || typeof getVictoryGoals !== 'function') return out;
+  var goals = getVictoryGoals(state);
+  var r = rules_victoryRatio(p, idx, state, goals);
+  if (!isFinite(r)) return out;          // defeated/NPC → -Infinity (봇 경로에선 미발생)
+  out.pct = r;
+  out.close = r >= RULES_BOT_CLOSE_PCT;
+  if (p.role === 'ghost') {
+    var raidCnt = ((state.meta && state.meta.raidsThisGame) || {})[idx] || 0;
+    out.raidNeed = Math.max(0, (goals.ghostRaids || 0) - raidCnt);
+  } else {
+    var hl = (typeof euro_hlVictoryBonus === 'function') ? euro_hlVictoryBonus(p) : 0;
+    var av = ((typeof assetValue === 'function') ? assetValue(p, state.stocks, state) : 0) + hl;
+    out.assetNeed = Math.max(0, (goals.blocAsset || 0) - av);
+  }
+  return out;
+}
+
+// ============================================================================
 // v6.44 (A2) → v6.51 이전: 협상 페이즈 (Phase 1.5) 공용 헬퍼 — docs/17 §2 원전 배선
 //   (index.html babel 인라인에서 그대로 이전 — logEntry/raiseTrack 은 호출 시점 전역 참조)
 // 원전 §2.1 거래 3종만 생성: 자원 스왑 / 비공격 약속(truce) / BROKER 중개.
@@ -309,6 +357,8 @@ if (typeof window !== 'undefined') {
   window.rules_raidSuccessFx = rules_raidSuccessFx;
   window.rules_victoryRatio = rules_victoryRatio;
   window.rules_victoryByPoints = rules_victoryByPoints;
+  window.RULES_BOT_CLOSE_PCT = RULES_BOT_CLOSE_PCT;
+  window.rules_botGoalGap = rules_botGoalGap;
   window.negoTypeLabel = negoTypeLabel;
   window.negoResAbbr = negoResAbbr;
   window.negoBuildCandidates = negoBuildCandidates;

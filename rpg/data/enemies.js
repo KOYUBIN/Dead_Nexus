@@ -240,6 +240,33 @@
       physImmune: true, hackOnly: true, bloc: 'MERIDIAN',
       lineage: '[신규 · MERIDIAN 오브젝티브 수호] GRID 정적 노드 · 물리무효·HACK만 (ICE_NODE/SIGNAL_ICE 차별축)',
     },
+    // ── [신규 v6.54 · Act 3 "SIGNAL DEBT"] MERIDIAN 청산관리단 (Receivership) ──
+    //   [계승 Act2] 기함(a2-99-flagship)이 격추된 뒤 남은 것은 군대가 아니라 **장부**다 —
+    //   MERIDIAN 은 외부 기업 "연합"(a2-00-framing 계보)이므로, 침공 자산이 청산되면 채권자가
+    //   회수하러 온다. [계승 docs/01 §2040년대] CARBON 이 도시 인프라를 '매입'했듯, 애시그리드의
+    //   메시 인프라는 언제나 담보로 잡힐 수 있는 자산이었다 — Act3 적대는 그 담보권의 집행이다.
+    //   전투 어휘는 전부 기존 것(advance/coverShooter/static · physImmune 없음) — 엔진 무편집.
+    //   밸런스 대역: ASSESSOR ≈ AXIOM_ANALYST 라인 · COLLECTOR ≈ IRONWALL_ENFORCER 하위 ·
+    //   LIQUIDATOR = WARLORD(24/6/4) 와 OVERLORD(30/7/5) 사이(26/5/4) — 체급 인플레 없음.
+    MERIDIAN_ASSESSOR: {
+      key: 'MERIDIAN_ASSESSOR', name: 'MERIDIAN Assessor', icon: '🧾',
+      hp: 9, atk: 3, def: 3, spd: 3, hack: 4, mov: 3, ap: 2,
+      attr: 'MESH', range: 4, ai: 'coverShooter', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 v6.54 · Act3 청산관리단] MESH 사정관 — 담보 자산을 원격으로 값매기는 회계 요원(AXIOM_ANALYST 대역)',
+    },
+    MERIDIAN_COLLECTOR: {
+      key: 'MERIDIAN_COLLECTOR', name: 'MERIDIAN Collector', icon: '⛓',
+      hp: 12, atk: 4, def: 3, spd: 3, mov: 3, hack: 1, ap: 2,
+      attr: 'ASH', range: 2, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 v6.54 · Act3 청산관리단] ASH 추심관 — VANGUARD(저속 중장)와 달리 도심 추격형 중거리 근접',
+    },
+    MERIDIAN_LIQUIDATOR: {
+      key: 'MERIDIAN_LIQUIDATOR', name: 'MERIDIAN Liquidator', icon: '⚖',
+      hp: 26, atk: 5, def: 4, spd: 3, hack: 6, mov: 3, ap: 2,
+      attr: 'SHADE', range: 3, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 v6.54 · Act3 최종 보스] SHADE 청산인 — 침공이 아니라 회수를 집행한다. 체급은 WARLORD↑/OVERLORD↓ (HP26/ATK5/DEF4/HACK6), 위력은 원장(오브젝티브)에 있다',
+    },
+
     ELIA_VOSS: {
       key: 'ELIA_VOSS', name: 'Elia Voss', icon: '🧬',
       hp: 18, atk: 4, def: 3, spd: 2, hack: 4, mov: 2, ap: 2,
