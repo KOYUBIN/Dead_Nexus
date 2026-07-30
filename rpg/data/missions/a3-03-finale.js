@@ -80,7 +80,7 @@
     cover: [
       { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
       { x: 3, y: 6, type: 'full' }, { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
-      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
+      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' }, { x: 3, y: 0, type: 'light' },
     ],
     // enc② — 관제 책임자 COLLECTOR + 원격 감정 ASSESSOR + 정찰 DRONE(기계). 이중 승리(전멸/오브젝티브).
     enemies: [
@@ -106,6 +106,7 @@
       { x: 3, y: 6, type: 'full' }, { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
       { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
       { x: 2, y: 2, type: 'light' }, { x: 4, y: 2, type: 'light' },
+      { x: 2, y: 0, type: 'full' }, { x: 3, y: 0, type: 'full' }, { x: 4, y: 0, type: 'full' },
     ],
     // enc③ — MERIDIAN_LIQUIDATOR(SHADE 청산인 hp26/def4, 중앙) + WARD_NODE×2(원장 수호, 선택) +
     //   STALKER(측면 압박). 코어 차감이 공통 완주선, 보스 격파는 부가 승리축.

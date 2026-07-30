@@ -57,13 +57,14 @@
     cover: [
       { x: 2, y: 4, type: 'light' }, { x: 4, y: 4, type: 'light' },
       { x: 3, y: 5, type: 'full' }, { x: 4, y: 2, type: 'light' },
+      { x: 2, y: 0, type: 'light' }, { x: 3, y: 0, type: 'light' }, { x: 4, y: 0, type: 'light' },
     ],
     // 로스터 — COLLECTOR(추심 책임자 · ASH 중거리 근접) + ASSESSOR(MESH 사정관) +
     //   GANG_THUG×1(고용된 거리 추심꾼 · ASH 근접). 전 적 killable → 전멸/오브젝티브 이중 승리.
     enemies: [
-      { key: 'MERIDIAN_COLLECTOR', x: 3, y: 3 },
+      { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
       { key: 'MERIDIAN_ASSESSOR',  x: 3, y: 1 },
-      { key: 'GANG_THUG',          x: 1, y: 2 },
+      { key: 'SPLICE_HOUND',       x: 1, y: 2 },
     ],
   };
 

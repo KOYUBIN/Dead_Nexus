@@ -63,8 +63,9 @@
     //   CARBON_DRONE(접수된 현지 설비 · 기계 → DATA SPIKE 대상). 위협 적 전원 killable.
     enemies: [
       { key: 'WARD_NODE',          x: 3, y: 1 },
-      { key: 'MERIDIAN_COLLECTOR', x: 3, y: 3 },
+      { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
       { key: 'CARBON_DRONE',       x: 4, y: 2 },
+      { key: 'MERIDIAN_STALKER',   x: 1, y: 2 },
     ],
   };
 

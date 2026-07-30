@@ -52,7 +52,7 @@
     ],
     cover: [
       { x: 2, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
-      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
+      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' }, { x: 3, y: 0, type: 'light' },
     ],
     // 적 배치 — 집행 창구. HELIX_MEDIC(BIO 집행 의료병) + SPLICE_HOUND(BIO 고속 근접) +
     //   ASSESSOR(MESH 사정관 · 회수량 감정). 전 적 killable → 전멸/오브젝티브 이중 승리(MFU).

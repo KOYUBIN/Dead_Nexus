@@ -1981,67 +1981,9 @@ const VICTORY_GOALS = {
   '5x5':   { blocAsset: 73, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
   '11x11': { blocAsset: 100, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
 };
-// ============================================================================
-// v6.25 (docs/23 갭#1): 구성 결정론 완화 — 언더독 진영 승리 임계 스케일링
-//   [진단] 승부는 "진영별 승리 임계까지의 병렬 레이스"다. 다수 진영은 (1) 병렬 레이서 수
-//     오더-통계 우위(임계를 먼저 밟음) + (2) Bloc 교차보유 시너지(assetValue 가 자기주가를
-//     제외 → Bloc 은 서로의 부양 주식을 보유해 자산 축적 → 초선형)로 유리하다. 실측(v6.24,
-//     n=150): 1g3b→bloc 99.3% · 3g1b→ghost 82.7% · 심지어 2:2 도 bloc 94.0%(=교차보유 시너지가
-//     동수에서도 Bloc 우위를 만든다). 솔로 인간은 항상 소수 1석 → 90~99% 패.
-//   [처방] 열세 진영의 승리 임계를 진영 인원 비에 따라 하향(레이스 거리 단축)해 병렬성·시너지를
-//     상쇄한다. Bloc 은 자기주가 자산 제외 탓에 "매R 수익 증폭"이 자기 자산에 무의미(euro_marketCycle
-//     자기 부양은 남을 이롭게 함) → 임계 스케일이 진단에 부합하는 유효 처방이다.
-//   [양면 핸디캡] 실측상 완화만으로는 부족하다 — Bloc 자산 레이스가 ~R6 에 100 을 밟아 Ghost 가
-//     임계를 낮춰도 그 전에 끝난다(binding constraint = Bloc 속도). 따라서 임계를 (1) 열세 진영은
-//     하향(레이스 단축) + (2) 우세/동수 Bloc 은 상향(레이스 지연)해 양면으로 벌린다. d = bc - gc.
-//   [비대칭 근거] Bloc 교차보유 시너지는 동수(d=0)에서도 우위 → parity 오프셋을 Ghost 하향·Bloc 상향
-//     양쪽에 실어 동수를 Ghost 쪽으로 되돌린다. 순열세 진영은 별도 하향(min 배수로 과보정 차단).
-//     단일 진영 판(gc·bc 중 0)·의도적 편향 시나리오(S02·S03)는 항등.
-//   [B-08 재튜닝 (43차)] v6.27 hp 승리 환산(EURO_HL_VICTORY_SCALE=0.3, rep_eff=rep+round(hp×0.3))이
-//     소수 Ghost 를 double-dip 시킨다: 언더독은 임계(RHS)를 낮추고 hp 는 달성값(LHS)을 올려 부등식
-//     반대편에서 독립 합성하지만 — 임계가 줄면 '고정' hp 가산이 (축소된) 임계의 더 큰 비율을 차지한다
-//     (repOnly 70→42 일 때 hp 가산 9 = 12.9%→21.4%). required_rep = base·ghostMult − 0.3·hp 로 보면 두
-//     완화(ghostMult<1 · −0.3·hp)가 가산적으로 겹친다. 게다가 revival 성질상 소수 Ghost 가 하이라이트를
-//     정당히 적립 → 계수 하향(0.2)은 36차에 기각(hp 는 정당). 처방: GHOST_STEP 을 유일 레버로 하향해
-//     Ghost 임계를 되올려 hp 채널을 상쇄(EURO_HL_VICTORY_SCALE=0.3 은 11×11 주 게이트 확정값 → 불변).
-//   [Ghost 비대칭 근거 — 측정] GHOST_STEP 은 d>0(Ghost 소수)에서만 작동 → 1g3b(및 SOLO 표준의 1g3b 절반)만
-//     이동하고 3g1b(d<0)·2:2(d=0) 임계는 byte 동일(측정 확인). hp 는 Bloc 도 올렸으나 3g1b bloc 은 43%로
-//     밴드 내(v6.25 37→43, <45) — 밴드 위반은 Ghost 뿐(48%). 그래서 Bloc 레버(BLOC_STEP=0.13)는 불변,
-//     Ghost 만 재튜닝(비대칭). 측정(S01, hp=0.3 고정, comp n=150 / 표준 SOLO n=300):
-//     0.08→ 1g3b ghost 48.0% · 표준 ghost 61.7%(둘 다 초과) | 0.04→ 1g3b 38.7% · 표준 48.7%
-//     · 3g1b bloc 44.0%(불변) · 2:2 ghost 55.3%(불변) · 5×5 1g3b 54→34%. 전 밴드 복귀, 에러 0.
-const EURO_UD_GHOST_PARITY  = 0.24;  // 동수 시 Ghost 임계 완화분 (시너지 상쇄; iter4 동수 중심화)
-const EURO_UD_GHOST_STEP    = 0.04;  // Bloc 초과 1인당 Ghost 임계 추가 완화 (d>0). B-08: 0.08→0.04 (hp double-dip 상쇄 — 상단 [B-08])
-const EURO_UD_GHOST_MIN     = 0.50;  // Ghost 임계 하한 배수
-const EURO_UD_GHOST_MAJSTEP = 0.08;  // Ghost 순우세 1인당 임계 상향 (d<0, 빠른 다수 Ghost 지연)
-const EURO_UD_GHOST_MAX      = 1.45; // Ghost 임계 상한 배수
-const EURO_UD_BLOC_PARITY    = 0.40; // 동수/우세 Bloc 임계 상향 기본분 (레이스 지연; iter4 동수 중심화)
-const EURO_UD_BLOC_STEP      = 0.13; // Bloc 초과 1인당 추가 상향 (d>0; iter4로 1g3b 불변 유지)
-const EURO_UD_BLOC_MAX       = 1.95; // Bloc 임계 상한 배수
-const EURO_UD_BLOC_MINSTEP   = 0.10; // Bloc 순열세 1인당 임계 하향 (d<0)
-const EURO_UD_BLOC_MIN       = 0.58; // Bloc 임계 하한 배수
-function euro_underdogGoalScale(state) {
-  const identity = { ghostMult: 1, blocMult: 1, gc: 0, bc: 0, d: 0, applied: false };
-  if (!state || !state.players) return identity;
-  // 의도적 편향 시나리오(S02 all-bloc · S03 ghostRising)는 원전 구성 유지 → 항등 폴백.
-  if (typeof scenarioRule === 'function' && scenarioRule(state, 'underdogRelief', true) === false) return identity;
-  let gc = 0, bc = 0;
-  for (const p of state.players) {
-    if (!p || p.defeated || p.isNpc) continue;
-    if (p.role === 'ghost') gc++; else if (p.role === 'bloc') bc++;
-  }
-  if (gc === 0 || bc === 0) return { ...identity, gc, bc };  // 단일 진영 판 → 상쇄 불필요
-  const d = bc - gc;   // Bloc 잉여(>0 = Bloc 다수). 소수 진영 = d 부호 반대편.
-  let ghostMult, blocMult;
-  if (d >= 0) {        // Ghost 열세/동수 → 임계 하향 ; Bloc 우세/동수 → 임계 상향
-    ghostMult = Math.max(EURO_UD_GHOST_MIN, 1 - EURO_UD_GHOST_PARITY - EURO_UD_GHOST_STEP * d);
-    blocMult  = Math.min(EURO_UD_BLOC_MAX,  1 + EURO_UD_BLOC_PARITY + EURO_UD_BLOC_STEP * d);
-  } else {             // Ghost 순우세 → 임계 상향(지연) ; Bloc 순열세 → 임계 하향(단축)
-    ghostMult = Math.min(EURO_UD_GHOST_MAX, 1 + EURO_UD_GHOST_MAJSTEP * (-d));
-    blocMult  = Math.max(EURO_UD_BLOC_MIN,  1 - EURO_UD_BLOC_MINSTEP * (-d));
-  }
-  return { ghostMult, blocMult, gc, bc, d, applied: ghostMult !== 1 || blocMult !== 1 };
-}
+// v6.53: 언더독 승리 임계 스케일(euro_underdogGoalScale + EURO_UD_* 상수 8종)은
+//   scenario_module.js 로 이전 — 로직·수치 불변. 사유는 아래 S06/init 훅 이전과 동일
+//   (babel 인라인 500,000자 임계 상쇄). 소비처 getVictoryGoals 는 typeof 가드 → 미로드 시 항등.
 function getVictoryGoals(state) {
   const isLarge = !!(state && state.meta && state.meta.mapSize === '11x11');
   const base = isLarge ? VICTORY_GOALS['11x11'] : VICTORY_GOALS['5x5'];
@@ -2056,7 +1998,8 @@ function getVictoryGoals(state) {
   const scGhostRep   = scenarioRule(state, 'ghostRepBattleOverride', null);
   const scGhostRaids = scenarioRule(state, 'ghostRaidsOverride', null);
   // v6.25: 언더독 임계 스케일 — 열세 진영 승리 거리 단축(구성 결정론 완화). 항등 시 무변화.
-  const ud = euro_underdogGoalScale(state);
+  const ud = (typeof euro_underdogGoalScale === 'function') ? euro_underdogGoalScale(state)
+    : { ghostMult: 1, blocMult: 1, gc: 0, bc: 0, d: 0, applied: false };   // v6.53: 모듈 미로드 시 항등
   const rawBlocAsset      = base.blocAsset + adj + scAssetBonus;
   const rawGhostRepBattle = scGhostRep != null ? scGhostRep : base.ghostRepBattle + Math.floor(adj / 2);
   const rawGhostRepOnly   = base.ghostRepOnly + adj;
@@ -2300,8 +2243,14 @@ const SCENARIOS = {
     blackoutRepairParts: 3,     // Bloc 복구 비용 ⚙3
     blackoutRepairCredit: 8,    // 복구 보상 ₵+8 (= 금융가 3R치 수입. 자산 통화로 직결 → "복구 = 자산 가치")
     blackoutHeatPer: 4,         // 잔여 정전 4구역당 라운드 시작 공권력 +1 (상한 10)
-    // blocAssetBonus 는 측정 후 결정 (S03/S05/S06 선례). 정전은 Bloc 수입을 이미 깎으므로
-    //   S06 식 "목표 상향으로 조기 자산승리 지연" 레버를 선험적으로 얹으면 이중 페널티가 된다.
+    // [측정 튜닝값] blocAssetBonus 스윕 (n=150, seed 1234, ghost 승률 / 평균 R / 복구 발생):
+    //   0 → 37.3% / 7.41R / 3.93   ·   15 → 42.7% / 7.47R / 3.97
+    //   25 → 43.3% / 7.57R / 4.15  ·   35 → 44.0% / 7.69R / 4.37
+    //   15 이후 수익 체감. 25 채택 — 자산/렙 경로가 56:43 으로 갈라지고(양 진영 승리 문법이
+    //   모두 살아있음) 복구도 4회/판대로 유지된다. 정전이 Bloc 수입을 이미 깎는데도 Bloc 이
+    //   우세했던 이유는 복구 보상(₵8 + 무주 구역 귀속)이 강해서다 — 복구는 정체성이라 그대로
+    //   두고 자산 목표 쪽을 올려 상쇄했다(S03/S05/S06 와 동일한 레버 선택).
+    blocAssetBonus: 25,
   },
 };
 const getScenario = (id) => SCENARIOS[id] || SCENARIOS.S01;

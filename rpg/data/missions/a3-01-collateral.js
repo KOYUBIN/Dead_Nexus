@@ -60,7 +60,7 @@
     //   DRONE(VOLT 기계 · DATA SPIKE 대상). 전 적 killable → 전멸/오브젝티브 이중 승리(MFU).
     enemies: [
       { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
-      { key: 'MERIDIAN_ASSESSOR',  x: 1, y: 3 },
+      { key: 'MERIDIAN_STALKER',   x: 1, y: 3 },
       { key: 'MERIDIAN_DRONE',     x: 5, y: 3 },
     ],
   };

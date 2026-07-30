@@ -256,9 +256,9 @@
     },
     MERIDIAN_COLLECTOR: {
       key: 'MERIDIAN_COLLECTOR', name: 'MERIDIAN Collector', icon: '⛓',
-      hp: 12, atk: 4, def: 3, spd: 3, mov: 3, hack: 1, ap: 2,
-      attr: 'ASH', range: 2, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
-      lineage: '[신규 v6.54 · Act3 청산관리단] ASH 추심관 — VANGUARD(저속 중장)와 달리 도심 추격형 중거리 근접',
+      hp: 12, atk: 4, def: 3, spd: 2, mov: 2, hack: 1, ap: 2,
+      attr: 'ASH', range: 1, ai: 'advance', isMachine: false, bloc: 'MERIDIAN',
+      lineage: '[신규 v6.54 · Act3 청산관리단] ASH 추심관 — 서류가방과 압류 장비를 든 저속 중거리 근접(VANGUARD 대비 경량·장사거리)',
     },
     MERIDIAN_LIQUIDATOR: {
       key: 'MERIDIAN_LIQUIDATOR', name: 'MERIDIAN Liquidator', icon: '⚖',
