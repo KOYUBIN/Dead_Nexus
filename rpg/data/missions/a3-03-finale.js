@@ -58,6 +58,9 @@
     cover: [
       { x: 2, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
       { x: 1, y: 2, type: 'light' }, { x: 5, y: 2, type: 'light' },
+      // [Act3 서명] 코어 앞 차폐 격벽 — 오브젝티브 남쪽 인접 3타일(grid.coverBonus 는
+      //   '대상에 직교 인접 + 공격자 방향' 엄폐만 계산 → 코어에 붙은 유닛의 실효 엄폐).
+      { x: 2, y: 1, type: 'light' }, { x: 3, y: 1, type: 'light' }, { x: 4, y: 1, type: 'light' },
     ],
     // enc① — 인도 전위. COLLECTOR(추심관) + ASSESSOR(사정관) + STALKER(SHADE 저격). 전 적 killable.
     enemies: [
@@ -80,7 +83,10 @@
     cover: [
       { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
       { x: 3, y: 6, type: 'full' }, { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
-      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' }, { x: 3, y: 0, type: 'light' },
+      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
+      // [Act3 서명] 코어 앞 차폐 격벽 — 오브젝티브 남쪽 인접 3타일(grid.coverBonus 는
+      //   '대상에 직교 인접 + 공격자 방향' 엄폐만 계산 → 코어에 붙은 유닛의 실효 엄폐).
+      { x: 2, y: 1, type: 'light' }, { x: 3, y: 1, type: 'light' }, { x: 4, y: 1, type: 'light' },
     ],
     // enc② — 관제 책임자 COLLECTOR + 원격 감정 ASSESSOR + 정찰 DRONE(기계). 이중 승리(전멸/오브젝티브).
     enemies: [
@@ -106,7 +112,9 @@
       { x: 3, y: 6, type: 'full' }, { x: 2, y: 6, type: 'light' }, { x: 4, y: 6, type: 'light' },
       { x: 1, y: 5, type: 'light' }, { x: 5, y: 5, type: 'light' },
       { x: 2, y: 2, type: 'light' }, { x: 4, y: 2, type: 'light' },
-      { x: 2, y: 0, type: 'full' }, { x: 3, y: 0, type: 'full' }, { x: 4, y: 0, type: 'full' },
+      // [Act3 서명] 코어 앞 차폐 격벽 — 오브젝티브 남쪽 인접 3타일(grid.coverBonus 는
+      //   '대상에 직교 인접 + 공격자 방향' 엄폐만 계산 → 코어에 붙은 유닛의 실효 엄폐).
+      { x: 2, y: 1, type: 'light' }, { x: 3, y: 1, type: 'light' }, { x: 4, y: 1, type: 'light' },
     ],
     // enc③ — MERIDIAN_LIQUIDATOR(SHADE 청산인 hp26/def4, 중앙) + WARD_NODE×2(원장 수호, 선택) +
     //   STALKER(측면 압박). 코어 차감이 공통 완주선, 보스 격파는 부가 승리축.

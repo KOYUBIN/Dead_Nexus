@@ -52,12 +52,15 @@
     ],
     cover: [
       { x: 2, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
-      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' }, { x: 3, y: 0, type: 'light' },
+      { x: 2, y: 3, type: 'light' }, { x: 4, y: 3, type: 'light' },
+      // [Act3 서명] 코어 앞 차폐 격벽 — 오브젝티브 남쪽 인접 3타일(grid.coverBonus 는
+      //   '대상에 직교 인접 + 공격자 방향' 엄폐만 계산 → 코어에 붙은 유닛의 실효 엄폐).
+      { x: 2, y: 1, type: 'light' }, { x: 3, y: 1, type: 'light' }, { x: 4, y: 1, type: 'light' },
     ],
     // 적 배치 — 집행 창구. HELIX_MEDIC(BIO 집행 의료병) + SPLICE_HOUND(BIO 고속 근접) +
     //   ASSESSOR(MESH 사정관 · 회수량 감정). 전 적 killable → 전멸/오브젝티브 이중 승리(MFU).
     enemies: [
-      { key: 'HELIX_MEDIC',       x: 3, y: 3 },
+      { key: 'HELIX_MEDIC',       x: 3, y: 2 },
       { key: 'SPLICE_HOUND',      x: 1, y: 2 },
       { key: 'MERIDIAN_ASSESSOR', x: 5, y: 2 },
     ],

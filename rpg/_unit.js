@@ -307,9 +307,12 @@ var REG = CAMP.MISSIONS;
 var mains = REG.filter(function (e) { return e.kind === 'main'; });
 var sides = REG.filter(function (e) { return e.kind === 'side'; });
 var act2 = REG.filter(function (e) { return e.kind === 'act2'; });
+var act3 = REG.filter(function (e) { return e.kind === 'act3'; });
 // [62차/v6.44] Act2 등록 → 30. [65차] BROKER/DRIFTER 클래스 사이드 2 추가 → 레지스트리 32
 //   (메인 8 + 사이드 8 + act2 16[a2-00 + 4갈래×2 + 클래스 6 + 캡스톤 1]). 메인/사이드 불변.
-ok('77. 레지스트리 = 32 미션 (메인 8 + 사이드 8 + act2 16)', REG.length === 32 && mains.length === 8 && sides.length === 8 && act2.length === 16);
+//   [v6.54] Act3 "SIGNAL DEBT" 6종(framing 1 + main 2 + finale 1 + class 2) 추가 → 38.
+ok('77. 레지스트리 = 38 미션 (메인 8 + 사이드 8 + act2 16 + act3 6)',
+  REG.length === 38 && mains.length === 8 && sides.length === 8 && act2.length === 16 && act3.length === 6);
 // 전 미션 데이터 해석 + id 일치 + 필수 섹션.
 var resolveOk = true, resolveBad = [];
 REG.forEach(function (e) {
@@ -360,7 +363,7 @@ var reachedUnion = {};
   }
   rsave.missionsDone.forEach(function (id) { reachedUnion[id] = 1; });
 });
-ok('81. 전 32 미션 도달 가능 (4엔딩 열람 + 6클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 32);
+ok('81. 전 38 미션 도달 가능 (4엔딩 열람 + 6클래스 순회 합집합 · 해금 확산)', Object.keys(reachedUnion).length === 38);
 // 단일 세이브(1엔딩·1클래스) 도달: 8 메인 + 8 사이드 + a2-00 + 해당 갈래 2 메인 + 해당 클래스 사이드 1 = 20.
 var oneSave = { missionsDone: [], flags: {}, endings: { seen: { 'corporate-eternal': 1 } }, character: { classKey: 'CIPHER' } };
 var chg = true, g2 = 0;
@@ -623,12 +626,13 @@ for (var _mi = 0; _mi < mrx.length; _mi++) {
   }
 }
 // [62차/v6.44] 40 인카운터×4=160. [65차] 6클래스×32미션 → 42 인카운터(32미션 + enc② 키 10
-//   [2연전 8×1 + 캡스톤 3연전×2])×6 = 252조합. 전원 클리어 유지.
+//   [2연전 8×1 + 캡스톤 3연전×2])×6 = 252조합. [v6.54] Act3 6미션 + enc 키 4(a3-01/a3-02
+//   stage2 + a3-03 stage2/stage3) → 52 인카운터×6 = 312조합. 전원 클리어 유지.
 //   멀티 인카운터 미션은 enc①(mission.combat) + 각 encounters 키를 개별 행으로 측정(하네스 encounters 순회).
 var nEncKeys = 0;
 REG.forEach(function (e) { var m = CAMP.missionData(e.id); if (m && m.encounters) nEncKeys += Object.keys(m.encounters).length; });
-ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 42 인카운터×6=252)',
-  nClear === nTotal && mrx.length === REG.length + nEncKeys && nTotal === (REG.length + nEncKeys) * 6 && nFail === 0 && nEncKeys === 10);
+ok('126. 전 ' + nTotal + '조합 클리어 가능 (clearFail 0 · 52 인카운터×6=312)',
+  nClear === nTotal && mrx.length === REG.length + nEncKeys && nTotal === (REG.length + nEncKeys) * 6 && nFail === 0 && nEncKeys === 14);
 ok('127. 소모전(attrition) 이상치 0', nAttr === 0);
 ok('128. 최속 승리 라운드 밴드 상한 ≤ 9 (전 조합)', worstRush <= 9);
 
@@ -849,7 +853,7 @@ var aggFull = BAL.aggregateScenario(BAL.runMatrix('full'));
 var AGG_N = aggBase.total;   // [62차/v6.44] 160 → [65차] 6클래스 42 인카운터×6 = 252. 시나리오 집계 총량(하네스 encounters 순회 반영).
 // 트리비얼은 enc① 워밍업/ch02 계승 베이스라인(BLADE 탱커) 3건 — 문서화 허용(51차 선례). clearFail 0 이 램프 불변식.
 ok('174. base ' + AGG_N + '/' + AGG_N + ' 클리어 · clearFail 0 · trivial ≤3(enc①/베이스라인 · 무장비 밴드)',
-  aggBase.clearable === AGG_N && aggBase.total === 252 && aggBase.trivial <= 3 && aggBase.fail === 0);
+  aggBase.clearable === AGG_N && aggBase.total === 312 && aggBase.trivial <= 3 && aggBase.fail === 0);
 ok('175. mid: 클리어율 동일(' + AGG_N + '/' + AGG_N + '=base) · 여유 증가(평균종료HP mid≥base)',
   aggMid.clearable === aggBase.clearable && aggMid.clearable === AGG_N && aggMid.avgHp >= aggBase.avgHp && aggMid.fail === 0);
 // ★full 후반 챕터 트리비얼화 가드 — ch06~08 최속승리 min ≥3R & 후반 트리비얼 0 = 합격(장비 하향 불요).
@@ -1565,9 +1569,11 @@ CAMP.MISSIONS.forEach(function (reg) {
 tagDead.sort();
 // [68차] 태그 게이트 총량 9 → 8 (a2-side-blade-vendetta 의 [IRONWALL 태그] 를 [DEF 4] 로 교체 —
 //   소유 클래스 사문 해소, 아래 294~296 참고). 블록 태그축 6건 전량 MOLE 통과 유지.
-ok('287. 태그 게이트 8건 중 블록 태그축 6건 전량 도달 가능(MOLE) · 미도달 잔존 = 속성명 태그축 2건 정확히'
+// [v6.54] Act3 3건 추가([VANTA] a3-01 · [HELIX] a3-02 · [AXIOM] a3-03) → 총량 11.
+//   셋 다 MOLE tags 보유축 → 사문 게이트 증가 0(미도달 잔존은 속성명 2건 그대로).
+ok('287. 태그 게이트 11건 중 블록 태그축 9건 전량 도달 가능(MOLE) · 미도달 잔존 = 속성명 태그축 2건 정확히'
   + (tagDead.length ? ' [' + tagDead.join(', ') + ']' : ''),
-  tagGates.length === 8 && tagDead.length === 2 &&
+  tagGates.length === 11 && tagDead.length === 2 &&
   tagDead[0] === 'a2-c2-signal-war|MESH' && tagDead[1] === 'a2-side-cipher-static|SHADE');
 
 // tags 는 대화 게이트 전용 축 — 전투 상태(buildCombat)에 유입되지 않음(밸런스 불변의 구조적 근거).
@@ -1755,9 +1761,9 @@ ok('311. 3정책 측정 행 = 생존형 1행 [a2-c1-first-contact] · 나머지 
 //   코어가 이미 그리드 최원거리라 '코어 이설' 은 무효(BLADE mov3×ap2 = 6칸/R 이 거리를 덮음) →
 //   직선 진입 레인을 격벽/붕괴잔해로 막아 우회를 강제(러시 2R→3R). survive:N 전환은 서사 부적합으로 배제.
 var agg68 = BAL.aggregateScenario(mrx68);
-ok('312. 71차 후 base 매트릭스: 252/252 클리어 · clearFail 0 · trivial 0 · 전 조합 무플래그(bandOk 252)',
-  agg68.total === 252 && agg68.clearable === 252 && agg68.fail === 0 && agg68.trivial === 0 &&
-  agg68.attrition === 0 && agg68.bandOk === 252);
+ok('312. base 매트릭스: 312/312 클리어 · clearFail 0 · trivial 0 · 전 조합 무플래그(bandOk 312) [v6.54 Act3 포함]',
+  agg68.total === 312 && agg68.clearable === 312 && agg68.fail === 0 && agg68.trivial === 0 &&
+  agg68.attrition === 0 && agg68.bandOk === 312);
 ok('313. 해소된 트리비얼 3건 [a2-c1-first-contact(68차) · ch02-insider-game · a2-d1-scavenge(71차)] 전량 flagged 부재',
   ['a2-c1-first-contact', 'ch02-insider-game', 'a2-d1-scavenge'].every(function (id) {
     return agg68.flagged.filter(function (f) { return f.id === id; }).length === 0;
@@ -2175,9 +2181,10 @@ CAMP.MISSIONS.forEach(function (reg) {
     });
   });
 });
-ok('364. 전 미션 비용 선언 = 2건(ch07 spendKarma · side-08 spendNuyen) · 지급 선언 = 5건 (grep 전수 일치)',
+// [v6.54] Act3 karma/₵ 지급 선언 6건 추가(a3-01 B · a3-02 B · a3-03 A · callin A/B · relay B) → 11.
+ok('364. 전 미션 비용 선언 = 2건(ch07 spendKarma · side-08 spendNuyen) · 지급 선언 = 11건 (grep 전수 일치)',
   costGated73.length === 2 && costGated73.indexOf('ch07-heart-of-city/approach#1') >= 0 &&
-  costGated73.indexOf('side-08-harbor-run/approach#2') >= 0 && giveGated73.length === 5);
+  costGated73.indexOf('side-08-harbor-run/approach#2') >= 0 && giveGated73.length === 11);
 ok('365. 비용 미선언 선택지 ' + costFree73 + '건은 karma/₵ 보유량과 무관하게 판정 불변 (기존 32미션 회귀)',
   costFree73 > 200);
 
@@ -2285,8 +2292,8 @@ function bannerLines(st) {
   if (!st.banner) return [];
   return Array.isArray(st.banner.lines) ? st.banner.lines : (st.banner.text ? [st.banner.text] : []);
 }
-ok('378. effect.rep 선언 전수 = ' + REP_GIVES.length + '건 (73차까지 전량 무로그) · 모두 지급 노드로 라우팅',
-  REP_GIVES.length === 12 && REP_GIVES.every(function (g) {
+ok('378. effect.rep 선언 전수 = ' + REP_GIVES.length + '건 (v6.54 Act3 4건 포함) · 모두 지급 노드로 라우팅',
+  REP_GIVES.length === 16 && REP_GIVES.every(function (g) {
     return CAMP.missionData(g.id).dialogue.nodes[g.node].choices[g.idx].goto === 'settle';
   }));
 
@@ -2770,6 +2777,178 @@ ok('429. 손상 입력: "null"/"\\"hi\\"" → ok:false · [v6.53 수정] "[]" �
 //     state.hub(rpgInitialState · HUB_NAV)이며 세이브에 영속되지 않는 것이 현행 계약.
 //   세 필드 모두 '죽은 스키마'로 확인 — 강제 테스트 없이 본 주석으로 핀(신규 소비처가 생기면
 //   그 배선 차수에서 테스트와 함께 이 주석을 갱신할 것).
+
+
+// ============================================================================
+// [v6.54] ACT 3 "SIGNAL DEBT" 계약 (430~441)
+//   신규 미션 6종(a3-00 framing · a3-01/a3-02 main · a3-03 finale · a3-side ×2)의
+//   레지스트리·해금·보드 분류·엔딩 하위호환·멀티 인카운터·로스터·밸런스·배선을 핀 고정.
+//   엔진(systems/*·state/*)은 무편집이며, 확장은 데이터 + 레지스트리 배선 + 보드 그룹뿐이다.
+// ============================================================================
+console.log('\n== ACT 3 "SIGNAL DEBT" [v6.54] ==');
+
+var A3_IDS = ['a3-00-framing', 'a3-01-collateral', 'a3-02-interest', 'a3-03-finale',
+  'a3-side-broker-callin', 'a3-side-rigger-relay'];
+var a3Reg = CAMP.MISSIONS.filter(function (e) { return e.kind === 'act3'; });
+var a3ById = {}; a3Reg.forEach(function (e) { a3ById[e.id] = e; });
+
+// 430. 레지스트리 6종 · branch 분포 · 해금 사슬(캡스톤 → framing → 01 → 02 → 03).
+var a3Branches = a3Reg.map(function (e) { return e.branch; }).sort().join(',');
+ok('430. Act3 레지스트리 6종 · branch(framing1·main2·finale1·class2) · 해금 사슬 = 캡스톤→framing→01→02→03',
+  a3Reg.length === 6 &&
+  A3_IDS.every(function (id) { return !!a3ById[id]; }) &&
+  a3Branches === 'class,class,finale,framing,main,main' &&
+  a3ById['a3-00-framing'].unlock.missionsDone.join() === 'a2-99-flagship' &&
+  a3ById['a3-01-collateral'].unlock.missionsDone.join() === 'a3-00-framing' &&
+  a3ById['a3-02-interest'].unlock.missionsDone.join() === 'a3-01-collateral' &&
+  a3ById['a3-03-finale'].unlock.missionsDone.join() === 'a3-02-interest' &&
+  a3ById['a3-side-broker-callin'].unlock.classKey === 'BROKER' &&
+  a3ById['a3-side-rigger-relay'].unlock.classKey === 'RIGGER');
+
+// 431. boardState 는 act3 를 별도 그룹으로 낸다 — mains/sides/act2 오염 0(기존 그룹 크기 불변).
+var bs54 = CAMP.boardState({ missionsDone: [], flags: {}, character: { classKey: 'CIPHER' } });
+ok('431. boardState.act3 별도 그룹 6행 · mains 8 / sides 8 / act2 16 오염 0 (기존 그룹 byte 크기 불변)',
+  bs54.act3 && bs54.act3.length === 6 && bs54.mains.length === 8 && bs54.sides.length === 8 &&
+  bs54.act2.length === 16 &&
+  bs54.act3.every(function (r) { return r.kind === 'act3'; }) &&
+  bs54.sides.concat(bs54.act2).every(function (r) { return A3_IDS.indexOf(r.id) < 0; }));
+
+// 432. 해금 게이트 실동 — 캡스톤 미클리어면 Act3 전량 잠김 / 클리어 시 프레이밍 + 해당 클래스 사이드만 개방.
+function a3Unlocked(save) {
+  return a3Reg.filter(function (e) { return CAMP.isUnlocked(e, save); }).map(function (e) { return e.id; }).sort();
+}
+var noCap = { missionsDone: ['ch08-zero-day'], flags: {}, character: { classKey: 'BROKER' } };
+var withCap = { missionsDone: ['ch08-zero-day', 'a2-99-flagship'], flags: {}, character: { classKey: 'BROKER' } };
+var withCapR = { missionsDone: ['ch08-zero-day', 'a2-99-flagship', 'a3-00-framing'], flags: {}, character: { classKey: 'RIGGER' } };
+ok('432. Act3 해금: 캡스톤 미클리어 = 0종 / 캡스톤 클리어 = 프레이밍 1종 / 프레이밍 후 = 메인1 + 해당 클래스 사이드',
+  a3Unlocked(noCap).length === 0 &&
+  a3Unlocked(withCap).join() === 'a3-00-framing' &&
+  a3Unlocked(withCapR).join() === 'a3-00-framing,a3-01-collateral,a3-side-rigger-relay');
+
+// 433. campaignStats 사이드 분류 계약 — act3 branch 'class' = 사이드, 그 외 act3 = 메인(레지스트리 우선).
+var st54 = END.campaignStats({ missionsDone: A3_IDS.slice(), character: {} });
+ok('433. campaignStats: a3-side-* 2건 = 사이드 · a3-00/01/02/03 4건 = 메인 (act2 계약을 act3 로 확장)',
+  st54.missionsCleared === 6 && st54.sideCleared === 2 && st54.mainCleared === 4);
+
+// 434. 4엔딩 계약 하위 호환 — ENDINGS 키 4 불변 · Act3 flag 만으로는 엔딩 판정이 바뀌지 않는다.
+var a3Flags = { act3Settled: true, settlementChoice: 'burn', debtBurned: true, ledgerSealed: true,
+  interestChoice: 'sever', signalThrottled: true, signalDebtKnown: true };
+var a3FlagsPlus = JSON.parse(JSON.stringify(a3Flags)); a3FlagsPlus.ascendEnding = true;
+ok('434. 4엔딩 계약 불변: ENDINGS 키 4종 · Act3 flag 단독 → dead-nexus(기본값 유지) · 기존 파생 flag 우선순위 불변',
+  Object.keys(END.ENDINGS).length === 4 && END.ORDER.length === 4 &&
+  END.resolveEnding({ flags: a3Flags }) === 'dead-nexus' &&
+  END.resolveEnding({ flags: a3FlagsPlus }) === 'nexus-reborn');
+
+// 435. Act3 종결 미션은 epilogue/capstoneEpilogue 를 쓰지 않는다(=엔딩/캡스톤 기록 무영향, returnHub 종결).
+var a3Effects = [];
+A3_IDS.forEach(function (id) {
+  var mm = CAMP.missionData(id);
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (c2) {
+      var e2 = c2.effect || {};
+      if (e2.epilogue) a3Effects.push(id + '/epilogue');
+      if (e2.capstoneEpilogue) a3Effects.push(id + '/capstoneEpilogue');
+    });
+  });
+});
+var finTerm = CAMP.missionData('a3-03-finale').dialogue.nodes.settle.choices[0].effect;
+ok('435. Act3 는 epilogue/capstoneEpilogue 선언 0 (종결 = returnHub) → endings.seen/runs/capstone 기록 계약 불변',
+  a3Effects.length === 0 && finTerm.returnHub === true && !finTerm.epilogue && !finTerm.capstoneEpilogue);
+
+// 436. 멀티 인카운터 — a3-01/a3-02 = stage2(2연전) · a3-03 = stage2+stage3(3연전) · encounter 참조 무결.
+var encRefBad = [];
+A3_IDS.forEach(function (id) {
+  var mm = CAMP.missionData(id);
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    (mm.dialogue.nodes[nid].choices || []).forEach(function (c2) {
+      var sc = (c2.effect || {}).startCombat;
+      if (sc && sc.encounter && !(mm.encounters && mm.encounters[sc.encounter])) encRefBad.push(id + '/' + nid);
+    });
+  });
+});
+ok('436. 멀티 인카운터: a3-01·a3-02 = stage2 / a3-03 = stage2+stage3 · startCombat.encounter 참조 무결(미정의 폴백 0)',
+  Object.keys(CAMP.missionData('a3-01-collateral').encounters).join() === 'stage2' &&
+  Object.keys(CAMP.missionData('a3-02-interest').encounters).join() === 'stage2' &&
+  Object.keys(CAMP.missionData('a3-03-finale').encounters).sort().join() === 'stage2,stage3' &&
+  !CAMP.missionData('a3-00-framing').encounters &&
+  !CAMP.missionData('a3-side-broker-callin').encounters &&
+  !CAMP.missionData('a3-side-rigger-relay').encounters &&
+  encRefBad.length === 0);
+
+// 437. 신규 적 3종 — 로스터 등재 · 밸런스 대역(청산인 < OVERLORD) · 기존 AI 어휘만 사용(엔진 무편집).
+var ASS = EN.ENEMIES.MERIDIAN_ASSESSOR, COLL = EN.ENEMIES.MERIDIAN_COLLECTOR, LIQ = EN.ENEMIES.MERIDIAN_LIQUIDATOR;
+var OVER = EN.ENEMIES.MERIDIAN_OVERLORD, WARL = EN.ENEMIES.MERIDIAN_WARLORD;
+ok('437. 신규 적 3종(ASSESSOR/COLLECTOR/LIQUIDATOR) 등재 · LIQUIDATOR 체급 WARLORD↑·OVERLORD↓ · AI 어휘 기존 3종만',
+  !!ASS && !!COLL && !!LIQ &&
+  LIQ.hp > WARL.hp && LIQ.hp < OVER.hp && LIQ.atk < OVER.atk && LIQ.def < OVER.def &&
+  [ASS, COLL, LIQ].every(function (u) { return ['advance', 'coverShooter', 'static'].indexOf(u.ai) >= 0; }) &&
+  [ASS, COLL, LIQ].every(function (u) { return !u.physImmune && !u.hackOnly; }));
+
+// 438. Act3 전 인카운터(10) × 6클래스 = 60조합 — 클리어 가능 · clearFail 0 · trivial 0 · attrition 0.
+var a3Rows = [];
+A3_IDS.forEach(function (id) {
+  a3Rows.push({ id: id, encKey: null });
+  var mm = CAMP.missionData(id);
+  if (mm.encounters) Object.keys(mm.encounters).forEach(function (k) { a3Rows.push({ id: id, encKey: k }); });
+});
+var a3Tot = 0, a3Clear = 0, a3Fail = 0, a3Triv = 0, a3Attr = 0;
+a3Rows.forEach(function (r) {
+  BAL.CLASSES.forEach(function (clsK) {
+    var cells = {};
+    BAL.POLICIES.forEach(function (pol) { cells[pol] = BAL.runEncounter(clsK, r.id, pol, 'base', r.encKey); });
+    var vd = BAL.verdict(cells);
+    a3Tot++;
+    if (vd.clearable) a3Clear++;
+    if (vd.flags.indexOf('clearFail') >= 0) a3Fail++;
+    if (vd.flags.indexOf('trivial') >= 0) a3Triv++;
+    if (vd.flags.indexOf('attrition') >= 0) a3Attr++;
+  });
+});
+ok('438. Act3 매트릭스: 10 인카운터×6클래스 = ' + a3Tot + '조합 전원 클리어 · clearFail/trivial/attrition 0',
+  a3Rows.length === 10 && a3Tot === 60 && a3Clear === 60 && a3Fail === 0 && a3Triv === 0 && a3Attr === 0);
+
+// 439. MFU 폴백 불변식 — 전투를 여는 노드마다 '무게이트 startCombat' 이 최소 1개(6클래스 완주 보장).
+var a3NoFallback = [];
+A3_IDS.forEach(function (id) {
+  var mm = CAMP.missionData(id);
+  Object.keys(mm.dialogue.nodes).forEach(function (nid) {
+    var chs = mm.dialogue.nodes[nid].choices || [];
+    var hasCombat = chs.some(function (c2) { return (c2.effect || {}).startCombat; });
+    if (!hasCombat) return;
+    var hasFree = chs.some(function (c2) { return (c2.effect || {}).startCombat && !c2.gate; });
+    if (!hasFree) a3NoFallback.push(id + '/' + nid);
+  });
+});
+ok('439. Act3 전 전투 분기에 무게이트 전투 폴백 상존 (게이트 미달 클래스도 완주 — MFU)' +
+  (a3NoFallback.length ? ' [' + a3NoFallback.join(', ') + ']' : ''), a3NoFallback.length === 0);
+
+// 440. 결정론 — Act3 전 인카운터 2회 실행 byte 동일(전투 로직에 난수/시각 의존 0).
+var a3Det = a3Rows.every(function (r) {
+  var a = BAL.runEncounter('CIPHER', r.id, 'objective', 'base', r.encKey);
+  var b = BAL.runEncounter('CIPHER', r.id, 'objective', 'base', r.encKey);
+  return JSON.stringify(a) === JSON.stringify(b);
+});
+ok('440. Act3 결정론 재현: 전 인카운터 동일 입력 2회 = byte 동일 결과', a3Det);
+
+// 441. 봉인 코어 확산 방지 — Act3 오브젝티브는 어느 것도 physImmune 링으로 봉인되지 않는다
+//   (side-02 의 HACK 전용 봉인은 정확히 1건 유지 · 물리 클래스 objective-reduce 경로 보존).
+var a3Sealed = [];
+a3Rows.forEach(function (r) {
+  var mm = CAMP.missionData(r.id);
+  var cfg = r.encKey ? mm.encounters[r.encKey] : mm.combat;
+  var o = cfg.objective, free = 0;
+  for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) {
+    var x = o.x + dx, y = o.y + dy;
+    if (x < 0 || y < 0 || x >= cfg.cols || y >= cfg.rows) continue;
+    var blockedTile = cfg.walls.some(function (w) { return w.x === x && w.y === y; }) ||
+      cfg.enemies.some(function (e2) { var t = EN.ENEMIES[e2.key]; return e2.x === x && e2.y === y && t && t.physImmune; });
+    if (!blockedTile) free++;
+  }
+  if (free === 0) a3Sealed.push(r.id + (r.encKey ? '#' + r.encKey : ''));
+});
+ok('441. Act3 오브젝티브 봉인 0 — 전 인카운터에서 물리 클래스가 닿을 수 있는 코어 인접 타일 상존' +
+  (a3Sealed.length ? ' [' + a3Sealed.join(', ') + ']' : ''), a3Sealed.length === 0);
+
 
 console.log('\n== 결과 ==');
 console.log('PASS ' + pass + ' / FAIL ' + fail + (fail ? ('  →  ' + fails.join('; ')) : ''));

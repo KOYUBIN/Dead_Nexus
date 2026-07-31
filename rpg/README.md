@@ -3,7 +3,8 @@
 **정본 스펙**: `docs/25-rpg-mode.md` (심사 만장일치 확정 아키텍처 + 이식요소 G1~G11, §7 로드맵
 Stage 1~3 전부 완료 현행화).
 이 디렉토리는 **Stage 1~3 전부 완료**(v6.29~v6.40) + **6클래스 완성·오브젝티브 다양성**(v6.45~v6.46
-추가 확장) — 챕터 1~8 + 사이드 8종 + Act 2 13종 + 캡스톤 1종 + 클래스 사이드 2종(총 **32미션**)을
+추가 확장) + **Act 3 "SIGNAL DEBT"**(v6.54 · 신규 6종) — 챕터 1~8 + 사이드 8종 + Act 2 13종 +
+캡스톤 1종 + 클래스 사이드 2종 + Act 3 6종(총 **38미션**)을
 CIPHER(해킹)·BLADE(근접)·RIGGER(설치)·MOLE(위장)·BROKER(중개)·DRIFTER(기동) **6클래스(전량)**로
 다르게 완주하고, 챕터 8 클리어 시 4엔딩 + New Game+(회차 플레이)로 이어진다.
 
@@ -39,9 +40,10 @@ node rpg/_unit.js          # 순수 로직 유닛 테스트 200건 (Stage 1: 1~4
                            #   57차 4엔딩+New Game+: 177~200 ·
                            #   68차 오브젝티브 다양성(생존형 win-condition·HACK 전용 코어·
                            #     하네스 survive 정책·blade-vendetta 사문 게이트 해소): 292~319)
-node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (32/32, 32개 파일)
+node rpg/_wiring_check.js   # 미션 배선 4집합 동치 (파일 ↔ index.html ↔ loader heal ↔ campaign MISSIONS)
+node rpg/_missions_check.js rpg/data/missions/<파일>   # 미션 스키마·대화 그래프 검증 (38/38, 38개 파일)
                            #   [68차] combat.survive:N(생존형 win-condition) 범위·밴드 검증 포함
-node rpg/_balance.js       # 전투 밸런스 매트릭스 (6클래스 × 42 인카운터 = 252조합) — 아래 §밸런스 하네스
+node rpg/_balance.js       # 전투 밸런스 매트릭스 (6클래스 × 52 인카운터 = 312조합) — 아래 §밸런스 하네스
                            #   ★ 장비는 옵트인 파워 → 무장비 기준 매트릭스는 B1 전후 byte 동일
 ```
 
@@ -52,7 +54,7 @@ node rpg/_balance.js       # 전투 밸런스 매트릭스 (6클래스 × 42 인
 **자동 플레이**가 가능하다. `sim-e2e` 의 측정 규율(매트릭스 + 이상치 플래그)을 RPG 로 이식.
 
 ```
-node rpg/_balance.js           # 6클래스 × 42 인카운터 매트릭스(252조합) + 이상치 + 챕터 경향 + 요약
+node rpg/_balance.js           # 6클래스 × 52 인카운터 매트릭스(312조합) + 이상치 + 챕터 경향 + 요약
 node rpg/_balance.js --json    # 기계 판독 JSON (매트릭스 원본)
 node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 = 같은 결과)
 ```
@@ -80,6 +82,34 @@ node rpg/_balance.js --smoke   # 결정론 재현 스모크 (같은 입력 2회 
 빌드 스텝 0. React 18 + Babel Standalone(브라우저 내 JSX 트랜스파일). 상태 = 단일
 `useReducer`(`state/store.js`) + 씬 라우터(hub / dialogue / combat).
 
+## Act 3 — "SIGNAL DEBT" [v6.54 · 신규 6종]
+
+Act 2 캡스톤(`a2-99-flagship`) 클리어로 개방되는 **후일담 장**. 기함이 격추된 뒤 남은 것은 군대가
+아니라 **장부**다 — MERIDIAN 은 외부 기업 "연합"이었고, 청산되자 채권자(**청산관리단**)가 담보를
+회수하러 온다. 담보 목록에는 애시그리드의 메시 인프라·코어텍스 인증망·시민 접속 권한, 그리고
+기함 격추에 대역폭을 당겨 쓴 **SIGNAL** 이 자산으로 올라 있다.
+
+| id | 구성 | 전투 | 해금 |
+|---|---|---|---|
+| `a3-00-framing` | 프레이밍 (SILK 의뢰인 허브 승격) | 단일 (6×7) | 캡스톤 클리어 |
+| `a3-01-collateral` | 메인 1 — 담보 원장고 | **2연전** (enc①+stage2) | a3-00 |
+| `a3-02-interest` | 메인 2 — 코어텍스 상환망 | **2연전** (enc①+stage2) | a3-01 |
+| `a3-03-finale` | 종결 — 청산 법정 (LIQUIDATOR 결전) | **3연전** (enc①+stage2+stage3) | a3-02 |
+| `a3-side-broker-callin` | BROKER 사이드 — 기한 이익 상실 | 단일 (6×7) | a3-00 + BROKER 편성 |
+| `a3-side-rigger-relay` | RIGGER 사이드 — 34번 중계탑 | 단일 (6×7) | a3-00 + RIGGER 편성 |
+
+- **kind `act3`** — `campaign.boardState` 가 `act3` 그룹으로 분리(보드 ACT 3 섹션, 퍼플).
+  `ending.campaignStats` 사이드 분류는 act2 계약을 그대로 확장(`branch:'class'` = 사이드).
+- **4엔딩 계약 불변** — `ending.js` 의 `ENDINGS`/`ORDER`/`DERIVE_ORDER` 무편집. Act 3 종결은
+  `effect.returnHub` 로 끝나며 `epilogue`/`capstoneEpilogue` 를 쓰지 않는다 → `endings.seen/runs`
+  와 `endings.capstone` 기록 계약도 불변(`_unit.js` 434~435 핀).
+- **신규 적 3종**(`data/enemies.js`) — `MERIDIAN_ASSESSOR`(MESH 사정관) · `MERIDIAN_COLLECTOR`
+  (ASH 추심관 · 저속 근접 문지기) · `MERIDIAN_LIQUIDATOR`(SHADE 청산인, HP26/ATK5/DEF4 —
+  WARLORD 상위·OVERLORD 하위). AI 어휘·스프라이트 전부 기존 것 재사용(신규 아트 0).
+- **Act 3 배치 서명** — 7×8 인카운터는 오브젝티브 남쪽 인접 3타일에 `light` 엄폐("코어 앞 차폐
+  격벽")를 둔다. `grid.coverBonus` 는 *대상에 직교 인접 + 공격자 방향* 엄폐만 계산하므로, 이
+  배치가 코어에 붙은 러시 유닛의 실효 엄폐가 된다(저HP 클래스 하드모드 생존창 확보).
+
 ## 오브젝티브 유형 카탈로그 [68차]
 
 v6.45 발굴 감사가 지적한 "30미션 전부 threshold 차감 단일형"을 **소수 미션 선택 전환**으로 해소한다
@@ -105,7 +135,7 @@ v6.45 발굴 감사가 지적한 "30미션 전부 threshold 차감 단일형"을
 | 층 | 파일 | 순도 |
 |---|---|---|
 | `core/` | `loader.js`(heal 로더 G11) · `projection.js`(좌표→스크린 seam G1) | 순수/DOM(loader만) |
-| `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(장비 10종, B1) + `missions/`(ch01~ch08 + side-01~08 + a2-00/a1~d2/a2-side×6 + a2-99, 32개) | 순수 리터럴 (DOM/리액트 0) |
+| `data/` | `attributes·signal·classes·abilities·enemies·weapons·gear`(장비 10종, B1) + `missions/`(ch01~ch08 + side-01~08 + a2-00/a1~d2/a2-side×6 + a2-99 + **a3-00/01/02/03/a3-side×2**, 38개) | 순수 리터럴 (DOM/리액트 0) |
 | `systems/combat/` | `grid`(BFS·LoS·엄폐) · `resolve`(결정론 피해 G5 + `surviveReached` 생존형 판정, 68차) · `ai`(유틸리티 트리+텔레그래프 G8/G9) | 순수 함수 (DOM/리액트 0, G2) |
 | `systems/` | `dialogue`(게이트) · `character`(karma) · `campaign`(보상·위협 G10) · `ending`(4엔딩 판정·에필로그·New Game+, 57차) | 순수 함수 |
 | `state/` | `store`(리듀서+전투 오케스트레이션) · `save`(localStorage+base64 export/import G11) | 순수 로직 |

@@ -18,7 +18,8 @@
   //   [계승 docs/01 §2040년대] 인프라 매각사 → 담보 3번 항목(a3-01 "메시 중계망 전체")의 실물.
   //   [계승 a2-side-rigger-build] 전작 사이드 매듭 flag(riggerFinalBuild)를 지름길 게이트로 계승.
   //   [계승 ch06/side-03 CARBON 무대축] CARBON_DRONE 재사용 — 청산관리단이 현지 설비를 접수해
-  //          그대로 굴린다는 설정(회수는 언제나 현지 자산을 쓴다).
+  //          그대로 굴린다는 설정(회수는 언제나 현지 자산을 쓴다). MERIDIAN_STALKER(재사용)는
+  //          자산 감시 저격 — 정비 구역 외곽에서 '관리 대상'을 지킨다.
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
   // SIMPLIFIED: classKey:'RIGGER' 게이트라 실플레이는 RIGGER 뿐 → [DEF 3]이 PATCH 의 정본 해법
@@ -59,8 +60,10 @@
       { x: 2, y: 4, type: 'light' }, { x: 4, y: 4, type: 'light' },
       { x: 3, y: 5, type: 'full' }, { x: 1, y: 2, type: 'light' },
     ],
-    // 로스터 — WARD_NODE(제어 코어 옆 봉인 태그 · physImmune·선택) + COLLECTOR(정비 감독 추심관) +
-    //   CARBON_DRONE(접수된 현지 설비 · 기계 → DATA SPIKE 대상). 위협 적 전원 killable.
+    // 로스터 — WARD_NODE(제어 코어 옆 봉인 태그 · physImmune·선택) + COLLECTOR(정비 감독 추심관 ·
+    //   저속 근접, y=4 로 물림) + CARBON_DRONE(접수된 현지 설비 · 기계 → DATA SPIKE 대상) +
+    //   STALKER(SHADE 감시 저격 · 정비 구역 외곽). 위협 적 전원 killable.
+    //   [밸런스] 감시 저격 1기가 고DEF 클래스에도 관통 피해를 남겨 2R 무피해 러시(트리비얼)를 차단.
     enemies: [
       { key: 'WARD_NODE',          x: 3, y: 1 },
       { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
@@ -85,13 +88,14 @@
       approach: {
         id: 'approach', speaker: 'PATCH', portrait: 'ghost',
         text: '중계탑 하부. 낡은 냉각 배관이 김을 뿜고, 그 너머 제어 코어가 새 부품으로 반짝인다 — 누군가 정성껏 갈아 끼웠다.\n' +
-              '정비 감독을 맡은 추심관이 공정표를 확인하고, 접수된 CARBON 드론이 배선을 잇는다. 코어 옆엔 봉인 태그가 붙어 있다.\n' +
+              '정비 감독을 맡은 추심관이 공정표를 확인하고, 접수된 CARBON 드론이 배선을 잇는다. 외곽에서는 감시 저격수 하나가 구역을 훑는다.\n' +
+              '코어 옆엔 봉인 태그가 붙어 있다 — 관리 대상 자산 표식.\n' +
               '[COLLECTOR] "정비공이면 돌아가시오. 이 설비는 오늘부로 관리 대상 자산입니다."',
         choices: [
           { label: '정비반을 걷어내고 제어 코어를 손에 넣는다',
             effect: { startCombat: { onWin: 'outro' } },
             setFlags: { relayFought: true },
-            desc: 'MERIDIAN_COLLECTOR + CARBON_DRONE + WARD_NODE(증원 DRONE)와 전투 → 제어 코어 확보 (공통 폴백, 6클래스 완주 가능)',
+            desc: 'MERIDIAN_COLLECTOR + CARBON_DRONE + STALKER + WARD_NODE(증원 CARBON_DRONE)와 전투 → 제어 코어 확보 (공통 폴백, 6클래스 완주 가능)',
           },
           { label: '[DEF 3] 배관 파열을 몸으로 막아 서며 코어까지 밀고 들어간다',
             gate: { attr: 'def', min: 3 }, show: 'gray',

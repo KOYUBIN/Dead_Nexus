@@ -17,8 +17,9 @@
   //          지름길 게이트로 계승 — "장부를 인수한 자"만 열 수 있는 협상 경로.
   //   [계승 docs/01 §구역 종류 유흥가] "네온과 카지노. 주로 고스트들의 은신처" — SILK 장부실이
   //          유흥가 뒷골목에 있다는 배치는 이 원전 구역 성격의 직접 계승[신규 무대].
-  //   [신규] 적대 = MERIDIAN 청산관리단 추심반(COLLECTOR/ASSESSOR) + 고용된 거리 추심꾼
-  //          (GANG_THUG 재사용 — 회수는 언제나 현지 인력을 쓴다).
+  //   [신규] 적대 = MERIDIAN 청산관리단 추심반(COLLECTOR/ASSESSOR) + SPLICE_HOUND(재사용 ·
+  //          [계승 docs/01 §스플라이스] HELIX 산물이 암시장을 통해 추심 도구로 흘러든 것) +
+  //          증원 GANG_THUG(재사용 — 회수는 언제나 현지 인력을 쓴다).
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
   // SIMPLIFIED: classKey:'BROKER' 게이트라 실플레이는 BROKER 뿐 → [SPD 4]가 SILK 의 정본 해법
@@ -57,10 +58,11 @@
     cover: [
       { x: 2, y: 4, type: 'light' }, { x: 4, y: 4, type: 'light' },
       { x: 3, y: 5, type: 'full' }, { x: 4, y: 2, type: 'light' },
-      { x: 2, y: 0, type: 'light' }, { x: 3, y: 0, type: 'light' }, { x: 4, y: 0, type: 'light' },
     ],
-    // 로스터 — COLLECTOR(추심 책임자 · ASH 중거리 근접) + ASSESSOR(MESH 사정관) +
-    //   GANG_THUG×1(고용된 거리 추심꾼 · ASH 근접). 전 적 killable → 전멸/오브젝티브 이중 승리.
+    // 로스터 — COLLECTOR(추심 책임자 · ASH 저속 근접 · 문 안쪽 대기) + ASSESSOR(MESH 사정관 ·
+    //   단말 앞) + SPLICE_HOUND(BIO 추적견 · 회수반이 끌고 온 HELIX 산물). 증원 = GANG_THUG
+    //   (고용된 거리 추심꾼). 전 적 killable → 전멸/오브젝티브 이중 승리.
+    //   [밸런스] COLLECTOR 를 y=4 로 물려 러시 1R 알파를 2기로 제한 — 저HP 클래스 생존창 확보.
     enemies: [
       { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
       { key: 'MERIDIAN_ASSESSOR',  x: 3, y: 1 },
@@ -84,13 +86,13 @@
       approach: {
         id: 'approach', speaker: 'SILK', portrait: 'ghost',
         text: '네온 뒷골목. 장부실 문이 이미 열려 있다 — 부순 게 아니라, 열쇠로 연 것이다.\n' +
-              '추심 책임자가 장부 단말 앞에 앉아 항목을 넘기고 있다. 사정관이 값을 매기고, 고용된 거리 추심꾼이 문가를 지킨다.\n' +
+              '사정관이 장부 단말 앞에 앉아 항목을 넘기고 있다. 추심 책임자는 문 안쪽에서 기다리고, 추적견 한 마리가 골목 입구를 훑는다.\n' +
               '[COLLECTOR] "홀트 씨. 당신 장부는 정말 깔끔하군요. 덕분에 청구가 아주 쉬웠습니다."',
         choices: [
           { label: '추심반을 걷어내고 장부 단말을 되찾는다',
             effect: { startCombat: { onWin: 'outro' } },
             setFlags: { callInFought: true },
-            desc: 'MERIDIAN_COLLECTOR + ASSESSOR + GANG_THUG(증원 THUG)와 전투 → 장부 단말 확보 (공통 폴백, 6클래스 완주 가능)',
+            desc: 'MERIDIAN_COLLECTOR + ASSESSOR + SPLICE_HOUND(증원 GANG_THUG)와 전투 → 장부 단말 확보 (공통 폴백, 6클래스 완주 가능)',
           },
           { label: '[SPD 4] 뒷문 배선을 타고 추심반보다 먼저 단말에 닿는다',
             gate: { attr: 'spd', min: 4 }, show: 'gray',

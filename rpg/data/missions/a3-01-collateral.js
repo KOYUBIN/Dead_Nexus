@@ -16,7 +16,8 @@
   //          지분·계약으로 진행된다는 원전 규율을 RPG 전투 무대로 각색.
   //   [계승 §3.1 · a2 메인 관례] 2연전 — enc① = MISSION.combat / enc② = MISSION.encounters.stage2.
   //          interlude 노드 effect.startCombat:{encounter:'stage2', onWin:'outro'} 소비.
-  //   [신규] 적대 = MERIDIAN 청산관리단(ASSESSOR/COLLECTOR) + WARD_NODE(GRID 정적 수호, 재사용).
+  //   [신규] 적대 = MERIDIAN 청산관리단(COLLECTOR/ASSESSOR) + STALKER·DRONE(Act2 로스터 재사용) +
+  //          WARD_NODE(GRID 정적 수호, 재사용).
   //   [계승 lore GHOST_IDENTITY.BROKER] 화자 SILK — "누가 누구에게 무엇을 빚졌는지 완벽한 장부".
   // 순수 데이터 — DOM/리액트 참조 0. 텍스트/좌표/수치 리터럴만.
   // ──────────────────────────────────────────────────────────────────────────
@@ -55,9 +56,13 @@
     cover: [
       { x: 2, y: 5, type: 'light' }, { x: 4, y: 5, type: 'light' }, { x: 3, y: 6, type: 'full' },
       { x: 1, y: 2, type: 'light' }, { x: 5, y: 2, type: 'light' },
+      // [Act3 서명] 코어 앞 차폐 격벽 — 오브젝티브 남쪽 인접 3타일(grid.coverBonus 는
+      //   '대상에 직교 인접 + 공격자 방향' 엄폐만 계산 → 코어에 붙은 유닛의 실효 엄폐).
+      { x: 2, y: 1, type: 'light' }, { x: 3, y: 1, type: 'light' }, { x: 4, y: 1, type: 'light' },
     ],
-    // 적 배치 — 접수반. COLLECTOR(ASH 추심관 · 중거리 근접) + ASSESSOR(MESH 사정관) +
+    // 적 배치 — 접수반. COLLECTOR(ASH 추심관 · 저속 근접 문지기) + STALKER(SHADE 저격) +
     //   DRONE(VOLT 기계 · DATA SPIKE 대상). 전 적 killable → 전멸/오브젝티브 이중 승리(MFU).
+    //   [밸런스] a2-99 enc① 과 동일 배치 골격(중장 1 + 저격 1 + 드론 1) — 하네스 재측정 근거.
     enemies: [
       { key: 'MERIDIAN_COLLECTOR', x: 3, y: 4 },
       { key: 'MERIDIAN_STALKER',   x: 1, y: 3 },
@@ -111,13 +116,13 @@
       approach: {
         id: 'approach', speaker: 'SILK', portrait: 'ghost',
         text: '원장고 접근층. 문서 캐비닛이 벽처럼 늘어선 복도 끝에 담보 인증 게이트가 붉게 뛴다.\n' +
-              '추심관 하나가 통로 한가운데를 막고 서 있다 — 무장한 회계원. 사정관과 드론이 좌우를 잡는다.\n' +
+              '추심관 하나가 통로 한가운데를 막고 서 있다 — 무장한 회계원. 저격수와 드론이 좌우를 잡는다.\n' +
               '[SILK] "저 게이트를 열어야 목록을 읽어. 저들은 목록을 읽히지 않으려고 서 있는 거고."',
         choices: [
           { label: '접수반을 정면으로 밀어내고 게이트를 연다',
             effect: { startCombat: { onWin: 'interlude' } },
             setFlags: { vaultForced: true },
-            desc: 'enc① COLLECTOR + ASSESSOR + DRONE 와 전투 → 인증 게이트 확보 (공통 폴백, 6클래스 완주 가능)',
+            desc: 'enc① COLLECTOR + STALKER + DRONE 와 전투 → 인증 게이트 확보 (공통 폴백, 6클래스 완주 가능)',
           },
           { label: '[SPD 4] 캐비닛 열 사이를 앞질러 게이트를 선점한다',
             gate: { attr: 'spd', min: 4 }, show: 'gray',
