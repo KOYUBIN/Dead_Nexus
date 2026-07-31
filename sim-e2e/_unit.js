@@ -1300,6 +1300,146 @@ function tests(){
   ok('CI 수입: 금융가3+유흥가2+거래소2+파티LV4트랙3 = ₵+10',ciR.players[0].resources.credit===ciSt.players[0].resources.credit+10,`+${ciR.players[0].resources.credit-ciSt.players[0].resources.credit}`);
   ok('CI 구역 속성 풀 적립: M+1(금융가) S+1(유흥가)',ciR.players[0].pool.M===1&&ciR.players[0].pool.S===1,JSON.stringify(ciR.players[0].pool));
   ok('CI 픽스처 assetValue: 구역10+거래소3 = 13 (구역·건물 분기 실행)',assetValue(ciSt.players[0],ciSt.stocks,ciSt)===13,`got ${assetValue(ciSt.players[0],ciSt.stocks,ciSt)}`);
+  // ==== v6.53 [S07]: 블랙아웃 카스케이드 — 정체성 룰 5종 수치 핀 (docs/14 확장 슬롯) ====
+  //   원칙(S02 정체성 룰 선례): 프로덕션 식을 재구현하지 않는다. 기대값은 전부 손계산 리터럴.
+  const s7=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:'S07'});
+  const BOA=window.BLACKOUT_ORDER, BSCH=window.blackout_scheduled, BADV=window.blackout_advance;
+  const BDC=window.blackout_darkCount, BHC=window.blackout_hardenedCount, BACT=window.blackout_active;
+  ok('S07 meta.scenario=S07',s7.meta.scenario==='S07');
+  ok('S07 startHeat=5',s7.heat===5,`got ${s7.heat}`);
+  ok('S07 locked=false · 11×11 전용',SCEN7L()===false&&SCEN7M(),'UI 노출 가능');
+  function SCEN7L(){return SR(s7,'locked',true);}
+  function SCEN7M(){const m=SR(s7,'maps',null);return !!m&&m.length===1&&m[0]==='11x11';}
+
+  // ---- 값 핀 (2번째 인자 = S01 기본값 → 키 부재 시 자동 실패) ----
+  ok('S07 blackoutCascade=true',SR(s7,'blackoutCascade',false)===true);
+  ok('S07 blackoutStart=2',SR(s7,'blackoutStart',0)===2);
+  ok('S07 blackoutPerRound=2',SR(s7,'blackoutPerRound',0)===2);
+  ok('S07 blackoutRaidMod=-2',SR(s7,'blackoutRaidMod',0)===-2);
+  ok('S07 blackoutRepairParts=3',SR(s7,'blackoutRepairParts',0)===3);
+  ok('S07 blackoutRepairCredit=8',SR(s7,'blackoutRepairCredit',0)===8);
+  ok('S07 blackoutHeatPer=4',SR(s7,'blackoutHeatPer',0)===4);
+  ok('S07 roundLimit=10 (HUD R표기와 동일 소스)',SR(s7,'roundLimit',12)===10);
+  ok('S07 blocAssetBonus=25 (측정 튜닝값)',SR(s7,'blocAssetBonus',0)===25);
+  ok('S07 underdogRelief=false (의도적 편향 — S02~S06 선례)',SR(s7,'underdogRelief',true)===false);
+  const nonNpc7=s7.players.filter(p=>!p.isNpc).length;
+  const adj7=(nonNpc7===2?-2:nonNpc7===3?-1:0);
+  const g7=GVG(s7);
+  ok('S07 blocAsset = 100+adj+25 (승리 판정 = HUD 목표 동일 소스)',g7.blocAsset===100+adj7+25,`got ${g7.blocAsset} (adj ${adj7}, 기대 ${100+adj7+25})`);
+
+  // ---- 정체성 룰 ① 결정론적 캐스케이드 시간표 (손계산: (R-2+1)*2, 18 캡) ----
+  ok('S07 BLACKOUT_ORDER 길이=18',BOA.length===18,`got ${BOA.length}`);
+  ok('S07 캐스케이드 순서 좌표가 전부 맵에 존재',BOA.every(c=>!!s7.map[c]),BOA.filter(c=>!s7.map[c]).join(','));
+  ok('S07 캐스케이드 좌표 중복 없음',new Set(BOA).size===18);
+  ok('S07 캐스케이드가 5 Bloc HQ·support 를 전부 비껴감 (시작 소유 0칸)',BOA.every(c=>s7.map[c].owner==null),BOA.filter(c=>s7.map[c].owner!=null).join(','));
+  ok('S07 스케줄 R1 = 0칸 (blackoutStart 2 이전)',BSCH(s7,1)===0);
+  ok('S07 스케줄 R2 = 2칸',BSCH(s7,2)===2,`got ${BSCH(s7,2)}`);
+  ok('S07 스케줄 R4 = 6칸',BSCH(s7,4)===6,`got ${BSCH(s7,4)}`);
+  ok('S07 스케줄 R10 = 18칸 (roundLimit 에 정확히 소진)',BSCH(s7,10)===18,`got ${BSCH(s7,10)}`);
+  ok('S07 스케줄 R20 = 18칸 (순서 배열 길이에서 캡)',BSCH(s7,20)===18,`got ${BSCH(s7,20)}`);
+  const s7r2=BADV({...s7,meta:{...s7.meta,round:2}});
+  ok('S07 R2 소등 = 정확히 2칸',BDC(s7r2)===2,`got ${BDC(s7r2)}`);
+  ok('S07 R2 소등 대상이 결정론적으로 F6·F5 (무작위 아님)',!!s7r2.map.F6.blackout&&!!s7r2.map.F5.blackout&&!s7r2.map.C4.blackout);
+  const s7r4=BADV({...s7r2,meta:{...s7r2.meta,round:4}});
+  ok('S07 R4 누적 소등 = 6칸 (C4·I4·C8·I8 추가)',BDC(s7r4)===6&&!!s7r4.map.C4.blackout&&!!s7r4.map.I8.blackout,`got ${BDC(s7r4)}`);
+
+  // ---- 정체성 룰 ② 정전 구역 수입 0 (손계산: 금융가 income.credit = 3) ----
+  const incBase={...s7,map:{Z9:{zone:'bank',owner:0}},players:s7.players.map((p,i)=>i===0?{...p,role:'bloc',tracks:{},stocks:{},pool:{}}:p)};
+  const incLit=withRand(0.99,()=>R(incBase,{type:'COLLECT_INCOME'}));
+  const incDark=withRand(0.99,()=>R({...incBase,map:{Z9:{zone:'bank',owner:0,blackout:true,boDef:-2}}},{type:'COLLECT_INCOME'}));
+  const c0=incBase.players[0].resources.credit;
+  ok('S07 점등 금융가 1칸 수입 = ₵+3',incLit.players[0].resources.credit===c0+3,`got +${incLit.players[0].resources.credit-c0}`);
+  ok('S07 정전 금융가 1칸 수입 = ₵+0 (정전 구역 수입 0)',incDark.players[0].resources.credit===c0,`got +${incDark.players[0].resources.credit-c0}`);
+
+  // ---- 정체성 룰 ③ 정전 구역 레이드 방어 −2 · 표시=판정 (손계산: d6 눈 수) ----
+  ok('S07 정상 구역 raidThreshold = 5',raidThreshold({})===5,`got ${raidThreshold({})}`);
+  ok('S07 정전 구역 raidThreshold = 3 (5 + boDef −2)',raidThreshold({boDef:-2})===3,`got ${raidThreshold({boDef:-2})}`);
+  ok('S07 소등 셀에 boDef=-2 기입',s7r2.map.F6.boDef===-2,`got ${s7r2.map.F6.boDef}`);
+  const RV=window.raidExecPctView, gp7=s7r2.players.find(p=>p.role==='ghost')||s7r2.players[0];
+  const vLit=RV(s7r2,gp7,raidThreshold({}),{stat:0,track:0,critImmune:false});
+  const vDark=RV(s7r2,gp7,raidThreshold(s7r2.map.F6),{stat:0,track:0,critImmune:false});
+  ok('S07 표시=판정 · 점등 구역 성공률 = 눈 5·6 → 2/6 = 33%',vLit.needed===5&&vLit.faces===2&&vLit.pct===33,JSON.stringify(vLit));
+  ok('S07 표시=판정 · 정전 구역 성공률 = 눈 3~6 → 4/6 = 67%',vDark.needed===3&&vDark.faces===4&&vDark.pct===67,JSON.stringify(vDark));
+
+  // ---- 정체성 룰 ④ Bloc 복구 (손계산: ⚙5−3=2 · ₵+8 · 무주 F6 귀속 · 경화) ----
+  //   G6 은 캐스케이드 순서에 없는 F6 인접 칸 → 소유시키면 F6 복구 자격이 선다.
+  const repBase={...s7r2,
+    map:{...s7r2.map,G6:{...s7r2.map.G6,owner:0}},
+    players:s7r2.players.map((p,i)=>i===0?{...p,role:'bloc',isNpc:false,defeated:false,resources:{...p.resources,parts:5,credit:0}}:{...p,role:'ghost'})};
+  const repDone=BADV({...repBase,meta:{...repBase.meta,round:2}});
+  ok('S07 복구: ⚙ 5→2 (blackoutRepairParts 3 지불)',repDone.players[0].resources.parts===2,`got ${repDone.players[0].resources.parts}`);
+  ok('S07 복구: ₵ 0→8 (blackoutRepairCredit)',repDone.players[0].resources.credit===8,`got ${repDone.players[0].resources.credit}`);
+  ok('S07 복구: 해당 칸 점등 (blackout false · boDef 0)',repDone.map.F6.blackout===false&&repDone.map.F6.boDef===0);
+  ok('S07 복구: 무주 구역이 복구자에게 귀속 (원안 "복구 = 자산 가치")',repDone.map.F6.owner===0,`got ${repDone.map.F6.owner}`);
+  ok('S07 복구: 경화 1칸 · 좌석당 라운드 1칸 제한',BHC(repDone)===1&&repDone.meta.blackout.repaired===1,`hard ${BHC(repDone)} repaired ${repDone.meta.blackout.repaired}`);
+  const repAgain=BADV({...repDone,meta:{...repDone.meta,round:3}});
+  ok('S07 경화 칸은 재정전 없음 (F6 은 R3 캐스케이드에서 제외)',!repAgain.map.F6.blackout);
+  ok('S07 복구 부품 부족 시 무발동 (⚙2 < 3 → 경화 증가 0)',BHC(repAgain)===1,`got ${BHC(repAgain)}`);
+
+  // ---- 정체성 룰 ⑤ 붕괴 압력 계단식 공권력 (손계산: floor(dark/4) 의 새 단계마다 +1) ----
+  ok('S07 R2 정전 2칸 → floor(2/4)=0 단계 → 공권력 불변 5',s7r2.heat===5&&(s7r2.meta.blackout.heatSteps||0)===0,`heat ${s7r2.heat}`);
+  const s7r3=BADV({...s7r2,meta:{...s7r2.meta,round:3}});
+  ok('S07 R3 정전 4칸 → floor(4/4)=1 단계 → 공권력 5→6',s7r3.heat===6&&s7r3.meta.blackout.heatSteps===1,`heat ${s7r3.heat} steps ${s7r3.meta.blackout.heatSteps}`);
+  const s7r4b=BADV({...s7r3,meta:{...s7r3.meta,round:4}});
+  ok('S07 R4 정전 6칸 → floor(6/4)=1 (단계 불변) → 공권력 6 유지',s7r4b.heat===6&&s7r4b.meta.blackout.heatSteps===1,`heat ${s7r4b.heat}`);
+  const s7r5=BADV({...s7r4b,meta:{...s7r4b.meta,round:5}});
+  ok('S07 R5 정전 8칸 → floor(8/4)=2 단계 → 공권력 6→7',s7r5.heat===7&&s7r5.meta.blackout.heatSteps===2,`heat ${s7r5.heat}`);
+
+  // ---- S01~S06 불변 증명: 7키 폴백 + 헬퍼 항등(참조 동일) + 셀 무오염 ----
+  for(const sid of ['S01','S02','S03','S04','S05','S06']){
+    const sx=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'bloc',specific:'VANTA',humans:null,scenario:sid});
+    const keysOff=SR(sx,'blackoutCascade',false)===false&&SR(sx,'blackoutStart',0)===0&&SR(sx,'blackoutPerRound',0)===0
+      &&SR(sx,'blackoutRaidMod',0)===0&&SR(sx,'blackoutRepairParts',0)===0&&SR(sx,'blackoutRepairCredit',0)===0&&SR(sx,'blackoutHeatPer',0)===0;
+    const xr={...sx,meta:{...sx.meta,round:5}};
+    ok(`${sid} S07 정전 룰 미침투 (7키 0/false 폴백 · blackout_active false · blackout_advance 항등)`,
+      keysOff&&BACT(sx)===false&&BADV(xr)===xr&&BSCH(sx,9)===0);
+    ok(`${sid} 맵 셀에 blackout/boDef 오염 없음 (raidThreshold 불변)`,
+      Object.keys(sx.map).every(c=>sx.map[c].blackout===undefined&&sx.map[c].boDef===undefined)&&raidThreshold(sx.map.F6)===5);
+  }
+  // 인접 판정 헬퍼 (손계산: F6 의 4방 = E6·G6·F5·F7)
+  const BAJ=window.blackout_adjacentTo;
+  const adjMap={E6:{owner:null},G6:{owner:3},F5:{owner:null},F7:{owner:null},F6:{owner:null},H6:{owner:3}};
+  ok('S07 blackout_adjacentTo: F6 4방에 owner3 존재(G6) → true',BAJ(adjMap,'F6',3)===true);
+  ok('S07 blackout_adjacentTo: 대각·2칸(H6)은 인접 아님 → owner4 false',BAJ(adjMap,'F6',4)===false);
+
+  // ==== v6.53 [B]: 봇 승리 진척 우선순위 — rules_botGoalGap (근시안 스코어링 교정) ====
+  //   종전 scoreGhostCard 는 rep16/raid2 하드코딩으로 승리 근접을 판정했다. 실임계(11×11
+  //   ghostRepOnly 70 / ghostRaids 2, S03 은 25/3)와 무관해 상시 참에 가까웠던 것을 정직화.
+  const BGG=window.rules_botGoalGap;
+  ok('B RULES_BOT_CLOSE_PCT=0.72',window.RULES_BOT_CLOSE_PCT===0.72,`got ${window.RULES_BOT_CLOSE_PCT}`);
+  const s1b=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S01'});
+  const g1b=GVG(s1b), gi=s1b.players.findIndex(p=>p.role==='ghost');
+  const gz={...s1b.players[gi],resources:{...s1b.players[gi].resources,rep:0},highlightPoints:0};
+  const gapZero=BGG({...s1b,players:s1b.players.map((p,i)=>i===gi?gz:p),meta:{...s1b.meta,raidsThisGame:{}}},gz,gi);
+  ok('B 렙0·레이드0 Ghost → 진척 0 · close false',gapZero.pct===0&&gapZero.close===false,JSON.stringify(gapZero));
+  ok('B raidNeed = 실목표 ghostRaids (S01 11×11 = 2)',gapZero.raidNeed===2&&g1b.ghostRaids===2,`raidNeed ${gapZero.raidNeed} goal ${g1b.ghostRaids}`);
+  // 회귀 핀: 종전 하드코딩 16 은 실임계의 23% — close 가 켜지면 안 된다.
+  //   [S04 를 쓰는 이유] S01 은 underdogRelief 기본 true 라 euro_underdogGoalScale 이 임계를
+  //   구성에 따라 스케일한다(= 손계산 리터럴이 성립 안 함). S04 는 underdogRelief:false 이고
+  //   ghostRep* 오버라이드도 없어 ghostRepOnly = base 70 + adj(4좌석 → 0) = 70 이 확정된다.
+  //   구 하드코딩이 무시하던 것이 바로 이 스케일·오버라이드 계층이라는 점도 함께 드러난다.
+  const s4b=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S04'});
+  const g4b=GVG(s4b), gi4=s4b.players.findIndex(p=>p.role==='ghost'&&!p.isNpc);
+  ok('B S04 ghostRepOnly=70 (언더독 항등 → 손계산 리터럴 성립)',g4b.ghostRepOnly===70,`got ${g4b.ghostRepOnly}`);
+  const g16={...s4b.players[gi4],resources:{...s4b.players[gi4].resources,rep:16},highlightPoints:0};
+  const gap16=BGG({...s4b,players:s4b.players.map((p,i)=>i===gi4?g16:p),meta:{...s4b.meta,raidsThisGame:{}}},g16,gi4);
+  ok('B 회귀: 렙 16(구 하드코딩 임계)은 close 아님 — 16/70 = 23%',gap16.close===false&&Math.round(gap16.pct*100)===23,`pct ${Math.round(gap16.pct*100)}%`);
+  // 렙온리 목표 도달 → 진척 100% → close
+  const gFull={...gz,resources:{...gz.resources,rep:g1b.ghostRepOnly}};
+  const gapFull=BGG({...s1b,players:s1b.players.map((p,i)=>i===gi?gFull:p),meta:{...s1b.meta,raidsThisGame:{}}},gFull,gi);
+  ok('B 렙온리 임계 도달 → 진척 1.0 · close true',gapFull.pct===1&&gapFull.close===true,`pct ${gapFull.pct}`);
+  // 핵심 결함 핀: S03 은 ghostRaidsOverride 3 — 구 하드코딩 2 는 이 값을 볼 수 없었다.
+  const s3b=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S03'});
+  const g3b=GVG(s3b), gi3=s3b.players.findIndex(p=>p.role==='ghost'&&!p.isNpc);
+  const gap3=BGG({...s3b,meta:{...s3b.meta,raidsThisGame:{}}},s3b.players[gi3],gi3);
+  ok('B S03 raidNeed = 3 (ghostRaidsOverride — 구 하드코딩 2 가 놓치던 값)',gap3.raidNeed===3&&g3b.ghostRaids===3,`raidNeed ${gap3.raidNeed} goal ${g3b.ghostRaids}`);
+  // Bloc 측: 종전 scoreBlocCard 에는 승리 인지 항이 전무했다.
+  const bi=s1b.players.findIndex(p=>p.role==='bloc'&&!p.isNpc);
+  const gapB=BGG(s1b,s1b.players[bi],bi);
+  ok('B Bloc assetNeed = blocAsset − (assetValue + hp환산)',gapB.assetNeed===Math.max(0,g1b.blocAsset-(assetValue(s1b.players[bi],s1b.stocks,s1b)+window.euro_hlVictoryBonus(s1b.players[bi]))),`got ${gapB.assetNeed} goal ${g1b.blocAsset}`);
+  ok('B rules_botGoalGap 은 rules_victoryRatio(타임아웃 판정)와 동일 진척값 — 단일 소스',
+    gapB.pct===window.rules_victoryRatio(s1b.players[bi],bi,s1b,g1b),`gap ${gapB.pct} ratio ${window.rules_victoryRatio(s1b.players[bi],bi,s1b,g1b)}`);
+
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }

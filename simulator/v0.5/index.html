@@ -853,6 +853,7 @@
 <script src="legacy_module.js"></script>
 <script src="fx_module.js"></script>
 <script src="rules_module.js"></script>
+<script src="scenario_module.js"></script>
 <script>
 // v6.11.2: 모듈 자가복구 로더 — 호스팅이 /simulator/v0.5 (슬래시 없음)로 서빙하면
 // 위 상대경로 src가 상위 디렉토리로 풀려 404가 된다 (Vercel 리다이렉트 이슈).
@@ -876,6 +877,7 @@
     ['legacy_module.js', 'legacyLoad'],
     ['fx_module.js', 'dnfx_nego'],
     ['rules_module.js', 'rules_victoryByPoints'],
+    ['scenario_module.js', 'blackout_advance'],
   ];
   window.addEventListener('DOMContentLoaded', function () {
     MODULES.forEach(function (m) { heal(m[0], m[1]); });
@@ -1365,7 +1367,10 @@ const d6 = () => Math.floor(Math.random() * 6) + 1;
 const raidBonus = (p) => 3 + Math.min(3, Math.floor((p.resources.weapons || 0) / 3)) + (typeof euro_gearBonus === 'function' ? euro_gearBonus(p) : 0);
 // v6.11.3 (P0-1): 레이드 방어 토큰 합 — fortified(요새) + garrison(주둔) + veil(베일).
 // 봇/카드/인간 모달 레이드 threshold가 이 한 소스를 공유 (sim-harness/core.js:1736 정합).
-const raidDefenseBonus = (cell) => (cell?.fortified || 0) + (cell?.garrison || 0) + (cell?.veil || 0);
+// v6.53 (S07): boDef = 정전 구역 방어 델타(음수, scenario_module 이 소등 시 셀에 기입).
+//   여기 한 곳에 합산하면 판정 2경로(봇·카드효과)와 표시 3경로(모달·맵 프리뷰·우측 패널)가
+//   자동으로 같은 값을 읽는다 — 호출부 증설 0 으로 v6.51 「표시=판정」 계약을 구조적으로 충족.
+const raidDefenseBonus = (cell) => (cell?.fortified || 0) + (cell?.garrison || 0) + (cell?.veil || 0) + (cell?.boDef || 0);
 // 봇/카드 레이드 기본 threshold = 5 + 방어 토큰 (인간 모달은 RAID_TYPES.threshold가 5를 대체하고 방어 토큰을 가산).
 const raidThreshold = (cell) => 5 + raidDefenseBonus(cell);
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -1976,67 +1981,9 @@ const VICTORY_GOALS = {
   '5x5':   { blocAsset: 73, ghostRepBattle: 42, ghostRepOnly: 60, ghostRaids: 2 },
   '11x11': { blocAsset: 100, ghostRepBattle: 45, ghostRepOnly: 70, ghostRaids: 2 },
 };
-// ============================================================================
-// v6.25 (docs/23 갭#1): 구성 결정론 완화 — 언더독 진영 승리 임계 스케일링
-//   [진단] 승부는 "진영별 승리 임계까지의 병렬 레이스"다. 다수 진영은 (1) 병렬 레이서 수
-//     오더-통계 우위(임계를 먼저 밟음) + (2) Bloc 교차보유 시너지(assetValue 가 자기주가를
-//     제외 → Bloc 은 서로의 부양 주식을 보유해 자산 축적 → 초선형)로 유리하다. 실측(v6.24,
-//     n=150): 1g3b→bloc 99.3% · 3g1b→ghost 82.7% · 심지어 2:2 도 bloc 94.0%(=교차보유 시너지가
-//     동수에서도 Bloc 우위를 만든다). 솔로 인간은 항상 소수 1석 → 90~99% 패.
-//   [처방] 열세 진영의 승리 임계를 진영 인원 비에 따라 하향(레이스 거리 단축)해 병렬성·시너지를
-//     상쇄한다. Bloc 은 자기주가 자산 제외 탓에 "매R 수익 증폭"이 자기 자산에 무의미(euro_marketCycle
-//     자기 부양은 남을 이롭게 함) → 임계 스케일이 진단에 부합하는 유효 처방이다.
-//   [양면 핸디캡] 실측상 완화만으로는 부족하다 — Bloc 자산 레이스가 ~R6 에 100 을 밟아 Ghost 가
-//     임계를 낮춰도 그 전에 끝난다(binding constraint = Bloc 속도). 따라서 임계를 (1) 열세 진영은
-//     하향(레이스 단축) + (2) 우세/동수 Bloc 은 상향(레이스 지연)해 양면으로 벌린다. d = bc - gc.
-//   [비대칭 근거] Bloc 교차보유 시너지는 동수(d=0)에서도 우위 → parity 오프셋을 Ghost 하향·Bloc 상향
-//     양쪽에 실어 동수를 Ghost 쪽으로 되돌린다. 순열세 진영은 별도 하향(min 배수로 과보정 차단).
-//     단일 진영 판(gc·bc 중 0)·의도적 편향 시나리오(S02·S03)는 항등.
-//   [B-08 재튜닝 (43차)] v6.27 hp 승리 환산(EURO_HL_VICTORY_SCALE=0.3, rep_eff=rep+round(hp×0.3))이
-//     소수 Ghost 를 double-dip 시킨다: 언더독은 임계(RHS)를 낮추고 hp 는 달성값(LHS)을 올려 부등식
-//     반대편에서 독립 합성하지만 — 임계가 줄면 '고정' hp 가산이 (축소된) 임계의 더 큰 비율을 차지한다
-//     (repOnly 70→42 일 때 hp 가산 9 = 12.9%→21.4%). required_rep = base·ghostMult − 0.3·hp 로 보면 두
-//     완화(ghostMult<1 · −0.3·hp)가 가산적으로 겹친다. 게다가 revival 성질상 소수 Ghost 가 하이라이트를
-//     정당히 적립 → 계수 하향(0.2)은 36차에 기각(hp 는 정당). 처방: GHOST_STEP 을 유일 레버로 하향해
-//     Ghost 임계를 되올려 hp 채널을 상쇄(EURO_HL_VICTORY_SCALE=0.3 은 11×11 주 게이트 확정값 → 불변).
-//   [Ghost 비대칭 근거 — 측정] GHOST_STEP 은 d>0(Ghost 소수)에서만 작동 → 1g3b(및 SOLO 표준의 1g3b 절반)만
-//     이동하고 3g1b(d<0)·2:2(d=0) 임계는 byte 동일(측정 확인). hp 는 Bloc 도 올렸으나 3g1b bloc 은 43%로
-//     밴드 내(v6.25 37→43, <45) — 밴드 위반은 Ghost 뿐(48%). 그래서 Bloc 레버(BLOC_STEP=0.13)는 불변,
-//     Ghost 만 재튜닝(비대칭). 측정(S01, hp=0.3 고정, comp n=150 / 표준 SOLO n=300):
-//     0.08→ 1g3b ghost 48.0% · 표준 ghost 61.7%(둘 다 초과) | 0.04→ 1g3b 38.7% · 표준 48.7%
-//     · 3g1b bloc 44.0%(불변) · 2:2 ghost 55.3%(불변) · 5×5 1g3b 54→34%. 전 밴드 복귀, 에러 0.
-const EURO_UD_GHOST_PARITY  = 0.24;  // 동수 시 Ghost 임계 완화분 (시너지 상쇄; iter4 동수 중심화)
-const EURO_UD_GHOST_STEP    = 0.04;  // Bloc 초과 1인당 Ghost 임계 추가 완화 (d>0). B-08: 0.08→0.04 (hp double-dip 상쇄 — 상단 [B-08])
-const EURO_UD_GHOST_MIN     = 0.50;  // Ghost 임계 하한 배수
-const EURO_UD_GHOST_MAJSTEP = 0.08;  // Ghost 순우세 1인당 임계 상향 (d<0, 빠른 다수 Ghost 지연)
-const EURO_UD_GHOST_MAX      = 1.45; // Ghost 임계 상한 배수
-const EURO_UD_BLOC_PARITY    = 0.40; // 동수/우세 Bloc 임계 상향 기본분 (레이스 지연; iter4 동수 중심화)
-const EURO_UD_BLOC_STEP      = 0.13; // Bloc 초과 1인당 추가 상향 (d>0; iter4로 1g3b 불변 유지)
-const EURO_UD_BLOC_MAX       = 1.95; // Bloc 임계 상한 배수
-const EURO_UD_BLOC_MINSTEP   = 0.10; // Bloc 순열세 1인당 임계 하향 (d<0)
-const EURO_UD_BLOC_MIN       = 0.58; // Bloc 임계 하한 배수
-function euro_underdogGoalScale(state) {
-  const identity = { ghostMult: 1, blocMult: 1, gc: 0, bc: 0, d: 0, applied: false };
-  if (!state || !state.players) return identity;
-  // 의도적 편향 시나리오(S02 all-bloc · S03 ghostRising)는 원전 구성 유지 → 항등 폴백.
-  if (typeof scenarioRule === 'function' && scenarioRule(state, 'underdogRelief', true) === false) return identity;
-  let gc = 0, bc = 0;
-  for (const p of state.players) {
-    if (!p || p.defeated || p.isNpc) continue;
-    if (p.role === 'ghost') gc++; else if (p.role === 'bloc') bc++;
-  }
-  if (gc === 0 || bc === 0) return { ...identity, gc, bc };  // 단일 진영 판 → 상쇄 불필요
-  const d = bc - gc;   // Bloc 잉여(>0 = Bloc 다수). 소수 진영 = d 부호 반대편.
-  let ghostMult, blocMult;
-  if (d >= 0) {        // Ghost 열세/동수 → 임계 하향 ; Bloc 우세/동수 → 임계 상향
-    ghostMult = Math.max(EURO_UD_GHOST_MIN, 1 - EURO_UD_GHOST_PARITY - EURO_UD_GHOST_STEP * d);
-    blocMult  = Math.min(EURO_UD_BLOC_MAX,  1 + EURO_UD_BLOC_PARITY + EURO_UD_BLOC_STEP * d);
-  } else {             // Ghost 순우세 → 임계 상향(지연) ; Bloc 순열세 → 임계 하향(단축)
-    ghostMult = Math.min(EURO_UD_GHOST_MAX, 1 + EURO_UD_GHOST_MAJSTEP * (-d));
-    blocMult  = Math.max(EURO_UD_BLOC_MIN,  1 - EURO_UD_BLOC_MINSTEP * (-d));
-  }
-  return { ghostMult, blocMult, gc, bc, d, applied: ghostMult !== 1 || blocMult !== 1 };
-}
+// v6.53: 언더독 승리 임계 스케일(euro_underdogGoalScale + EURO_UD_* 상수 8종)은
+//   scenario_module.js 로 이전 — 로직·수치 불변. 사유는 아래 S06/init 훅 이전과 동일
+//   (babel 인라인 500,000자 임계 상쇄). 소비처 getVictoryGoals 는 typeof 가드 → 미로드 시 항등.
 function getVictoryGoals(state) {
   const isLarge = !!(state && state.meta && state.meta.mapSize === '11x11');
   const base = isLarge ? VICTORY_GOALS['11x11'] : VICTORY_GOALS['5x5'];
@@ -2051,7 +1998,8 @@ function getVictoryGoals(state) {
   const scGhostRep   = scenarioRule(state, 'ghostRepBattleOverride', null);
   const scGhostRaids = scenarioRule(state, 'ghostRaidsOverride', null);
   // v6.25: 언더독 임계 스케일 — 열세 진영 승리 거리 단축(구성 결정론 완화). 항등 시 무변화.
-  const ud = euro_underdogGoalScale(state);
+  const ud = (typeof euro_underdogGoalScale === 'function') ? euro_underdogGoalScale(state)
+    : { ghostMult: 1, blocMult: 1, gc: 0, bc: 0, d: 0, applied: false };   // v6.53: 모듈 미로드 시 항등
   const rawBlocAsset      = base.blocAsset + adj + scAssetBonus;
   const rawGhostRepBattle = scGhostRep != null ? scGhostRep : base.ghostRepBattle + Math.floor(adj / 2);
   const rawGhostRepOnly   = base.ghostRepOnly + adj;
@@ -2270,6 +2218,40 @@ const SCENARIOS = {
     liquidatorBlocs: 2,         // 원전 "2개 이상 블록 파산 유도"
     //   공매도 자체는 기존 시스템(SHORT_CONFIG)으로 상시 활성 → 붕괴 저가에서 정산 2배로 실효.
   },
+  // --- S07: 블랙아웃 카스케이드 (v6.53 신설) — 도시 인프라 붕괴 연쇄 ---
+  //   [정체성] 기존 6종과의 차별점 = **위협이 무작위가 아니라 공표된 시간표**라는 것.
+  //     S04 는 경찰 배치가 랜덤, S06 은 주가가 뉴스 난수에 흔들린다. S07 은 어느 구역이
+  //     몇 라운드에 꺼지는지 게임 시작 전부터 확정돼 있다(BLACKOUT_ORDER 18칸 고정).
+  //     따라서 유일하게 "선점·대비"가 전략이 되는 시나리오다.
+  //   [진영 대칭] Ghost = 혼란 이용(정전 구역 방어 −2 → 레이드 창), Bloc = 복구 인프라 장악
+  //     (⚙3 지불 → ₵+8 + 해당 칸 영구 경화 = 다시 안 꺼짐). 정전이 길어질수록 공권력이
+  //     오르므로(4칸당 +1) Bloc 의 복구 동기가 도시 전체 이해와 정렬된다.
+  //   [구현] 전량 scenarioRule 게이팅 + scenario_module.js(blackout_*). 하드코딩 분기 0 —
+  //     인라인 훅은 NEXT_ROUND 1줄·COLLECT_INCOME 1줄·raidDefenseBonus 1항이 전부이며
+  //     전부 키 미지정 시 항등 폴백이라 S01~S06 동작은 바이트 단위로 불변(유닛 검증).
+  S07: {
+    id: 'S07', name: '블랙아웃 카스케이드', tagline: '불이 하나씩 꺼진다. 순서를 아는 자가 도시를 갖는다.',
+    desc: '도시 인프라 붕괴 연쇄 · 11×11 전용. 매 R 결정론적 순서로 2구역 정전(수입 0 · 방어 −2) · Bloc 복구(⚙3 → ₵+8 · 영구 경화) · 정전 4구역당 공권력 +1 · 10R.',
+    locked: false, maps: ['11x11'],
+    underdogRelief: false,      // v6.25 선례: 의도적 편향(인프라 붕괴) 시나리오 — 언더독 완화 제외
+    startHeat: 5,               // 기준선과 동일 — 압박은 정전 누적(blackoutHeatPer)이 만든다
+    roundLimit: 10,             // 캐스케이드 18칸이 R10 에 소진 = 시간표의 끝 = 판의 끝 (HUD R표기와 동일 소스)
+    blackoutCascade: true,      // 엔진 게이트 — 이 키가 없으면 blackout_* 전부 항등 (타 시나리오 불변)
+    blackoutStart: 2,           // R2 부터 소등 시작 (R1 은 준비 라운드)
+    blackoutPerRound: 2,        // 라운드당 2구역 — 18칸 / 2 = 9R 소요 → roundLimit 10 과 정합
+    blackoutRaidMod: -2,        // 정전 구역 레이드 방어 −2 (raidDefenseBonus 합산; Ghost 의 혼란 이용)
+    blackoutRepairParts: 3,     // Bloc 복구 비용 ⚙3
+    blackoutRepairCredit: 8,    // 복구 보상 ₵+8 (= 금융가 3R치 수입. 자산 통화로 직결 → "복구 = 자산 가치")
+    blackoutHeatPer: 4,         // 잔여 정전 4구역당 라운드 시작 공권력 +1 (상한 10)
+    // [측정 튜닝값] blocAssetBonus 스윕 (n=150, seed 1234, ghost 승률 / 평균 R / 복구 발생):
+    //   0 → 37.3% / 7.41R / 3.93   ·   15 → 42.7% / 7.47R / 3.97
+    //   25 → 43.3% / 7.57R / 4.15  ·   35 → 44.0% / 7.69R / 4.37
+    //   15 이후 수익 체감. 25 채택 — 자산/렙 경로가 56:43 으로 갈라지고(양 진영 승리 문법이
+    //   모두 살아있음) 복구도 4회/판대로 유지된다. 정전이 Bloc 수입을 이미 깎는데도 Bloc 이
+    //   우세했던 이유는 복구 보상(₵8 + 무주 구역 귀속)이 강해서다 — 복구는 정체성이라 그대로
+    //   두고 자산 목표 쪽을 올려 상쇄했다(S03/S05/S06 와 동일한 레버 선택).
+    blocAssetBonus: 25,
+  },
 };
 const getScenario = (id) => SCENARIOS[id] || SCENARIOS.S01;
 // 룰 오버라이드 조회 — 사용처에서 state.meta.scenario 기준 값 획득 (없으면 fallback).
@@ -2299,132 +2281,13 @@ const scenNpcDefMod  = (state, ownerIdx) => {
   return (owner && owner.isNpc) ? scenarioRule(state, 'npcDefenseMod', 0) : 0;
 };
 // ============================================================================
-// v6.46 [69차] (S06): 원전 특수 승리 루트 — 재건왕/청산자 하이라이트 배선 (docs/14 §S06 원안)
-//   원전 인용: "재건왕(RECONSTRUCTOR): 파산(주가 0) 블록을 주가 10↑로 복구한 플레이어 ★ 타이틀 + 렙/자산 +5."
-//              "청산자: 2개 이상 블록 파산 유도 Ghost 렙 +10."
-//   전용 점수·타이틀 추적 엔티티 신설 대신 기존 하이라이트(recordHighlight) 재사용 = 경량 배선.
-//   전부 scenarioRule 게이트(crashBottomThresh / reconstructThresh / liquidatorBlocs). 타 시나리오는
-//   키 미지정 → 0 폴백 → 첫 줄에서 인자 state 를 그대로 반환(참조 동일 = byte 불변 항등).
-//   function 선언 = 전역(window) 노출 → 유닛 테스트 직접 검증 가능.
-// ----------------------------------------------------------------------------
-// 붕괴 바닥(=파산) 도달 이력 기록. 주가는 전역 Math.max(1, …) 하한이라 원전 "주가 0"은 도달 불가 →
-//   crashBottomThresh(S06=1) 이하를 "파산"으로 매핑. 원인 무관(뉴스·레이드·매도) — 복구 판정의 전제.
-function s06MarkCrashBottom(state) {
-  const bottom = scenarioRule(state, 'crashBottomThresh', 0);
-  if (!bottom) return state;
-  const cur = state.meta.s06CrashedBlocs || {};
-  let next = null;
-  for (const bl of Object.keys(state.stocks || {})) {
-    if ((state.stocks[bl] ?? 99) <= bottom && !cur[bl]) { next = next || { ...cur }; next[bl] = true; }
-  }
-  return next ? { ...state, meta: { ...state.meta, s06CrashedBlocs: next } } : state;
-}
-// 재건왕 — 파산 이력이 있는 블록의 주가가 reconstructThresh(원전 10) 이상으로 회복되면 해당 블록의
-//   Bloc 플레이어에게 하이라이트. 귀속 근거: 엔진에 "누가 주가를 올렸는가" 신호가 없고(뉴스·배당·다중 매수),
-//   플레이어에 결정적으로 귀속되는 주가 상승 신호는 자사 매수(BUY_STOCK/봇 매집 = 주가 +1)뿐이므로
-//   원전의 "복구한 플레이어"를 자사 블록 소유 Bloc 좌석으로 매핑한다. NPC Bloc·탈락 좌석 제외.
-function s06CheckReconstructor(state) {
-  const thresh = scenarioRule(state, 'reconstructThresh', 0);
-  if (!thresh) return state;
-  let s = s06MarkCrashBottom(state);
-  const crashed = s.meta.s06CrashedBlocs || {};
-  for (let i = 0; i < s.players.length; i++) {
-    const p = s.players[i];
-    if (!p || p.role !== 'bloc' || p.defeated || p.isNpc) continue;
-    if (crashed[p.specific] && (s.stocks[p.specific] || 0) >= thresh) s = recordHighlight(s, 'reconstructor', i);
-  }
-  return s;
-}
-// 청산자 — 한 Ghost 의 행동 창(카드 해결 1회분 / 레이드 1회) 안에서 바닥 위 → 바닥 이하로 밀려난 블록만
-//   그 Ghost 의 "파산 유도"로 귀속·누적. 누적 블록 수가 liquidatorBlocs(원전 2) 이상이면 하이라이트.
-//   preStocks = 행동 직전 state.stocks 스냅샷. Bloc·NPC 는 role 게이트로 제외.
-function s06NoteLiquidation(state, playerIdx, preStocks) {
-  const need = scenarioRule(state, 'liquidatorBlocs', 0);
-  if (!need || !preStocks) return state;
-  const p = state.players[playerIdx];
-  if (!p || p.role !== 'ghost') return state;
-  const bottom = scenarioRule(state, 'crashBottomThresh', 1);
-  const byP = state.meta.s06LiquidatedBy || {};
-  const mine = byP[playerIdx] || [];
-  let add = null;
-  for (const bl of Object.keys(state.stocks || {})) {
-    const before = preStocks[bl], after = state.stocks[bl];
-    if (before != null && before > bottom && after <= bottom && mine.indexOf(bl) === -1 && !(add && add.indexOf(bl) !== -1)) {
-      add = add || []; add.push(bl);
-    }
-  }
-  if (!add) return state;
-  const nextMine = [...mine, ...add];
-  let s = { ...state, meta: { ...state.meta, s06LiquidatedBy: { ...byP, [playerIdx]: nextMine } } };
-  s = s06MarkCrashBottom(s);
-  if (nextMine.length >= need) s = recordHighlight(s, 'liquidator', playerIdx);
-  return s;
-}
-// 시작 구역 확장용: origin 좌표에서 가장 가까운 미소유 일반(비-NEXUS) 구역 1칸을 찾는다.
-//   좌표 = 열문자(A..)+행숫자(1..). 맵에 존재·owner null·zone!=='nex' 조건.
-function nearestUnownedZone(map, origin) {
-  const parse = (c) => ({ col: c.charCodeAt(0) - 65, row: parseInt(c.slice(1), 10) });
-  const o = parse(origin);
-  let best = null, bestD = Infinity;
-  for (const c of Object.keys(map)) {
-    const cell = map[c];
-    if (!cell || cell.owner != null || cell.zone === 'nex') continue;
-    const p = parse(c);
-    const d = Math.abs(p.col - o.col) + Math.abs(p.row - o.row);
-    if (d > 0 && d < bestD) { bestD = d; best = c; }
-  }
-  return best;
-}
-// initGame 훅 — 시작 players/map 변형 (전원 Bloc 이미 배치·구역 소유 확정 후 호출).
-//   startCredit(전원 Bloc 크레딧 보강) · extraSupport(HQ 인근 미소유 구역 추가 소유).
-function applyScenarioInit(scen, players, map) {
-  if (!scen) return;
-  if (scen.startCredit) {
-    players.forEach(p => {
-      if (p.role === 'bloc') p.resources = { ...p.resources, credit: (p.resources.credit || 0) + scen.startCredit };
-    });
-  }
-  // v6.19 (S03): Ghost 시작 렙/크레딧 보강 + (실참) Bloc 인플루언스 보강 (docs/14 S03).
-  if (scen.ghostRepBonus || scen.ghostCreditBonus) {
-    players.forEach(p => {
-      if (p.role !== 'ghost') return;
-      p.resources = { ...p.resources,
-        rep:    (p.resources.rep || 0)    + (scen.ghostRepBonus || 0),
-        credit: (p.resources.credit || 0) + (scen.ghostCreditBonus || 0) };
-    });
-  }
-  if (scen.blocInfluenceBonus) {
-    players.forEach(p => {
-      if (p.role === 'bloc' && !p.isNpc) p.resources = { ...p.resources, influence: (p.resources.influence || 0) + scen.blocInfluenceBonus };
-    });
-  }
-  // v6.20 (S05/S06): 전원 대상 시작 자원 델타 (docs/14 S05 크레딧 +5 · S06 크레딧 −3·인플루언스 −1).
-  //   role 무관 전 좌석에 적용. 음수는 0 하한으로 클램프(자원 음수 방지).
-  if (scen.startCreditAll) {
-    players.forEach(p => { p.resources = { ...p.resources, credit: Math.max(0, (p.resources.credit || 0) + scen.startCreditAll) }; });
-  }
-  if (scen.startInfluenceAll) {
-    players.forEach(p => { p.resources = { ...p.resources, influence: Math.max(0, (p.resources.influence || 0) + scen.startInfluenceAll) }; });
-  }
-  // v6.20 (S06): 모든 블록 스캔들 카드 1장씩 덱 오염 상태로 시작 (docs/14 S06).
-  //   insertScandal 코어와 동일하게 'SCANDAL' 카드를 discard 에 선삽입 (런타임 오염 카드).
-  if (scen.startScandalEach) {
-    players.forEach(p => { if (p.role === 'bloc') p.discard = [...(p.discard || []), 'SCANDAL']; });
-  }
-  if (scen.extraSupport) {
-    players.forEach(p => {
-      if (p.role !== 'bloc' || p.position == null) return;
-      for (let n = 0; n < scen.extraSupport; n++) {
-        const coord = nearestUnownedZone(map, p.position);
-        if (coord) map[coord] = { ...map[coord], owner: p.id };
-      }
-    });
-  }
-  // v6.21 (S04): 전원 무기 델타 (docs/14 S04 무기 −2 압수). 0 하한 클램프.
-  if (scen.startWeaponsAll) {
-    players.forEach(p => { p.resources = { ...p.resources, weapons: Math.max(0, (p.resources.weapons || 0) + scen.startWeaponsAll) }; });
-  }
-}
+// v6.53: S06 재건왕/청산자 판정(s06MarkCrashBottom / s06CheckReconstructor /
+//   s06NoteLiquidation) · initGame 시작조건 훅(nearestUnownedZone / applyScenarioInit)은
+//   `scenario_module.js` 로 이전했다 — 로직·이름·수치 전부 불변. 이유: 이 babel 인라인
+//   블록이 Babel 코드 생성기의 500,000자 deopt 임계에 근접해, S07 신설분을 얹으려면
+//   JSX 불필요한 순수 규칙 로직을 밖으로 빼 순감을 만들어야 했다 (fx/rules_module 선례).
+//   소비처는 전부 typeof 가드 → 모듈 미로드 시 항등 폴백(E13 배너가 별도 고지).
+// ============================================================================
 
 // ============================================================================
 // v6.21 — 모바일 NPC 엔티티 엔진 (docs/02 §6.3 공권력 9 · docs/14 S04 계엄의 밤).
@@ -2880,7 +2743,7 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
 
   // v6.18: 시나리오 initGame 훅 — 시작 크레딧 보강 + 추가 구역(Ring 확장) 배정.
   //   구역 소유가 확정된 후 호출 (extraSupport 가 미소유 구역을 탐색).
-  applyScenarioInit(scen, players, map);
+  if (typeof applyScenarioInit === 'function') applyScenarioInit(scen, players, map);
 
   // Deal objectives
   const objBloc = shuffle(OBJECTIVES.filter(o => o.role === 'bloc'));
@@ -3561,7 +3424,7 @@ function reducer(state, action) {
       const newHeat = Math.min(10, Math.max(0, s.heat + heatDelta));
       s = { ...s, players: ps, map: newMap, stocks: newStocks, heat: newHeat };
       // v6.46 [69차] (S06): 인간 Ghost 레이드가 블록을 붕괴 바닥으로 밀어넣었으면 청산자 누적 (P0 좌석).
-      s = s06NoteLiquidation(s, 0, _s06PreStocks);
+      if (typeof s06NoteLiquidation === 'function') s = s06NoteLiquidation(s, 0, _s06PreStocks);
       // v6.11.4 (P0-4): 레이드 실패 HP 피해를 통합 헬퍼로 — HP0 시 STEP F (Bloc 방어자가 약탈물 수령)
       if (outcome === 'failure') s = applyDamage(s, 0, rewards.hp || 0, { attacker: pr.blocIdx, label: '레이드 실패' });
 
@@ -4173,7 +4036,7 @@ function reducer(state, action) {
 
       // v6.46 [69차] (S06): 재건왕 — 라운드 시작 주가 스냅 판정 (ten_zone_hold 와 동일 훅·1회성).
       //   파산 이력 누적 + 회복 임계(10) 도달 검사. 타 시나리오는 헬퍼 첫 줄에서 항등(참조 동일).
-      state = s06CheckReconstructor(state);
+      if (typeof s06CheckReconstructor === 'function') state = s06CheckReconstructor(state);
 
       // v0.9.2: 만료된 truce 약속 — 지킴(active)이면 양측 ★+1
       const promisesNow = state.meta.promises || [];
@@ -4253,7 +4116,9 @@ function reducer(state, action) {
       const raceSnapPct = {};
       state.players.forEach((p, i) => { if (!p.isNpc && !p.defeated) raceSnapPct[i] = hudRaceProgress(p, i, state, sumGoals); });
 
-      return {
+      // v6.53 (S07): 정전 캐스케이드 훅 — round 확정 후 1회. 소등·Bloc 복구·붕괴 압력을 한 번에
+      //   처리한다(scenario_module.blackout_advance). 타 시나리오는 blackoutCascade 미지정 → 항등.
+      const nextRoundState = {
         ...state,
         meta: { ...state.meta, round: newRound, phase: 0, extraDrawNext: 0,
           // v0.9.2: 만료된 truce 약속 정리 (지킴 → 양측 ★+1, broken은 그대로 두고 만료)
@@ -4268,6 +4133,7 @@ function reducer(state, action) {
         players: refilledPlayers,
         log: finalLog,
       };
+      return (typeof blackout_advance === 'function') ? blackout_advance(nextRoundState) : nextRoundState;
     }
 
     case 'DRAW_NEWS': {
@@ -4487,6 +4353,7 @@ function reducer(state, action) {
 
         ownedCoords.forEach(c => {
           const cell = state.map[c];
+          if (cell.blackout) return;   // v6.53 (S07): 정전 구역은 수입 0 (타 시나리오는 blackout 미기입 → 불변)
           const z = ZONE_TYPES[cell.zone];
           if (!z) return;
           for (const [k, v] of Object.entries(z.income)) {
@@ -4925,7 +4792,7 @@ function executeCards(state, playerIdx) {
     const newDiscard = [...p.discard, ...p.plannedCards];
     s.players = s.players.map((pp, j) => j === playerIdx ? { ...pp, hand: newHand, discard: newDiscard, plannedHalves: [] } : pp);
   }
-  return s06NoteLiquidation(s, playerIdx, _s06PreStocks);  // v6.46 [69차] (S06): 청산자 판정 (타 시나리오 항등)
+  return (typeof s06NoteLiquidation === 'function') ? s06NoteLiquidation(s, playerIdx, _s06PreStocks) : s;  // v6.46 [69차] (S06): 청산자 판정 (타 시나리오 항등)
 }
 
 // ============================================================================
@@ -4985,6 +4852,10 @@ const LEADER_BREAK_BONUS1 = 3;    // 자산 1위 소유 구역 거리 보정
 const LEADER_BREAK_BONUS2 = 1;    // 자산 2위 소유 구역 거리 보정
 const LEADER_BREAK_DECLARER = 6;  // v6.12 P0-1: 종료 선언자 소유 구역 거리 보정 (최우선)
 const LEADER_BREAK_SCANCAP = 12;  // BFS 탐색 상한 (성능·과도한 원정 방지)
+// v6.53 (S07): 정전 구역 유인 — 봇 Ghost 가 "어둠을 골라 친다"(방어 −2)를 실제 경로 선택으로
+//   실행하게 하는 거리 보정. cell.blackout 은 S07 에서만 기입되므로 타 시나리오는 구조적으로 0.
+//   LEADER_BREAK_BONUS1(3)과 같은 크기 — 자산 1위 견제와 대등한 유인이지, 선언자(6)를 덮지는 않는다.
+const BLACKOUT_RAID_PULL = 3;
 function findRaidTargetZone(state, fromCoord) {
   const nearest = findNearestBlocZone(state, fromCoord);
   if (!nearest) return null;
@@ -5017,7 +4888,7 @@ function findRaidTargetZone(state, fromCoord) {
       if (cell.owner !== null && cell.owner !== undefined) {
         const owner = state.players[cell.owner];
         if (owner?.role === 'bloc') {
-          const score = dist - bonusOf(cell.owner);
+          const score = dist - bonusOf(cell.owner) - (cell.blackout ? BLACKOUT_RAID_PULL : 0);  // v6.53 (S07)
           if (score < bestScore) { bestScore = score; best = c; }
         }
       }
@@ -6787,18 +6658,17 @@ function scoreGhostCard(state, pIdx, cid) {
   //   블록보다 완화(-16/+8): 고스트 파워 보존. tl 미지정 카드는 상시 사용 가능.
   if (c.tl) { if (c.tl <= (p.tl || 1)) score += 8; else score -= 16; }
 
-  const rep = p.resources.rep || 0;
-  const raids = state.meta.raidsThisGame?.[pIdx] || 0;
-  const repNeeded = Math.max(0, 16 - rep);
-  const raidNeeded = Math.max(0, 2 - raids);
-  const closeToWin = repNeeded <= 3 && raidNeeded <= 1;
+  // v6.53 [B]: 승리 근접도를 실판정 소스(rules_botGoalGap → rules_victoryRatio → getVictoryGoals)에서
+  //   읽는다. 종전 하드코딩 16/2 는 실제 임계(45/2, S03 은 25/3)와 무관해 상시 참에 가까웠다.
+  const gap = (typeof rules_botGoalGap === 'function') ? rules_botGoalGap(state, p, pIdx) : { close: false, raidNeed: 0 };
+  const closeToWin = gap.close;
 
   // 두 반쪽을 합쳐 카드 가치 평가 (하나만 쓰겠지만 잠재 기여도 둘 다 합산 X, 최대값)
   const halves = [c.top, c.bot].filter(Boolean);
   for (const h of halves) {
     // 공격·이동: 기존 점수
     if (h.atk || h.atk_x2 || h.atk_x3_retort) score += (p.hp > p.maxHp * 0.5 ? 12 : -5);
-    if (h.move) score += p.role === 'ghost' ? (raidNeeded > 0 ? 8 : 3) : 8;
+    if (h.move) score += p.role === 'ghost' ? (gap.raidNeed > 0 ? 8 : 3) : 8;   // v6.53 [B]: 실목표 잔여 레이드 수
     // 속성 생성
     if (h.gen) score += 4;
     // === 신규: 폴백 보상 효과들 점수화 (BROKER/CIPHER/MOLE 살리기) ===
@@ -6866,6 +6736,15 @@ function scoreGhostCard(state, pIdx, cid) {
   if (closeToWin) {
     if (halves.some(h => h.atk || h.move || h.extort)) score += 10;
   }
+  // v6.53 [B]: 렙배틀 경로의 **레이드 게이트**가 미충족이면 공격·이동 우선.
+  //   [왜 +10·같은 카드 집합인가 — 측정 근거] 종전 closeToWin 은 rep 13(목표의 29%)에서 켜져
+  //   사실상 상시 참이었다. 그래서 "closeToWin +10" 은 실질적으로 **Ghost 의 기본 공격 성향**
+  //   이었지 승리 근접 신호가 아니었다. 게이트만 정직화하고 이 항을 빼면 Ghost 가 통째로
+  //   수동적이 된다 — 실측 S01 ghost 34.5% → 31.0%(n=200×2)로 하락했다.
+  //   그래서 같은 크기·같은 카드 집합의 항을 **실제로 의미 있는 게이트**(잔여 레이드 수, goals
+  //   에서 파생 → S03 ghostRaidsOverride 3 도 자동 반영)로 옮겨 단다. 초반에는 raidNeed>0 이라
+  //   기존과 동일하게 켜지고, 게이트를 채운 뒤에는 꺼져 렙 축적으로 자연 전환된다.
+  if (gap.raidNeed > 0 && halves.some(h => h.atk || h.move || h.extort)) score += 10;
 
   return score + Math.random() * 3;
 }
@@ -6924,6 +6803,13 @@ function scoreBlocCard(state, pIdx, cid) {
 
   // Reward aggressive cards for attackers
   if (c.main?.deploy_op || c.main?.heat) score += 10;
+
+  // v6.53 [B]: Bloc 에도 승리 인지 부여 — 종전 scoreBlocCard 에는 자산 목표 관련 항이 전무했다.
+  //   자산 목표(goals.blocAsset)에 근접하면 레이스를 끝낼 경제 카드를, 아직 멀면 기반 확장 카드를
+  //   선호한다. 두 항 모두 기존 가중치 대역(6~14) 안쪽인 +6 으로 두어 카드 서열을 뒤집지 않는다.
+  const bgap = (typeof rules_botGoalGap === 'function') ? rules_botGoalGap(state, p, pIdx) : { close: false };
+  if (bgap.close) { if (m.stock_buy_any || m.credit || m.zone_income_2x || m.div_2x || m.bond) score += 6; }
+  else if (m.deploy_op || m.zone_income_2x || m.steal_op) score += 6;
 
   return score + Math.random() * 2;
 }
@@ -7045,6 +6931,11 @@ function SetupScreen({ onStart }) {
       {scen.id === 'S05' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           ⚠ {scen.id} {scen.name}: 경제 과열 · 11×11 전용 · {scen.roundLimit}R 단축 스프린트 · 시작 주가 {scen.startStock} · 전원 크레딧 +{scen.startCreditAll} · 모든 구역 수입 +{scen.zoneIncomeBonus} · Bloc 자산 목표 +{scen.blocAssetBonus} · 뉴스 매 R {scen.newsDrawCount}장. {scen.roundLimit}R 도달 시 최고 자산 Bloc/최고 렙 Ghost 자동 승리. (부분 구현 — 원안 No-op 4건 전부 미배선: 금융가 수입 ×2 · 주가 변동폭 ±4 · 블랙마켓 +2 · M&A 방어 +3)
+        </div>
+      )}
+      {scen.blackoutCascade && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          ⚡ {scen.id} {scen.name}: 인프라 붕괴 연쇄 · 11×11 전용 · {scen.roundLimit}R · R{scen.blackoutStart}부터 매 R {scen.blackoutPerRound}구역씩 <b>고정 순서</b>로 정전(총 {typeof blackout_orderLen === 'function' ? blackout_orderLen() : 0}구역, 무작위 아님) · 정전 구역 수입 0 · 레이드 방어 {scen.blackoutRaidMod} (👻 혼란 이용) · 🏢 Bloc 복구 ⚙{scen.blackoutRepairParts} → ₵+{scen.blackoutRepairCredit} + 해당 구역 영구 경화(재정전 없음) · 잔여 정전 {scen.blackoutHeatPer}구역당 공권력 +1. 소등 순서는 중앙 NEXUS에서 좌우 대칭으로 퍼지며 5 Bloc 의 HQ·시작 구역은 제외된다.
         </div>
       )}
       {scen.id === 'S06' && (
@@ -8095,6 +7986,14 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         {/* v6.52 (V5): 라운드 상한 = NEXT_ROUND maxR 과 동일 scenarioRule 파생 (S05 8R 정직) */}
         <div className="round">R{state.meta.round}/{scenarioRule(state, 'roundLimit', state.meta.mapSize === '11x11' ? 12 : 8)}</div>
         <div className="heat">🚨HEAT {state.heat}</div>
+        {/* v6.53 (S07): 정전 현황 — 판정에 쓰이는 meta.blackout 을 그대로 읽는다(표시=판정).
+            정전 칸 수 / 스케줄상 총 소등 예정 수 / 복구·경화 칸 수. 타 시나리오는 blackout 미생성 → null. */}
+        {(() => {
+          if (typeof blackout_darkCount !== 'function' || !scenarioRule(state, 'blackoutCascade', false)) return null;
+          const dk = blackout_darkCount(state), hd = blackout_hardenedCount(state);
+          const sch = blackout_scheduled(state, state.meta.round);
+          return <div className="heat" title={`R${state.meta.round} 시간표: 누적 ${sch}구역 소등 예정 · 복구(경화) ${hd}구역`}>⚡정전 {dk} <span style={{ opacity: 0.6 }}>/{sch}</span>{hd ? ` 🔌${hd}` : ''}</div>;
+        })()}
         {/* v6.23: S04 구출 퀘스트 진행 (구금 NPC x/5). captive 있는 판(=S04)에서만 표시. */}
         {(() => {
           const total = CAPTIVE_COUNT;

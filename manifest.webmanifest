@@ -25,10 +25,33 @@
       "purpose": "any"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "전략 시뮬레이션",
+      "short_name": "시뮬",
+      "description": "솔로 + 봇 3 · 11×11 정식 / 5×5 튜토리얼",
+      "url": "simulator/v0.5/index.html",
+      "icons": [{ "src": "assets/shortcut-sim-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "RPG — ASH & SIGNAL",
+      "short_name": "RPG",
+      "description": "턴제 전술 + 내러티브 · 미션 보드",
+      "url": "rpg/index.html",
+      "icons": [{ "src": "assets/shortcut-rpg-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "프린트 킷",
+      "short_name": "프린트",
+      "description": "테이블 에디션 PnP 인쇄 자료",
+      "url": "print-kit/index.html",
+      "icons": [{ "src": "assets/shortcut-kit-96.png", "sizes": "96x96", "type": "image/png" }]
     }
   ]
 }

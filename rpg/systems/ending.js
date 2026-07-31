@@ -181,6 +181,9 @@
   //   휴리스틱은 'a2-side-*'(클래스 사이드)를 메인으로 오분류했다. 레지스트리 kind='side' 또는
   //   act2 branch='class'(클래스 전용 사이드) = 사이드, 그 외(main·act2 갈래/framing/capstone) =
   //   메인. 레지스트리 미해석 id 만 접두사 폴백(side-* / a2-side-*). karma 지출 = growth 합.
+  //   [v6.54 Act3] 동일 계약을 kind='act3' 로 확장 — act3 branch='class'(a3-side-*) = 사이드,
+  //   그 외(framing/main/finale) = 메인. 폴백 접두사에도 'a3-side-' 추가(레지스트리 미로드 환경).
+  //   Act1/Act2 판정 경로는 무변경 → 기존 세이브의 mainCleared/sideCleared 집계 byte 불변.
   function campaignStats(save) {
     save = save || {};
     var done = (save.missionsDone || []);
@@ -189,8 +192,10 @@
     for (var i = 0; i < done.length; i++) {
       var entry = (CAMP && CAMP.missionById) ? CAMP.missionById(done[i]) : null;
       var isSide = entry
-        ? (entry.kind === 'side' || (entry.kind === 'act2' && entry.branch === 'class'))
-        : (done[i].indexOf('side') === 0 || done[i].indexOf('a2-side-') === 0);
+        ? (entry.kind === 'side' ||
+           ((entry.kind === 'act2' || entry.kind === 'act3') && entry.branch === 'class'))
+        : (done[i].indexOf('side') === 0 || done[i].indexOf('a2-side-') === 0 ||
+           done[i].indexOf('a3-side-') === 0);
       if (isSide) sideCleared++; else mainCleared++;
     }
     var ch = save.character || {};

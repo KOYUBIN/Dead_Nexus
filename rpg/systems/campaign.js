@@ -4,7 +4,7 @@
   // systems/campaign.js — 미션 레지스트리 · 허브 라우터 · 보상 · 위협 게이지 [G10]
   // ──────────────────────────────────────────────────────────────────────────
   // 순수 함수 (DOM/React 무의존).
-  //   MISSIONS     : 미션 레지스트리 (메인 8 + 사이드 8 = 16). id·kind·chapter·
+  //   MISSIONS     : 미션 레지스트리 (메인 8 + 사이드 8 + Act2 16 + Act3 6 = 38). id·kind·chapter·
   //                  order·global(전역명)·module(require 경로)·unlock(해금조건).
   //   missionData  : id → MISSION 데이터 객체 (window 전역 or require 해석)
   //   isUnlocked   : 해금 조건(missionsDone/flagsSet) 판정 — 해금 그래프 배선
@@ -143,6 +143,29 @@
     { id: 'a2-99-flagship',         kind: 'act2', chapter: null, order: 40, branch: 'capstone',
       global: 'RPG_MISSION_A2_99_FLAGSHIP', module: '../data/missions/a2-99-flagship.js',
       unlock: { missionsDone: ['a2-a2-crown-throne', 'a2-b2-freeport', 'a2-c2-signal-war', 'a2-d2-last-signal'] } },
+
+    // ── [신규 v6.54] ACT 3 "SIGNAL DEBT" (kind 'act3' — boardState 별도 그룹) ──
+    //   해금 사슬: 캡스톤(a2-99-flagship) → a3-00 프레이밍 → a3-01 → a3-02 → a3-03 종결.
+    //   클래스 사이드 2종은 프레이밍 + classKey 게이트(a2-side-* 선례와 동일 계약).
+    //   branch: 'framing' | 'main' | 'finale' | 'class' (보드 ACT 3 섹션 그룹 키).
+    { id: 'a3-00-framing',          kind: 'act3', chapter: null, order: 50, branch: 'framing',
+      global: 'RPG_MISSION_A3_00_FRAMING', module: '../data/missions/a3-00-framing.js',
+      unlock: { missionsDone: ['a2-99-flagship'] } },
+    { id: 'a3-01-collateral',       kind: 'act3', chapter: null, order: 51, branch: 'main',
+      global: 'RPG_MISSION_A3_01_COLLATERAL', module: '../data/missions/a3-01-collateral.js',
+      unlock: { missionsDone: ['a3-00-framing'] } },
+    { id: 'a3-02-interest',         kind: 'act3', chapter: null, order: 52, branch: 'main',
+      global: 'RPG_MISSION_A3_02_INTEREST', module: '../data/missions/a3-02-interest.js',
+      unlock: { missionsDone: ['a3-01-collateral'] } },
+    { id: 'a3-03-finale',           kind: 'act3', chapter: null, order: 53, branch: 'finale',
+      global: 'RPG_MISSION_A3_03_FINALE', module: '../data/missions/a3-03-finale.js',
+      unlock: { missionsDone: ['a3-02-interest'] } },
+    { id: 'a3-side-broker-callin',  kind: 'act3', chapter: null, order: 54, branch: 'class',
+      global: 'RPG_MISSION_A3_SIDE_BROKER_CALLIN', module: '../data/missions/a3-side-broker-callin.js',
+      unlock: { missionsDone: ['a3-00-framing'], classKey: 'BROKER' } },
+    { id: 'a3-side-rigger-relay',   kind: 'act3', chapter: null, order: 55, branch: 'class',
+      global: 'RPG_MISSION_A3_SIDE_RIGGER_RELAY', module: '../data/missions/a3-side-rigger-relay.js',
+      unlock: { missionsDone: ['a3-00-framing'], classKey: 'RIGGER' } },
   ];
 
   var BY_ID = {};
@@ -234,22 +257,24 @@
 
   // 진행 상태 요약 — 허브/유닛 테스트가 소비. mains/sides 정렬 + 해금·클리어 플래그.
   function boardState(save) {
-    var mains = [], sides = [], act2 = [];
+    var mains = [], sides = [], act2 = [], act3 = [];
     for (var i = 0; i < MISSIONS.length; i++) {
       var e = MISSIONS[i];
       var row = { id: e.id, kind: e.kind, chapter: e.chapter, order: e.order, branch: e.branch || null,
         unlocked: isUnlocked(e, save), cleared: isCleared(e.id, save), hint: unlockHint(e) };
       if (e.kind === 'main') mains.push(row);
       else if (e.kind === 'act2') act2.push(row);   // [61차] Act2 별도 그룹(보드 ACT 2 섹션)
+      else if (e.kind === 'act3') act3.push(row);   // [v6.54] Act3 별도 그룹(보드 ACT 3 섹션)
       else sides.push(row);
     }
     mains.sort(function (a, b) { return a.order - b.order; });
     sides.sort(function (a, b) { return a.order - b.order; });
     act2.sort(function (a, b) { return a.order - b.order; });
+    act3.sort(function (a, b) { return a.order - b.order; });
     // 현재 진행 챕터 = 첫 미클리어 메인 (강조용).
     var current = null;
     for (var j = 0; j < mains.length; j++) { if (mains[j].unlocked && !mains[j].cleared) { current = mains[j].id; break; } }
-    return { mains: mains, sides: sides, act2: act2, current: current };
+    return { mains: mains, sides: sides, act2: act2, act3: act3, current: current };
   }
 
   // ==========================================================================

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#06060e" />
+  <meta name="color-scheme" content="dark" />
   <title>DEAD NEXUS — 홈</title>
   <meta name="description" content="DEAD NEXUS — 사이버펑크 비대칭 시장 전쟁. 전략 시뮬레이션 · RPG · 프린트 킷 3트랙 포털." />
   <meta property="og:title" content="DEAD NEXUS" />
@@ -23,6 +24,7 @@
       --bg2:     #0c0c18;
       --bg3:     #0f0f1a;
       --border:  #1a1a2e;
+      --border2: #2a2a44;   /* [그래픽] 한 단계 밝은 테두리 — 패널/CTA 윤곽 분리용 */
       --cyan:    #00e5ff;
       --magenta: #ff003c;
       --yellow:  #ffd700;
@@ -30,6 +32,7 @@
       --purple:  #a855f7;
       --text:    #e0e0e0;
       --text-dim:#9090a8;
+      --text-mid:#a4a4bc;   /* [a11y] 지표/보조문 전용 — bg2 대비 7.97:1 (AA 여유) */
       /* 외부 폰트 의존 제거 — 로컬 Share Tech Mono가 있으면 쓰고, 없으면 시스템 monospace */
       --mono: 'Share Tech Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
     }
@@ -42,6 +45,9 @@
       padding: 40px 20px; position: relative; overflow-x: hidden;
       -webkit-text-size-adjust: 100%;
     }
+    /* [a11y] 전역 포커스 링 — 브라우저 기본 outline 이 어두운 배경에서 사실상 비가시라 대체.
+       개별 규칙이 outline:none 하지 않도록 아래 컴포넌트들도 모두 outline 을 명시 유지한다. */
+    :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
     .bg-glow {
       position: absolute; inset: 0; z-index: 0;
       background: radial-gradient(ellipse at 50% 22%, #0d1b2a 0%, var(--bg) 68%);
@@ -74,7 +80,25 @@
     .wrap { position: relative; z-index: 1; max-width: 1000px; width: 100%; }
 
     /* ── 히어로 ── */
-    .hero { text-align: center; margin-bottom: 42px; }
+    .hero { position: relative; text-align: center; margin-bottom: 34px; padding: 26px 18px 22px; }
+    /* [그래픽] 코너 브래킷 — HUD 프레임 톤. 순수 border, 애니메이션 0. */
+    .hero::before, .hero::after {
+      content: ''; position: absolute; width: 26px; height: 26px;
+      border: 1px solid #00e5ff3d; pointer-events: none;
+    }
+    .hero::before { left: 0;  top: 0;    border-right: 0; border-bottom: 0; }
+    .hero::after  { right: 0; bottom: 0; border-left: 0;  border-top: 0; }
+    /* [그래픽] 로고 뒤 저강도 헤일로 — 6s 호흡. reduced-motion 에서 정지(가시성은 유지). */
+    .halo {
+      position: absolute; left: 50%; top: 42%; width: min(560px, 92%); height: 190px;
+      transform: translate(-50%, -50%); z-index: -1; pointer-events: none;
+      background: radial-gradient(ellipse at center, #ff003c1f 0%, #ff003c0d 38%, transparent 70%);
+      animation: halo-breathe 6s ease-in-out infinite;
+    }
+    @keyframes halo-breathe {
+      0%, 100% { opacity: .62; }
+      50%      { opacity: 1; }
+    }
     .label {
       font-size: 11px; letter-spacing: 8px; color: var(--cyan);
       margin-bottom: 14px; text-transform: uppercase;
@@ -114,22 +138,98 @@
     @media (prefers-reduced-motion: reduce) {
       h1::before, h1::after { animation: none !important; opacity: 0 !important; }
       .bg-scan::before { animation: none !important; opacity: 0 !important; }
+      .halo { animation: none !important; opacity: .8 !important; }
     }
     .tagline {
       font-size: clamp(13px, 3.4vw, 16px); color: #b8b8d0;
       letter-spacing: 2px; margin-bottom: 12px;
     }
     .tagline .hl { color: var(--yellow); }
+    /* [그래픽] 히어로 구분선 — 시안↔마젠타 그라디언트 1px 룰 */
+    .rule {
+      width: min(320px, 74%); height: 1px; margin: 0 auto 14px;
+      background: linear-gradient(90deg, transparent, #00e5ff55 18%, #ff003c66 50%, #00e5ff55 82%, transparent);
+    }
     .stamp {
-      display: inline-block; font-size: 10px; letter-spacing: 3px; color: var(--text-dim);
-      border: 1px solid var(--border); border-radius: 3px; padding: 4px 12px;
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 10px; letter-spacing: 3px; color: var(--text-dim);
+      border: 1px solid var(--border); border-radius: 3px; padding: 5px 12px;
+      background: #0c0c1899;
     }
     .stamp b { color: var(--green); font-weight: 700; }
+    .stamp .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 6px var(--green); flex: none;
+    }
+
+    /* ── 오프라인 안내 (서비스워커 0 — navigator.onLine 기반 고지만) ── */
+    .offline {
+      margin: 0 0 18px; padding: 11px 14px; border: 1px solid #ffd70055; border-radius: 5px;
+      background: #1a1608; color: var(--yellow); font-size: 12px; line-height: 1.6; letter-spacing: .5px;
+    }
+
+    /* ── 온보딩: 추천 진입점 1개 ── */
+    .onboard { margin: 0 0 30px; }
+    .ob-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 10px; }
+    .ob-kicker {
+      font-size: 10px; letter-spacing: 3px; font-weight: 700; padding: 4px 9px; border-radius: 3px;
+      background: var(--ob-accent, var(--green)); color: var(--bg);
+    }
+    .ob-h { font-size: 12px; letter-spacing: 2.5px; color: var(--text-mid); font-weight: 400; }
+    .ob-cta {
+      display: flex; align-items: center; gap: 14px; min-height: 72px;
+      padding: 15px 16px; text-decoration: none; color: inherit;
+      border: 1px solid var(--border2); border-left: 3px solid var(--ob-accent, var(--green));
+      border-radius: 6px; position: relative; overflow: hidden;
+      background:
+        linear-gradient(100deg, color-mix(in srgb, var(--ob-accent, var(--green)) 9%, var(--bg2)) 0%, var(--bg2) 52%);
+      transition: transform .2s cubic-bezier(.2,.8,.3,1), box-shadow .2s ease, border-color .2s ease;
+    }
+    /* [그래픽] CTA 우측 저강도 사선 해치 — 데이터 스트림 톤, 정적 */
+    .ob-cta::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 120px;
+      background: repeating-linear-gradient(115deg, #ffffff08 0 2px, transparent 2px 9px);
+      mask-image: linear-gradient(90deg, transparent, #000 85%);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 85%);
+      pointer-events: none;
+    }
+    .ob-cta:hover, .ob-cta:focus-visible {
+      transform: translateX(3px);
+      border-color: var(--ob-accent, var(--green));
+      box-shadow: 0 0 22px color-mix(in srgb, var(--ob-accent, var(--green)) 26%, transparent),
+                  0 10px 26px -16px color-mix(in srgb, var(--ob-accent, var(--green)) 60%, transparent);
+    }
+    .ob-cta:focus-visible { outline: 2px solid var(--ob-accent, var(--green)); outline-offset: 3px; }
+    .ob-ico {
+      font-size: 26px; line-height: 1; flex: none; width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border2); border-radius: 5px; background: var(--bg3);
+    }
+    .ob-body { flex: 1 1 auto; min-width: 0; }
+    .ob-title {
+      display: block; font-size: 15px; font-weight: 700; letter-spacing: .8px;
+      color: var(--text); margin-bottom: 5px; line-height: 1.35;
+    }
+    .ob-sub { display: block; font-size: 12px; line-height: 1.6; color: var(--text-mid); }
+    .ob-go { flex: none; font-size: 13px; letter-spacing: 2px; color: var(--ob-accent, var(--green)); }
+    .ob-note { margin-top: 9px; font-size: 10.5px; letter-spacing: .5px; color: var(--text-dim); line-height: 1.6; }
+    @media (prefers-reduced-motion: reduce) {
+      .ob-cta { transition: box-shadow .18s ease, border-color .18s ease; }
+      .ob-cta:hover, .ob-cta:focus-visible { transform: none; }
+    }
+
+    /* ── 섹션 헤딩 ── */
+    .sec-h {
+      font-size: 11px; letter-spacing: 4px; color: var(--text-mid); font-weight: 400;
+      margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
+    }
+    .sec-h::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
 
     /* ── 트랙 카드 ── */
     .tracks {
-      display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 34px;
+      display: grid; grid-template-columns: 1fr; gap: 16px;
     }
+    .tracks-sec { margin-bottom: 30px; }
     @media (min-width: 760px) {
       .tracks { grid-template-columns: repeat(3, 1fr); }
     }
@@ -145,6 +245,11 @@
       background: var(--accent, var(--cyan)); opacity: .85;
       transition: width .22s ease, opacity .22s ease, box-shadow .22s ease;
     }
+    /* [그래픽] 카드 우상단 인덱스 넘버 — 초저강도, 순수 장식 */
+    .card .idx {
+      position: absolute; right: 12px; top: 8px; font-size: 40px; font-weight: 700;
+      line-height: 1; color: #ffffff0a; letter-spacing: 0; pointer-events: none;
+    }
     /* [각색] 카드 호버 네온 리프트 강화 — 상승폭 확대 + 이중 글로우 + 좌측 엣지 강조 */
     .card:hover, .card:focus-visible {
       transform: translateY(-6px) scale(1.012); border-color: var(--accent, var(--cyan));
@@ -153,8 +258,10 @@
         0 0 26px color-mix(in srgb, var(--accent, var(--cyan)) 38%, transparent),
         0 14px 34px -14px color-mix(in srgb, var(--accent, var(--cyan)) 55%, transparent),
         inset 0 0 18px color-mix(in srgb, var(--accent, var(--cyan)) 10%, transparent);
-      outline: none;
     }
+    /* [a11y v6.53] 과거 outline:none 로 포커스 링을 지웠던 자리 — 글로우만으로는 포커스 위치가
+       고대비 모드/저시력에서 불명확하다. 접근 강조(글로우)는 유지하되 링을 되살린다. */
+    .card:focus-visible { outline: 2px solid var(--accent, var(--cyan)); outline-offset: 3px; }
     .card:hover::before, .card:focus-visible::before {
       width: 4px; opacity: 1;
       box-shadow: 0 0 12px var(--accent, var(--cyan));
@@ -169,8 +276,23 @@
       margin-bottom: 8px;
     }
     .card .ttl .sub { display: block; font-size: 12px; letter-spacing: 2px; color: var(--accent, var(--cyan)); margin-top: 3px; }
-    .card .desc { font-size: 13px; color: #9a9ab0; line-height: 1.6; flex: 1; }
-    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    /* desc 는 자연 높이 — 과거 flex:1 이 설명을 늘려 카드마다 지표 스트립 y좌표가 어긋났다.
+       바닥 정렬은 .go 의 margin-top:auto 하나로만 처리한다(지표·배지는 설명에 밀착). */
+    .card .desc { font-size: 13px; color: #9a9ab0; line-height: 1.6; }
+    /* [정보 밀도] 실측 지표 스트립 — 숫자는 JS가 단일 소스 배열에서 파생 주입(정적 값은 no-JS 폴백,
+       _home_check.js 가 정본 코드와 대조). */
+    .stats {
+      list-style: none; display: flex; flex-wrap: wrap; gap: 6px 0; margin: 14px 0 0; padding: 0;
+      font-size: 11px; letter-spacing: .5px; color: var(--text-mid);
+    }
+    .stats li { display: flex; align-items: baseline; gap: 4px; padding: 0 11px; }
+    .stats li:first-child { padding-left: 0; }
+    .stats li + li { border-left: 1px solid var(--border); }
+    .stats b {
+      font-size: 15px; font-weight: 700; letter-spacing: 0; color: var(--accent, var(--cyan));
+      font-variant-numeric: tabular-nums;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .badge {
       font-size: 10px; letter-spacing: 1px; padding: 3px 8px; border-radius: 10px;
       border: 1px solid var(--border); color: var(--text-dim); background: var(--bg3);
@@ -180,10 +302,10 @@
     .card.rpg  { --accent: var(--magenta); }
     .card.kit  { --accent: var(--yellow); }
     .card .go {
-      margin-top: 14px; font-size: 11px; letter-spacing: 3px; color: var(--accent, var(--cyan));
+      margin-top: auto; padding-top: 16px; font-size: 11px; letter-spacing: 3px; color: var(--accent, var(--cyan));
     }
     /* [신규 v6.44 · 과제 A3] 진행 배지 — 로컬 세이브 있을 때만 JS가 hidden 해제(레이아웃 불변). */
-    .progress { margin-top: 12px; font-size: 10.5px; letter-spacing: .3px; color: var(--text-dim); line-height: 1.5; }
+    .progress { margin-top: 12px; font-size: 10.5px; letter-spacing: .3px; color: var(--text-mid); line-height: 1.5; }
     .progress .bar {
       margin-top: 5px; height: 3px; border-radius: 2px; background: var(--bg3);
       border: 1px solid var(--border); overflow: hidden;
@@ -196,21 +318,29 @@
       margin-bottom: 26px;
     }
     .links a {
+      /* [a11y] 터치 타겟 44px 하한 (WCAG 2.5.5 Target Size) */
+      display: inline-flex; align-items: center; min-height: 44px;
       font-size: 12px; letter-spacing: 1px; color: var(--text-dim); text-decoration: none;
       border: 1px solid var(--border); border-radius: 4px; padding: 9px 16px;
       transition: color .18s ease, border-color .18s ease;
     }
-    .links a:hover, .links a:focus-visible { color: var(--cyan); border-color: #00e5ff55; outline: none; }
+    .links a:hover { color: var(--cyan); border-color: #00e5ff55; }
+    .links a:focus-visible { color: var(--cyan); border-color: #00e5ff55; outline: 2px solid var(--cyan); outline-offset: 3px; }
 
     footer {
-      /* [a11y v6.45] 대비 상향: #55556e(2.80:1, AA 미달) → #7a7a92(≈4.6:1, AA 통과) on --bg #06060e */
+      position: relative; z-index: 1; max-width: 1000px; width: 100%;
+      /* [a11y v6.45] 대비 상향: #55556e(2.80:1, AA 미달) → #7a7a92(≈4.8:1, AA 통과) on --bg #06060e */
       text-align: center; font-size: 10px; letter-spacing: 2px; color: #7a7a92;
     }
-    footer .sep { color: #5a5a72; margin: 0 8px; } /* [a11y v6.45] #33334a(1.65:1) → #5a5a72 구분자 가독 */
+    /* [a11y v6.53] 구분자 #5a5a72(3.02:1, AA 미달) → #6f6f8a(≈4.1:1)… 로도 부족 → #7a7a92 계열 유지.
+       텍스트 노드이므로 본문과 동일 하한(4.5:1)을 적용한다. */
+    footer .sep { color: #7a7a92; margin: 0 8px; }
 
     @media (max-width: 480px) {
       body { padding: 28px 16px; }
       h1 { letter-spacing: 4px; }
+      .hero { padding: 22px 14px 18px; }
+      .card .idx { font-size: 34px; }
     }
   </style>
 </head>
@@ -221,168 +351,384 @@
 
   <main class="wrap">
     <section class="hero">
+      <div class="halo" aria-hidden="true"></div>
       <div class="label">ASHGRID 2091 · NEXUS PORTAL</div>
       <h1 data-text="DEAD_NEXUS">DEAD<span class="accent">_</span>NEXUS</h1>
       <p class="tagline">사이버펑크 <span class="hl">비대칭 시장 전쟁</span> — 레이드가 곧 주가 포지션이 된다</p>
-      <span class="stamp">SIMULATOR <b>v6.53</b> · 3-TRACK BUILD</span>
+      <div class="rule" aria-hidden="true"></div>
+      <span class="stamp"><i class="dot" aria-hidden="true"></i>SIMULATOR <b>v6.54</b> · 3-TRACK BUILD</span>
     </section>
 
-    <nav class="tracks" aria-label="트랙 선택">
-      <a class="card sim" href="simulator/v0.5/index.html">
-        <div class="icon">🎮</div>
-        <div class="ttl">전략 시뮬레이션<span class="sub">WEB SIMULATOR</span></div>
-        <div class="desc">솔로 + 봇 3, 30~60분 · 레이드가 곧 주가 포지션. 11×11 정식 + 5×5 튜토리얼, 레이스 HUD + NEXUS BAR.</div>
-        <div class="badges">
-          <span class="badge">시나리오 6종</span>
-          <span class="badge">튜토리얼</span>
-          <span class="badge">모바일</span>
-        </div>
-        <div class="progress" id="prog-sim" hidden aria-label="전략 시뮬레이션 진행 상태">
-          <span id="prog-sim-text"></span>
-          <div class="bar"><i id="prog-sim-bar" role="progressbar" aria-label="레거시 캠페인 챕터 해금 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
-        </div>
-        <div class="go">▶ 시작</div>
-      </a>
+    <!-- [PWA · 오프라인] 서비스워커 없이 가능한 범위 — 오프라인 상태 고지만. 캐시 없음. -->
+    <p class="offline" id="offline" role="status" hidden>
+      ⚠ 오프라인 상태입니다 — 아직 열어보지 않은 트랙은 로드되지 않을 수 있습니다. 진행 상황은 이 기기에 그대로 남아 있습니다.
+    </p>
 
-      <a class="card rpg" href="rpg/index.html">
-        <div class="icon">⚔</div>
-        <div class="ttl">RPG — ASH &amp; SIGNAL<span class="sub">GHOSTGRID</span></div>
-        <div class="desc">턴제 전술 + 내러티브. 미션 32종 · 6클래스 · 4엔딩+New Game+ · Act 2 &amp; 캡스톤.</div>
-        <div class="badges">
-          <span class="badge new">NEW</span>
-          <span class="badge">미션 32종</span>
-          <span class="badge">6클래스</span>
-          <span class="badge">모바일</span>
-        </div>
-        <div class="progress" id="prog-rpg" hidden aria-label="RPG 진행 상태">
-          <span id="prog-rpg-text"></span>
-          <div class="bar"><i id="prog-rpg-bar" role="progressbar" aria-label="RPG 미션 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
-        </div>
-        <div class="go">▶ 입장</div>
+    <!-- ── 온보딩: 추천 진입점 1개 ──
+         기본(no-JS) 마크업 = 신규 방문자 뷰. 세이브가 확인되면 JS 가 '이어하기'로 교체한다.
+         파싱 실패 시에도 이 기본 뷰가 그대로 남고 console.warn 을 남긴다(조용한 실패 금지). -->
+    <section class="onboard" aria-labelledby="ob-h">
+      <div class="ob-head">
+        <span class="ob-kicker" id="ob-kicker">처음이라면</span>
+        <h2 class="ob-h" id="ob-h">여기서 시작하세요</h2>
+      </div>
+      <a class="ob-cta" id="ob-cta" href="rpg/index.html">
+        <span class="ob-ico" id="ob-ico" aria-hidden="true">⚔</span>
+        <span class="ob-body">
+          <span class="ob-title" id="ob-title">RPG · 챕터 1 — First Blood</span>
+          <span class="ob-sub" id="ob-sub">가장 짧은 입구입니다. 운영자 1명을 고르고 VANTA 서버룸에 침투 — 대화로 우회할지, 정면으로 뚫을지만 정하면 됩니다.</span>
+        </span>
+        <span class="ob-go" aria-hidden="true">▶</span>
       </a>
+      <p class="ob-note" id="ob-note">진행 상황은 이 브라우저에만 저장됩니다 (localStorage · 서버 전송 0).</p>
+    </section>
 
-      <a class="card kit" href="print-kit/index.html">
-        <div class="icon">🖨</div>
-        <div class="ttl">프린트 킷<span class="sub">BOARDGAME v1</span></div>
-        <div class="desc">테이블 에디션 인쇄 자료 · 3~4인 대면. 맵 · 카드 · 토큰 · 캐릭터 시트 · 퀵 레퍼런스 PnP 세트.</div>
-        <div class="badges">
-          <span class="badge">테이블 v1</span>
-          <span class="badge">PnP</span>
-        </div>
-        <div class="go">▶ 인쇄</div>
-      </a>
-    </nav>
+    <section class="tracks-sec" aria-labelledby="tracks-h">
+      <h2 class="sec-h" id="tracks-h">3 TRACKS</h2>
+      <nav class="tracks" aria-labelledby="tracks-h">
+        <a class="card sim" id="card-sim" href="simulator/v0.5/index.html">
+          <span class="idx" aria-hidden="true">01</span>
+          <div class="icon" aria-hidden="true">🎮</div>
+          <h3 class="ttl">전략 시뮬레이션<span class="sub">WEB SIMULATOR</span></h3>
+          <p class="desc">솔로 + 봇 3, 30~60분 · 레이드가 곧 주가 포지션. 11×11 정식 + 5×5 튜토리얼, 레이스 HUD + NEXUS BAR.</p>
+          <ul class="stats" aria-label="전략 시뮬레이션 규모">
+            <li><b data-metric="sim-scenarios">7</b>시나리오</li>
+            <li><b data-metric="sim-chapters">8</b>챕터 캠페인</li>
+            <li><b data-metric="sim-maps">2</b>맵 규격</li>
+          </ul>
+          <div class="badges">
+            <span class="badge">튜토리얼</span>
+            <span class="badge">봇 3</span>
+            <span class="badge">모바일</span>
+          </div>
+          <div class="progress" id="prog-sim" hidden aria-label="전략 시뮬레이션 진행 상태">
+            <span id="prog-sim-text"></span>
+            <div class="bar"><i id="prog-sim-bar" role="progressbar" aria-label="레거시 캠페인 챕터 해금 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
+          </div>
+          <div class="go">▶ 시작</div>
+        </a>
 
-    <div class="links">
+        <a class="card rpg" id="card-rpg" href="rpg/index.html">
+          <span class="idx" aria-hidden="true">02</span>
+          <div class="icon" aria-hidden="true">⚔</div>
+          <h3 class="ttl">RPG — ASH &amp; SIGNAL<span class="sub">GHOSTGRID</span></h3>
+          <p class="desc">턴제 전술 + 내러티브. 메인 8챕터 + 사이드 계약 + Act 2 4갈래, 엔딩 열람으로 갈래가 열리는 New Game+.</p>
+          <ul class="stats" aria-label="RPG 규모">
+            <li><b data-metric="rpg-missions">38</b>미션</li>
+            <li><b data-metric="rpg-classes">6</b>클래스</li>
+            <li><b data-metric="rpg-endings">4</b>엔딩</li>
+          </ul>
+          <div class="badges">
+            <span class="badge new">NEW</span>
+            <span class="badge">캡스톤</span>
+            <span class="badge">모바일</span>
+          </div>
+          <div class="progress" id="prog-rpg" hidden aria-label="RPG 진행 상태">
+            <span id="prog-rpg-text"></span>
+            <div class="bar"><i id="prog-rpg-bar" role="progressbar" aria-label="RPG 미션 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></i></div>
+          </div>
+          <div class="go">▶ 입장</div>
+        </a>
+
+        <a class="card kit" id="card-kit" href="print-kit/index.html">
+          <span class="idx" aria-hidden="true">03</span>
+          <div class="icon" aria-hidden="true">🖨</div>
+          <h3 class="ttl">프린트 킷<span class="sub">BOARDGAME v1</span></h3>
+          <p class="desc">테이블 에디션 인쇄 자료 · 3~4인 대면. 맵 · 카드 · 토큰 · 캐릭터 시트 · 퀵 레퍼런스 PnP 세트.</p>
+          <ul class="stats" aria-label="프린트 킷 규모">
+            <li><b data-metric="kit-sheets">13</b>인쇄물</li>
+            <li>A4·A3 판형</li>
+            <li>대면 3~4인</li>
+          </ul>
+          <div class="badges">
+            <span class="badge">테이블 v1</span>
+            <span class="badge">PnP</span>
+          </div>
+          <div class="go">▶ 인쇄</div>
+        </a>
+      </nav>
+    </section>
+
+    <nav class="links" aria-label="프로젝트 링크">
       <a href="https://github.com/KOYUBIN/Dead_Nexus" target="_blank" rel="noopener">⌥ GitHub 리포지토리</a>
       <a href="https://github.com/KOYUBIN/Dead_Nexus/tree/main/docs" target="_blank" rel="noopener">📖 설계 문서 (docs/)</a>
-    </div>
-
-    <footer>
-      DEAD NEXUS · ASHGRID 2091
-      <span class="sep">·</span> CONNECTION SEVERED, NEW SIGNAL DETECTED
-      <span class="sep">·</span> © 2026
-    </footer>
+    </nav>
   </main>
+
+  <footer>
+    DEAD NEXUS · ASHGRID 2091
+    <span class="sep">·</span> CONNECTION SEVERED, NEW SIGNAL DETECTED
+    <span class="sep">·</span> © 2026
+  </footer>
 
   <script>
     // ==========================================================================
-    // [신규 v6.44 · 과제 A3] 홈 포털 진행 배지 — 로컬 세이브 존재 시에만 표시.
-    //   순수 인라인 JS, 외부 의존 0. 세이브 없음/파싱 실패/file:// localStorage 차단 등
-    //   어떤 사유로든 읽기가 실패하면 배지를 그냥 숨김 상태로 둔다(레이아웃 불변) —
-    //   장식용 진행 표시일 뿐 핵심 동작이 아니므로 이 블록에 한해 의도적으로 조용히 실패한다.
-    //   시뮬레이터 스키마: simulator/v0.5/legacy_module.js 의 localStorage 'dn_legacy_v1'
-    //     { chaptersUnlocked: number[] (1~8) }.
-    //   RPG 스키마: rpg/state/save.js 의 localStorage 'dead_nexus_rpg_save_v1'
-    //     { missionsDone: string[], endings: { seen: {key:count}, capstone: number } }.
-    //   미션/엔딩 ID 목록은 rpg/systems/campaign.js MISSIONS·rpg/systems/ending.js ORDER 와
-    //   동기(캡스톤 a2-99-flagship 은 목록에서 제외 — 별도 "캡스톤 클리어" 표시로 집계).
-    //   표시 분모는 리터럴 금지 — RPG_MISSION_IDS.length / RPG_ENDING_KEYS.length 파생만
-    //   사용한다(_home_check.js 항목 9 가 하드코딩 잔존을 검출).
+    // [v6.44 · 과제 A3 → v6.53 확장] 홈 포털 런타임 — 단일 소스 지표 · 진행 배지 · 온보딩
+    //   순수 인라인 JS, 외부 의존 0.
+    //
+    //   ① 단일 소스 상수(SINGLE SOURCE) — 홈은 file:// 인라인 제약상 rpg/systems/campaign.js ·
+    //      simulator/v0.5/index.html 을 import 할 수 없어 "정적 사본"을 둔다. 사본은 반드시
+    //      _home_check.js 가 정본 코드와 대조한다(드리프트 = 게이트 FAIL).
+    //   ② 카드 지표(.stats b[data-metric])는 이 배열들의 length 에서 파생 주입한다.
+    //      HTML 의 정적 숫자는 no-JS 폴백이며, 같은 값인지 역시 _home_check.js 가 검사한다.
+    //   ③ 진행 배지 — 세이브 존재 시에만 노출(레이아웃 불변).
+    //   ④ 온보딩 CTA — 세이브 없음 = "처음이라면"(HTML 기본값 유지) / 있음 = "이어하기".
+    //      파싱 실패는 조용히 넘기지 않는다: console.warn 후 신규 방문자 뷰로 폴백.
+    //
+    //   세이브 스키마(실측):
+    //     simulator/v0.5/legacy_module.js  localStorage 'dn_legacy_v1'
+    //       { chaptersUnlocked: number[] (1..TOTAL_CHAPTERS) }
+    //     rpg/state/save.js                localStorage 'dead_nexus_rpg_save_v1'
+    //       { missionsDone: string[], endings: { seen:{key:count}, capstone:number } }
     // ==========================================================================
     (function () {
+      'use strict';
+
+      // ── ① 단일 소스 상수 (정본 대조 대상 — _home_check.js) ────────────────────
+      // RPG 미션 ID(캡스톤 제외) — rpg/systems/campaign.js MISSIONS 사본.
+      var RPG_MISSION_IDS = [
+        'ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
+        'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city', 'ch08-zero-day',
+        'side-01-traitor-contract', 'side-02-corp-breach', 'side-05-informant-hit', 'side-03-chemical-raid',
+        'side-08-harbor-run', 'side-04-medbay-heist', 'side-06-rival-duel', 'side-07-server-zero',
+        'a2-00-framing',
+        'a2-a1-crown-breach', 'a2-a2-crown-throne', 'a2-b1-barricade', 'a2-b2-freeport',
+        'a2-c1-first-contact', 'a2-c2-signal-war', 'a2-d1-scavenge', 'a2-d2-last-signal',
+        'a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami',
+        'a2-side-broker-ledger', 'a2-side-drifter-lastroad',
+        'a3-00-framing', 'a3-01-collateral', 'a3-02-interest', 'a3-03-finale',
+        'a3-side-broker-callin', 'a3-side-rigger-relay'
+      ]; // 캡스톤 제외 — 진행률 분모. 총 미션 수 = 이 길이 + RPG_CAPSTONE_IDS.length (지표 파생).
+      var RPG_CAPSTONE_IDS = ['a2-99-flagship'];                    // campaign.js branch:'capstone'
+      var RPG_ENDING_KEYS = ['corporate-eternal', 'street-rising', 'nexus-reborn', 'dead-nexus'];
+      var RPG_CLASS_KEYS = ['CIPHER', 'BLADE', 'RIGGER', 'MOLE', 'BROKER', 'DRIFTER']; // rpg/data/classes.js PLAYABLE
+      // 메인 체인(순차 해금) — '이어하기' 대상 산출용. t = missionData(id).title 의 부제부.
+      var RPG_MAIN_CHAIN = [
+        { id: 'ch01-first-blood',      t: 'First Blood' },
+        { id: 'ch02-insider-game',     t: 'Insider Game' },
+        { id: 'ch03-martial-night',    t: 'Martial Night' },
+        { id: 'ch04-price-of-splice',  t: 'Price of Splice' },
+        { id: 'ch05-mesh-ghost',       t: 'Mesh Ghost' },
+        { id: 'ch06-bloc-acquisition', t: 'Bloc Acquisition' },
+        { id: 'ch07-heart-of-city',    t: 'Heart of the City' },
+        { id: 'ch08-zero-day',         t: 'Zero Day' }
+      ];
+      // 시뮬레이터 — simulator/v0.5/index.html SCENARIOS 키 / legacy_module.js TOTAL_CHAPTERS 사본.
+      var SIM_SCENARIO_IDS = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07'];
+      var SIM_MAP_IDS = ['5x5', '11x11'];
+      var SIM_CHAPTER_IDS = [1, 2, 3, 4, 5, 6, 7, 8];   // 레거시 캠페인 챕터 — 분모 단일 소스
+      // 프린트 킷 — print-kit 디렉터리의 번호 접두 html 실파일 사본(index.html 제외).
+      var KIT_SHEET_IDS = [
+        '01-map', '01b-map-11x11', '02-cards-ghost', '03-cards-bloc', '04-news-v1',
+        '05-tokens', '06-character-sheets', '07-reference', '08-feedback-form',
+        '09-scenarios', '10-objectives', '11-achievements', '12-quick-reference'
+      ];
+
+      var SIM_SAVE_KEY = 'dn_legacy_v1';
+      var RPG_SAVE_KEY = 'dead_nexus_rpg_save_v1';
+
+      function warn(msg) {
+        // 조용한 실패 금지 — 세이브가 있는데 읽지 못한 경우는 반드시 남긴다.
+        if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
+          console.warn('[DEAD NEXUS 홈] ' + msg);
+        }
+      }
+      function byId(id) { return document.getElementById(id); }
+
+      // ── ② 카드 지표 주입 — 전부 배열 길이 파생(리터럴 0) ──────────────────────
+      var METRICS = {
+        'sim-scenarios': SIM_SCENARIO_IDS.length,
+        'sim-chapters': SIM_CHAPTER_IDS.length,
+        'sim-maps': SIM_MAP_IDS.length,
+        'rpg-missions': RPG_MISSION_IDS.length + RPG_CAPSTONE_IDS.length,
+        'rpg-classes': RPG_CLASS_KEYS.length,
+        'rpg-endings': RPG_ENDING_KEYS.length,
+        'kit-sheets': KIT_SHEET_IDS.length
+      };
       try {
-        if (typeof localStorage === 'undefined' || localStorage === null) return;
-        // file:// 등에서 localStorage 접근 자체가 던지는 브라우저 대비 — 프로브 후 즉시 정리.
-        var probeKey = '__dn_home_probe__';
-        try { localStorage.setItem(probeKey, '1'); localStorage.removeItem(probeKey); }
-        catch (eProbe) { return; }
+        var nodes = document.querySelectorAll('[data-metric]');
+        for (var n = 0; n < nodes.length; n++) {
+          var key = nodes[n].getAttribute('data-metric');
+          if (METRICS[key] != null) nodes[n].textContent = String(METRICS[key]);
+        }
+      } catch (eMetric) {
+        warn('지표 주입 실패 — HTML 정적 값 유지: ' + (eMetric && eMetric.message));
+      }
 
-        // ── 시뮬레이터 카드: 레거시 캠페인 챕터 해금 진행 ──
+      // ── 오프라인 고지 (서비스워커 0 — 상태 표시만) ────────────────────────────
+      try {
+        var offlineBox = byId('offline');
+        var syncOffline = function () {
+          if (!offlineBox) return;
+          var off = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
+          offlineBox.hidden = !off;
+        };
+        syncOffline();
+        if (typeof window.addEventListener === 'function') {
+          window.addEventListener('online', syncOffline);
+          window.addEventListener('offline', syncOffline);
+        }
+      } catch (eOff) { /* 고지 전용 — 실패해도 포털 기능 영향 0 */ }
+
+      // ── 세이브 로드 유틸 ──────────────────────────────────────────────────────
+      //  반환: { available:boolean, data:object|null }
+      //    available=false → 저장소 자체를 못 씀(file:// 차단 등) 또는 파싱 실패.
+      var storageOk = (function () {
         try {
-          var simRaw = localStorage.getItem('dn_legacy_v1');
-          if (simRaw) {
-            var simState = JSON.parse(simRaw);
-            var chapters = (simState && Array.isArray(simState.chaptersUnlocked)) ? simState.chaptersUnlocked : [];
-            var simSeen = {}, simN = 0;
-            for (var i = 0; i < chapters.length; i++) {
-              var c = chapters[i];
-              if (c >= 1 && c <= 8 && !simSeen[c]) { simSeen[c] = true; simN++; }
-            }
-            if (simN > 0) {
-              var simBox = document.getElementById('prog-sim');
-              var simText = document.getElementById('prog-sim-text');
-              var simBar = document.getElementById('prog-sim-bar');
-              if (simBox && simText && simBar) {
-                simText.textContent = '저장됨 · 레거시 캠페인 ' + simN + '/8 챕터 해금';
-                var simPct = Math.round(Math.min(100, (simN / 8) * 100));
-                simBar.style.width = simPct + '%';
-                simBar.setAttribute('aria-valuenow', String(simPct)); // [a11y] progressbar 값 동기
-                simBox.hidden = false;
-              }
-            }
+          if (typeof localStorage === 'undefined' || localStorage === null) return false;
+          var probeKey = '__dn_home_probe__';
+          localStorage.setItem(probeKey, '1');
+          localStorage.removeItem(probeKey);
+          return true;
+        } catch (eProbe) { return false; }
+      })();
+
+      function loadSave(key) {
+        if (!storageOk) return { available: false, data: null };
+        var raw = null;
+        try { raw = localStorage.getItem(key); }
+        catch (eGet) { warn("세이브 읽기 실패 ('" + key + "') — " + (eGet && eGet.message)); return { available: false, data: null }; }
+        if (raw == null) return { available: true, data: null };   // 세이브 없음 = 정상(신규 방문자)
+        var parsed = null;
+        try { parsed = JSON.parse(raw); }
+        catch (eParse) {
+          warn("세이브 JSON 파싱 실패 ('" + key + "') — 신규 방문자 뷰로 폴백: " + (eParse && eParse.message));
+          return { available: false, data: null };
+        }
+        if (!parsed || typeof parsed !== 'object' || Object.prototype.toString.call(parsed) === '[object Array]') {
+          warn("세이브 형식 이상 ('" + key + "', 객체가 아님) — 신규 방문자 뷰로 폴백");
+          return { available: false, data: null };
+        }
+        return { available: true, data: parsed };
+      }
+
+      // ── 진행 상태 산출 (배지·온보딩 공용) ─────────────────────────────────────
+      function simProgress(save) {
+        if (!save) return null;
+        if (!(save.chaptersUnlocked instanceof Array)) {
+          warn("시뮬 세이브에 chaptersUnlocked 배열이 없음 — 진행 표시 생략 ('" + SIM_SAVE_KEY + "')");
+          return null;
+        }
+        var seen = {}, count = 0, highest = 0;
+        for (var i = 0; i < save.chaptersUnlocked.length; i++) {
+          var c = save.chaptersUnlocked[i];
+          if (SIM_CHAPTER_IDS.indexOf(c) !== -1 && !seen[c]) { seen[c] = true; count++; if (c > highest) highest = c; }
+        }
+        return { count: count, total: SIM_CHAPTER_IDS.length, highest: highest };
+      }
+
+      function rpgProgress(save) {
+        if (!save) return null;
+        if (!(save.missionsDone instanceof Array)) {
+          warn("RPG 세이브에 missionsDone 배열이 없음 — 진행 표시 생략 ('" + RPG_SAVE_KEY + "')");
+          return null;
+        }
+        var doneSet = {};
+        for (var j = 0; j < save.missionsDone.length; j++) doneSet[save.missionsDone[j]] = true;
+        var mCount = 0;
+        for (var k = 0; k < RPG_MISSION_IDS.length; k++) { if (doneSet[RPG_MISSION_IDS[k]]) mCount++; }
+
+        var endingsObj = (save.endings && typeof save.endings === 'object') ? save.endings : {};
+        var seen = (endingsObj.seen && typeof endingsObj.seen === 'object') ? endingsObj.seen : {};
+        var eCount = 0;
+        for (var e = 0; e < RPG_ENDING_KEYS.length; e++) { if ((seen[RPG_ENDING_KEYS[e]] || 0) > 0) eCount++; }
+        var capstoneDone = typeof endingsObj.capstone === 'number' && endingsObj.capstone > 0;
+
+        // 메인 체인에서 아직 클리어하지 않은 첫 챕터 = '이어하기' 대상(체인은 순차 해금).
+        var next = null, nextIdx = -1, mainDone = 0;
+        for (var c2 = 0; c2 < RPG_MAIN_CHAIN.length; c2++) {
+          if (doneSet[RPG_MAIN_CHAIN[c2].id]) mainDone++;
+          else if (!next) { next = RPG_MAIN_CHAIN[c2]; nextIdx = c2; }
+        }
+        return {
+          mCount: mCount, mTotal: RPG_MISSION_IDS.length,
+          eCount: eCount, eTotal: RPG_ENDING_KEYS.length,
+          capstoneDone: capstoneDone, next: next, nextIdx: nextIdx,
+          mainDone: mainDone, mainTotal: RPG_MAIN_CHAIN.length
+        };
+      }
+
+      // ── ③ 진행 배지 렌더 ─────────────────────────────────────────────────────
+      function renderSimBadge(p) {
+        if (!p || p.count <= 0) return;
+        var box = byId('prog-sim'), text = byId('prog-sim-text'), bar = byId('prog-sim-bar');
+        if (!box || !text || !bar) return;
+        var simTotal = SIM_CHAPTER_IDS.length || 1;   // 분모 단일 소스(리터럴 금지)
+        text.textContent = '저장됨 · 레거시 캠페인 ' + p.count + '/' + simTotal + ' 챕터 해금';
+        var simPct = Math.round(Math.min(100, (p.count / simTotal) * 100));
+        bar.style.width = simPct + '%';
+        bar.setAttribute('aria-valuenow', String(simPct));
+        box.hidden = false;
+      }
+
+      function renderRpgBadge(p) {
+        if (!p || (p.mCount <= 0 && p.eCount <= 0 && !p.capstoneDone)) return;
+        var rpgBox = byId('prog-rpg'), rpgText = byId('prog-rpg-text'), rpgBar = byId('prog-rpg-bar');
+        if (!rpgBox || !rpgText || !rpgBar) return;
+        // [H1 v6.46] 텍스트 분모·바 분모는 단일 소스(RPG_MISSION_IDS.length) 파생.
+        //   과거: 텍스트 '/31' ↔ 바 '/29' 리터럴 불일치로 100% 도달 전 바가 포화.
+        var mTotal = RPG_MISSION_IDS.length || 1;
+        var mCount = p.mCount, eCount = p.eCount;
+        rpgText.textContent = '저장됨 · 미션 ' + mCount + '/' + mTotal + ' · 엔딩 ' + eCount + '/' + RPG_ENDING_KEYS.length +
+          (p.capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
+        var rpgPct = Math.round(Math.min(100, (mCount / mTotal) * 100));
+        rpgBar.style.width = rpgPct + '%';
+        rpgBar.setAttribute('aria-valuenow', String(rpgPct));
+        rpgBox.hidden = false;
+      }
+
+      // ── ④ 온보딩 CTA — 추천 진입점 1개 ───────────────────────────────────────
+      //   우선순위: RPG 진행 > 시뮬 진행 > 신규(HTML 기본값 유지).
+      //   RPG 를 먼저 보는 이유: 메인 체인이 선형이라 "다음 한 걸음"을 정확히 지목할 수 있다.
+      function renderOnboard(rpg, sim) {
+        var cta = byId('ob-cta'), kicker = byId('ob-kicker'), head = byId('ob-h');
+        var title = byId('ob-title'), sub = byId('ob-sub'), ico = byId('ob-ico'), note = byId('ob-note');
+        if (!cta || !kicker || !head || !title || !sub || !ico) return;
+
+        var hasRpg = rpg && (rpg.mCount > 0 || rpg.eCount > 0 || rpg.capstoneDone);
+        var hasSim = sim && sim.count > 0;
+        if (!hasRpg && !hasSim) return;   // 신규 방문자 — HTML 기본 뷰 그대로
+
+        kicker.textContent = '이어하기';
+        head.textContent = '마지막 진행 지점';
+
+        if (hasRpg) {
+          cta.style.setProperty('--ob-accent', 'var(--magenta)');
+          cta.setAttribute('href', 'rpg/index.html');
+          ico.textContent = '⚔';
+          if (rpg.next) {
+            title.textContent = 'RPG · 챕터 ' + (rpg.nextIdx + 1) + ' — ' + rpg.next.t;
+            sub.textContent = '메인 체인 ' + rpg.mainDone + '/' + rpg.mainTotal + ' 완료 · 미션 ' +
+              rpg.mCount + '/' + rpg.mTotal + ' · 엔딩 ' + rpg.eCount + '/' + rpg.eTotal +
+              (rpg.capstoneDone ? ' · 캡스톤 클리어' : '');
+          } else {
+            title.textContent = 'RPG · Act 2 — 갈래 미션' + (rpg.capstoneDone ? ' & 캡스톤 재도전' : ' & 캡스톤');
+            sub.textContent = '메인 ' + rpg.mainTotal + '챕터 완주 · 미션 ' + rpg.mCount + '/' + rpg.mTotal +
+              ' · 엔딩 ' + rpg.eCount + '/' + rpg.eTotal + ' — 엔딩을 열람하면 대응 갈래가 열립니다.';
           }
-        } catch (eSim) { /* 시뮬 배지만 숨김 유지, RPG 배지는 계속 시도 */ }
+        } else {
+          cta.style.setProperty('--ob-accent', 'var(--cyan)');
+          cta.setAttribute('href', 'simulator/v0.5/index.html');
+          ico.textContent = '🎮';
+          title.textContent = '전략 시뮬 · 레거시 캠페인 챕터 ' + sim.highest + ' 이후';
+          sub.textContent = '챕터 ' + sim.count + '/' + sim.total + ' 해금 — 다음 판의 결과가 도시에 흉터로 남습니다.';
+        }
+        if (note) note.textContent = '진행 상황은 이 브라우저에만 저장됩니다 (localStorage · 서버 전송 0).';
+      }
 
-        // ── RPG 카드: 미션 n/총계 · 엔딩 n/총계 · 캡스톤 여부 (분모는 배열 길이 파생) ──
-        try {
-          var RPG_MISSION_IDS = [
-            'ch01-first-blood', 'ch02-insider-game', 'ch03-martial-night', 'ch04-price-of-splice',
-            'ch05-mesh-ghost', 'ch06-bloc-acquisition', 'ch07-heart-of-city', 'ch08-zero-day',
-            'side-01-traitor-contract', 'side-02-corp-breach', 'side-05-informant-hit', 'side-03-chemical-raid',
-            'side-08-harbor-run', 'side-04-medbay-heist', 'side-06-rival-duel', 'side-07-server-zero',
-            'a2-00-framing',
-            'a2-a1-crown-breach', 'a2-a2-crown-throne', 'a2-b1-barricade', 'a2-b2-freeport',
-            'a2-c1-first-contact', 'a2-c2-signal-war', 'a2-d1-scavenge', 'a2-d2-last-signal',
-            'a2-side-cipher-static', 'a2-side-blade-vendetta', 'a2-side-rigger-build', 'a2-side-mole-whoami',
-            'a2-side-broker-ledger', 'a2-side-drifter-lastroad'
-          ]; // 31종 (캡스톤 a2-99-flagship 제외 — v6.45 BROKER/DRIFTER 사이드 2종 추가, _home_check.js가 campaign.js와 동치 검증)
-          var RPG_ENDING_KEYS = ['corporate-eternal', 'street-rising', 'nexus-reborn', 'dead-nexus'];
-
-          var rpgRaw = localStorage.getItem('dead_nexus_rpg_save_v1');
-          if (rpgRaw) {
-            var rpgSave = JSON.parse(rpgRaw);
-            var done = (rpgSave && Array.isArray(rpgSave.missionsDone)) ? rpgSave.missionsDone : [];
-            var doneSet = {};
-            for (var j = 0; j < done.length; j++) doneSet[done[j]] = true;
-            var mCount = 0;
-            for (var k = 0; k < RPG_MISSION_IDS.length; k++) { if (doneSet[RPG_MISSION_IDS[k]]) mCount++; }
-
-            var endingsObj = (rpgSave && rpgSave.endings && typeof rpgSave.endings === 'object') ? rpgSave.endings : {};
-            var seen = (endingsObj.seen && typeof endingsObj.seen === 'object') ? endingsObj.seen : {};
-            var eCount = 0;
-            for (var e = 0; e < RPG_ENDING_KEYS.length; e++) { if ((seen[RPG_ENDING_KEYS[e]] || 0) > 0) eCount++; }
-            var capstoneDone = typeof endingsObj.capstone === 'number' && endingsObj.capstone > 0;
-
-            if (mCount > 0 || eCount > 0 || capstoneDone) {
-              var rpgBox = document.getElementById('prog-rpg');
-              var rpgText = document.getElementById('prog-rpg-text');
-              var rpgBar = document.getElementById('prog-rpg-bar');
-              if (rpgBox && rpgText && rpgBar) {
-                // [H1 v6.46] 텍스트 분모·바 분모는 단일 소스(RPG_MISSION_IDS.length) 파생.
-                //   과거: 텍스트 '/31' ↔ 바 '/29' 리터럴 불일치로 100% 도달 전 바가 포화.
-                var mTotal = RPG_MISSION_IDS.length || 1;
-                rpgText.textContent = '저장됨 · 미션 ' + mCount + '/' + mTotal + ' · 엔딩 ' + eCount + '/' + RPG_ENDING_KEYS.length +
-                  (capstoneDone ? ' · 🌃 캡스톤 클리어' : '');
-                var rpgPct = Math.round(Math.min(100, (mCount / mTotal) * 100));
-                rpgBar.style.width = rpgPct + '%';
-                rpgBar.setAttribute('aria-valuenow', String(rpgPct)); // [a11y] progressbar 값 동기
-                rpgBox.hidden = false;
-              }
-            }
-          }
-        } catch (eRpg) { /* RPG 배지만 숨김 유지 */ }
-      } catch (eOuter) { /* 전체 실패 시 두 배지 모두 숨김 — 레이아웃 불변 */ }
+      // ── 실행 ─────────────────────────────────────────────────────────────────
+      try {
+        var simSave = loadSave(SIM_SAVE_KEY);
+        var rpgSave = loadSave(RPG_SAVE_KEY);
+        var simP = null, rpgP = null;
+        try { simP = simProgress(simSave.data); } catch (e1) { warn('시뮬 진행 계산 실패: ' + (e1 && e1.message)); }
+        try { rpgP = rpgProgress(rpgSave.data); } catch (e2) { warn('RPG 진행 계산 실패: ' + (e2 && e2.message)); }
+        renderSimBadge(simP);
+        renderRpgBadge(rpgP);
+        renderOnboard(rpgP, simP);
+      } catch (eOuter) {
+        warn('진행 상태 렌더 실패 — 신규 방문자 뷰 유지: ' + (eOuter && eOuter.message));
+      }
     })();
   </script>
 </body>

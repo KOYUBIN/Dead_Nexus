@@ -5,11 +5,11 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.53 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 32미션·6클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·캡스톤+심연 프로토콜·장비 경제·아이소 뷰·사운드·오브젝티브 다양성(생존형·HACK 전용 코어) + 시뮬 협상 페이즈 배선 + S06 재건왕/청산자 타이틀 + 외부 의존 0 + NEXUS BAR/레이스 HUD + 연출 폴리시(협상 플래시·S06 타이틀 스팅·레이스 HUD juice·전투 juice, `fx_module.js`)
+**현재 버전**: v6.54 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 38미션·6클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·**Act 3 "SIGNAL DEBT"**·캡스톤+심연 프로토콜·장비 경제·아이소 뷰·사운드·오브젝티브 다양성(생존형·HACK 전용 코어) + 시뮬 협상 페이즈 배선 + **시나리오 S07 블랙아웃 카스케이드**·S06 재건왕/청산자 타이틀 + 외부 의존 0 + NEXUS BAR/레이스 HUD + 연출 폴리시(협상 플래시·S06 타이틀 스팅·레이스 HUD juice·전투 juice, `fx_module.js`) + 봇 AI 승리 게이트 정합(`rules_module.js`)
 
 - **라이브 플레이**: [dead-nexus.vercel.app](https://dead-nexus.vercel.app) — 브라우저에서 바로 시작 (모바일 세로 스택 지원, v6.25)
 - **레이스 HUD**: 중앙 상단 4요소 — VICTORY RACE 트랙(전 좌석 승리 진척 %) · MARKET 틱커 · THREAT 스트립 · ROUND BRIEF. 판정 코드(`getVictoryGoals`/`evalPlayerVictory`)와 동일 소스로 계기판 정직성 유지 (v6.26)
-- **시나리오 S01~S06 전체 개방**: 표준·코프 대전(all-Bloc M&A)·스트리트 라이징(Ghost 주도)·계엄의 밤(모바일 경찰 NPC)·골드러시(8R 스프린트)·마켓 크래시(공매도 전성) — 시나리오별 개성 실측 검증 완료 (docs/14, v6.21)
+- **시나리오 S01~S07 전체 개방**: 표준·코프 대전(all-Bloc M&A)·스트리트 라이징(Ghost 주도)·계엄의 밤(모바일 경찰 NPC)·골드러시(8R 스프린트)·마켓 크래시(공매도 전성)·블랙아웃 카스케이드(공표된 정전 시간표, v6.54 신설) — 시나리오별 개성 실측 검증 완료 (docs/14, v6.21)
 - **레거시 캠페인 8챕터 완결**: First Blood(최초 레이드 해금, v6.24) → Zero Day까지 전체 8챕터 온라인 해금 + 도시 흉터(최다 피격 블록 다음 판 주가 −1) 영속 계층, `legacy_module.js`(`TOTAL_CHAPTERS = 8`, v6.39 완결)
 - **highlightPoints 승리 환산**: 하이라이트 포인트가 판정·HUD·배지 단일 소스로 승리 임계에 직결(`EURO_HL_VICTORY_SCALE`) — 종료 선언 역전율 재측정으로 기해소 확인 포함 (v6.27)
 
@@ -25,7 +25,7 @@
 | **난이도** | ★★★★☆ |
 | **장르** | 전략 / 자원 관리 / 구역 장악 / 레거시 |
 | **핵심 메커니즘** | 6속성 마나형 시스템 + 2카드 TOP/BOTTOM + 덱빌딩+사이드웨이 + **5트랙 거리명성** + **Phase 1.5 협상** + **NEXUS 동적 룰** + **Cyberware 슬롯** |
-| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — index.html + JS 모듈 5종(euro/tutorial/lore/legacy/fx), Chrome/Safari 직접 실행 |
+| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — index.html + JS 모듈 7종(euro/tutorial/lore/legacy/fx/rules/scenario), Chrome/Safari 직접 실행 |
 
 ---
 
@@ -114,13 +114,15 @@ dead-nexus/
 │       └── meta.md
 │
 ├── simulator/                         # 웹 시뮬레이터
-│   └── v0.5/                          # 메인 시뮬레이터 (v6.44)
+│   └── v0.5/                          # 메인 시뮬레이터 (v6.54)
 │       ├── index.html                 # React 18 + Babel · 11×11 + 5×5 · 엔트리+코어 로직
 │       ├── euro_module.js             # 유로 메커닉 (web 빌드)
 │       ├── tutorial_module.js         # BGA 스타일 가이드 튜토리얼 (5×5 솔로)
 │       ├── lore_module.js             # 서사 표면화 (인물 11인·명대사·에필로그)
 │       ├── legacy_module.js           # 레거시 캠페인 8챕터 완결 (localStorage 영속, v6.39)
 │       ├── fx_module.js               # 연출 FX 판별 로직 (협상 플래시·타이틀 스팅·HUD juice, v6.50)
+│       ├── rules_module.js            # 승리 판정·레이드 성공률·숏 지급·봇 승리 게이트 (v6.51~54)
+│       ├── scenario_module.js         # S07 블랙아웃 엔진·S06 타이틀·언더독 스케일 (v6.54)
 │       └── README.md
 │
 ├── sim-harness/                       # 헤드리스 시뮬 + 밸런스 회귀
@@ -166,7 +168,7 @@ dead-nexus/
 - **[09-tech-tree.md](docs/09-tech-tree.md)** — TL 1~5 업그레이드 트리
 - **[10-map-zones.md](docs/10-map-zones.md)** — 11×11 동심원 + 5×5 튜토리얼
 - **[11-events-quests.md](docs/11-events-quests.md)** — 이벤트 토큰·뉴스·퀘스트
-- **[14-scenarios.md](docs/14-scenarios.md)** — 시나리오 S01~S06
+- **[14-scenarios.md](docs/14-scenarios.md)** — 시나리오 S01~S07
 - **[15-hidden-objectives.md](docs/15-hidden-objectives.md)** — 숨은 목표
 - **[16-achievements.md](docs/16-achievements.md)** — 업적 (in-game / meta)
 - **[17-v1.0-systems.md](docs/17-v1.0-systems.md)** — v0.6~v1.0 통합 시스템

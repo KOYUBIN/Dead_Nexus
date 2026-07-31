@@ -123,7 +123,7 @@
    **근거**: `index.html:4343~4470`(v0.6.6c 폴백 주석 블록)
 9. **DRIFTER 스탯이 3원장에서 3값.** docs HP9/ATK4, harness HP9/ATK2(주석 "atk 4→3"는 stale), 웹 HP8/ATK2 — 밸런스 너프가 문서에 역반영되지 않음.
    **근거**: `docs/07-combat-stats.md:47` vs `sim-harness/core.js:64` vs `index.html:607`
-10. **웹 덱과 `cards/*.md`가 클래스별 최대 4장 상이** (RIGGER·MOLE·DRIFTER). docs/04와 `cards/drifter.md` 간에도 STORM RUSH vs GHOST RUN 불일치.
+10. **웹 덱과 `cards/*.md`가 클래스별 최대 4장 상이** (RIGGER·MOLE·DRIFTER). docs/04와 `cards/ghost/drifter.md` 간에도 STORM RUSH vs GHOST RUN 불일치.
     **근거**: `cards/ghost/rigger.md:13~24`, `mole.md:13~24`, `drifter.md:13~25` vs `index.html:691~698`; `docs/04:224~228`
 11. **결정 모달 6타입 전부 클래스 무관** — BLADE 표적·MOLE 위장 대상·HELIX 클론 사용처가 모두 자동 휴리스틱. 클래스 개성이 "선택"으로 표현되는 지점이 없음.
     **근거**: `euro_module.js:746~753, 350~357, 424~428`

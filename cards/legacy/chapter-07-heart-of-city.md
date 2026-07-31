@@ -60,7 +60,7 @@
 ### 3. 새로운 카드 (5장)
 - **NEXUS OVERRIDE** (Bloc 한정): 의장실 점거 시 즉시 ₵ +20 및 블록 주가 +8
 - **FINAL BREACH** (Ghost 한정): 타워 최종 잠금 해제, 엔딩 분기 트리거
-- **LAST STAND** (공용): 자신 HP 5 이하 시 ATK 2배, 1라운드 한정
+- **FINAL STAND** (공용): 자신 HP 5 이하 시 ATK 2배, 1라운드 한정 (BLADE 전용 카드 LAST STAND와 별개)
 - **SIGNAL'S CHOSEN** (레거시): SIGNAL이 한 플레이어를 선택, 해당 플레이어 속성 판정 모두 +2 (1챕터 한정)
 - **CITY'S HEART** (공용 이벤트): 모든 플레이어 카드 1장 즉시 소각 — 대신 ₵ +10 / 렙 +5 / 속성 +3 중 택1
 
@@ -142,4 +142,4 @@
 - **메인 캠페인 가이드**: `docs/12-legacy-campaign.md`
 - **이전 챕터**: `legacy/chapter-06-bloc-acquisition.md`
 - **다음 챕터**: `legacy/chapter-08-zero-day.md`
-- **관련 시스템**: `docs/10-map-zones.md` §6.1 (NEXUS), `docs/07-combat-stats.md` (보스 전투)
+- **관련 시스템**: `docs/10-map-zones.md` §2 (NEXUS), `docs/07-combat-stats.md` (보스 전투)

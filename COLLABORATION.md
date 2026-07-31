@@ -47,6 +47,11 @@
 | v6.44 | 캡스톤 최종 결전 + 심연 프로토콜(무한 웨이브) · **시뮬 협상 페이즈** (docs/17 원전 배선·B-04 클로즈) · 사운드 (Kenney CC0 23종) · 홈 진행 배지 |
 | v6.45 | **RPG 6클래스 완성** — BROKER·DRIFTER 플레이어블 승격(미션 32종·밸런스 252조합) · 시뮬 계기판 정직화 · 홈 PWA · 접근성 |
 | v6.46 | 자율 업데이트 1차분 — **오브젝티브 다양성**(생존형 `survive:N`·HACK 전용 코어) · **S06 재건왕/청산자 타이틀** 배선 · **B-01 기각 종결**(S03 2-레버 전수 측정) · S05 뉴스 매R 2장 배선 · MOLE HELIX 태그 |
+| v6.47~49 | 자율 2~4차분 — 미소비 대화 효과 전량 배선 (spendKarma·spendNuyen·karma/₵ 지급 — evalCost를 COST_KEYS 테이블로 일반화, 원자 차감) · 심연 기록 클래스별 확장 · 첫 전투 온보딩 |
+| v6.50 | 자율 5차분 — 연출 폴리시 양 트랙 (전투 juice·협상 플래시·S06 타이틀 스팅). **500KB babel 임계 발견 → `fx_module.js` 분리, 모듈 외장이 기본 전략이 됨** |
+| v6.51 | **3차 발굴 감사 전면 수정 54건** — RPG 새로고침 진행 소실·시뮬 타임아웃 승자 판정 파탄·applyEffect 이중 발동·BROKER 무한 협상·truce 위반 하드코딩·표시↔판정 불일치 14건. `rules_module.js` 신설 |
+| v6.52 | 시뮬 유닛 404→**496** (승리 파이프라인·M&A 엔진·리듀서 핵심 액션 최초 커버). 테스트가 협상 stale 스냅샷 실결함을 발견 → 즉시 수정 |
+| v6.53 | RPG 유닛 406→**431** (리듀서 22액션 전수 인벤토리 핀). 테스트가 결함 2건 발견(전투 null 가드·배열 세이브 수용) → 즉시 수정 |
 
 ---
 
@@ -66,25 +71,33 @@
 ## 4. 검증 인프라 — 머지 전 필수 게이트
 
 ```bash
-# 시뮬레이터 (350 유닛, 실측 2026-07-26: `node sim-e2e/_unit.js` → ALL 350 UNIT TESTS PASSED)
-cd sim-e2e && node _unit.js                 # ALL PASSED 필수
+# 시뮬레이터 (496+ 유닛¹, 실측 2026-07-26: `node sim-e2e/_unit.js` → ALL 496 UNIT TESTS PASSED)
+cd sim-e2e && node _unit.js                 # ALL PASSED 필수 (플레이키 의심 시 3회 연속)
 node run.js 5 5x5                            # e2e 스모크 — errors (none)
-node run.js 300 11x11                        # 밸런스 측정 (밴드 확인용)
+node run.js 300 11x11                        # 밸런스 측정 (밴드 확인용) · 3번째 인자 = 시나리오
 
-# RPG (391+ 유닛¹ + 검증기 + 하네스)
+# RPG (431+ 유닛¹ + 검증기 + 하네스)
 node rpg/_unit.js                            # PASS 전수
 for f in rpg/data/missions/*.js; do node rpg/_missions_check.js "$f"; done   # 32/32
-node rpg/_balance.js --smoke                 # 결정론 재현 8/8
+node rpg/_wiring_check.js                    # 4집합 동치 (미션 파일↔script 태그↔heal 로더↔campaign)
+node rpg/_balance.js --smoke                 # 결정론 재현 12/12
 node rpg/_balance.js                         # 전 조합 클리어 (252/252, 6클래스×42인카운터)
+
+# 홈 포털 (37항 — 버전 스탬프·트랙 지표·접근성·PWA 자산까지 코드 대조)
+node _home_check.js                          # PASS 전수 필수
 
 # 공통
 node -c <모듈>                               # 문법
 # babel: /tmp/node_modules/@babel/core 로 index.html 최대 text/babel 블록 transformSync (preset-react)
 # Playwright: /opt/pw-browsers/chromium (playwright install 금지 — vendor 오프라인 주입)
 ```
-¹ RPG 유닛 수는 다른 에이전트의 동시 작업으로 계속 늘어날 수 있는 하한선이다. 실측 2026-07-26
-  `node rpg/_unit.js` → `PASS 391 / FAIL 0`. 머지 전에는 항상 재실행해 당시 실값으로 갱신할 것
-  (감소는 회귀, 증가는 정상).
+¹ 유닛 수는 계속 늘어나는 하한선이다. 실측 2026-07-26 시뮬 496 · RPG 431. 머지 전 항상 재실행해
+  당시 실값으로 갱신할 것 (감소는 회귀, 증가는 정상).
+
+**`_home_check.js`는 홈 파일 검사기가 아니라 프로젝트 전역 정합 게이트다.** 홈/README 버전 스탬프가
+CHANGELOG 최신과 동치인지, 홈이 표시하는 미션·클래스·시나리오·챕터 수가 각 트랙 코드의 실제 배열과
+동치인지까지 검사한다. **트랙에 미션·시나리오를 추가하면 이 게이트가 FAIL로 뒤집히는 것이 설계된
+동작**이므로, 추가한 쪽이 루트 `index.html`의 대응 배열도 함께 갱신해야 한다.
 
 `sim-e2e/results/`는 gitignore (리포 비대화 방지 — 대표 수치는 CHANGELOG/다이제스트에 기록).
 
@@ -113,7 +126,7 @@ node -c <모듈>                               # 문법
 - 보드게임 재개 시: 오토마 덱 설계 (봇 3인 테이블 번역) · 세션 00 실시 · docs/24 ⚠️ 8종 기법
 
 **항시**
-- 유닛·검증기·하네스 게이트 유지 (총 741+¹ 유닛[시뮬 350 + RPG 391+] + 32 미션 검증 + 252 조합)
+- 유닛·검증기·하네스 게이트 유지 (총 927+¹ 유닛[시뮬 496 + RPG 431] + 32 미션 검증 + 배선 11 + 홈 37 + 252 조합)
 
 ---
 
