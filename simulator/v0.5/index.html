@@ -854,6 +854,7 @@
 <script src="fx_module.js"></script>
 <script src="rules_module.js"></script>
 <script src="scenario_module.js"></script>
+<script src="coop_module.js"></script>
 <script>
 // v6.11.2: 모듈 자가복구 로더 — 호스팅이 /simulator/v0.5 (슬래시 없음)로 서빙하면
 // 위 상대경로 src가 상위 디렉토리로 풀려 404가 된다 (Vercel 리다이렉트 이슈).
@@ -878,6 +879,7 @@
     ['fx_module.js', 'dnfx_nego'],
     ['rules_module.js', 'rules_victoryByPoints'],
     ['scenario_module.js', 'blackout_advance'],
+    ['coop_module.js', 'coop_active'],   // v6.55 (E13): 미로드 시 협동 모드 버튼 비활성+배너 사유
   ];
   window.addEventListener('DOMContentLoaded', function () {
     MODULES.forEach(function (m) { heal(m[0], m[1]); });
@@ -2038,6 +2040,7 @@ function euro_hlVictoryBonus(p) {
 }
 // 플레이어가 현재 승리 조건을 충족하면 { route, reason } 반환, 아니면 null (단일 판정 소스).
 function evalPlayerVictory(p, idx, state, goals) {
+  if (typeof coop_active === 'function' && coop_active(state)) return null;   // v6.55: 협동전 — 개인(경쟁) 승리 경로 차단, 승패는 coop_checkEnd/coop_timeUp 단일 소스
   if (!p || p.defeated || p.isNpc) return null;
   goals = goals || getVictoryGoals(state);
   const hlBonus = euro_hlVictoryBonus(p);  // v6.27 (B-06): 달성값 가산 (역할 대칭)
@@ -2056,32 +2059,12 @@ function evalPlayerVictory(p, idx, state, goals) {
 }
 
 // ============================================================================
-// v6.26 (docs/22 §계기판·docs/23): 레이스 HUD 정직성 진척 함수 — 단일 소스 계기판
-//   원칙: "HUD 숫자 = 판정 숫자". 진척률은 evalPlayerVictory(=checkInstantVictory)와
-//   동일 소스만 사용한다: getVictoryGoals(언더독 스케일 반영) + assetValue/rep/raidsThisGame.
-//   새 임계 수학을 도입하지 않는다 — 오직 이미 판정에 쓰는 값을 0~100 으로 정규화할 뿐.
-//   [정직성 계약] evalPlayerVictory 가 승리(non-null)를 반환하는 상태에서는 반드시 100 을
-//   반환한다(각 경로의 게이트가 곧 100% 지점). Ghost 는 두 승리 경로(렙배틀·렙온리)의
-//   max 진척(레이스에서 실제로 더 가까운 경로). 렙배틀은 렙·레이드 동시 게이트 → min 성분.
-function hudRaceProgress(p, idx, state, goals) {
-  if (!p || p.isNpc || p.defeated) return 0;
-  goals = goals || getVictoryGoals(state);
-  const hlBonus = euro_hlVictoryBonus(p);  // v6.27 (B-06): 판정과 동일 asset_eff/rep_eff (정직성 계약)
-  if (p.role === 'bloc') {
-    const av = assetValue(p, state.stocks, state) + hlBonus;
-    if (!goals.blocAsset) return 0;
-    return Math.max(0, Math.min(100, Math.round(av / goals.blocAsset * 100)));
-  }
-  const rep = (p.resources.rep || 0) + hlBonus;
-  const raids = (state.meta.raidsThisGame || {})[idx] || 0;
-  // 렙배틀 경로: 렙≥ghostRepBattle && 레이드≥ghostRaids — 뒤처진 성분이 레이스를 게이트 → min.
-  const battleRep  = goals.ghostRepBattle > 0 ? rep / goals.ghostRepBattle : 1;
-  const battleRaid = goals.ghostRaids     > 0 ? raids / goals.ghostRaids   : 1;
-  const battlePct  = Math.min(battleRep, battleRaid) * 100;
-  // 렙온리 경로: 렙≥ghostRepOnly.
-  const onlyPct = goals.ghostRepOnly > 0 ? rep / goals.ghostRepOnly * 100 : 0;
-  return Math.max(0, Math.min(100, Math.round(Math.max(battlePct, onlyPct))));
-}
+// v6.55: 레이스 HUD 진척 함수(hudRaceProgress, v6.26)와 종료 선언 라운드
+//   (applyVictoryDeclaration, v6.12 P0-1)는 rules_module.js 로 **이전** — 로직·이름·수치
+//   불변. 사유 = 협동 모드 UI 배선으로 babel 인라인이 500,000자 임계를 넘어, JSX 불필요한
+//   순수 규칙 로직을 밖으로 빼 상쇄 (v6.53 S06/init 훅 이전과 동일 수법). 소비처는 전부
+//   typeof 가드 → 미로드 시 진척 0/선언 항등 폴백 (E13 배너가 별도 고지).
+// ============================================================================
 
 // ============================================================================
 // 시나리오 시스템 (docs/14) — 시작 조건 변주 프레임워크 (v6.18)
@@ -2253,7 +2236,9 @@ const SCENARIOS = {
     blocAssetBonus: 25,
   },
 };
-const getScenario = (id) => SCENARIOS[id] || SCENARIOS.S01;
+// v6.55 (협동): C01~C03 은 coop_module 레지스트리에서 조회 — SCENARIOS 블록에 섞지 않는다
+//   (_home_check.js 가 SCENARIOS 키 집합을 검사). S 계열은 coop_getScenario null → 기존 경로 그대로.
+const getScenario = (id) => (typeof coop_getScenario === 'function' && coop_getScenario(id)) || SCENARIOS[id] || SCENARIOS.S01;
 // 룰 오버라이드 조회 — 사용처에서 state.meta.scenario 기준 값 획득 (없으면 fallback).
 function scenarioRule(state, key, fallback) {
   const sc = getScenario(state && state.meta && state.meta.scenario);
@@ -2329,151 +2314,11 @@ function spawnCaptiveEntities(map, count, exclude) {
   return chosen.map((pos, i) => ({ id: CAPTIVE_ID_BASE + i, type: 'captive', position: pos }));
 }
 
-// v6.23 — Ghost 가 구금 NPC 위치 도착 시 자동 구출. 같은 칸에 경찰이 있으면 구출 불가(경찰이 지킨다 →
-//   자동전투 먼저; 호출부에서 police 조우 선처리). 디스폰 + ★+1, 전원(5) 구출 시 ★+10 보너스 1회.
-function resolveCaptiveRescue(state, ghostIdx) {
-  let s = state;
-  const ghost = s.players[ghostIdx];
-  if (!ghost || ghost.defeated || ghost.role !== 'ghost') return s;
-  const cap = (s.meta.npcs || []).find(n => n.type === 'captive' && n.position === ghost.position);
-  if (!cap) return s;
-  // 경찰이 같은 칸을 지키면 구출 보류 (호출부가 자동전투를 먼저 해소해야 함)
-  if ((s.meta.npcs || []).some(n => n.type === 'police' && n.position === ghost.position)) return s;
-  const rby = { ...(s.meta.rescuesByPlayer || {}) };
-  rby[ghostIdx] = (rby[ghostIdx] || 0) + 1;
-  const ps = [...s.players];
-  ps[ghostIdx] = { ...ghost, resources: { ...ghost.resources, rep: (ghost.resources.rep || 0) + CAPTIVE_RESCUE_REP } };
-  s = { ...s, players: ps, meta: { ...s.meta,
-    npcs: (s.meta.npcs || []).filter(n => n.id !== cap.id),
-    rescues: (s.meta.rescues || 0) + 1,
-    rescuesByPlayer: rby,
-  } };
-  const meTag = ghostIdx === 0 ? '⭐ 당신 ' : '';
-  const zNm = ZONE_TYPES[s.map[cap.position]?.zone]?.name || cap.position;
-  s = logEntry(s, `${meTag}⛓ 구금 NPC 구출 (${zNm}) — P${ghostIdx} [${ghost.specific}] 렙+${CAPTIVE_RESCUE_REP} · 진행 ${rby[ghostIdx]}/${CAPTIVE_COUNT}`);
-  // 전원 구출 보너스 (플레이어별 1회)
-  const awarded = { ...(s.meta.captiveBonusAwarded || {}) };
-  if (rby[ghostIdx] >= CAPTIVE_COUNT && !awarded[ghostIdx]) {
-    awarded[ghostIdx] = true;
-    const g2 = s.players[ghostIdx];
-    const ps2 = [...s.players];
-    ps2[ghostIdx] = { ...g2, resources: { ...g2.resources, rep: (g2.resources.rep || 0) + CAPTIVE_ALL_BONUS_REP } };
-    s = { ...s, players: ps2, meta: { ...s.meta, captiveBonusAwarded: awarded } };
-    s = logEntry(s, `${meTag}⛓ 전원 구출 달성! P${ghostIdx} [${g2.specific}] 렙+${CAPTIVE_ALL_BONUS_REP} 보너스 (docs/14 §S04)`);
-  }
-  return s;
-}
-
-// Ghost ↔ 경찰 NPC 자동전투. 단일 조우를 결론까지 해소 (docs/14 "자동 전투").
-//   판정: 매 교환 양측 d6. Ghost atk(+트랙 보너스)+d6 vs POLICE_ATK+d6.
-//   Ghost 우세 → NPC HP −Ghost atk. NPC 우세 → Ghost 피해 누적(POLICE_ATK).
-//   NPC HP0 → 격파(렙+2·디스폰). Ghost 피해는 마지막에 applyDamage 1회 위임(HP0 시 STEP F 자동).
-function resolvePoliceCombat(state, ghostIdx, npcId, trigger) {
-  let s = state;
-  const npcs = s.meta.npcs || [];
-  const npc = npcs.find(n => n.id === npcId);
-  const ghost = s.players[ghostIdx];
-  if (!npc || !ghost || ghost.defeated || ghost.role !== 'ghost') return s;
-  let npcHp = npc.hp;
-  let ghostHpSim = ghost.hp;
-  let ghostDmg = 0;
-  const gAtkBase = (ghost.stats.atk || 0) + trackBonus(ghost, 'atk');
-  let ghostWon = false, guard = 0;
-  while (guard++ < 30) {
-    const gTotal = gAtkBase + d6();
-    const nTotal = POLICE_ATK + d6();
-    if (gTotal >= nTotal) npcHp -= Math.max(1, ghost.stats.atk || 1);   // Ghost 가격
-    else { ghostHpSim -= POLICE_ATK; ghostDmg += POLICE_ATK; }          // 경찰 반격 (누적)
-    if (npcHp <= 0) { ghostWon = true; break; }
-    if (ghostHpSim <= 0) { ghostWon = false; break; }
-  }
-  const meTag = ghostIdx === 0 ? '⭐ 당신 ' : '';
-  const zNm = ZONE_TYPES[s.map[npc.position]?.zone]?.name || npc.position;
-  if (ghostWon) {
-    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임 (가해자 없음=환경)
-    const gNow = s.players[ghostIdx];
-    if (gNow && !gNow.defeated) {
-      const ps = [...s.players];
-      ps[ghostIdx] = { ...gNow, resources: { ...gNow.resources, rep: (gNow.resources.rep || 0) + POLICE_KILL_REP } };
-      s = { ...s, players: ps };
-    }
-    s = { ...s, meta: { ...s.meta, npcs: (s.meta.npcs || []).filter(n => n.id !== npcId), policeKills: (s.meta.policeKills || 0) + 1 } };
-    s = logEntry(s, `${meTag}🚔 경찰 NPC 격파 (${zNm}) — P${ghostIdx} [${ghost.specific}] 렙+${POLICE_KILL_REP}`);
-  } else {
-    const npcs2 = (s.meta.npcs || []).map(n => n.id === npcId ? { ...n, hp: Math.max(0, npcHp) } : n);
-    s = { ...s, meta: { ...s.meta, npcs: npcs2, policeFights: (s.meta.policeFights || 0) + 1 } };
-    s = logEntry(s, `${meTag}🚔 경찰 자동전투 (${zNm}) — P${ghostIdx} [${ghost.specific}] 피해 −${ghostDmg} · 경찰 HP ${Math.max(0, npcHp)}/${POLICE_HP}`);
-    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임
-  }
-  return s;
-}
-
-// 매 라운드(NEXT_ROUND) NPC 갱신: (1) heat≥9 최초 스폰 (docs/02 §6.3, 게임당 1회, 하락해도 유지),
-//   (2) 각 NPC 무작위 인접 1칸 이동, (3) Ghost 와 같은 칸이면 자동전투(진입점 B).
-function updatePoliceForRound(state) {
-  let s = state;
-  // (1) 공권력 9 도달 시 경찰 3체 스폰 (S01 포함 전 게임 공통 코어 규칙). policeSpawned 로 1회 게이트.
-  if (!s.meta.policeSpawned && (s.heat || 0) >= 9) {
-    const npcs = spawnPoliceEntities(s.map, null, POLICE_COUNT);
-    s = { ...s, meta: { ...s.meta, npcs, policeSpawned: true } };
-    s = logEntry(s, `🚔 공권력 ${s.heat} 도달 — 공권력 NPC ${npcs.length}체 출현 (무작위 구역)`);
-  }
-  const cur = s.meta.npcs || [];
-  if (!cur.length) return s;
-  // (2) 이동: police 만 이동(captive 는 고정). S04(patrolGuard) 는 가장 가까운 구금 NPC 로 수호 순찰,
-  //     그 외 시나리오/heat9 스폰은 기존 무작위 인접 1칸(docs/02 §6.3 · docs/14 "랜덤 이동").
-  const maxIdx = mapMaxIdx(s);
-  const capPos = cur.filter(n => n.type === 'captive').map(n => n.position);
-  const guard = scenarioRule(s, 'patrolGuard', false) && capPos.length > 0;
-  const moved = cur.map(n => {
-    if (n.type !== 'police') return { ...n };            // captive 고정
-    const adj = coordsAdj(n.position, maxIdx).filter(c => s.map[c]);
-    if (!adj.length) return { ...n };
-    if (guard) {
-      // 수호: 가장 가까운 구금 NPC 를 향해 1칸(거리 최소화). 이미 수호칸(거리0)이면 정지.
-      let nearest = capPos[0], nd = coordDist(n.position, capPos[0]);
-      for (const cp of capPos) { const d = coordDist(n.position, cp); if (d < nd) { nd = d; nearest = cp; } }
-      if (n.position === nearest) return { ...n };        // 구금 NPC 칸에 착석 = 수호
-      let best = adj[0], bd = coordDist(adj[0], nearest);
-      for (const c of adj) { const d = coordDist(c, nearest); if (d < bd) { bd = d; best = c; } }
-      return { ...n, position: best };
-    }
-    return { ...n, position: rand(adj) };
-  });
-  s = { ...s, meta: { ...s.meta, npcs: moved } };
-  // (3) 이동 후 Ghost 와 겹친 NPC → police=자동전투(진입점 B), captive=자동 구출(경찰 부재 시).
-  //     id 스냅샷 순회 (디스폰 안전). captive 는 police 처리 후 검사 → 경찰이 지키면 구출 보류.
-  for (const npc of [...s.meta.npcs]) {
-    if (npc.type !== 'police') continue;
-    const ghost = s.players.find(p => !p.defeated && p.role === 'ghost' && p.position === npc.position);
-    if (ghost) s = resolvePoliceCombat(s, ghost.id, npc.id, 'police-entry');
-  }
-  for (const npc of [...s.meta.npcs]) {
-    if (npc.type !== 'captive') continue;
-    const ghost = s.players.find(p => !p.defeated && p.role === 'ghost' && p.position === npc.position);
-    if (ghost) s = resolveCaptiveRescue(s, ghost.id);
-  }
-  return s;
-}
-
-// 봇 Ghost 이동 heuristic — NPC 회피/격파 판단 (간단). 각 이동 스텝의 nextStep 보정.
-//   HP 여유(≥60%) → 인접 경찰 있으면 격파 보상 추구(경찰칸으로 진입). 여유 없으면 회피(경찰칸 배제).
-function policeAwareStep(s, playerIdx, current, nextStep) {
-  const npcs = s.meta.npcs || [];
-  if (!npcs.length) return nextStep;
-  const g = s.players[playerIdx];
-  const engage = g.maxHp ? (g.hp / g.maxHp) >= 0.6 : true;
-  const policeAt = (c) => npcs.some(n => n.type === 'police' && n.position === c);  // v6.23: captive 는 위협 아님
-  const adj = coordsAdj(current, mapMaxIdx(s)).filter(c => s.map[c]);
-  if (engage) {
-    const adjPolice = adj.filter(policeAt);
-    if (adjPolice.length) return adjPolice[0];   // 격파 추구: 인접 경찰로 진입
-  } else if (nextStep && policeAt(nextStep)) {
-    const safe = adj.filter(c => !policeAt(c));   // 회피: 경찰 없는 인접칸
-    return safe.length ? rand(safe) : current;
-  }
-  return nextStep;
-}
+// v6.55: NPC 엔진 4함수(resolveCaptiveRescue / resolvePoliceCombat / updatePoliceForRound /
+//   policeAwareStep)는 scenario_module.js 로 **이전** — 로직·이름·수치 불변 (협동 모드 UI
+//   배선의 babel 인라인 500,000자 임계 상쇄 — 상단 hudRaceProgress 이전과 동일 사유).
+//   상수(POLICE_*/CAPTIVE_*/coordDist/mapMaxIdx)와 스폰 2함수는 인라인 유지(initGame·JSX 소비).
+//   소비처는 typeof 가드 → 미로드 시 NPC 엔진 무발동(항등, E13 배너 고지).
 
 // TL 승급 비용: TL3~5 해금 — docs/09 §1 "TL이 오를수록 비쌈" 곡선.
 //   e2e 축적 분포(중앙 47pt·p75 61·p90 80/게임, 평균 8R)에 맞춰 누적 임계 5/25/55/90 캘리브레이션:
@@ -2635,7 +2480,14 @@ function initGame(humanRole, humanSpecific, playerCount, mapSize, extraOpts) {
     humansList = humansList.map(h => h.role === 'bloc' ? h : { role: 'bloc', specific: allBlocs.includes(h.specific) ? h.specific : 'VANTA' });
   }
 
-  if (mode === 'multi' && humansList && humansList.length >= 2) {
+  if (mode === 'coop' && typeof coop_buildRoster === 'function') {
+    // v6.55 (협동 INCURSION): 좌석 = 인간(1~4) + 아군 봇 충원 → 4석 (목표 구성 2👻+2🏢,
+    //   충원 순서 결정론 — coop_module). 솔로 협동(인간1)·핫시트 협동(인간2~4) 공용 경로.
+    coop_buildRoster(humansList, humanRole, humanSpecific).forEach((h) => {
+      players.push(buildPlayer(players.length, h.kind, h.role, h.specific));
+      if (h.role === 'bloc') usedBlocs.push(h.specific); else usedGhosts.push(h.specific);
+    });
+  } else if (mode === 'multi' && humansList && humansList.length >= 2) {
     // 멀티 핫시트: humansList 그대로 인간 P0~P(N-1)
     humansList.forEach((h, i) => {
       players.push(buildPlayer(i, 'human', h.role, h.specific));
@@ -3672,6 +3524,8 @@ function reducer(state, action) {
       const SPEC = (typeof window !== 'undefined' && window.SUPPRESSION_SPEC) || (typeof SUPPRESSION_SPEC !== 'undefined' ? SUPPRESSION_SPEC : null);
       const spec = SPEC && SPEC[action.tokenType];
       if (!spec) return state;
+      // v6.55 (협동): 전 좌석 한 팀 — 아군 견제 금지. 조용한 실패 금지: 로그로 사유 고지.
+      if (typeof coop_pvpBlocked === 'function' && coop_pvpBlocked(state)) return logEntry(state, '🚫 협동전 — 아군 견제 불가 (전 좌석 한 팀)');
       const attacker = state.players[action.playerIdx];
       const target = state.players[action.targetIdx];
       if (!attacker || !target) return state;
@@ -3977,15 +3831,20 @@ function reducer(state, action) {
       //   하락분을 Ghost 숏 계약에 지급하고 새 스냅샷 저장(단일 지점 = 이중 정산 없음).
       state = settleShortPositions(state);
       // v6.12 P0-1: 종료 선언 갱신 (도달 선언 / 조건 이탈 해제) — 방금 끝난 라운드 기준
-      state = applyVictoryDeclaration(state);
+      //   v6.55: rules_module 이전 — 미로드 시 항등(선언 없이 진행, E13 배너 고지)
+      state = (typeof applyVictoryDeclaration === 'function') ? applyVictoryDeclaration(state) : state;
       // v6.21: 모바일 NPC 엔진 — heat9 스폰 + 경찰 랜덤 이동 + 이동 후 Ghost 조우 자동전투 (진입점 B).
-      state = updatePoliceForRound(state);
+      //   v6.55: scenario_module 이전 — 미로드 시 항등(NPC 무발동, E13 배너 고지)
+      state = (typeof updatePoliceForRound === 'function') ? updatePoliceForRound(state) : state;
       if (state.meta.gameOver) return state;
       const newRound = state.meta.round + 1;
       // v0.8.3: 맵별 maxRounds — 5×5: 8, 11×11: 12
       // v6.20 (S05): 시나리오 roundLimit 오버라이드 (골드러시 8R 단축). 미지정 시 맵 기본값.
       const maxR = scenarioRule(state, 'roundLimit', state.meta.mapSize === '11x11' ? 12 : 8);
       if (newRound > maxR) {
+        // v6.55 (협동): 시간표 종료 — C02 사수 승리 / C01·C03 미완수 패배 (coop_timeUp 이
+        //   마지막 라운드 주둔 강습까지 정산). 비협동은 참조 동일 반환 → 기존 판정 그대로.
+        if (typeof coop_timeUp === 'function') { const cs = coop_timeUp(state); if (cs !== state) return cs; }
         return checkVictoryByPoints(state);
       }
       // 서사 표면화(선택): 라운드 시작 도시 분위기 1줄 — 공권력(heat) 3단계. 표시 전용.
@@ -4114,7 +3973,7 @@ function reducer(state, action) {
       // v6.26: 레이스 HUD 델타용 스냅샷 — 방금 끝난 라운드의 진척률을 표시 전용으로 저장
       //   (loreQuoted 선례: meta 표시 필드, 게임 로직 무영향). HUD 는 현재값 - 스냅샷 = ▲▼.
       const raceSnapPct = {};
-      state.players.forEach((p, i) => { if (!p.isNpc && !p.defeated) raceSnapPct[i] = hudRaceProgress(p, i, state, sumGoals); });
+      state.players.forEach((p, i) => { if (!p.isNpc && !p.defeated && typeof hudRaceProgress === 'function') raceSnapPct[i] = hudRaceProgress(p, i, state, sumGoals); });
 
       // v6.53 (S07): 정전 캐스케이드 훅 — round 확정 후 1회. 소등·Bloc 복구·붕괴 압력을 한 번에
       //   처리한다(scenario_module.blackout_advance). 타 시나리오는 blackoutCascade 미지정 → 항등.
@@ -4133,7 +3992,10 @@ function reducer(state, action) {
         players: refilledPlayers,
         log: finalLog,
       };
-      return (typeof blackout_advance === 'function') ? blackout_advance(nextRoundState) : nextRoundState;
+      // v6.55 (협동): 침공 라운드 훅 체인 — 주둔 강습→상륙→파멸→안정화→승패 (coop_advance).
+      //   비협동은 두 훅 모두 항등(참조 동일) — S01~S07 byte 동일 경로.
+      const advOut = (typeof blackout_advance === 'function') ? blackout_advance(nextRoundState) : nextRoundState;
+      return (typeof coop_advance === 'function') ? coop_advance(advOut) : advOut;
     }
 
     case 'DRAW_NEWS': {
@@ -4353,7 +4215,7 @@ function reducer(state, action) {
 
         ownedCoords.forEach(c => {
           const cell = state.map[c];
-          if (cell.blackout) return;   // v6.53 (S07): 정전 구역은 수입 0 (타 시나리오는 blackout 미기입 → 불변)
+          if (cell.blackout || cell.merDark) return;   // v6.53 (S07) 정전 · v6.55 (협동) MERIDIAN 점거/오염 — 수입 0 (타 시나리오는 두 플래그 미기입 → 불변)
           const z = ZONE_TYPES[cell.zone];
           if (!z) return;
           for (const [k, v] of Object.entries(z.income)) {
@@ -4748,7 +4610,8 @@ function executeCards(state, playerIdx) {
     // 기본: 1번 카드=top, 2번 카드=bot. 사용자가 선택 가능
     const halves = p.plannedHalves && p.plannedHalves.length === p.plannedCards.length
       ? p.plannedHalves
-      : p.plannedCards.map((_, i) => i === 0 ? 'top' : 'bot');
+      // v6.55 (협동): 봇 Ghost 반쪽을 목표 정렬(이동/강습)로 선택 — 비협동/인간은 null → 기본 그대로
+      : ((typeof coop_botHalves === 'function' && coop_botHalves(s, playerIdx, p.plannedCards)) || p.plannedCards.map((_, i) => i === 0 ? 'top' : 'bot'));
     // 실행: 선택 순서대로 (top 먼저 → bot 나중, 하지만 둘 다 top이면 0번→1번 순)
     const order = [...p.plannedCards.keys()].sort((a, b) => {
       const ha = halves[a], hb = halves[b];
@@ -4966,6 +4829,9 @@ function stepToward(state, fromCoord, toCoord) {
 
 function applyEffect(state, playerIdx, effect, kind, card) {
   let s = state;
+  // v6.55 (협동): atk 카드 → 거점 강습 전용 + 아군 적대 효과 무력화 (coop_effectFilter,
+  //   비협동 항등 — s·effect 참조 그대로). 전 좌석 한 팀 계약의 카드층 게이트.
+  if (typeof coop_effectFilter === 'function') { const cf = coop_effectFilter(s, playerIdx, effect); s = cf.s; effect = cf.effect; }
   const p = s.players[playerIdx];
 
   // 속성 생성 (개인 풀)
@@ -5014,9 +4880,12 @@ function applyEffect(state, playerIdx, effect, kind, card) {
       } else if (pNow.role === 'ghost') {
         // v6.12 P0-3: 봇 Ghost는 선두 편향 타겟팅, 인간 자동경로는 순수 최근접(UI 정합)
         // v6.23 (S04): 봇 Ghost 는 구출 표적(구금 NPC)을 이동 후보에 추가 — 레이드 표적보다 멀지 않으면 우선.
-        const goal = (pNow.kind === 'bot')
+        // v6.55 (협동): 아군 봇·인간 자동경로 공통 — 목표 = 최근접 활성 MERIDIAN 거점
+        //   (coop_botGhostGoal, 비협동 null → 기존 타겟팅 그대로). 거점 전멸 시 현위치 유지.
+        const coopGoal = (typeof coop_botGhostGoal === 'function') ? coop_botGhostGoal(s, current, playerIdx) : null;
+        const goal = coopGoal || ((pNow.kind === 'bot')
           ? chooseGhostGoal(s, current, findRaidTargetZone(s, current), findRescueTargetZone(s, current))
-          : findNearestBlocZone(s, current);
+          : findNearestBlocZone(s, current));
         if (goal && goal !== current) {
           nextStep = stepToward(s, current, goal);
         } else if (goal === current) {
@@ -5026,7 +4895,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
           if (adj.length) nextStep = rand(adj);
         }
         // v6.21: 봇 Ghost NPC 회피/격파 heuristic (인간 자동경로는 UI 정합 위해 미적용)
-        if (pNow.kind === 'bot') nextStep = policeAwareStep(s, playerIdx, current, nextStep);
+        if (pNow.kind === 'bot' && typeof policeAwareStep === 'function') nextStep = policeAwareStep(s, playerIdx, current, nextStep);
       } else {
         // Bloc: 빈 buildable 구역 선호
         const adj = coordsAdj(current);
@@ -5062,15 +4931,17 @@ function applyEffect(state, playerIdx, effect, kind, card) {
         if (pHere.role === 'ghost' && !pHere.defeated) {
           // 경찰 우선: 같은 칸 police 와 먼저 자동전투 (경찰이 지킨다 → 격파 전엔 구출 불가).
           const policeHere = (s.meta.npcs || []).find(n => n.type === 'police' && n.position === pHere.position);
-          if (policeHere) { s = resolvePoliceCombat(s, playerIdx, policeHere.id, 'ghost-entry'); s.meta._didAutoRaid = true; }
+          if (policeHere && typeof resolvePoliceCombat === 'function') { s = resolvePoliceCombat(s, playerIdx, policeHere.id, 'ghost-entry'); s.meta._didAutoRaid = true; }
           // v6.23: 경찰 부재 시 구금 NPC 자동 구출 (docs/14 §S04). 구출은 이 이동의 다른 액션을 막지 않음.
-          s = resolveCaptiveRescue(s, playerIdx);
+          if (typeof resolveCaptiveRescue === 'function') s = resolveCaptiveRescue(s, playerIdx);
         }
       }
 
       // === Ghost가 다른 Ghost와 같은 구역에 있음 → PvP 옵션 ===
+      // v6.55 (협동): 전 좌석 한 팀 — Ghost 결투·Bloc 구역 레이드 이동 트리거 게이트 (비협동 false → 불변)
+      const _coopPvpOff = (typeof coop_pvpBlocked === 'function') && coop_pvpBlocked(s);
       const pAfterMove = s.players[playerIdx];
-      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
+      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid && !_coopPvpOff) {
         const rivalGhosts = s.players.filter((pp, i) => i !== playerIdx && !pp.defeated && pp.role === 'ghost' && pp.position === pAfterMove.position);
         if (rivalGhosts.length > 0) {
           const rival = rivalGhosts[0];
@@ -5124,7 +4995,7 @@ function applyEffect(state, playerIdx, effect, kind, card) {
 
       // === Ghost가 Bloc 소유 구역에 도착 → 레이드 시도 ===
       // v0.6.0: RIGGER는 도착 + 인접 Bloc 구역도 드론 레이드 후보. 가까운 Bloc 찾음.
-      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid) {
+      if (pAfterMove.role === 'ghost' && !s.meta._didAutoRaid && !_coopPvpOff) {
         let cellThere = s.map[pAfterMove.position];
         let effectiveCoord = pAfterMove.position;
         // RIGGER 원격: 현위치에 Bloc 없으면 인접 Bloc 검색
@@ -6550,6 +6421,9 @@ function checkVictoryByPoints(state) {
 }
 
 function checkInstantVictory(state) {
+  // v6.55 (협동): 목표 완수 = 팀 승리 — 5R 가드 이전 체크 (카드 강습으로 라운드 중 완수 가능).
+  //   비협동은 coop_checkEnd 가 인자 그대로 반환(참조 동일) → 아래 기존 경로 불변.
+  if (typeof coop_checkEnd === 'function') { const cs = coop_checkEnd(state); if (cs !== state) return cs; }
   // v6.10: M&A 2블록 인수 승리는 5R 가드 이전에 체크 (인수 루프 특성상 조기 성립 가능).
   //  M&A(2블록)·NEXUS 연속 점유 같은 "이벤트형 즉시 승리"는 서사적 정당성이 있어
   //  종료 선언 유예를 우회하고 즉시 확정한다 (v6.12 P0-1 설계 판단).
@@ -6578,53 +6452,8 @@ function checkInstantVictory(state) {
   return state;
 }
 
-// v6.12 P0-1: 종료 선언 라운드 — 임계 도달 시 즉시 승리 대신 전원에게 공개 선언 후 유예 1R.
-//   NEXT_ROUND(euro_applyAll·M&A 체크 직후)에서 호출 → state.meta.round 는 방금 끝난 라운드 R.
-//   ① 현 선언자가 조건을 이탈했으면 선언 해제(재도달 시 재선언 가능)
-//   ② 활성 선언이 없고 신규 도달자가 있으면 선언 (같은 플레이어 게임당 2회 캡 — 무한 반복 방지)
-//   확정은 다음 라운드 phase6 checkInstantVictory 가 담당.
-function applyVictoryDeclaration(state) {
-  if (state.meta.gameOver) return state;
-  if (state.meta.round < 5) return state;  // 5R 가드 이전엔 선언 없음
-  const goals = getVictoryGoals(state);
-  let decl = state.meta.victoryDeclaration || null;
-  const counts = { ...(state.meta.declarationCounts || {}) };
-  const logMsgs = [];
-  const loreQuoted = { ...(state.meta.loreQuoted || {}) };  // 서사 표면화: 게임당 인물별 명대사 1회 캡
-  // ① 현 선언자 조건 이탈 → 선언 해제
-  if (decl) {
-    const dp = state.players[decl.idx];
-    if (!evalPlayerVictory(dp, decl.idx, state, goals)) {
-      logMsgs.push(`⚖ P${decl.idx} [${dp ? dp.specific : '?'}] 승리 조건 이탈 — 종료 선언 해제 (견제 성공)`);
-      decl = null;
-    }
-  }
-  // ② 활성 선언 없음 & 신규 도달자 → 선언 (2회 캡)
-  if (!decl) {
-    for (let i = 0; i < state.players.length; i++) {
-      const p = state.players[i];
-      if (!p || p.defeated || p.isNpc) continue;
-      const v = evalPlayerVictory(p, i, state, goals);
-      if (!v) continue;
-      if ((counts[i] || 0) >= 2) continue;  // 무한 반복 방지 캡
-      counts[i] = (counts[i] || 0) + 1;
-      decl = { idx: i, route: v.route, reason: v.reason, round: state.meta.round };
-      logMsgs.push(`📢 P${i} [${p.specific}] 승리 조건 도달 (${v.reason}) — 이번 라운드가 마지막 기회. 다음 라운드 종료까지 유지하면 승리!`);
-      // 서사 표면화: 종료 선언 시 선언자 명대사 1회 첨가 (게임당 인물별 캡)
-      if (typeof loreQuote === 'function' && !loreQuoted[p.specific]) {
-        const lq = loreQuote(p.specific);
-        if (lq) { logMsgs.push(lq.line); loreQuoted[p.specific] = true; }
-      }
-      break;
-    }
-  }
-  if (logMsgs.length === 0 && (state.meta.victoryDeclaration || null) === decl) return state;
-  return {
-    ...state,
-    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts, loreQuoted },
-    log: [...state.log, ...logMsgs.map(m => ({ round: state.meta.round, phase: 6, message: m }))].slice(-150),
-  };
-}
+// v6.12 P0-1 종료 선언 라운드(applyVictoryDeclaration)는 v6.55 에 rules_module.js 로 이전
+//   (로직·이름·수치 불변 — 상단 hudRaceProgress 이전 주석의 사유·폴백 계약과 동일).
 
 // ============================================================================
 // AI (Score-based greedy)
@@ -6653,6 +6482,8 @@ function scoreGhostCard(state, pIdx, cid) {
   if (!c) return 0;
   if (c.wound) return -1000 + Math.random();  // v6.13.1 (P1-1): 상처 = 최하 점수 → 봇 자연 회피
   let score = 10;
+  // v6.55 (협동): 아군 봇 조준 보정 — 적대 반쪽 감점(무력화돼 낭비)·이동/atk(강습 연료) 가점 (비협동 0 항등)
+  if (typeof coop_scoreGhost === 'function') score += coop_scoreGhost(state, p, c);
 
   // TL3~5 해금: 클래스 상위 카드는 TL 도달 전 봇이 회피 (docs/09 §4 고스트 스킬 트리).
   //   블록보다 완화(-16/+8): 고스트 파워 보존. tl 미지정 카드는 상시 사용 가능.
@@ -6755,6 +6586,8 @@ function scoreBlocCard(state, pIdx, cid) {
   if (!c) return 0;
   if (c.scandalCard) return -1000 + Math.random();  // v6.13.1 (P1-1): 스캔들 = 최하 점수 → 봇 자연 회피
   let score = 10;
+  // v6.55 (협동): 아군 봇 조준 보정 — 적대 감점·경제(⚙ 안정화 연료) 가점 (비협동 0 항등)
+  if (typeof coop_scoreBloc === 'function') score += coop_scoreBloc(state, p, c);
 
   // Prefer own TL or lower
   if (c.tl <= p.tl) score += 15;
@@ -6872,10 +6705,12 @@ function SetupScreen({ onStart }) {
     setHumans(next);
   };
   const addHuman = () => {
-    if (humans.length >= 5) return;
+    if (humans.length >= humanMax) return;
     setHumans([...humans, { role: humans.length % 2 === 0 ? 'ghost' : 'bloc', specific: humans.length % 2 === 0 ? 'BLADE' : 'IRONWALL' }]);
   };
-  const removeHuman = () => { if (humans.length > 2) setHumans(humans.slice(0, -1)); };
+  const humanMin = mode === 'coop' ? 1 : 2;   // v6.55: 솔로 협동 = 인간 1 + 아군 봇 3
+  const humanMax = mode === 'coop' ? 4 : 5;   // v6.55: 협동 좌석 4 고정 (2👻+2🏢 목표 충원)
+  const removeHuman = () => { if (humans.length > humanMin) setHumans(humans.slice(0, -1)); };
 
   return (
     <div className="setup">
@@ -6883,20 +6718,28 @@ function SetupScreen({ onStart }) {
       <div className="tagline">SIMULATOR v1.0 · {mapSize === '11x11' ? 'FULL ASHGRID 11×11' : 'TUTORIAL 5×5'} · {mode === 'solo' ? 'SOLO' : 'HOT-SEAT'}</div>
 
       <h2>0. 모드 선택</h2>
-      <div className="role-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className={`role-card ${mode === 'solo' ? 'selected' : ''}`} onClick={() => setMode('solo')}>
+      <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className={`role-card ${mode === 'solo' ? 'selected' : ''}`} onClick={() => { setMode('solo'); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
           <h3>🎮 솔로 (1인)</h3>
           <p>당신 1명 + 봇 3명. 난이도 조절 가능. 추천 첫 플레이.</p>
         </div>
-        <div className={`role-card ${mode === 'multi' ? 'selected' : ''}`} onClick={() => setMode('multi')}>
+        <div className={`role-card ${mode === 'multi' ? 'selected' : ''}`} onClick={() => { setMode('multi'); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
           <h3>👥 핫시트 (2~5인)</h3>
           <p>한 기기에 2~5명 모여 차례로 플레이. 빈 자리는 봇 보충.</p>
+        </div>
+        {/* v6.55: 협동 모드 — coop_module 미로드 시 비활성 + 사유 (E13 계약: 조용한 실패 금지) */}
+        <div className={`role-card ${mode === 'coop' ? 'selected' : ''}`}
+          style={typeof coop_active === 'function' ? {} : { opacity: 0.4, cursor: 'not-allowed' }}
+          onClick={() => { if (typeof coop_active !== 'function') return; setMode('coop'); setScenario('C01'); setMapSize('11x11'); }}>
+          <h3>🤝 협동 (INCURSION)</h3>
+          <p>{typeof coop_active === 'function' ? '전 좌석 한 팀 — MERIDIAN 청산관리단의 침공 저지. 인간 1~4 + 아군 봇.' : '⚠ coop_module.js 미로드 — 협동 모드 사용 불가'}</p>
         </div>
       </div>
 
       <h2>1. 시나리오</h2>
       <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {Object.values(SCENARIOS).map(sc => (
+        {/* v6.55: 협동 모드는 COOP_SCENARIOS(C01~C03)만, 그 외 모드는 경쟁 SCENARIOS(S01~S07)만 — 상호 비노출 */}
+        {(mode === 'coop' ? (typeof coop_scenarioList === 'function' ? coop_scenarioList() : []) : Object.values(SCENARIOS)).map(sc => (
           <div
             key={sc.id}
             className={`role-card ${scenario === sc.id ? 'selected' : ''}`}
@@ -6910,9 +6753,16 @@ function SetupScreen({ onStart }) {
           >
             <h3>{sc.locked ? '🔒 ' : ''}{sc.id} {sc.name}</h3>
             <p>{sc.desc}</p>
+            {sc.coopMode && <p style={{ color: 'var(--yellow)', fontSize: 11 }}>{sc.locked ? sc.lockReason : sc.recLine}</p>}
           </div>
         ))}
       </div>
+      {/* v6.55: 협동 전체 공표 배너 — 목표/패배/시간표/판정식/별점식 (정보 은닉 없음 = 모드 정체성) */}
+      {scen.coopMode && typeof coop_setupInfo === 'function' && (
+        <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
+          {coop_setupInfo(scen.id).map((ln, li) => <div key={li} style={{ marginBottom: 3 }}>{ln}</div>)}
+        </div>
+      )}
       {scen.allBloc && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           ⚠ {scen.id} {scen.name}: 전원 Bloc · 11×11 전용 · 시작 공권력 {scen.startHeat} · 크레딧 +{scen.startCredit} · 4구역 시작 · M&A 쿨다운 없음. (역할 자동 Bloc, Ghost 선택 무시)
@@ -6995,9 +6845,9 @@ function SetupScreen({ onStart }) {
       ) : (
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <button className="pa-btn" onClick={removeHuman} disabled={humans.length <= 2} style={{ padding: '4px 10px' }}>− 인간 제거</button>
-            <span style={{ alignSelf: 'center', fontSize: 13, color: 'var(--cyan)' }}>인간 {humans.length}명</span>
-            <button className="pa-btn" onClick={addHuman} disabled={humans.length >= 5} style={{ padding: '4px 10px' }}>＋ 인간 추가</button>
+            <button className="pa-btn" onClick={removeHuman} disabled={humans.length <= humanMin} style={{ padding: '4px 10px' }}>− 인간 제거</button>
+            <span style={{ alignSelf: 'center', fontSize: 13, color: 'var(--cyan)' }}>인간 {humans.length}명{mode === 'coop' ? (humans.length === 1 ? ' (솔로 협동 — 아군 봇 3)' : ' (핫시트 협동)') : ''}</span>
+            <button className="pa-btn" onClick={addHuman} disabled={humans.length >= humanMax} style={{ padding: '4px 10px' }}>＋ 인간 추가</button>
           </div>
           {humans.map((h, idx) => (
             <div key={idx} style={{ display: 'grid', gridTemplateColumns: '60px 100px 1fr', gap: 6, padding: 8, marginBottom: 6, background: 'var(--bg2)', borderRadius: 3, alignItems: 'center', fontSize: 12 }}>
@@ -7057,11 +6907,11 @@ function SetupScreen({ onStart }) {
           mode, mapSize: effMap, difficulty, scenario,
           role: mode === 'solo' ? soloRole : humans[0].role,
           specific: mode === 'solo' ? soloSpec : humans[0].specific,
-          humans: mode === 'multi' ? humans : null,
+          humans: mode === 'solo' ? null : humans,   // v6.55: 협동도 humans 목록 전달 (1~4명)
           tutorial: mode === 'solo' && effMap === '5x5' && !scen.allBloc ? tutorial : false,
         });
       }}>
-        🎮 START · {scenario} · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : `${humans.length}P HOT-SEAT`} · {((scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize).toUpperCase()}
+        🎮 START · {scenario} · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : mode === 'coop' ? `${humans.length}P COOP` : `${humans.length}P HOT-SEAT`} · {((scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize).toUpperCase()}
       </button>
 
       {/* === v6.24 (레거시 Stage 1): 캠페인 진행 === */}
@@ -7217,7 +7067,8 @@ function nextAction(state, ctx) {
 
 function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
   // v1.0.2: 핫시트 모드면 activePlayer 인간 기준으로 'me' 결정
-  const isMulti = state.meta.mode === 'multi';
+  // v6.55: 협동도 인간 2+ 이면 핫시트 흐름(pass-device·NEXT_HUMAN) 재사용 — 솔로 협동은 P0 단독
+  const isMulti = state.meta.mode === 'multi' || (state.meta.mode === 'coop' && state.players.filter(p => p.kind === 'human').length > 1);
   const meIdx = isMulti ? (state.meta.activePlayer ?? 0) : 0;
   const me = state.players[meIdx];
   const isMyTurn = state.meta.phase === 2;  // Plan phase
@@ -7523,6 +7374,23 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
         <div style={{ color: 'var(--text-dim)', fontSize: 14, letterSpacing: 2, marginBottom: 20, textAlign: 'center' }}>
           {state.meta.winReason || '게임 종료'}
         </div>
+        {/* v6.55 (협동): 팀 결과 + 별점(판정식 공개) + 에필로그 — 전부 coop_result 단일 소스 */}
+        {(() => {
+          const cr = (typeof coop_result === 'function') ? coop_result(state) : null;
+          if (!cr) return null;
+          return (
+            <div style={{ maxWidth: 640, margin: '0 auto 22px', padding: '18px 22px', background: 'var(--bg2)', border: '1px solid var(--magenta)', borderLeft: '3px solid var(--magenta)', borderRadius: 4, textAlign: 'left' }}>
+              <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 13, color: 'var(--magenta)', fontWeight: 700, marginBottom: 6 }}>
+                🤝 {cr.scenId} INCURSION — {cr.win ? `팀 승리 ${cr.starText}` : '팀 패배'}
+              </div>
+              <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--text-dim)', marginBottom: 8 }}>
+                ☠ 파멸 {cr.doom}/{cr.cap} · R{cr.round} 종료 (잔여 {cr.roundsLeft}R) · 거점 파괴 {cr.destroyed}/{cr.landed} · 강습 {cr.assaults}회 · 장부 방어 {cr.stabilized}회
+              </div>
+              <div style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: 11, color: 'var(--yellow)', marginBottom: 10 }}>별점식: {cr.formula}</div>
+              <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text)', margin: 0 }}>{cr.epilogue}</p>
+            </div>
+          );
+        })()}
         {/* v6.24/6.31/6.33/6.34/6.35/6.36/6.39 (레거시 Stage 1~8): 이번 판에 신규 해금된 챕터(1 레이드·2 M&A·3 계엄·4 스플라이스·5 메시·6 인수·7 넥서스·8 완결)마다 봉투 개봉 배너 */}
         {legacyBanner && (legacyBanner.chapter1Newly || legacyBanner.chapter2Newly || legacyBanner.chapter3Newly || legacyBanner.chapter4Newly || legacyBanner.chapter5Newly || legacyBanner.chapter6Newly || legacyBanner.chapter7Newly || legacyBanner.chapter8Newly) && (() => {
           const total = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
@@ -8074,7 +7942,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             const repGoalV = vGoals.ghostRepBattle;
             const raidDone = raids >= vGoals.ghostRaids;
             // v6.52 (V3): 진척 바 = hudRaceProgress (min 게이트·repOnly max — 레이스 HUD 동일)
-            progressPct = hudRaceProgress(p, i, state, vGoals);
+            progressPct = (typeof hudRaceProgress === 'function') ? hudRaceProgress(p, i, state, vGoals) : 0;
             const repLeft = Math.max(0, repGoalV - rep);
             if (isWinning) { threatLevel = 'won'; threatBadge = '🏆'; }
             else if (repLeft <= 3 && raidDone) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
@@ -8090,6 +7958,11 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             else if (assetLeft <= 5) { threatLevel = 'danger'; threatBadge = '⚠ 한 턴 남음'; }
             else if (assetLeft <= 15) { threatLevel = 'warn'; }
             needLabel = `자산 ${assetBase}${hlBonus ? `+${hlBonus}✨` : ''}/${assetGoalV}`;
+          }
+          // v6.55 (협동): 개인 승리 없음 — 라벨을 팀 기여(강습력/⚙)로, 진척은 팀 목표(단일 소스)로 교체
+          if (typeof coop_hudModel === 'function' && typeof coop_seatLabel === 'function') {
+            const cmSeat = coop_hudModel(state);
+            if (cmSeat) { needLabel = coop_seatLabel(state, i); progressPct = cmSeat.objPct; threatLevel = 'safe'; threatBadge = null; }
           }
           const isDeclared = declIdx === i;
           if (isDeclared) threatBadge = '📢 종료 선언';
@@ -8301,13 +8174,38 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
       {/* CENTER — Map + Hand */}
       <div className="center-panel">
         {/* ═══ v6.26 레이스 HUD — ①트랙 ②마켓 틱커 ③위협 스트립 ④라운드 브리핑 (docs/22 §계기판) ═══ */}
+        {/* v6.55 (협동): 레이스 HUD 자리를 파멸 트랙+목표 진척으로 교체 — 표시 소스 = 판정 소스
+            (coop_hudModel = coop_doom/coop_objective 파생, v6.51 단일 소스 계약). 비협동 null → 기존 HUD. */}
         {(() => {
+          const cm = (typeof coop_hudModel === 'function') ? coop_hudModel(state) : null;
+          if (cm) return (
+            <div className="hud-wrap">
+              <div className="race-hud">
+                <div className="rh-head">
+                  <span>☠ RECEIVERSHIP · {cm.scenId} · R{state.meta.round}/{cm.roundLimit}</span>
+                  <span className="rh-lead">🎯 {cm.objLabel} · {cm.objPct}% {cm.objPct >= 100 ? '✅' : ''}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 2, margin: '5px 0 3px' }} title={`파멸 트랙 ${cm.doom}/${cm.cap} — 상한 도달 = 즉시 팀 패배`}>
+                  {Array.from({ length: cm.cap }).map((_, i) => (
+                    <span key={i} style={{ flex: 1, height: 9, borderRadius: 1, background: i < cm.doom ? 'var(--magenta)' : 'var(--bg3)', boxShadow: i < cm.doom ? '0 0 4px var(--magenta)' : 'none' }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 10, fontFamily: 'Share Tech Mono, monospace', color: 'var(--text-dim)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--magenta)' }}>☠ 파멸 {cm.doom}/{cm.cap}</span>
+                  <span>🛰 활성 거점: {cm.basesAlive}</span>
+                  <span>🛳 다음 상륙: {cm.nextLanding}</span>
+                  <span>🏢 장부 방어 ⚙{cm.stabCost}→☠−1 · {cm.stabilized}회</span>
+                  <span style={{ color: 'var(--yellow)' }}>⭐ 현재 페이스 {coop_starText(cm.starNow)}</span>
+                </div>
+              </div>
+            </div>
+          );
           const vG = getVictoryGoals(state);
           const declIdx = state.meta.victoryDeclaration ? state.meta.victoryDeclaration.idx : -1;
           const X = pct => 3 + Math.max(0, Math.min(100, pct)) * 0.94;  // 진척%→트랙 위치% (3~97 인셋)
           // ── 레이서: 실 플레이어(비NPC·생존)만 정규화 배치 ──
           const racers = state.players
-            .map((p, i) => ({ p, i, pct: hudRaceProgress(p, i, state, vG) }))
+            .map((p, i) => ({ p, i, pct: (typeof hudRaceProgress === 'function') ? hudRaceProgress(p, i, state, vG) : 0 }))
             .filter(r => !r.p.isNpc && !r.p.defeated);
           const snap = (state.meta.raceSnapshot && state.meta.raceSnapshot.pct) || {};
           const leader = racers.reduce((a, r) => r.pct > a.pct ? r : a, { pct: -1, i: -1 });
@@ -8528,6 +8426,21 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                           </div>
                         );
                       })()}
+                      {/* v6.55 (협동): MERIDIAN 거점(판정 소스 meta.coop.bases 그대로) + 오염 셀 표시 */}
+                      {cell.merBase && (() => {
+                        const cb = (typeof coop_baseAt === 'function') ? coop_baseAt(state, cd) : null;
+                        if (!cb) return null;
+                        const ct = (typeof COOP_TIERS !== 'undefined' && COOP_TIERS[cb.tier]) || { icon: '⛓', label: '거점' };
+                        return (
+                          <div title={`${ct.label} · 내구 ${cb.hp}/${cb.hp0} · 방어 ${cb.def} — 👻 도착 시 자동 강습 (무기보정+ATK+전투트랙 ≥ ${cb.def})`}
+                            style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 14, lineHeight: 1, filter: 'drop-shadow(0 0 4px var(--magenta))', zIndex: 4, pointerEvents: 'none' }}>
+                            {ct.icon}<span style={{ fontSize: 9, color: 'var(--magenta)', fontWeight: 900 }}>{cb.hp}</span>
+                          </div>
+                        );
+                      })()}
+                      {!cell.merBase && cell.merDark && (
+                        <div title="MERIDIAN 오염 — 수입 0 (인접 거점 파괴 시 해제)" style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 10, opacity: 0.8, zIndex: 4, pointerEvents: 'none' }}>☣</div>
+                      )}
                       {isTargeting && isReachable && previewTag && (
                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 10, color: previewColor, background: 'rgba(0,0,0,0.85)', padding: '2px 4px', borderRadius: 2, pointerEvents: 'none', fontWeight: 900, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{previewTag}</div>
                       )}
@@ -9512,6 +9425,8 @@ function App() {
     if (state?.meta?.gameOver && !savedRef.current) {
       savedRef.current = true;
       saveGameRecord(buildGameRecord(state));
+      // v6.55 (협동): 전적 기록 (dn_coop_v1 — 최고 별점·클리어·판수, C03 해금 체인 소스). 비협동 null 무해.
+      if (typeof coop_recordGame === 'function') { try { coop_recordGame(state); } catch (e) {} }
       // v6.24 (레거시 Stage 1): 최초 레이드 발생 → 챕터 1 해금 + 최다 피해 블록 → 도시 흉터.
       // v6.31 (레거시 Stage 2): 최초 M&A 선언(Bloc→타 Bloc) → 챕터 2 해금 + M&A 표적(PREY) → 흉터.
       // v6.33 (레거시 Stage 3): 계엄 발생(공권력 최고조/경찰 전개/S04) → 챕터 3 해금 + 'martial' 흉터.

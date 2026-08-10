@@ -345,8 +345,94 @@ function rules_shortPayout(state, bloc, drop, qty, payoutPerPt) {
   return { mult: mult, crashBonus: crashBonus, payout: drop * qty * payoutPerPt * mult * crashBonus };
 }
 
+// ============================================================================
+// v6.26 → v6.55 이전: 레이스 HUD 정직성 진척 함수 — 단일 소스 계기판 (index.html babel
+//   인라인에서 이동, 로직·이름·수치 불변. 사유 = 협동 모드 인라인 배선의 500,000자 상쇄).
+//   원칙: "HUD 숫자 = 판정 숫자". 진척률은 evalPlayerVictory(=checkInstantVictory)와
+//   동일 소스만 사용한다: getVictoryGoals(언더독 스케일 반영) + assetValue/rep/raidsThisGame.
+//   [정직성 계약] evalPlayerVictory 가 승리(non-null)를 반환하는 상태에서는 반드시 100.
+//   Ghost 는 두 승리 경로(렙배틀·렙온리)의 max 진척, 렙배틀은 렙·레이드 동시 게이트 → min.
+//   getVictoryGoals/euro_hlVictoryBonus 는 인라인 function 전역 — 호출 시점 지연 참조.
+//   assetValue 는 인라인 const 렉시컬 전역 — 같은 realm 이라 bare 이름 접근 가능(v6.53 선례).
+// ============================================================================
+function hudRaceProgress(p, idx, state, goals) {
+  if (!p || p.isNpc || p.defeated) return 0;
+  goals = goals || ((typeof getVictoryGoals === 'function') ? getVictoryGoals(state) : { blocAsset: 0, ghostRepBattle: 0, ghostRepOnly: 0, ghostRaids: 0 });
+  const hlBonus = (typeof euro_hlVictoryBonus === 'function') ? euro_hlVictoryBonus(p) : 0;  // v6.27 (B-06): 판정과 동일 asset_eff/rep_eff (정직성 계약)
+  if (p.role === 'bloc') {
+    const av = ((typeof assetValue === 'function') ? assetValue(p, state.stocks, state) : 0) + hlBonus;
+    if (!goals.blocAsset) return 0;
+    return Math.max(0, Math.min(100, Math.round(av / goals.blocAsset * 100)));
+  }
+  const rep = (p.resources.rep || 0) + hlBonus;
+  const raids = (state.meta.raidsThisGame || {})[idx] || 0;
+  // 렙배틀 경로: 렙≥ghostRepBattle && 레이드≥ghostRaids — 뒤처진 성분이 레이스를 게이트 → min.
+  const battleRep  = goals.ghostRepBattle > 0 ? rep / goals.ghostRepBattle : 1;
+  const battleRaid = goals.ghostRaids     > 0 ? raids / goals.ghostRaids   : 1;
+  const battlePct  = Math.min(battleRep, battleRaid) * 100;
+  // 렙온리 경로: 렙≥ghostRepOnly.
+  const onlyPct = goals.ghostRepOnly > 0 ? rep / goals.ghostRepOnly * 100 : 0;
+  return Math.max(0, Math.min(100, Math.round(Math.max(battlePct, onlyPct))));
+}
+
+// ============================================================================
+// v6.12 P0-1 → v6.55 이전: 종료 선언 라운드 — 임계 도달 시 즉시 승리 대신 공개 선언 후
+//   유예 1R (index.html babel 인라인에서 이동, 로직·이름·수치 불변 — 상쇄 사유 동일).
+//   NEXT_ROUND(euro_applyAll·M&A 체크 직후)에서 호출 → state.meta.round 는 방금 끝난 라운드 R.
+//   ① 현 선언자가 조건을 이탈했으면 선언 해제(재도달 시 재선언 가능)
+//   ② 활성 선언이 없고 신규 도달자가 있으면 선언 (같은 플레이어 게임당 2회 캡)
+//   확정은 다음 라운드 phase6 checkInstantVictory 가 담당.
+//   evalPlayerVictory/getVictoryGoals(인라인 function 전역)·loreQuote(lore_module)는
+//   호출 시점 지연 참조. 협동 모드에선 evalPlayerVictory 가 항상 null → 선언 자체가 없다.
+// ============================================================================
+function applyVictoryDeclaration(state) {
+  if (state.meta.gameOver) return state;
+  if (state.meta.round < 5) return state;  // 5R 가드 이전엔 선언 없음
+  if (typeof evalPlayerVictory !== 'function' || typeof getVictoryGoals !== 'function') return state;
+  const goals = getVictoryGoals(state);
+  let decl = state.meta.victoryDeclaration || null;
+  const counts = { ...(state.meta.declarationCounts || {}) };
+  const logMsgs = [];
+  const loreQuoted = { ...(state.meta.loreQuoted || {}) };  // 서사 표면화: 게임당 인물별 명대사 1회 캡
+  // ① 현 선언자 조건 이탈 → 선언 해제
+  if (decl) {
+    const dp = state.players[decl.idx];
+    if (!evalPlayerVictory(dp, decl.idx, state, goals)) {
+      logMsgs.push(`⚖ P${decl.idx} [${dp ? dp.specific : '?'}] 승리 조건 이탈 — 종료 선언 해제 (견제 성공)`);
+      decl = null;
+    }
+  }
+  // ② 활성 선언 없음 & 신규 도달자 → 선언 (2회 캡)
+  if (!decl) {
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      if (!p || p.defeated || p.isNpc) continue;
+      const v = evalPlayerVictory(p, i, state, goals);
+      if (!v) continue;
+      if ((counts[i] || 0) >= 2) continue;  // 무한 반복 방지 캡
+      counts[i] = (counts[i] || 0) + 1;
+      decl = { idx: i, route: v.route, reason: v.reason, round: state.meta.round };
+      logMsgs.push(`📢 P${i} [${p.specific}] 승리 조건 도달 (${v.reason}) — 이번 라운드가 마지막 기회. 다음 라운드 종료까지 유지하면 승리!`);
+      // 서사 표면화: 종료 선언 시 선언자 명대사 1회 첨가 (게임당 인물별 캡)
+      if (typeof loreQuote === 'function' && !loreQuoted[p.specific]) {
+        const lq = loreQuote(p.specific);
+        if (lq) { logMsgs.push(lq.line); loreQuoted[p.specific] = true; }
+      }
+      break;
+    }
+  }
+  if (logMsgs.length === 0 && (state.meta.victoryDeclaration || null) === decl) return state;
+  return {
+    ...state,
+    meta: { ...state.meta, victoryDeclaration: decl, declarationCounts: counts, loreQuoted },
+    log: [...state.log, ...logMsgs.map(m => ({ round: state.meta.round, phase: 6, message: m }))].slice(-150),
+  };
+}
+
 // HTML 글로벌 노출 (fx_module 패턴)
 if (typeof window !== 'undefined') {
+  window.hudRaceProgress = hudRaceProgress;                     // v6.55 이전 (v6.26 원 기능)
+  window.applyVictoryDeclaration = applyVictoryDeclaration;    // v6.55 이전 (v6.12 P0-1 원 기능)
   window.rules_raidExecEst = rules_raidExecEst;
   window.rules_shortPayout = rules_shortPayout;
   window.RULES_NEGO_MAX = RULES_NEGO_MAX;

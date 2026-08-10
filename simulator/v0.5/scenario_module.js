@@ -357,6 +357,11 @@ function applyScenarioInit(scen, players, map) {
   if (scen.startWeaponsAll) {
     players.forEach(p => { p.resources = { ...p.resources, weapons: Math.max(0, (p.resources.weapons || 0) + scen.startWeaponsAll) }; });
   }
+  // v6.55 (협동 C01~C03): 전원 부품 델타 — Bloc 장부 방어(⚙ 안정화) 시동 자본. 키 미지정
+  //   시나리오(S01~S07)는 이 분기를 타지 않아 byte 동일 (startWeaponsAll 선례).
+  if (scen.startPartsAll) {
+    players.forEach(p => { p.resources = { ...p.resources, parts: Math.max(0, (p.resources.parts || 0) + scen.startPartsAll) }; });
+  }
   // v6.53 (S07): 정전 캐스케이드 초기 상태 — 시작 시점은 전 구역 점등(스케줄 R<blackoutStart).
   //   meta 초기화는 buildInitial 이 아니라 첫 blackout_advance 가 맡는다(항등 폴백 유지).
 }
@@ -426,8 +431,166 @@ function euro_underdogGoalScale(state) {
   return { ghostMult, blocMult, gc, bc, d, applied: ghostMult !== 1 || blocMult !== 1 };
 }
 
+// ============================================================================
+// v6.21/v6.23 → v6.55 이전: 모바일 NPC 엔진 4함수 — index.html babel 인라인에서 이동,
+//   로직·이름·수치 불변 (협동 모드 인라인 배선의 500,000자 임계 상쇄 — S06/init 훅 이전과
+//   동일 수법). 인라인 상수(POLICE_*/CAPTIVE_*/coordDist/mapMaxIdx/coordsAdj/rand/d6/
+//   ZONE_TYPES = const 렉시컬 전역)와 인라인 함수 전역(trackBonus/logEntry/applyDamage/
+//   scenarioRule/spawnPoliceEntities)은 **호출 시점 지연 참조** — 같은 realm 이라 bare
+//   이름 접근 가능(v6.53 SCENARIOS 선례). 소비처는 typeof 가드.
+// ============================================================================
+// v6.23 — Ghost 가 구금 NPC 위치 도착 시 자동 구출. 같은 칸에 경찰이 있으면 구출 불가(경찰이 지킨다 →
+//   자동전투 먼저; 호출부에서 police 조우 선처리). 디스폰 + ★+1, 전원(5) 구출 시 ★+10 보너스 1회.
+function resolveCaptiveRescue(state, ghostIdx) {
+  let s = state;
+  const ghost = s.players[ghostIdx];
+  if (!ghost || ghost.defeated || ghost.role !== 'ghost') return s;
+  const cap = (s.meta.npcs || []).find(n => n.type === 'captive' && n.position === ghost.position);
+  if (!cap) return s;
+  // 경찰이 같은 칸을 지키면 구출 보류 (호출부가 자동전투를 먼저 해소해야 함)
+  if ((s.meta.npcs || []).some(n => n.type === 'police' && n.position === ghost.position)) return s;
+  const rby = { ...(s.meta.rescuesByPlayer || {}) };
+  rby[ghostIdx] = (rby[ghostIdx] || 0) + 1;
+  const ps = [...s.players];
+  ps[ghostIdx] = { ...ghost, resources: { ...ghost.resources, rep: (ghost.resources.rep || 0) + CAPTIVE_RESCUE_REP } };
+  s = { ...s, players: ps, meta: { ...s.meta,
+    npcs: (s.meta.npcs || []).filter(n => n.id !== cap.id),
+    rescues: (s.meta.rescues || 0) + 1,
+    rescuesByPlayer: rby,
+  } };
+  const meTag = ghostIdx === 0 ? '⭐ 당신 ' : '';
+  const zNm = ZONE_TYPES[s.map[cap.position]?.zone]?.name || cap.position;
+  s = logEntry(s, `${meTag}⛓ 구금 NPC 구출 (${zNm}) — P${ghostIdx} [${ghost.specific}] 렙+${CAPTIVE_RESCUE_REP} · 진행 ${rby[ghostIdx]}/${CAPTIVE_COUNT}`);
+  // 전원 구출 보너스 (플레이어별 1회)
+  const awarded = { ...(s.meta.captiveBonusAwarded || {}) };
+  if (rby[ghostIdx] >= CAPTIVE_COUNT && !awarded[ghostIdx]) {
+    awarded[ghostIdx] = true;
+    const g2 = s.players[ghostIdx];
+    const ps2 = [...s.players];
+    ps2[ghostIdx] = { ...g2, resources: { ...g2.resources, rep: (g2.resources.rep || 0) + CAPTIVE_ALL_BONUS_REP } };
+    s = { ...s, players: ps2, meta: { ...s.meta, captiveBonusAwarded: awarded } };
+    s = logEntry(s, `${meTag}⛓ 전원 구출 달성! P${ghostIdx} [${g2.specific}] 렙+${CAPTIVE_ALL_BONUS_REP} 보너스 (docs/14 §S04)`);
+  }
+  return s;
+}
+
+// Ghost ↔ 경찰 NPC 자동전투. 단일 조우를 결론까지 해소 (docs/14 "자동 전투").
+//   판정: 매 교환 양측 d6. Ghost atk(+트랙 보너스)+d6 vs POLICE_ATK+d6.
+//   Ghost 우세 → NPC HP −Ghost atk. NPC 우세 → Ghost 피해 누적(POLICE_ATK).
+//   NPC HP0 → 격파(렙+2·디스폰). Ghost 피해는 마지막에 applyDamage 1회 위임(HP0 시 STEP F 자동).
+function resolvePoliceCombat(state, ghostIdx, npcId, trigger) {
+  let s = state;
+  const npcs = s.meta.npcs || [];
+  const npc = npcs.find(n => n.id === npcId);
+  const ghost = s.players[ghostIdx];
+  if (!npc || !ghost || ghost.defeated || ghost.role !== 'ghost') return s;
+  let npcHp = npc.hp;
+  let ghostHpSim = ghost.hp;
+  let ghostDmg = 0;
+  const gAtkBase = (ghost.stats.atk || 0) + trackBonus(ghost, 'atk');
+  let ghostWon = false, guard = 0;
+  while (guard++ < 30) {
+    const gTotal = gAtkBase + d6();
+    const nTotal = POLICE_ATK + d6();
+    if (gTotal >= nTotal) npcHp -= Math.max(1, ghost.stats.atk || 1);   // Ghost 가격
+    else { ghostHpSim -= POLICE_ATK; ghostDmg += POLICE_ATK; }          // 경찰 반격 (누적)
+    if (npcHp <= 0) { ghostWon = true; break; }
+    if (ghostHpSim <= 0) { ghostWon = false; break; }
+  }
+  const meTag = ghostIdx === 0 ? '⭐ 당신 ' : '';
+  const zNm = ZONE_TYPES[s.map[npc.position]?.zone]?.name || npc.position;
+  if (ghostWon) {
+    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임 (가해자 없음=환경)
+    const gNow = s.players[ghostIdx];
+    if (gNow && !gNow.defeated) {
+      const ps = [...s.players];
+      ps[ghostIdx] = { ...gNow, resources: { ...gNow.resources, rep: (gNow.resources.rep || 0) + POLICE_KILL_REP } };
+      s = { ...s, players: ps };
+    }
+    s = { ...s, meta: { ...s.meta, npcs: (s.meta.npcs || []).filter(n => n.id !== npcId), policeKills: (s.meta.policeKills || 0) + 1 } };
+    s = logEntry(s, `${meTag}🚔 경찰 NPC 격파 (${zNm}) — P${ghostIdx} [${ghost.specific}] 렙+${POLICE_KILL_REP}`);
+  } else {
+    const npcs2 = (s.meta.npcs || []).map(n => n.id === npcId ? { ...n, hp: Math.max(0, npcHp) } : n);
+    s = { ...s, meta: { ...s.meta, npcs: npcs2, policeFights: (s.meta.policeFights || 0) + 1 } };
+    s = logEntry(s, `${meTag}🚔 경찰 자동전투 (${zNm}) — P${ghostIdx} [${ghost.specific}] 피해 −${ghostDmg} · 경찰 HP ${Math.max(0, npcHp)}/${POLICE_HP}`);
+    if (ghostDmg > 0) s = applyDamage(s, ghostIdx, ghostDmg, { label: '경찰 전투' });  // STEP F 위임
+  }
+  return s;
+}
+
+// 매 라운드(NEXT_ROUND) NPC 갱신: (1) heat≥9 최초 스폰 (docs/02 §6.3, 게임당 1회, 하락해도 유지),
+//   (2) 각 NPC 무작위 인접 1칸 이동, (3) Ghost 와 같은 칸이면 자동전투(진입점 B).
+function updatePoliceForRound(state) {
+  let s = state;
+  // (1) 공권력 9 도달 시 경찰 3체 스폰 (S01 포함 전 게임 공통 코어 규칙). policeSpawned 로 1회 게이트.
+  if (!s.meta.policeSpawned && (s.heat || 0) >= 9) {
+    const npcs = spawnPoliceEntities(s.map, null, POLICE_COUNT);
+    s = { ...s, meta: { ...s.meta, npcs, policeSpawned: true } };
+    s = logEntry(s, `🚔 공권력 ${s.heat} 도달 — 공권력 NPC ${npcs.length}체 출현 (무작위 구역)`);
+  }
+  const cur = s.meta.npcs || [];
+  if (!cur.length) return s;
+  // (2) 이동: police 만 이동(captive 는 고정). S04(patrolGuard) 는 가장 가까운 구금 NPC 로 수호 순찰,
+  //     그 외 시나리오/heat9 스폰은 기존 무작위 인접 1칸(docs/02 §6.3 · docs/14 "랜덤 이동").
+  const maxIdx = mapMaxIdx(s);
+  const capPos = cur.filter(n => n.type === 'captive').map(n => n.position);
+  const guard = scenarioRule(s, 'patrolGuard', false) && capPos.length > 0;
+  const moved = cur.map(n => {
+    if (n.type !== 'police') return { ...n };            // captive 고정
+    const adj = coordsAdj(n.position, maxIdx).filter(c => s.map[c]);
+    if (!adj.length) return { ...n };
+    if (guard) {
+      // 수호: 가장 가까운 구금 NPC 를 향해 1칸(거리 최소화). 이미 수호칸(거리0)이면 정지.
+      let nearest = capPos[0], nd = coordDist(n.position, capPos[0]);
+      for (const cp of capPos) { const d = coordDist(n.position, cp); if (d < nd) { nd = d; nearest = cp; } }
+      if (n.position === nearest) return { ...n };        // 구금 NPC 칸에 착석 = 수호
+      let best = adj[0], bd = coordDist(adj[0], nearest);
+      for (const c of adj) { const d = coordDist(c, nearest); if (d < bd) { bd = d; best = c; } }
+      return { ...n, position: best };
+    }
+    return { ...n, position: rand(adj) };
+  });
+  s = { ...s, meta: { ...s.meta, npcs: moved } };
+  // (3) 이동 후 Ghost 와 겹친 NPC → police=자동전투(진입점 B), captive=자동 구출(경찰 부재 시).
+  //     id 스냅샷 순회 (디스폰 안전). captive 는 police 처리 후 검사 → 경찰이 지키면 구출 보류.
+  for (const npc of [...s.meta.npcs]) {
+    if (npc.type !== 'police') continue;
+    const ghost = s.players.find(p => !p.defeated && p.role === 'ghost' && p.position === npc.position);
+    if (ghost) s = resolvePoliceCombat(s, ghost.id, npc.id, 'police-entry');
+  }
+  for (const npc of [...s.meta.npcs]) {
+    if (npc.type !== 'captive') continue;
+    const ghost = s.players.find(p => !p.defeated && p.role === 'ghost' && p.position === npc.position);
+    if (ghost) s = resolveCaptiveRescue(s, ghost.id);
+  }
+  return s;
+}
+
+// 봇 Ghost 이동 heuristic — NPC 회피/격파 판단 (간단). 각 이동 스텝의 nextStep 보정.
+//   HP 여유(≥60%) → 인접 경찰 있으면 격파 보상 추구(경찰칸으로 진입). 여유 없으면 회피(경찰칸 배제).
+function policeAwareStep(s, playerIdx, current, nextStep) {
+  const npcs = s.meta.npcs || [];
+  if (!npcs.length) return nextStep;
+  const g = s.players[playerIdx];
+  const engage = g.maxHp ? (g.hp / g.maxHp) >= 0.6 : true;
+  const policeAt = (c) => npcs.some(n => n.type === 'police' && n.position === c);  // v6.23: captive 는 위협 아님
+  const adj = coordsAdj(current, mapMaxIdx(s)).filter(c => s.map[c]);
+  if (engage) {
+    const adjPolice = adj.filter(policeAt);
+    if (adjPolice.length) return adjPolice[0];   // 격파 추구: 인접 경찰로 진입
+  } else if (nextStep && policeAt(nextStep)) {
+    const safe = adj.filter(c => !policeAt(c));   // 회피: 경찰 없는 인접칸
+    return safe.length ? rand(safe) : current;
+  }
+  return nextStep;
+}
+
 // HTML 글로벌 노출 (fx_module / rules_module 패턴)
 if (typeof window !== 'undefined') {
+  window.resolveCaptiveRescue = resolveCaptiveRescue;     // v6.55 이전 (v6.23 원 기능)
+  window.resolvePoliceCombat = resolvePoliceCombat;       // v6.55 이전 (v6.21 원 기능)
+  window.updatePoliceForRound = updatePoliceForRound;     // v6.55 이전 (v6.21 원 기능)
+  window.policeAwareStep = policeAwareStep;               // v6.55 이전 (v6.21 원 기능)
   window.BLACKOUT_ORDER = BLACKOUT_ORDER;
   window.blackout_active = blackout_active;
   window.blackout_orderLen = blackout_orderLen;
