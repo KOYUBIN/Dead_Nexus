@@ -356,7 +356,7 @@
       <h1 data-text="DEAD_NEXUS">DEAD<span class="accent">_</span>NEXUS</h1>
       <p class="tagline">사이버펑크 <span class="hl">비대칭 시장 전쟁</span> — 레이드가 곧 주가 포지션이 된다</p>
       <div class="rule" aria-hidden="true"></div>
-      <span class="stamp"><i class="dot" aria-hidden="true"></i>SIMULATOR <b>v6.54</b> · 3-TRACK BUILD</span>
+      <span class="stamp"><i class="dot" aria-hidden="true"></i>SIMULATOR <b>v6.55</b> · 3-TRACK BUILD</span>
     </section>
 
     <!-- [PWA · 오프라인] 서비스워커 없이 가능한 범위 — 오프라인 상태 고지만. 캐시 없음. -->
@@ -390,11 +390,12 @@
           <span class="idx" aria-hidden="true">01</span>
           <div class="icon" aria-hidden="true">🎮</div>
           <h3 class="ttl">전략 시뮬레이션<span class="sub">WEB SIMULATOR</span></h3>
-          <p class="desc">솔로 + 봇 3, 30~60분 · 레이드가 곧 주가 포지션. 11×11 정식 + 5×5 튜토리얼, 레이스 HUD + NEXUS BAR.</p>
+          <p class="desc">솔로 + 봇 3, 30~60분 · 레이드가 곧 주가 포지션. 11×11 정식 + 5×5 튜토리얼, 레이스 HUD + NEXUS BAR · 🤝 협동 INCURSION(파멸 트랙 vs MERIDIAN).</p>
           <ul class="stats" aria-label="전략 시뮬레이션 규모">
             <li><b data-metric="sim-scenarios">7</b>시나리오</li>
             <li><b data-metric="sim-chapters">8</b>챕터 캠페인</li>
             <li><b data-metric="sim-maps">2</b>맵 규격</li>
+            <li><b data-metric="sim-coop">3</b>협동 작전</li>
           </ul>
           <div class="badges">
             <span class="badge">튜토리얼</span>
@@ -515,6 +516,7 @@
       ];
       // 시뮬레이터 — simulator/v0.5/index.html SCENARIOS 키 / legacy_module.js TOTAL_CHAPTERS 사본.
       var SIM_SCENARIO_IDS = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07'];
+      var SIM_COOP_IDS = ['C01', 'C02', 'C03'];   // coop_module.js COOP_SCENARIOS 키 사본 (_home_check 가드 대조)
       var SIM_MAP_IDS = ['5x5', '11x11'];
       var SIM_CHAPTER_IDS = [1, 2, 3, 4, 5, 6, 7, 8];   // 레거시 캠페인 챕터 — 분모 단일 소스
       // 프린트 킷 — print-kit 디렉터리의 번호 접두 html 실파일 사본(index.html 제외).
@@ -538,6 +540,7 @@
       // ── ② 카드 지표 주입 — 전부 배열 길이 파생(리터럴 0) ──────────────────────
       var METRICS = {
         'sim-scenarios': SIM_SCENARIO_IDS.length,
+        'sim-coop': SIM_COOP_IDS.length,
         'sim-chapters': SIM_CHAPTER_IDS.length,
         'sim-maps': SIM_MAP_IDS.length,
         'rpg-missions': RPG_MISSION_IDS.length + RPG_CAPSTONE_IDS.length,

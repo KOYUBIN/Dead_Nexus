@@ -1440,6 +1440,193 @@ function tests(){
   ok('B rules_botGoalGap 은 rules_victoryRatio(타임아웃 판정)와 동일 진척값 — 단일 소스',
     gapB.pct===window.rules_victoryRatio(s1b.players[bi],bi,s1b,g1b),`gap ${gapB.pct} ratio ${window.rules_victoryRatio(s1b.players[bi],bi,s1b,g1b)}`);
 
+  // ==== v6.55: 협동 시나리오 모드 INCURSION (coop_module.js — C01/C02/C03) ====
+  //   ① 레지스트리 격리·정체성 리터럴 핀 ② 좌석 로스터 ③ 침공 엔진(상륙·파멸·강습·안정화)
+  //   ④ 승리/패배/별점/해금/기록 ⑤ 아군 봇 협동 게이트(PvP 금지) ⑥ 기존 모드 무손상 격리
+  const CGS=window.coop_getScenario,CADV=window.coop_advance,CCE=window.coop_checkEnd,CTU=window.coop_timeUp,
+    CST=window.coop_stars,CRES=window.coop_result,CREC=window.coop_recordGame,CRST=window.coop_resetRec,
+    CUNL=window.coop_isUnlocked,CEF=window.coop_effectFilter,CBG=window.coop_botGhostGoal,CAP=window.coop_assaultPower,
+    CHM=window.coop_hudModel,CACT=window.coop_active,CD=window.coop_doom,COBJ=window.coop_objective;
+  // ---- ① 레지스트리 격리 (홈 가드 보호) + 정체성 리터럴 핀 ----
+  ok('COOP SCENARIOS 키 = S01~S07 만 (C 계열 미혼입 — _home_check 가드 14 보호)',Object.keys(SCENARIOS).join()==='S01,S02,S03,S04,S05,S06,S07',Object.keys(SCENARIOS).join());
+  ok('COOP getScenario(S01) = SCENARIOS.S01 참조 동일 (기존 경로 무변경)',getScenario('S01')===SCENARIOS.S01);
+  ok('COOP getScenario(C01) = coop 레지스트리 (coop_getScenario 위임)',getScenario('C01')===CGS('C01')&&CGS('C01').coopMode===true);
+  ok('COOP coop_getScenario(S01) = null (S 계열 불간섭)',CGS('S01')===null);
+  ok('C01 리터럴: 8R · 파멸 상한 12 · 거점 내구 1/방어 5 · 유지 +1 · 상륙 +0 · 파괴 −1 · 안정화 ⚙2',
+    (()=>{const c=CGS('C01');return c.roundLimit===8&&c.coopDoomCap===12&&c.coopBaseHp===1&&c.coopBaseDef===5&&c.coopDoomPerBase===1&&c.coopDoomOnLand===0&&c.coopKillDoom===1&&c.coopStabCost===2&&c.coopObjective==='destroy';})());
+  ok('C01 상륙 시간표 리터럴 고정 (결정론 — S07 BLACKOUT_ORDER 선례)',JSON.stringify(CGS('C01').coopLandings)==='[[2,"D4","col"],[2,"H4","col"],[3,"D8","col"],[3,"H8","col"]]');
+  ok('C02 리터럴: 10R · 상한 12 · 유지 +2(가속) · 상륙 +1 · survive · 시간표 7건(재상륙 포함)',
+    (()=>{const c=CGS('C02');return c.roundLimit===10&&c.coopDoomCap===12&&c.coopDoomPerBase===2&&c.coopDoomOnLand===1&&c.coopObjective==='survive'&&c.coopLandings.length===7&&c.coopBaseHp===1;})());
+  ok('C03 리터럴: 10R · 상한 16 · 기함 내구 10/방어 7 · flagship 목표 · R2 F6 착좌',
+    (()=>{const c=CGS('C03');return c.roundLimit===10&&c.coopDoomCap===16&&c.coopFlagHp===10&&c.coopFlagDef===7&&c.coopObjective==='flagship'&&JSON.stringify(c.coopLandings[0])==='[2,"F6","flag"]';})());
+  ok('C 시간표 좌표는 5 Bloc HQ·support·NEXUS·Ghost 시작칸 전부 회피',
+    (()=>{const ban=['C2','B2','C1','I2','I1','J2','F4','F3','E4','C10','B10','C11','I10','J10','I11','A6','F1','K6','F11','A1','K11'];
+      return ['C01','C02','C03'].every(id=>CGS(id).coopLandings.every(L=>L[1]==='F6'||!ban.includes(L[1])));})());
+  ok('C 별점식 데이터: C01 잔여≥1/≥2 · C02 파멸 ≤4/≤2 · C03 파멸≤10+잔여≥2',
+    (()=>{const a=CGS('C01'),b=CGS('C02'),c=CGS('C03');return a.star2Rounds===1&&a.star3Rounds===2&&b.star2Doom===4&&b.star3Doom===2&&c.star2Doom===10&&c.star3Rounds===2;})());
+  // ---- ② 좌석 로스터 (결정론 충원 — 2👻+2🏢) ----
+  const c01=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:[{role:'ghost',specific:'BLADE'}],scenario:'C01'});
+  ok('C01 meta: scenario=C01 · mode=coop · roundLimit rule 8 · coop_active true',c01.meta.scenario==='C01'&&c01.meta.mode==='coop'&&SR(c01,'roundLimit',0)===8&&CACT(c01)===true);
+  ok('C01 솔로 협동 로스터: 4석 = 인간 BLADE👻 + 봇 RIGGER👻·IRONWALL🏢·CARBON🏢 (결정론 충원)',
+    c01.players.length===4&&c01.players[0].kind==='human'&&c01.players[0].specific==='BLADE'&&
+    c01.players.map(p=>p.kind).join()==='human,bot,bot,bot'&&c01.players.map(p=>p.role).join()==='ghost,ghost,bloc,bloc'&&
+    c01.players[1].specific==='RIGGER'&&c01.players[2].specific==='IRONWALL'&&c01.players[3].specific==='CARBON',c01.players.map(p=>p.kind+':'+p.role+':'+p.specific).join(' '));
+  ok('C01 NPC 좌석 0 (전원 실참 한 팀)',c01.players.every(p=>!p.isNpc));
+  ok('C01 시작 보급: Ghost 무기 3(기본0+11×11보정1+무기고2)·부품 3 / Bloc 무기 2·부품 2 (startWeaponsAll/startPartsAll)',
+    c01.players[0].resources.weapons===3&&c01.players[0].resources.parts===3&&c01.players[2].resources.weapons===2&&c01.players[2].resources.parts===2,
+    JSON.stringify(c01.players.map(p=>[p.resources.weapons,p.resources.parts])));
+  const c01h2=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'CIPHER',humans:[{role:'ghost',specific:'CIPHER'},{role:'bloc',specific:'VANTA'}],scenario:'C01'});
+  ok('C01 핫시트 협동(인간2): 인간 CIPHER👻·VANTA🏢 + 봇 충원 → 2👻+2🏢 유지',
+    c01h2.players.map(p=>p.kind).join()==='human,human,bot,bot'&&c01h2.players.filter(p=>p.role==='ghost').length===2&&c01h2.players.filter(p=>p.role==='bloc').length===2);
+  // ---- ③ 침공 엔진: 결정론 상륙·오염·유지 파멸·안정화 ----
+  const cA2=CADV({...c01,meta:{...c01.meta,round:2}});
+  ok('C01 R2 상륙: D4·H4 거점 활성 (내구 1·방어 5) · 파멸 0 (onLand 0 · 기존 거점 없음)',
+    (()=>{const co=cA2.meta.coop;return co&&co.bases.D4&&co.bases.H4&&co.bases.D4.hp===1&&co.bases.D4.def===5&&co.doom===0&&co.landed===2;})(),JSON.stringify(cA2.meta.coop&&cA2.meta.coop.bases));
+  ok('C01 R2 셀 표기: D4 merBase+merDark · 인접 D3/D5/C4/E4 merDark (점거 몰수+인접 오염)',
+    !!cA2.map.D4.merBase&&!!cA2.map.D4.merDark&&!!cA2.map.D3.merDark&&!!cA2.map.D5.merDark&&!!cA2.map.C4.merDark&&!!cA2.map.E4.merDark&&!cA2.map.A1.merDark);
+  const cA2b=CADV(structuredClone({...c01,meta:{...c01.meta,round:2}}));
+  ok('C01 상륙 결정론: 동일 입력 2회 → 동일 거점·파멸 (Math.random 0)',
+    JSON.stringify({d:cA2.meta.coop.doom,b:cA2.meta.coop.bases})===JSON.stringify({d:cA2b.meta.coop.doom,b:cA2b.meta.coop.bases}));
+  const cA3=CADV({...cA2,meta:{...cA2.meta,round:3}});
+  ok('C01 R3: 유지 파멸 +2(활성 2거점×1) → Bloc 안정화 2회(⚙2씩 지불) → 파멸 0 · 신규 상륙 D8·H8',
+    (()=>{const co=cA3.meta.coop;return co.doom===0&&co.stabilized===2&&co.landed===4&&Object.values(co.bases).filter(b=>b.hp>0).length===4
+      &&cA3.players[2].resources.parts===0&&cA3.players[3].resources.parts===0;})(),JSON.stringify({d:cA3.meta.coop.doom,st:cA3.meta.coop.stabilized,p2:cA3.players[2].resources.parts}));
+  ok('C01 merDark 구역 수입 0 (COLLECT_INCOME 손계산: 금융가 ₵3 → 0)',
+    (()=>{const base={...c01,map:{Z9:{zone:'bank',owner:0}},players:c01.players.map((p,i)=>i===0?{...p,role:'bloc',tracks:{},stocks:{},pool:{}}:p)};
+      const lit=withRand(0.99,()=>R(base,{type:'COLLECT_INCOME'}));
+      const dark=withRand(0.99,()=>R({...base,map:{Z9:{zone:'bank',owner:0,merDark:true}}},{type:'COLLECT_INCOME'}));
+      const c0=base.players[0].resources.credit;
+      return lit.players[0].resources.credit===c0+3&&dark.players[0].resources.credit===c0;})());
+  // ---- ③b 강습 (기존 레이드 판정 성분 재사용 — 결정론·표시=판정) ----
+  ok('C01 강습력 손계산: BLADE = raidBonus(무기3→4) + ATK 5 + 전투트랙 1 = 10 (기존 레이드 성분 재사용)',CAP(c01.players[0])===10,`got ${CAP(c01.players[0])}`);
+  const cAtk={...cA2,players:cA2.players.map((p,i)=>i===0?{...p,position:'D4'}:p)};
+  const cA3k=CADV({...cAtk,meta:{...cAtk.meta,round:3}});
+  ok('C01 주둔 강습: 9 ≥ 5(+4 초과 → 피해 2) → 내구 1 거점 파괴 · ★+5(타격2+파괴3) · 파멸 −1 클램프 0',
+    (()=>{const co=cA3k.meta.coop;return co.destroyed===1&&co.assaults===1&&co.bases.D4.hp===0
+      &&cA3k.players[0].resources.rep===c01.players[0].resources.rep+5;})(),JSON.stringify({d:cA3k.meta.coop.destroyed,rep:cA3k.players[0].resources.rep}));
+  ok('C01 파괴 후 셀 정화: D4 merBase 해제 · 잔존 H4 오염 유지',!cA3k.map.D4.merBase&&!!cA3k.map.H4.merBase&&!!cA3k.map.H3.merDark);
+  const cAdj={...cA2,players:cA2.players.map((p,i)=>i===0?{...p,position:'D3'}:p)};
+  ok('C01 포위 강습: 인접칸(D3)에서도 D4 거점 타격 (coop_baseNear)',CADV({...cAdj,meta:{...cAdj.meta,round:3}}).meta.coop.bases.D4.hp===0);
+  const cWeak={...cA2,players:cA2.players.map((p,i)=>i===0?{...p,position:'D4',stats:{...p.stats,atk:1},tracks:{},resources:{...p.resources,weapons:0}}:p)};
+  const cWk=CADV({...cWeak,meta:{...cWeak.meta,round:3}});
+  ok('C01 강습 실패: 총합 4(3+1) < 방어 5 → 거점 무손 · 강습자 HP −1',
+    cWk.meta.coop.bases.D4.hp===1&&cWk.players[0].hp===c01.players[0].hp-1&&cWk.meta.coop.assaults===1,`hp ${cWk.players[0].hp}`);
+  ok('C01 카드 강습 변환: atk 효과 + 거점 위 → 추가 강습 발동 + atk 키 제거 (coop_effectFilter)',
+    (()=>{const cf=CEF(cAtk,0,{atk:2,gen:'I'});return cf.s!==cAtk&&cf.s.meta.coop.assaults===1&&cf.effect.atk===undefined&&cf.effect.gen==='I';})());
+  // ---- ③c C02/C03 고유 룰 ----
+  const c02=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:[{role:'ghost',specific:'BLADE'}],scenario:'C02'});
+  const c02r2=CADV({...c02,meta:{...c02.meta,round:2}});
+  ok('C02 R2: 압류 집행소 D6 착좌 · 상륙 파멸 +1 → 안정화 1회 → 0',
+    c02r2.meta.coop.bases.D6&&c02r2.meta.coop.bases.D6.tier==='ass'&&c02r2.meta.coop.doom===0&&c02r2.meta.coop.stabilized===1,JSON.stringify({d:c02r2.meta.coop.doom}));
+  const c02re={...c02r2,meta:{...c02r2.meta,round:6}};
+  const c02re2=CADV(c02re);
+  ok('C02 재상륙 스킵: R6 D6 이미 활성 → 중복 상륙 없음 (landed 불변) · 유지 +2(가속) 과금',
+    c02re2.meta.coop.landed===c02r2.meta.coop.landed&&Object.values(c02re2.meta.coop.bases).filter(b=>b.hp>0).length===1,
+    JSON.stringify({landed:c02re2.meta.coop.landed,doom:c02re2.meta.coop.doom}));
+  const c02doom={...c02r2,players:c02r2.players.map(p=>({...p,resources:{...p.resources,parts:0}})),meta:{...c02r2.meta,round:5,coop:{...c02r2.meta.coop,doom:9}}};
+  const c02dead=CADV(c02doom);
+  ok('C02 파멸 상한 패배: 9 + 유지2 + 상륙1 = 12 ≥ 상한 12 → 즉시 팀 패배 (RECEIVERSHIP)',
+    c02dead.meta.gameOver===true&&c02dead.meta.winner===null&&/RECEIVERSHIP/.test(c02dead.meta.winReason),c02dead.meta.winReason);
+  const c03=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:[{role:'ghost',specific:'BLADE'}],scenario:'C03'});
+  const c03r2=CADV({...c03,meta:{...c03.meta,round:2}});
+  ok('C03 R2: 기함급 F6 착좌 (tier flag · 내구 10 · 방어 7) · startHeat 6',
+    c03r2.meta.coop.bases.F6&&c03r2.meta.coop.bases.F6.tier==='flag'&&c03r2.meta.coop.bases.F6.hp===10&&c03r2.meta.coop.bases.F6.def===7&&c03.heat===6);
+  const c03atk={...c03r2,players:c03r2.players.map((p,i)=>i===0?{...p,position:'F6'}:p)};
+  const c03hit=CADV({...c03atk,meta:{...c03atk.meta,round:3}});
+  ok('C03 기함 강습: BLADE 9 ≥ 7 (초과 2 < 4 → 피해 1) → 내구 10→9 · 목표 진척 1/10',
+    c03hit.meta.coop.bases.F6.hp===9&&COBJ(c03hit).done===1&&COBJ(c03hit).total===10,JSON.stringify(COBJ(c03hit)));
+  const c03win={...c03hit,meta:{...c03hit.meta,coop:{...c03hit.meta.coop,bases:{...c03hit.meta.coop.bases,F6:{...c03hit.meta.coop.bases.F6,hp:0}}}}};
+  ok('C03 기함 격파 = coop_checkEnd 팀 승리 (winner 0 · 사유에 별점 포함)',
+    (()=>{const e=CCE(c03win);return e.meta.gameOver===true&&e.meta.winner===0&&/협동 승리/.test(e.meta.winReason)&&/★/.test(e.meta.winReason);})());
+  // ---- ④ 승리/패배/별점/해금/기록 ----
+  const c01win={...cA3k,meta:{...cA3k.meta,round:5,coop:{...cA3k.meta.coop,destroyed:4}}};
+  ok('C01 전파괴 = coop_checkEnd 팀 승리 · 진척 100%',(()=>{const e=CCE(c01win);return e.meta.gameOver&&e.meta.winner===0&&COBJ(c01win).pct===100;})());
+  ok('C01 미완수 timeUp = 팀 패배 (winner null)',(()=>{const e=CTU({...cA3,meta:{...cA3.meta,round:8}});return e.meta.gameOver&&e.meta.winner===null&&/패배/.test(e.meta.winReason);})());
+  ok('C02 생존 timeUp = 팀 승리 (survive · winner 0)',(()=>{const e=CTU({...c02r2,meta:{...c02r2.meta,round:10}});return e.meta.gameOver&&e.meta.winner===0&&/사수 완료/.test(e.meta.winReason);})());
+  ok('C02 timeUp 도 마지막 라운드 주둔 강습 정산 (D6 위 BLADE → 격파 후 승리)',
+    (()=>{const st={...c02r2,players:c02r2.players.map((p,i)=>i===0?{...p,position:'D6'}:p),meta:{...c02r2.meta,round:10}};
+      const e=CTU(st);return e.meta.winner===0&&e.meta.coop.destroyed===c02r2.meta.coop.destroyed+1;})());
+  const mkStar=(sc,round,doom)=>CST({meta:{scenario:sc,round,coop:{doom}}});
+  ok('별점식 C01 (잔여 2단): R6→★3 · R7→★2 · R8→★1',mkStar('C01',6,0)===3&&mkStar('C01',7,0)===2&&mkStar('C01',8,0)===1);
+  ok('별점식 C02 (파멸 2단): 파멸2→★3 · 4→★2 · 5→★1',mkStar('C02',10,2)===3&&mkStar('C02',10,4)===2&&mkStar('C02',10,5)===1);
+  ok('별점식 C03 (혼합): R8·파멸10→★3 · R8·파멸11→★2 · R9·파멸11→★1',mkStar('C03',8,10)===3&&mkStar('C03',8,11)===2&&mkStar('C03',9,11)===1);
+  ok('별점식 공개 계약: coop_setupInfo 에 coop_starFormula 문구 그대로 포함',
+    ['C01','C02','C03'].every(id=>window.coop_setupInfo(id).some(ln=>ln.includes(window.coop_starFormula(CGS(id))))));
+  CRST();
+  const recWin={meta:{scenario:'C01',round:6,gameOver:true,winner:0,coop:{doom:1,destroyed:4,landed:4,assaults:6,stabilized:3,bases:{}}}};
+  const coopRec1=CREC(recWin);
+  ok('기록: C01 승리 → dn_coop_v1 { best ★3(잔여2) · clears 1 · plays 1 }',coopRec1&&coopRec1.best===3&&coopRec1.clears===1&&coopRec1.plays===1,JSON.stringify(coopRec1));
+  const coopRec2=CREC({...recWin,meta:{...recWin.meta,winner:null}});
+  ok('기록: 패배 → plays 만 증가 (best·clears 유지)',coopRec2&&coopRec2.best===3&&coopRec2.clears===1&&coopRec2.plays===2,JSON.stringify(coopRec2));
+  ok('해금: C01 만 클리어 → C03 잠금 유지',CUNL('C03')===false&&CUNL('C01')===true&&CUNL('C02')===true);
+  CREC({meta:{scenario:'C02',round:10,gameOver:true,winner:0,coop:{doom:2,destroyed:5,landed:7,assaults:9,stabilized:4,bases:{}}}});
+  ok('해금 체인: C01+C02 클리어 → C03 해금 · 목록 locked 해제',CUNL('C03')===true&&window.coop_scenarioList().find(s=>s.id==='C03').locked===false);
+  ok('coop_result = 별점 단일 소스 (coop_stars 와 동일값)',(()=>{const res=CRES(recWin);return res&&res.win===true&&res.stars===CST(recWin)&&res.stars===3;})());
+  CRST();
+  ok('기록 리셋: dn_coop_v1 제거 → C03 재잠금 (전적 파생 locked)',CUNL('C03')===false&&window.coop_scenarioList().find(s=>s.id==='C03').locked===true);
+  // ---- ④b 표시=판정 단일 소스 (v6.51 계약) ----
+  ok('HUD 모델 = 판정 소스 파생: doom=meta.coop.doom · cap=rule · objPct=coop_objective',
+    (()=>{const cm=CHM(cA3);return cm&&cm.doom===cA3.meta.coop.doom&&cm.cap===12&&cm.objPct===COBJ(cA3).pct&&cm.roundLimit===8;})());
+  ok('HUD 다음 상륙 = 시간표 리터럴 파생 (R2 시점 → R3 ⛓D8 · R3 ⛓H8)',CHM(cA2).nextLanding==='R3 ⛓D8 · R3 ⛓H8',CHM(cA2).nextLanding);
+  ok('협동전 evalPlayerVictory = null (개인 승리 차단 — 자산 임계 초과라도)',
+    (()=>{const st={...c01,players:c01.players.map((p,i)=>i===2?{...p,stocks:{...p.stocks,VANTA:60}}:p)};
+      return evalPlayerVictory(st.players[2],2,st)===null;})());
+  ok('동일 좌석·자산 S01 이면 개인 승리 성립 (게이트가 협동 한정임을 증명)',
+    (()=>{const st={...c01,meta:{...c01.meta,scenario:'S01'},players:c01.players.map((p,i)=>i===2?{...p,stocks:{...p.stocks,VANTA:60}}:p)};
+      return evalPlayerVictory(st.players[2],2,st)!==null;})());
+  // ---- ⑤ 아군 봇 협동 게이트 (PvP 레이드·적대 M&A·견제·적대 카드 금지) ----
+  ok('게이트: euro_grantSuppression 협동 항등 (참조 동일 — 봇 견제 발동 금지)',window.euro_grantSuppression(c01)===c01);
+  ok('게이트: euro_declareMnaCheck 협동 거부 + 사유 표기 (인간 UI·봇 공용)',
+    (()=>{const k=window.euro_declareMnaCheck(c01,2,'VANTA');return k.ok===false&&/협동/.test(k.reason);})());
+  ok('게이트: HUMAN_SUPPRESS 협동 무발동 + 사유 로그 (조용한 실패 금지)',
+    (()=>{const r=R({...c01,players:c01.players.map((p,i)=>i===0?{...p,resources:{...p.resources,credit:20}}:p)},{type:'HUMAN_SUPPRESS',playerIdx:0,targetIdx:2,tokenType:'combat'});
+      const tok=r.players[2].suppressionTokens;return (!tok||!tok.combat)&&/아군 견제 불가/.test(r.log[r.log.length-1].message);})());
+  ok('게이트: 적대 카드 효과 무력화 — assassin_contract 제거·자기강화(gen) 보존',
+    (()=>{const cf=CEF(c01,2,{assassin_contract:1,gen:'M'});return cf.effect.assassin_contract===undefined&&cf.effect.gen==='M'&&cf.s===c01;})());
+  ok('게이트: COOP_HOSTILE_KEYS 에 3금지축 전부 등재 (raid류·M&A류 주가공격·견제류)',
+    ['hire_raid','crash_target','bounty_post','assassin_contract','ghost_track','steal_op','scandal','execute'].every(k=>window.COOP_HOSTILE_KEYS.includes(k)));
+  ok('아군 봇 조준: coop_botGhostGoal = 최근접 활성 거점 · 분담 배정 (P0→D4 · P1(F11)→H4 아님 D8?  거점 미상륙 R1 은 현위치)',
+    (()=>{const g0=CBG(cA2,'F1',0);const g1=CBG(cA2,'F11',1);return g0==='D4'&&g1==='H4'&&CBG(c01,'F1',0)==='F1';})(),`g0 ${CBG(cA2,'F1',0)} g1 ${CBG(cA2,'F11',1)}`);
+  ok('아군 봇 조준: 시나리오 목표 함수 파생 — 거점 전멸 시 현위치 유지(추격 대상 없음)',
+    (()=>{const cl={...cA2,meta:{...cA2.meta,coop:{...cA2.meta.coop,bases:{}}}};return CBG(cl,'F5',0)==='F5';})());
+  // ---- ⑤b 통합 스모크: 봇 전용 협동 2판 — PvP 흔적 0 + 정상 종료 ----
+  for(let gi=0;gi<2;gi++){
+    let sG=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:[{role:'ghost',specific:'BLADE'},{role:'ghost',specific:'CIPHER'},{role:'bloc',specific:'IRONWALL'},{role:'bloc',specific:'VANTA'}],scenario:'C01'});
+    sG={...sG,players:sG.players.map(p=>({...p,kind:'bot'}))};
+    const pvp=[];let guard=0;
+    while(!sG.meta.gameOver&&guard<12){
+      guard++;
+      sG=R(sG,{type:'SET_PHASE',phase:1});sG=R(sG,{type:'DRAW_NEWS'});sG=R(sG,{type:'BOT_MARKET'});
+      sG=R(sG,{type:'SET_PHASE',phase:2});
+      for(let i=0;i<sG.players.length;i++){if(sG.players[i].defeated)continue;sG=R(sG,{type:'PLAN_CARDS',playerIdx:i,cards:window.botPickCards(sG,i)});}
+      sG=R(sG,{type:'SET_PHASE',phase:3});sG=R(sG,{type:'SNAPSHOT_TURN'});sG=R(sG,{type:'EXECUTE_TURN'});sG=R(sG,{type:'COMPUTE_TURN_DIFF'});
+      sG=R(sG,{type:'SET_PHASE',phase:4});sG=R(sG,{type:'COLLECT_INCOME'});
+      sG=R(sG,{type:'SET_PHASE',phase:5});sG=R(sG,{type:'RESEARCH_PHASE'});
+      sG=R(sG,{type:'SET_PHASE',phase:6});
+      const af=window.checkInstantVictory(sG);
+      if(af.meta.gameOver){sG=R(sG,{type:'VICTORY',winner:af.meta.winner,reason:af.meta.winReason});break;}
+      sG=R(sG,{type:'NEXT_ROUND'});
+      for(const l of sG.log){const m=l.message||'';if(/레이드 성공|Ghost 결투|인수 선언|견제 \(₵|청부 살인|현상금 발행/.test(m))pvp.push(m);}
+    }
+    ok(`통합 ${gi+1}/2: 봇 전용 C01 완주 — PvP·적대 M&A·견제 흔적 0 · 정상 종료 (${sG.meta.winner===0?'승':'패'} R${sG.meta.round})`,
+      sG.meta.gameOver===true&&pvp.length===0,pvp[0]||'');
+  }
+  // ---- ⑥ 기존 모드 무손상 격리 (S01 픽스처 — 전 진입점 참조 동일 항등) ----
+  const iso=B({mode:'solo',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:null,scenario:'S01'});
+  const isoR={...iso,meta:{...iso.meta,round:3}};
+  ok('격리: coop_active(S01)=false · coop_advance/checkEnd/timeUp 참조 동일 항등',
+    CACT(iso)===false&&CADV(isoR)===isoR&&CCE(iso)===iso&&CTU(iso)===iso);
+  ok('격리: coop_effectFilter(S01) — state·effect 참조 동일 (카드층 바이트 불변)',
+    (()=>{const e={atk:2,assassin_contract:1};const cf=CEF(iso,0,e);return cf.s===iso&&cf.effect===e;})());
+  ok('격리: coop_botGhostGoal(S01)=null · coop_scoreGhost/Bloc=0 · coop_botHalves=null (봇 경로 불변)',
+    CBG(iso,'F1',0)===null&&window.coop_scoreGhost(iso,iso.players[0],{top:{move:2}})===0&&window.coop_scoreBloc(iso,iso.players[1],{main:{credit:3}})===0&&window.coop_botHalves(iso,1,['BASIC_MOVE_C'])===null);
+  ok('격리: S01 맵 셀 merBase/merDark 무오염 (수입 경로 불변)',Object.keys(iso.map).every(c=>iso.map[c].merBase===undefined&&iso.map[c].merDark===undefined)&&Object.keys(CADV(isoR).map||{}).length>0);
+  ok('격리: S01 euro_grantSuppression 게이트 통과 (협동 아닐 때 기존 로직 도달 — 참조 변화 가능성 유지)',
+    (()=>{const r=withRand(0.99,()=>window.euro_grantSuppression(iso));return r===iso;})());  // rand 0.99 ≥ prob → 기존 첫 게이트에서 항등 (경로 자체가 살아있음을 부수 확인)
+  ok('격리: hudRaceProgress·applyVictoryDeclaration·NPC 엔진 4종 모듈 이전 후 전역 생존 (E13 marker)',
+    ['hudRaceProgress','applyVictoryDeclaration','resolveCaptiveRescue','resolvePoliceCombat','updatePoliceForRound','policeAwareStep'].every(n=>typeof window[n]==='function'));
+  ok('격리: 협동 모듈 marker(coop_active) MODULES 감시 대상 — window 노출 확인',typeof window.coop_active==='function'&&typeof window.coop_scenarioList==='function');
+
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }

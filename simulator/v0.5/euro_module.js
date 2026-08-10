@@ -571,6 +571,8 @@ const EURO_DECLARER_BONUS = 10;
 // v6.6: (4) 보복 편향 — 최근 EURO_GRUDGE_WINDOW라운드 내 나(부여 봇)를 견제한 상대는
 //           위협도 +EURO_GRUDGE_BONUS. 발동 확률·비용·토큰 수는 불변, "타겟 선정"만 변화.
 function euro_grantSuppression(state) {
+  // v6.55 (협동): 전 좌석 한 팀 — 봇 견제 발동 금지 (coop_module 게이트, 비협동 false → 불변)
+  if (typeof coop_pvpBlocked === 'function' && coop_pvpBlocked(state)) return state;
   const mode = (typeof euro_mode === 'function') ? euro_mode(state.meta.mapSize) : null;
   const prob = (mode && mode.suppressionProb != null) ? mode.suppressionProb : 0.3;
   if (Math.random() >= prob) return state;
@@ -1070,6 +1072,9 @@ function euro_acquisitionsFor(state, idx) {
 
 // 선언 게이트 — { ok, reason }. UI 버튼 활성/비활성 + 사유 표기에 그대로 사용.
 function euro_declareMnaCheck(state, attackerIdx, bloc) {
+  // v6.55 (협동): 적대 M&A 금지 — 인간 UI 버튼(사유 표기)·봇 선언(euro_declareMnaBots) 공용 게이트
+  if (typeof coop_pvpBlocked === 'function' && coop_pvpBlocked(state))
+    return { ok: false, reason: '협동전 — 적대 M&A 금지 (전 좌석 한 팀)' };
   if (typeof euro_mnaEnabled !== 'function' || !euro_mnaEnabled(state))
     return { ok: false, reason: '이 맵에선 M&A 비활성' };
   const attacker = state.players && state.players[attackerIdx];

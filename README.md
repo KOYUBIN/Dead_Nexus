@@ -5,7 +5,7 @@
 **DEAD NEXUS**는 1~5인 전략 레거시 게임 프로젝트입니다.
 디스토피아 도시 **애시그리드(Ashgrid)**를 무대로, 5대 블록(Bloc) 메가기업과 독립 고스트(Ghost)가 벌이는 권력·자원·정보 전쟁.
 
-**현재 버전**: v6.54 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 38미션·6클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·**Act 3 "SIGNAL DEBT"**·캡스톤+심연 프로토콜·장비 경제·아이소 뷰·사운드·오브젝티브 다양성(생존형·HACK 전용 코어) + 시뮬 협상 페이즈 배선 + **시나리오 S07 블랙아웃 카스케이드**·S06 재건왕/청산자 타이틀 + 외부 의존 0 + NEXUS BAR/레이스 HUD + 연출 폴리시(협상 플래시·S06 타이틀 스팅·레이스 HUD juice·전투 juice, `fx_module.js`) + 봇 AI 승리 게이트 정합(`rules_module.js`)
+**현재 버전**: v6.55 (2026-07) — 3트랙 체제 (전략 시뮬 · RPG ASH & SIGNAL · 프린트 킷) + 레거시 캠페인 8챕터 완결 + RPG 38미션·6클래스·4엔딩+New Game+·Act 2 "AFTER ZERO DAY"·**Act 3 "SIGNAL DEBT"**·캡스톤+심연 프로토콜·장비 경제·아이소 뷰·사운드·오브젝티브 다양성(생존형·HACK 전용 코어) + 시뮬 협상 페이즈 배선 + **시나리오 S07 블랙아웃 카스케이드**·**협동 모드 INCURSION(파멸 트랙·C01~C03·별점)**·S06 재건왕/청산자 타이틀 + 외부 의존 0 + NEXUS BAR/레이스 HUD + 연출 폴리시(협상 플래시·S06 타이틀 스팅·레이스 HUD juice·전투 juice, `fx_module.js`) + 봇 AI 승리 게이트 정합(`rules_module.js`)
 
 - **라이브 플레이**: [dead-nexus.vercel.app](https://dead-nexus.vercel.app) — 브라우저에서 바로 시작 (모바일 세로 스택 지원, v6.25)
 - **레이스 HUD**: 중앙 상단 4요소 — VICTORY RACE 트랙(전 좌석 승리 진척 %) · MARKET 틱커 · THREAT 스트립 · ROUND BRIEF. 판정 코드(`getVictoryGoals`/`evalPlayerVictory`)와 동일 소스로 계기판 정직성 유지 (v6.26)
@@ -25,7 +25,7 @@
 | **난이도** | ★★★★☆ |
 | **장르** | 전략 / 자원 관리 / 구역 장악 / 레거시 |
 | **핵심 메커니즘** | 6속성 마나형 시스템 + 2카드 TOP/BOTTOM + 덱빌딩+사이드웨이 + **5트랙 거리명성** + **Phase 1.5 협상** + **NEXUS 동적 룰** + **Cyberware 슬롯** |
-| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — index.html + JS 모듈 7종(euro/tutorial/lore/legacy/fx/rules/scenario), Chrome/Safari 직접 실행 |
+| **시뮬레이터** | [simulator/v0.5/index.html](simulator/v0.5/index.html) — index.html + JS 모듈 8종(euro/tutorial/lore/legacy/fx/rules/scenario/coop), Chrome/Safari 직접 실행 |
 
 ---
 
@@ -123,6 +123,7 @@ dead-nexus/
 │       ├── fx_module.js               # 연출 FX 판별 로직 (협상 플래시·타이틀 스팅·HUD juice, v6.50)
 │       ├── rules_module.js            # 승리 판정·레이드 성공률·숏 지급·봇 승리 게이트 (v6.51~54)
 │       ├── scenario_module.js         # S07 블랙아웃 엔진·S06 타이틀·언더독 스케일 (v6.54)
+│       ├── coop_module.js             # 협동 INCURSION — 침공 시간표·파멸 트랙·C01~C03·별점 (v6.55)
 │       └── README.md
 │
 ├── sim-harness/                       # 헤드리스 시뮬 + 밸런스 회귀

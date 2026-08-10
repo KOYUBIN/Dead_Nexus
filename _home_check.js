@@ -95,6 +95,7 @@ const homeCapstones = stringsInArray(html, 'RPG_CAPSTONE_IDS');
 const homeClasses = stringsInArray(html, 'RPG_CLASS_KEYS');
 const homeChain = objArray(html, 'RPG_MAIN_CHAIN');
 const homeScenarios = stringsInArray(html, 'SIM_SCENARIO_IDS');
+const homeCoop = stringsInArray(html, 'SIM_COOP_IDS');
 const homeMaps = stringsInArray(html, 'SIM_MAP_IDS');
 const homeSimChapters = numbersInArray(html, 'SIM_CHAPTER_IDS');
 const homeKitSheets = stringsInArray(html, 'KIT_SHEET_IDS');
@@ -256,6 +257,7 @@ check(!!readmeStamp && !!latestVer && readmeStamp === latestVer,
 // 9. data-metric 정적값(no-JS 폴백) == 홈 단일 소스 배열 길이
 const metricExpect = {
   'sim-scenarios': homeScenarios.length,
+  'sim-coop': homeCoop.length,
   'sim-chapters': homeSimChapters.length,
   'sim-maps': homeMaps.length,
   'rpg-missions': homeMissions.length + homeCapstones.length,
@@ -308,6 +310,12 @@ check(chainSeq, "메인 체인이 순차 해금(chN.unlock == [ch(N-1)]) — 홈
 // 14. 시나리오 집합 == 시뮬 SCENARIOS 키
 check(setEq(homeScenarios, canonScenarios),
   '홈 SIM_SCENARIO_IDS 집합 == simulator SCENARIOS 키 (홈 ' + homeScenarios.length + ' ↔ 시뮬 ' + canonScenarios.length + ')');
+
+// 14b. [v6.55] 협동 시나리오 집합 == coop_module.js COOP_SCENARIOS 키
+const coopSrc = fs.readFileSync(path.join(__dirname, 'simulator/v0.5/coop_module.js'), 'utf8');
+const canonCoop = [...coopSrc.matchAll(/^\s{2}(C\d+):\s*\{/gm)].map((m) => m[1]);
+check(setEq(homeCoop, canonCoop),
+  '홈 SIM_COOP_IDS 집합 == coop_module COOP_SCENARIOS 키 (홈 ' + homeCoop.length + ' ↔ 협동 ' + canonCoop.length + ')');
 
 // 15. 맵 규격 집합 == SCENARIOS[].maps 합집합
 check(setEq(homeMaps, canonMaps),
