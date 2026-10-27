@@ -24,3 +24,24 @@ globals (`buildInitial` / `reducer` / `botPickCards` / `checkInstantVictory` + `
 `euro_applyAll`), replaying the exact phase-dispatch sequence the React auto-advance effect
 uses, with **every seat planned by `botPickCards`**. This exercises the real M&A / suppression /
 victory logic incl. `euro_declareMnaBots` and `euro_grantSuppression`.
+
+
+## Portal, setup and mobile regression
+
+From the repository root, after installing `sim-e2e` dependencies and a Playwright Chromium browser:
+
+```bash
+node sim-e2e/_unit.js
+node sim-e2e/mobile_verify.js
+```
+
+Both commands resolve the checkout relative to the script and use Playwright's default browser.
+Set `CHROMIUM_PATH` to use an existing Chromium executable. Set `DN_BASE_URL` (for example
+`http://localhost:3000`) to reuse an already running static preview instead of a temporary local server.
+`mobile_verify.js` writes screenshots under the gitignored `sim-e2e/results/` directory.
+
+The UI suite covers portal widths 320–1440px, all mode presets, keyboard and locked choices,
+valid/corrupt saves without mutation, co-op/hotseat rosters, same-configuration retry, menu return,
+RPG boot, print-kit navigation, file://, no-JS fallback and reduced motion. It then runs the original
+mobile map/trading controls and desktop three-column checks. Retry uses a test-injected finished
+state, not a claim of human completion of the campaign. No production save or engine code is patched.
