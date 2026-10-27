@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#06060e">
 <meta name="description" content="DEAD NEXUS 시뮬레이터 — 애시그리드 2091, Bloc과 Ghost의 인수·억압·레이드 전략 웹 시뮬레이터 (봇 밸런스/솔로 플레이).">
-<title>DEAD NEXUS · Simulator v0.5</title>
+<title>DEAD NEXUS — 전략 작전실</title>
 <!-- 외부 폰트 의존 제거 (CDN 0 · file:// 호환) — 로컬 Share Tech Mono/Rajdhani가 있으면 쓰고, 없으면 시스템 폰트로 폴백. -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20fill%3D'%2306060e'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'9'%20fill%3D'none'%20stroke%3D'%2300e5ff'%20stroke-width%3D'1.5'%2F%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'3'%20fill%3D'%2300e5ff'%2F%3E%3C%2Fsvg%3E">
 <style>
@@ -797,6 +797,114 @@
     .title-sting .ts-sweep { display: none; }
     .race-marker.rm-hot .rm-dot::after { opacity: .8; }
   }
+
+/* Ashgrid portal / operation setup: presentation only. */
+[hidden] { display: none !important; }
+.setup { --cyan:#e6ef98; --magenta:#ed8f9f; --yellow:#e6ef98; --text:#eceee7; --text-dim:#a0a4b3; --border:#2c303b; --bg2:#11131e; --bg3:#191d28; max-width:1080px; padding:30px 32px 70px; font-family:Arial,'Malgun Gothic',sans-serif; }
+.setup-top {display:flex;justify-content:space-between;gap:20px;font:10px ui-monospace,monospace;letter-spacing:1px;padding:14px 0 24px;border-bottom:1px solid var(--border);color:var(--text-dim)}
+.setup-top a {color:var(--cyan);text-decoration:none;min-height:32px;display:flex;align-items:center}
+.setup-hero {display:flex;align-items:center;justify-content:space-between;padding:42px 0 32px;gap:20px}
+.setup-kicker {font:10px ui-monospace,monospace;letter-spacing:2px;color:var(--cyan);margin-bottom:16px}
+.setup h1 {font:800 clamp(30px,5vw,46px)/1.2 Arial,sans-serif;letter-spacing:-2px;background:none;color:var(--text);-webkit-text-fill-color:currentColor}
+.setup-hero p {color:var(--text-dim);font-size:12px;line-height:1.8;margin-top:14px}
+.setup-symbol {width:90px;height:90px;flex:none;border:1px solid #e6ef9855;transform:rotate(-8deg);display:grid;place-items:center;font:700 52px ui-monospace,monospace;color:var(--cyan);background:repeating-linear-gradient(45deg,transparent 0 10px,#e6ef9808 11px 12px)}
+.setup-steps {display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);margin-bottom:26px}
+.setup-steps button {min-height:65px;background:var(--bg2);color:var(--text-dim);border:0;border-right:1px solid var(--border);border-bottom:2px solid transparent;font-size:12px;display:flex;align-items:center;justify-content:center;gap:15px}
+.setup-steps button:last-child {border-right:0}.setup-steps button[aria-current] {color:var(--cyan);background:#e6ef980a;border-bottom-color:var(--cyan)}.setup-steps b {font:13px ui-monospace,monospace}
+.step-caption {font:11px ui-monospace,monospace;color:var(--text-dim);line-height:1.6;padding:8px 0}
+.setup h2 {font:600 15px Arial,sans-serif;letter-spacing:0;color:var(--text);border:0;margin:25px 0 14px}
+.setup .role-card {border:1px solid var(--border);border-radius:2px;padding:22px 18px;min-width:0;background:linear-gradient(140deg,#171a25,#10121c);transition:border-color .2s,background .2s;position:relative}
+.setup .role-card:hover:not([aria-disabled="true"]),.setup .class-card:hover {border-color:#757d5b}
+.setup .role-card.selected,.setup .class-card.selected {border-color:var(--cyan);background:#e6ef9809;box-shadow:inset 3px 0 0 var(--cyan)}
+.setup .role-card h3 {font:600 13px/1.6 Arial,sans-serif;color:var(--text);margin-bottom:10px}.setup .role-card.selected h3 {color:var(--cyan)}
+.setup .role-card p {font-size:11px;line-height:1.8;color:var(--text-dim);word-break:keep-all}.setup .class-card {padding:20px;border:1px solid var(--border);border-radius:2px}.setup .class-card .cstats {line-height:1.9}.setup select{min-height:40px;max-width:100%}
+.setup :focus-visible {outline:2px solid var(--cyan);outline-offset:4px}
+.setup-navigation {position:sticky;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px 0;background:#06060ef5;border-top:1px solid var(--border);margin-top:28px;backdrop-filter:blur(12px)}
+.setup-navigation button {min-height:44px;padding:0 22px;border:1px solid var(--border);color:var(--text);background:var(--bg2);font-size:12px}.setup-navigation button:disabled{opacity:.35;cursor:not-allowed}.setup-navigation .step-next{background:var(--cyan);color:#10120b;border-color:var(--cyan);font-weight:700}.setup-navigation span{color:var(--text-dim);font:10px ui-monospace,monospace}
+.setup .start-btn {background:var(--cyan);letter-spacing:1px;font-size:14px;padding:20px;color:#10120b;border-radius:2px;margin-top:24px;min-height:58px}.setup .start-btn:hover {box-shadow:none;filter:brightness(1.08)}
+.setup-details{margin-top:20px;border-top:1px solid var(--border);padding-top:10px}.setup-details>summary{cursor:pointer;padding:14px 0;font-size:12px;color:var(--text-dim)}.setup-details>div{overflow-x:auto}
+.launch-summary {background:radial-gradient(ellipse at top right,#e6ef9810,transparent 65%),var(--bg2);border:1px solid #687344;padding:30px;margin-top:20px}.launch-summary>span{font:10px ui-monospace,monospace;letter-spacing:2px;color:var(--cyan)}.launch-summary h2{font-size:24px;line-height:1.5;margin:16px 0}.launch-summary p{font-size:12px;line-height:1.9;color:var(--text-dim)}.launch-facts{display:grid;grid-template-columns:1fr 1fr 2fr;gap:20px;border-top:1px solid var(--border);margin-top:22px;padding-top:22px}.launch-facts small{display:block;color:var(--text-dim);font-size:10px;margin-bottom:8px}.launch-facts b{font:12px/1.7 ui-monospace,monospace;overflow-wrap:anywhere}.setup-brief{padding:24px 0 0;font-size:12px}.setup-brief b{color:var(--cyan)}.setup-brief p{color:var(--text-dim);line-height:1.9;margin-bottom:0}
+.gameover .start-btn {font-size:12px;letter-spacing:0;min-height:48px}
+@media(max-width:650px){.setup{padding:18px 18px 45px}.setup-top span{display:none}.setup-top{padding-bottom:12px}.setup-hero{padding:28px 0 24px}.setup-symbol{width:58px;height:68px;font-size:36px}.setup-kicker{font-size:8px;letter-spacing:1px}.setup-hero p{font-size:11px;max-width:230px}.setup-steps button{font-size:10px;gap:8px;min-height:58px}.setup .role-grid{grid-template-columns:1fr!important;gap:9px}.setup .role-card{padding:16px}.setup .role-card h3{margin-bottom:5px}.setup .class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.setup .class-card{padding:16px}.setup-navigation span{display:none}.setup-navigation button{padding:0 18px}.launch-summary{padding:22px}.launch-summary h2{font-size:20px}.launch-facts{grid-template-columns:1fr 1fr;gap:18px}.launch-facts>div:last-child{grid-column:1/-1}}
+
+
+/* Readable command-center palette; faction map colours and rule state unchanged. */
+.game, .gameover { --cyan:#b8dbe2; --magenta:#f592a4; --yellow:#e6ef98; --green:#b8df9c; --bg2:#10121c; --bg3:#191d28; --border:#303544; --text-dim:#a3a8b8; --text:#e8ebe7; }
+.game .top-bar { background:#10121b; background-image:none; gap:18px; }
+.game .top-bar .title {font-size:11px;letter-spacing:1.5px;color:var(--yellow)}
+.game .top-bar .home-link {min-width:30px;min-height:30px;display:grid;place-items:center}
+.game .left-panel,.game .right-panel {background:#0d0f18}
+.game .player-card,.game .pool-box {border-radius:4px;background:linear-gradient(140deg,#1a1e2a,#121520)}
+.game .player-card.me {border-color:#acbc70;box-shadow:inset 2px 0 0 #d9e790}
+.game .hand-wrap {background:#10121b;background-image:none;border-top:1px solid var(--border)}
+.game .card {background:#191d28;border-color:#383e50;border-radius:5px}
+.game .card.disabled {opacity:.65;filter:grayscale(.25)}
+.game .phase-chip.active {background:var(--yellow);border-color:var(--yellow)}
+.game .phase-actions .pa-btn.primary {background:var(--yellow);color:#11150a;border-color:var(--yellow);box-shadow:none}
+.game .coop-objective-card {border-color:#727c49;line-height:1.7}
+.coop-objective-card strong {font-size:13px;color:var(--yellow)}
+.coop-objective-card p {font-size:11px;color:var(--text-dim);margin:8px 0 0}
+.coop-meter {height:4px;margin:12px 0;background:#ffffff15}.coop-meter i {height:100%;display:block;background:var(--yellow)}
+.game :focus-visible {outline:2px solid var(--yellow);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.setup *{transition:none!important}}
+
+/* In-game usability pass: stronger action hierarchy, readable map guidance, and practical tablet sizing. */
+.game { grid-template-columns: 270px minmax(0, 1fr) 260px; }
+.game .top-bar { gap: 12px; padding-inline: 12px; }
+.game .top-bar .phases { gap: 5px; }
+.game .phase-chip { min-height: 28px; display: inline-flex; align-items: center; }
+.play-guide {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  flex: 0 0 auto; margin: 0 0 8px; padding: 9px 12px;
+  background: linear-gradient(100deg, rgba(230,239,152,.10), rgba(16,18,28,.92) 42%);
+  border: 1px solid #596044; border-left: 3px solid var(--yellow); border-radius: 4px;
+  font-size: 11px; line-height: 1.5;
+}
+.play-guide.is-targeting { border-color: rgba(184,219,226,.65); border-left-color: var(--cyan); background: rgba(184,219,226,.08); }
+.pg-step { color: var(--yellow); font: 700 10px/1.3 'Share Tech Mono', monospace; letter-spacing: 1px; white-space: nowrap; }
+.play-guide.is-targeting .pg-step { color: var(--cyan); }
+.pg-copy { color: var(--text); }
+.pg-count { color: var(--yellow); font: 700 10px 'Share Tech Mono', monospace; white-space: nowrap; }
+.map-key { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:6px 4px 8px; color:var(--text-dim); font-size:10px; }
+.map-key span { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.map-key i { display:inline-block; width:10px; height:10px; border-radius:2px; }
+.map-key .key-star { width:auto; height:auto; color:var(--cyan); font-style:normal; font-size:13px; }
+.map-key .key-owner { border:2px solid var(--yellow); background:#191d28; }
+.map-key .key-move { border:1px dashed var(--cyan); background:rgba(184,219,226,.14); }
+.map-key .key-scroll { margin-left:auto; color:#858b9c; }
+.game .phase-actions { position:relative; z-index:12; padding:8px; gap:8px; box-shadow:0 -8px 18px rgba(0,0,0,.14); }
+.game .phase-actions .pa-btn, .game .hand-wrap h4 .pa-btn { min-height:42px; }
+.game .hand-wrap h4 { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:8px; line-height:1.5; }
+.game .hand-wrap h4 .pa-btn { float:none!important; flex:0 0 auto; margin:0!important; }
+.game .card { touch-action:manipulation; }
+.game .player-card.turn { border-color:var(--yellow); box-shadow:inset 3px 0 0 var(--yellow),0 0 12px rgba(230,239,152,.12); }
+.game button:disabled { filter:saturate(.45); }
+@media (max-width: 1080px) and (min-width: 721px) {
+  .game { grid-template-columns: 220px minmax(0,1fr) 230px; }
+  .game .left-panel, .game .right-panel { padding:8px; }
+  .game .top-bar { gap:8px; }
+  .game .top-bar .title { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .game .phase-chip { padding-inline:6px; font-size:9px; }
+  .game .dn-botbar { grid-template-columns:220px minmax(0,1fr) 230px; }
+  .game .bb-id, .game .bb-act { padding-inline:8px; }
+}
+@media (max-width: 720px) {
+  .game { grid-template-rows: auto auto auto auto; }
+  .game .top-bar { gap:6px 8px; }
+  .game .top-bar .title { max-width:calc(100vw - 145px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .play-guide { grid-template-columns:auto 1fr; gap:4px 8px; padding:8px 10px; font-size:11px; }
+  .pg-copy { grid-column:1/-1; grid-row:2; }
+  .pg-count { grid-column:2; grid-row:1; justify-self:end; }
+  .map-key { gap:6px 10px; padding:6px 2px 8px; font-size:9px; }
+  .map-key .key-scroll { margin-left:0; flex-basis:100%; }
+  .game .phase-actions { position:sticky; bottom:calc(var(--botbar-h) + 2px); padding:7px; background:rgba(16,18,28,.97); backdrop-filter:blur(10px); border-top-width:1px; }
+  .game .phase-actions .pa-btn { min-height:44px; }
+  .game .hand-wrap h4 { font-size:10px; letter-spacing:1px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game .card, .game .map-cell, .game .phase-actions .pa-btn { transition:none!important; }
+}
+
 </style>
 </head>
 <body>
@@ -960,6 +1068,19 @@
 })();
 </script>
 
+<script>
+// Portal presets never auto-start, change saves, or unlock scenarios.
+window.dnLaunchPreset = function (search) {
+  var mode = new URLSearchParams(search || '').get('mode');
+  var preset = { mode: 'solo', scenario: 'S01', mapSize: '11x11', difficulty: 'normal', role: 'ghost', specific: 'CIPHER', tutorial: true };
+  if (mode === 'tutorial') Object.assign(preset, { mapSize: '5x5', difficulty: 'easy', specific: 'BLADE' });
+  if (mode === 'multi') preset.mode = 'multi';
+  if (mode === 'coop' && typeof window.coop_active === 'function') Object.assign(preset, {
+    mode: 'coop', scenario: 'C01', specific: 'BLADE', humans: [{ role: 'ghost', specific: 'BLADE' }]
+  });
+  return preset;
+};
+</script>
 <script type="text/babel" data-presets="react">
 'use strict';
 const { useState, useEffect, useReducer, useMemo, useCallback, useRef } = React;
@@ -6651,21 +6772,24 @@ function scoreBlocCard(state, pIdx, cid) {
 // UI COMPONENTS
 // ============================================================================
 
-function SetupScreen({ onStart }) {
-  const [role, setRole] = useState('ghost');
-  const [specific, setSpecific] = useState('CIPHER');
-  const [mapSize, setMapSize] = useState('11x11');
-  const [scenario, setScenario] = useState('S01');  // v6.18: 시나리오 선택 (docs/14)
+function SetupScreen({ onStart, initialOptions }) {
+  const [preset] = useState(() => initialOptions || window.dnLaunchPreset(window.location.search));
+  const [step, setStep] = useState(0);
+  const stepRef = useRef(null);
+  const goStep = n => { setStep(n); requestAnimationFrame(() => { stepRef.current?.focus(); window.scrollTo(0, 0); }); };
+  const [role, setRole] = useState(preset.role || 'ghost');
+  const [specific, setSpecific] = useState(preset.specific || 'CIPHER');
+  const [mapSize, setMapSize] = useState(preset.mapSize || '11x11');
+  const [scenario, setScenario] = useState(preset.scenario || 'S01');  // v6.18: 시나리오 선택 (docs/14)
   const scen = getScenario(scenario);
-  // v1.0.1: 모드 — solo (1H+3봇), multi (2~5H 핫시트), bots-only (전부 봇 시뮬)
-  const [mode, setMode] = useState('solo');
-  const [humanCount, setHumanCount] = useState(2);  // multi 모드용
-  const [difficulty, setDifficulty] = useState('normal');  // solo: easy/normal/hard
-  // multi 모드: 인간 플레이어들의 (role, specific) 배열
-  const [humans, setHumans] = useState([{ role: 'ghost', specific: 'CIPHER' }, { role: 'bloc', specific: 'VANTA' }]);
+
+  const [mode, setMode] = useState(preset.mode || 'solo');
+  const [difficulty, setDifficulty] = useState(preset.difficulty || 'normal');  // solo: easy/normal/hard
+
+  const [humans, setHumans] = useState(preset.humans || [{ role: 'ghost', specific: 'CIPHER' }, { role: 'bloc', specific: 'VANTA' }]);
   const [history, setHistory] = useState(() => loadHistory());
-  const [tutorial, setTutorial] = useState(true);  // 🎓 가이드 튜토리얼 (5×5 솔로 전용, 기본 ON)
-  // v6.24 (레거시 Stage 1): 캠페인 영속 상태 스냅샷 (legacy_module 미로드/스토리지 미가용 시 기본값)
+  const [tutorial, setTutorial] = useState(preset.tutorial !== false);  // 🎓 가이드 튜토리얼 (5×5 솔로 전용, 기본 ON)
+
   const [legacy, setLegacy] = useState(() => (typeof legacyLoad === 'function') ? legacyLoad() : { chaptersUnlocked: [], chapterProgress: {}, cityScars: [] });
   const legacyScar = (typeof legacyActiveScar === 'function') ? legacyActiveScar() : null;
   const legacyTotal = (typeof legacyTotalChapters === 'function') ? legacyTotalChapters() : 8;
@@ -6694,12 +6818,11 @@ function SetupScreen({ onStart }) {
   const statsFor = (sp) => role === 'ghost' ? GHOST_STATS[sp] : BLOC_STATS[sp];
   const s = statsFor(specific);
 
-  // v1.0.2: 멀티 모드용 — 인간 추가/제거
   const updateHuman = (idx, field, val) => {
     const next = [...humans];
     next[idx] = { ...next[idx], [field]: val };
     if (field === 'role') {
-      // 역할 변경 시 specific 기본값 변경
+
       next[idx].specific = val === 'ghost' ? 'CIPHER' : 'VANTA';
     }
     setHumans(next);
@@ -6713,41 +6836,43 @@ function SetupScreen({ onStart }) {
   const removeHuman = () => { if (humans.length > humanMin) setHumans(humans.slice(0, -1)); };
 
   return (
-    <div className="setup">
-      <h1>DEAD NEXUS</h1>
-      <div className="tagline">SIMULATOR v1.0 · {mapSize === '11x11' ? 'FULL ASHGRID 11×11' : 'TUTORIAL 5×5'} · {mode === 'solo' ? 'SOLO' : 'HOT-SEAT'}</div>
-
-      <h2>0. 모드 선택</h2>
+    <div className="setup" onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"]')) { e.preventDefault(); e.target.click(); } }}>
+      <div className="setup-top"><a href="../../index.html">← DEAD NEXUS / PORTAL</a><span>ASHGRID 2091 / OPERATION SETUP</span></div>
+      <div className="setup-hero"><div><div className="setup-kicker">YOUR NEXT MOVE STARTS HERE</div><h1>작전을 준비하라.</h1><p>누구와, 어떤 도시에서, 누구의 이름으로 싸울 것인가.</p></div><div className="setup-symbol" aria-hidden="true">N</div></div>
+      <nav className="setup-steps" aria-label="작전 준비 단계">{['모드와 시나리오', '맵과 플레이어', '최종 브리핑'].map((label, i) => <button key={i} type="button" aria-current={step === i ? 'step' : undefined} onClick={() => goStep(i)}><b>0{i + 1}</b>{label}</button>)}</nav>
+      <div className="step-caption" ref={stepRef} tabIndex={-1}>STEP 0{step + 1} / {['어떤 작전에 참여할까요?', '당신의 플레이 방식을 정하세요.', '설정을 확인하고 도시에 진입하세요.'][step]}</div>
+      <section hidden={step !== 0}>
+      <h2>플레이 모드</h2>
       <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className={`role-card ${mode === 'solo' ? 'selected' : ''}`} onClick={() => { setMode('solo'); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
+        <div className={`role-card ${mode === 'solo' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={mode === 'solo'} onClick={() => { setMode('solo'); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
           <h3>🎮 솔로 (1인)</h3>
           <p>당신 1명 + 봇 3명. 난이도 조절 가능. 추천 첫 플레이.</p>
         </div>
-        <div className={`role-card ${mode === 'multi' ? 'selected' : ''}`} onClick={() => { setMode('multi'); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
+        <div className={`role-card ${mode === 'multi' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={mode === 'multi'} onClick={() => { setMode('multi'); if (humans.length < 2) setHumans([...humans, {role:'bloc',specific:'VANTA'}]); if (scenario.charAt(0) === 'C') setScenario('S01'); }}>
           <h3>👥 핫시트 (2~5인)</h3>
           <p>한 기기에 2~5명 모여 차례로 플레이. 빈 자리는 봇 보충.</p>
         </div>
-        {/* v6.55: 협동 모드 — coop_module 미로드 시 비활성 + 사유 (E13 계약: 조용한 실패 금지) */}
-        <div className={`role-card ${mode === 'coop' ? 'selected' : ''}`}
+
+        <div className={`role-card ${mode === 'coop' ? 'selected' : ''}`} role="button" tabIndex={typeof coop_active === 'function' ? 0 : -1} aria-disabled={typeof coop_active !== 'function'} aria-pressed={mode === 'coop'}
           style={typeof coop_active === 'function' ? {} : { opacity: 0.4, cursor: 'not-allowed' }}
-          onClick={() => { if (typeof coop_active !== 'function') return; setMode('coop'); setScenario('C01'); setMapSize('11x11'); }}>
+          onClick={() => { if (typeof coop_active !== 'function') return; setMode('coop'); setHumans(humans.slice(0, 4)); setScenario('C01'); setMapSize('11x11'); }}>
           <h3>🤝 협동 (INCURSION)</h3>
           <p>{typeof coop_active === 'function' ? '전 좌석 한 팀 — MERIDIAN 청산관리단의 침공 저지. 인간 1~4 + 아군 봇.' : '⚠ coop_module.js 미로드 — 협동 모드 사용 불가'}</p>
         </div>
       </div>
 
-      <h2>1. 시나리오</h2>
+      <h2>시나리오 선택</h2>
       <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {/* v6.55: 협동 모드는 COOP_SCENARIOS(C01~C03)만, 그 외 모드는 경쟁 SCENARIOS(S01~S07)만 — 상호 비노출 */}
+
         {(mode === 'coop' ? (typeof coop_scenarioList === 'function' ? coop_scenarioList() : []) : Object.values(SCENARIOS)).map(sc => (
           <div
             key={sc.id}
-            className={`role-card ${scenario === sc.id ? 'selected' : ''}`}
+            className={`role-card ${scenario === sc.id ? 'selected' : ''}`} role="button" tabIndex={sc.locked ? -1 : 0} aria-disabled={!!sc.locked} aria-pressed={scenario === sc.id}
             style={sc.locked ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
             onClick={() => {
               if (sc.locked) return;
               setScenario(sc.id);
-              // S02 등 M&A 정체성 시나리오는 11×11 전용
+
               if (sc.maps && !sc.maps.includes(mapSize)) setMapSize(sc.maps[0]);
             }}
           >
@@ -6757,7 +6882,8 @@ function SetupScreen({ onStart }) {
           </div>
         ))}
       </div>
-      {/* v6.55: 협동 전체 공표 배너 — 목표/패배/시간표/판정식/별점식 (정보 은닉 없음 = 모드 정체성) */}
+      <details className="setup-details"><summary>선택한 시나리오 상세 규칙</summary>
+
       {scen.coopMode && typeof coop_setupInfo === 'function' && (
         <div style={{ background: 'var(--bg2)', padding: '8px 12px', borderRadius: 3, fontSize: 12, color: 'var(--yellow)', marginBottom: 10 }}>
           {coop_setupInfo(scen.id).map((ln, li) => <div key={li} style={{ marginBottom: 3 }}>{ln}</div>)}
@@ -6794,14 +6920,16 @@ function SetupScreen({ onStart }) {
         </div>
       )}
 
-      <h2>2. 맵 크기</h2>
+      </details></section>
+      <section hidden={step !== 1}>
+      <h2>맵 크기</h2>
       <div className="role-grid">
-        <div className={`role-card ${mapSize === '11x11' ? 'selected' : ''}`} onClick={() => setMapSize('11x11')}>
+        <div className={`role-card ${mapSize === '11x11' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={mapSize === '11x11'} onClick={() => setMapSize('11x11')}>
           <h3>🏙 11×11 정식</h3>
           <p>121 셀 Ashgrid 도시 전체. NEXUS 중앙. 5 Bloc 외곽 분산. 추천 5~12R.</p>
         </div>
         <div
-          className={`role-card ${mapSize === '5x5' ? 'selected' : ''}`}
+          className={`role-card ${mapSize === '5x5' ? 'selected' : ''}`} role="button" tabIndex={scen.maps && !scen.maps.includes('5x5') ? -1 : 0} aria-disabled={!!(scen.maps && !scen.maps.includes('5x5'))} aria-pressed={mapSize === '5x5'}
           style={scen.maps && !scen.maps.includes('5x5') ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
           onClick={() => { if (scen.maps && !scen.maps.includes('5x5')) return; setMapSize('5x5'); }}
         >
@@ -6812,17 +6940,17 @@ function SetupScreen({ onStart }) {
 
       {mode === 'solo' && (
         <>
-          <h2>2. 난이도</h2>
+          <h2>난이도</h2>
           <div className="role-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            <div className={`role-card ${difficulty === 'easy' ? 'selected' : ''}`} onClick={() => setDifficulty('easy')}>
+            <div className={`role-card ${difficulty === 'easy' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={difficulty === 'easy'} onClick={() => setDifficulty('easy')}>
               <h3>🟢 EASY</h3>
               <p>봇 자동 점령 50%, 시작 자원 +5</p>
             </div>
-            <div className={`role-card ${difficulty === 'normal' ? 'selected' : ''}`} onClick={() => setDifficulty('normal')}>
+            <div className={`role-card ${difficulty === 'normal' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={difficulty === 'normal'} onClick={() => setDifficulty('normal')}>
               <h3>🟡 NORMAL</h3>
               <p>표준 균형 (검증된 시뮬 수치)</p>
             </div>
-            <div className={`role-card ${difficulty === 'hard' ? 'selected' : ''}`} onClick={() => setDifficulty('hard')}>
+            <div className={`role-card ${difficulty === 'hard' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={difficulty === 'hard'} onClick={() => setDifficulty('hard')}>
               <h3>🔴 HARD</h3>
               <p>봇 자동 점령 +50%, 봇 시작 자원 +5</p>
             </div>
@@ -6830,14 +6958,14 @@ function SetupScreen({ onStart }) {
         </>
       )}
 
-      <h2>{mode === 'solo' ? '3. 역할 선택' : '2. 인간 플레이어 설정'}</h2>
+      <h2>{mode === 'solo' ? '역할 선택' : '인간 플레이어 설정'}</h2>
       {mode === 'solo' ? (
         <div className="role-grid">
-          <div className={`role-card ${role === 'ghost' ? 'selected' : ''}`} onClick={() => { setRole('ghost'); setSpecific('CIPHER'); }}>
+          <div className={`role-card ${role === 'ghost' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={role === 'ghost'} onClick={() => { setRole('ghost'); setSpecific('CIPHER'); }}>
             <h3>👻 GHOST</h3>
             <p>독립 용병. 평판/레이드로 승리.</p>
           </div>
-          <div className={`role-card ${role === 'bloc' ? 'selected' : ''}`} onClick={() => { setRole('bloc'); setSpecific('VANTA'); }}>
+          <div className={`role-card ${role === 'bloc' ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={role === 'bloc'} onClick={() => { setRole('bloc'); setSpecific('VANTA'); }}>
             <h3>🏢 BLOC</h3>
             <p>메가기업 운영. 자산 도달로 승리.</p>
           </div>
@@ -6852,11 +6980,11 @@ function SetupScreen({ onStart }) {
           {humans.map((h, idx) => (
             <div key={idx} style={{ display: 'grid', gridTemplateColumns: '60px 100px 1fr', gap: 6, padding: 8, marginBottom: 6, background: 'var(--bg2)', borderRadius: 3, alignItems: 'center', fontSize: 12 }}>
               <strong style={{ color: 'var(--cyan)' }}>P{idx + 1}</strong>
-              <select value={h.role} onChange={e => updateHuman(idx, 'role', e.target.value)} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', padding: '4px' }}>
+              <select aria-label={`P${idx + 1} 역할`} value={h.role} onChange={e => updateHuman(idx, 'role', e.target.value)} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', padding: '4px' }}>
                 <option value="ghost">👻 Ghost</option>
                 <option value="bloc">🏢 Bloc</option>
               </select>
-              <select value={h.specific} onChange={e => updateHuman(idx, 'specific', e.target.value)} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', padding: '4px' }}>
+              <select aria-label={`P${idx + 1} 클래스 또는 블록`} value={h.specific} onChange={e => updateHuman(idx, 'specific', e.target.value)} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', padding: '4px' }}>
                 {(h.role === 'ghost' ? ['CIPHER','BLADE','BROKER','RIGGER','DRIFTER','MOLE'] : ['VANTA','IRONWALL','HELIX','AXIOM','CARBON']).map(sp => (
                   <option key={sp} value={sp}>{sp}</option>
                 ))}
@@ -6866,12 +6994,12 @@ function SetupScreen({ onStart }) {
         </div>
       )}
 
-      <h2>2. {role === 'ghost' ? '클래스' : '블록'} 선택</h2>
+      {mode === 'solo' && <><h2>{role === 'ghost' ? '클래스' : '블록'} 선택</h2>
       <div className="class-grid">
         {options.map(([sp, desc]) => {
           const st = statsFor(sp);
           return (
-            <div key={sp} className={`class-card ${specific === sp ? 'selected' : ''}`} onClick={() => setSpecific(sp)}>
+            <div key={sp} className={`class-card ${specific === sp ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={specific === sp} onClick={() => setSpecific(sp)}>
               <div className="cname">{sp}</div>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{desc}</div>
               <div className="cstats">
@@ -6884,11 +7012,7 @@ function SetupScreen({ onStart }) {
         })}
       </div>
 
-      <h2>3. 상대 (봇 3명 자동 배정)</h2>
-      <div style={{ background: 'var(--bg2)', padding: 12, borderRadius: 3, fontSize: 13, color: 'var(--text-dim)' }}>
-        당신이 {role === 'ghost' ? 'Ghost' : 'Bloc'}이면 봇은 반대 역할 + 같은 역할 믹스로 배정됩니다.
-        시나리오 S01 표준 · {mapSize === '11x11' ? '최대 12라운드' : '최대 8라운드'} · 최소 5R 보장.
-      </div>
+      </>}
 
       {mode === 'solo' && mapSize === '5x5' && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0', padding: '10px 12px', background: 'var(--bg2)', border: '1px solid var(--cyan)', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}>
@@ -6898,8 +7022,12 @@ function SetupScreen({ onStart }) {
         </label>
       )}
 
+      </section>
+      <section hidden={step !== 2}>
+        <div className="launch-summary"><span>{mode === 'coop' ? 'COOPERATIVE OPERATION' : mode === 'multi' ? 'HOT-SEAT OPERATION' : 'SOLO OPERATION'}</span><h2>{scen.id} / {scen.name}</h2><p>{scen.desc}</p><div className="launch-facts"><div><small>전장</small><b>{mapSize}</b></div><div><small>플레이어</small><b>{mode === 'solo' ? '인간 1 + 봇 3' : `인간 ${humans.length}명`}</b></div><div><small>진영</small><b>{scen.allBloc ? 'ALL BLOC' : scen.ghostRising ? 'GHOST RISING' : mode === 'solo' ? specific : humans.map(h => h.specific).join(' / ')}</b></div></div></div>
+        <div className="setup-brief"><b>작전 체크리스트</b><p>{mode === 'coop' ? '모두 같은 팀입니다. Ghost는 거점을 강습하고 Bloc은 장부 방어로 파멸을 낮춥니다. 침공 시간표와 목표는 게임 화면에서 확인하세요.' : '시장에서는 거래하고, 계획 단계에서는 카드와 사용할 반쪽을 고릅니다. 실행 이후 수입과 연구는 자동으로 처리됩니다.'}</p><p>진행 중인 한 판은 새로고침하면 사라집니다. 캠페인 해금과 종료 전적은 이 브라우저에 남습니다.</p></div>
       <button className="start-btn" onClick={() => {
-        // v6.18: allBloc 시나리오는 맵을 강제(11×11) + 인간 역할을 Bloc 로 정규화.
+
         const effMap = (scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize;
         const soloRole = scen.allBloc ? 'bloc' : role;
         const soloSpec = scen.allBloc && !['VANTA','IRONWALL','HELIX','AXIOM','CARBON'].includes(specific) ? 'VANTA' : specific;
@@ -6911,10 +7039,13 @@ function SetupScreen({ onStart }) {
           tutorial: mode === 'solo' && effMap === '5x5' && !scen.allBloc ? tutorial : false,
         });
       }}>
-        🎮 START · {scenario} · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : mode === 'coop' ? `${humans.length}P COOP` : `${humans.length}P HOT-SEAT`} · {((scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize).toUpperCase()}
+        작전 시작 → {scenario} · {mode === 'solo' ? `SOLO ${difficulty.toUpperCase()}` : mode === 'coop' ? `${humans.length}P COOP` : `${humans.length}P HOT-SEAT`} · {((scen.maps && !scen.maps.includes(mapSize)) ? scen.maps[0] : mapSize).toUpperCase()}
       </button>
 
-      {/* === v6.24 (레거시 Stage 1): 캠페인 진행 === */}
+      </section>
+      <div className="setup-navigation"><button type="button" disabled={step === 0} onClick={() => goStep(step - 1)}>← 이전 단계</button><span>{scen.id} · {mapSize} · {mode.toUpperCase()}</span>{step < 2 && <button type="button" className="step-next" onClick={() => goStep(step + 1)}>다음 단계 →</button>}</div>
+      <details className="setup-details"><summary>캠페인 진행과 플레이 기록</summary>
+
       <div style={{ marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderLeft: '3px solid var(--yellow)', borderRadius: 4, padding: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <h3 style={{ margin: 0, fontFamily: 'Share Tech Mono, monospace', color: 'var(--yellow)', letterSpacing: 2, fontSize: 13 }}>📜 레거시 · ASH &amp; SIGNAL</h3>
@@ -6939,7 +7070,7 @@ function SetupScreen({ onStart }) {
               : <span style={{ color: 'var(--text-dim)' }}>없음</span>}
           </div>
         </div>
-        {/* v6.39 (레거시 완주): 8챕터 전부 해금 시 캠페인 완주 배지 + 원전 공통 에필로그 발췌 */}
+
         {(typeof legacyCampaignComplete === 'function' ? legacyCampaignComplete(legacy) : (legacy.chaptersUnlocked || []).length >= legacyTotal) && (() => {
           const fin = (typeof legacyChapterMeta === 'function') ? legacyChapterMeta(8) : null;
           return (
@@ -6951,7 +7082,7 @@ function SetupScreen({ onStart }) {
             </div>
           );
         })()}
-        {/* v6.31·v6.33·v6.34·v6.35·v6.36·v6.39 (레거시 Stage 2~8): 챕터 1~8 상태 — 해금 전 ??? / 해금 시 스토리 + 효과 */}
+
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { n: 1, hint: '게임 중 최초 레이드 발생 시 해금', effect: '최다 피격 블록 다음 게임 시작 주가 -1 (도시 흉터)' },
@@ -6986,7 +7117,7 @@ function SetupScreen({ onStart }) {
         </div>
       </div>
 
-      {/* === 플레이 히스토리 === */}
+
       {stats && (
         <div style={{ marginTop: 30, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -7035,6 +7166,7 @@ function SetupScreen({ onStart }) {
           </div>
         </div>
       )}
+      </details>
     </div>
   );
 }
@@ -7450,8 +7582,8 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button className="start-btn" style={{ maxWidth: 180 }} onClick={() => dispatch({ type: 'RESET', humanRole: me.role, humanSpecific: me.specific })}>
-            🔄 다시
+          <button className="start-btn" style={{ maxWidth: 180 }} onClick={() => dispatch({ type: 'RESET' })}>
+            같은 설정으로 재도전
           </button>
           <button className="start-btn" style={{ maxWidth: 180, background: 'var(--bg3)', color: 'var(--yellow)', border: '1px solid var(--yellow)' }} onClick={() => dispatch({ type: 'BACK_TO_MENU' })}>
             📊 메뉴 & 히스토리
@@ -7843,7 +7975,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
 
       <div className="top-bar">
         <a className="home-link" href="../../index.html" title="홈으로">⌂</a>
-        <div className="title">DEAD NEXUS · SIM v1.0 {isMulti ? `· P${meIdx} ${me.specific} 차례` : ''}</div>
+        <div className="title">DEAD NEXUS / {state.meta.mode === 'coop' ? 'INCURSION' : 'STRATEGY'} {isMulti ? `· P${meIdx} ${me.specific} 차례` : ''}</div>
         <div className="phases">
           {PHASE_NAMES.map((name, i) => (
             <div key={i} className={`phase-chip ${i === state.meta.phase ? 'active' : (i < state.meta.phase ? 'done' : '')}`}>
@@ -8319,6 +8451,19 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           </div>
           );
         })()}
+        <div className={`play-guide ${state.meta.awaitingMoveTarget ? 'is-targeting' : ''}`} role="status" aria-live="polite">
+          <span className="pg-step">{state.meta.awaitingMoveTarget ? '이동 목표' : `R${state.meta.round} · ${PHASE_NAMES[state.meta.phase] || '작전 진행'}`}</span>
+          <span className="pg-copy">{state.meta.awaitingMoveTarget
+            ? '빛나는 칸을 눌러 이동할 곳을 정하세요. 이동을 건너뛰려면 아래 버튼을 이용하세요.'
+            : state.meta.phase === 0 ? '라운드 시작입니다. 준비가 끝났다면 시장·뉴스 단계로 넘어가세요.'
+            : state.meta.phase === 1 ? '주가를 확인하고 매수·매도 또는 협상을 진행한 뒤 계획 단계로 이동하세요.'
+            : state.meta.phase === 2 ? '손패에서 카드 2장을 고르고, 각 카드의 상단/하단 효과를 확인한 뒤 확정하세요.'
+            : state.meta.phase === 3 ? '선택한 카드 효과와 이동·전투가 처리됩니다. 작전 결과를 확인하세요.'
+            : state.meta.phase === 4 ? '구역과 보유 자원에서 수입을 정산하고 있습니다.'
+            : state.meta.phase === 5 ? '연구와 기술 진행이 처리되고 있습니다.'
+            : '라운드 결산 중입니다. 잠시 후 다음 라운드가 시작됩니다.'}</span>
+          <span className="pg-count">{state.meta.awaitingMoveTarget ? `이동 ${state.meta.moveBudget || 0}칸` : canPlan ? `카드 ${selectedCards.length}/${needCards}` : `R${state.meta.round}`}</span>
+        </div>
         <div className="map-wrap">
           {(() => {
             // v0.8.2: 맵 사이즈에 따라 동적 그리드
@@ -8455,6 +8600,12 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
           </div>
             );
           })()}
+        </div>
+        <div className="map-key" aria-label="지도 표시 안내">
+          <span><i className="key-star">★</i> 내 위치</span>
+          <span><i className="key-owner" /> 점유 구역 테두리</span>
+          {state.meta.awaitingMoveTarget && <span><i className="key-move" /> 이동 가능</span>}
+          <span className="key-scroll">{state.meta.mapSize === '11x11' ? '좌우로 밀어 도시 전체 보기' : '색상으로 구역 유형 구분'}</span>
         </div>
 
         {/* Hand */}
@@ -8880,29 +9031,33 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
       <div className="right-panel">
         {/* === 승리 진척 (상시 표시) === */}
         {(() => {
+          if (typeof coop_active === 'function' && coop_active(state)) {
+            const h = coop_hudModel(state);
+            return <div className="pool-box coop-objective-card"><h4>팀 공동 목표 / {h.scenId}</h4><strong>{h.objLabel}</strong><div className="coop-meter" role="progressbar" aria-label="협동 목표 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={h.objPct}><i style={{width: h.objPct + '%'}} /></div><p>파멸 {h.doom}/{h.cap} · R{state.meta.round}/{h.roundLimit}</p><p>{me.role === 'ghost' ? 'Ghost: 거점 또는 인접 칸에서 강습하세요.' : `Bloc: 부품 ${h.stabCost}로 파멸을 자동 억제합니다.`}</p><p>다음 상륙: {h.nextLanding}</p></div>;
+          }
           const vGoals = getVictoryGoals(state);
           if (me.role === 'ghost') {
             const repGoal = vGoals.ghostRepBattle;
             const raidGoal = vGoals.ghostRaids;
-            // v6.52 (V1): 판정(evalPlayerVictory)과 동일한 rep_eff = rep + euro_hlVictoryBonus (✨ 가산 표기)
+
             const hlB = euro_hlVictoryBonus(me);
             const repBase = me.resources.rep || 0;
             const rep = repBase + hlB;
-            const raids = state.meta.raidsThisGame?.[0] || 0;
+            const raids = state.meta.raidsThisGame?.[meIdx] || 0;
             const repPct = Math.min(100, Math.round(rep / repGoal * 100));
             const raidDone = raids >= raidGoal;
             const repDone = rep >= repGoal;
-            // v6.52 (V1): ✅ 팁 발동 = 판정 소스 그대로 (렙온리 경로 포함)
-            const winNow = !!evalPlayerVictory(me, 0, state, vGoals);
-            // 가장 가까운 Bloc 구역 + 레이드 성공률 계산
+
+            const winNow = !!evalPlayerVictory(me, meIdx, state, vGoals);
+
             const nearest = me.position ? findNearestBlocZone(state, me.position) : null;
             const nearestDist = nearest ? (nearest === me.position ? 0 : bfsDistance(state, me.position, nearest)) : null;
-            // v6.52 (V2): 맵 프리뷰와 동일 단일 식 (트랙·위장·atkOnce·크리 면역)
+
             const nearestCell = nearest ? state.map[nearest] : null;
             const raidPct = nearestCell
               ? raidExecPctView(state, me, raidThreshold(nearestCell) + moleDisguiseMod(me, state.players[nearestCell.owner]?.specific), { stat: me.stats.atk, track: trackBonus(me, 'atk') }).pct
               : 0;
-            // v6.52 (V7): 실보상 파생 — RAID_TYPES rep 범위 × 시나리오 배수(결정 모달 택1). 배지는 최소 보상 기준.
+
             const raidReps = Object.values(RAID_TYPES).map(c => scenRaidRep(state, c.success.rep));
             const repMin = Math.min(...raidReps), repMax = Math.max(...raidReps);
             const repNeeded = Math.max(0, repGoal - rep);
@@ -8938,15 +9093,15 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
             );
           } else {
             const assetGoal = vGoals.blocAsset;
-            // v6.52 (V1): 판정과 동일한 asset_eff = assetValue + euro_hlVictoryBonus (✨ 가산 표기)
+
             const hlB = euro_hlVictoryBonus(me);
             const assetBase = assetValue(me, state.stocks, state);
             const asset = assetBase + hlB;
             const assetPct = Math.min(100, Math.round(asset / assetGoal * 100));
             const assetDone = asset >= assetGoal;   // = evalPlayerVictory Bloc 게이트 (hlBonus 포함)
-            // 남은 간격 계산
+
             const gap = Math.max(0, assetGoal - asset);
-            const myZones = Object.values(state.map).filter(c => c.owner === 0).length;
+            const myZones = Object.values(state.map).filter(c => c.owner === meIdx).length;
             const tip = assetDone
               ? '✅ 승리 조건 충족 — 종료 선언! 다음 라운드 종료까지 유지하면 승리'
               : gap <= 10
@@ -8954,7 +9109,7 @@ function GameScreen({ state, dispatch, tutorialEnabled, legacyBanner }) {
                 : `구역 ${Math.ceil(gap / 5)}곳 확장 or 타 블록 주식 모으기 (현재 ${myZones}구역)`;
             return (
               <div className="pool-box" style={{ borderColor: assetDone ? 'var(--green)' : 'var(--yellow)' }}>
-                <h4 style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Bloc 튜토리얼)</h4>
+                <h4 style={{ color: assetDone ? 'var(--green)' : 'var(--yellow)' }}>🎯 내 승리 조건 (Bloc)</h4>
                 <div style={{ fontSize: 11, fontFamily: 'Share Tech Mono, monospace', marginTop: 4 }}>
                   <div style={{ marginBottom: 4 }}>
                     <span style={{ color: assetDone ? 'var(--green)' : 'var(--text)' }}>{assetDone ? '✓' : '•'} 자산 </span>
@@ -9376,6 +9531,8 @@ function TutorialOverlay({ state, enabled }) {
 function App() {
   const [state, setState] = useState(null);
   const savedRef = useRef(false);
+  const startOptionsRef = useRef(null);
+  const [session, setSession] = useState(0);
   // v6.24 (레거시 Stage 1): 게임 종료 시 계산한 챕터 해금 배너 { chapter1Newly, unlocked }
   const [legacyBanner, setLegacyBanner] = useState(null);
   // 🎓 튜토리얼: 이번 게임에서 가이드가 켜졌는지 (5×5 솔로 + 토글 ON + 미완료)
@@ -9386,6 +9543,8 @@ function App() {
 
   const startGame = useCallback((opts) => {
     console.log('[SIM] Start game:', opts);
+    startOptionsRef.current = { ...opts, humans: opts.humans ? opts.humans.map(h => ({...h})) : null };
+    setSession(n => n + 1);
     savedRef.current = false;
     setLegacyBanner(null);
     evalTut(opts);
@@ -9399,8 +9558,11 @@ function App() {
     if (action.type === 'RESET') {
       savedRef.current = false;
       setLegacyBanner(null);
-      evalTut(action.opts);
-      setState(buildInitial(action.opts));
+      const opts = action.opts || startOptionsRef.current || window.dnLaunchPreset('');
+      startOptionsRef.current = { ...opts, humans: opts.humans ? opts.humans.map(h => ({...h})) : null };
+      evalTut(opts);
+      setSession(n => n + 1);
+      setState(buildInitial(opts));
       return;
     }
     if (action.type === 'BACK_TO_MENU') {
@@ -9516,10 +9678,10 @@ function App() {
   }, [state?.meta?.gameOver]);
 
   if (!state) {
-    return <SetupScreen onStart={startGame} />;
+    return <SetupScreen onStart={startGame} initialOptions={startOptionsRef.current} />;
   }
 
-  return <GameScreen state={state} dispatch={dispatch} tutorialEnabled={tutEnabledRef.current} legacyBanner={legacyBanner} />;
+  return <GameScreen key={session} state={state} dispatch={dispatch} tutorialEnabled={tutEnabledRef.current} legacyBanner={legacyBanner} />;
 }
 
 // Mount — 마운트 성공 시 부트 스플래시 제거 + 워치독 해제. 실패 시 실패 UI 노출.
