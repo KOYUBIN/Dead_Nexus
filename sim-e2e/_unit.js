@@ -1,6 +1,6 @@
 'use strict';
 const http=require('http'),fs=require('fs'),path=require('path');const {chromium}=require('playwright');
-const ROOT='/home/user/Dead_Nexus',VENDOR='/home/user/Dead_Nexus/sim-e2e/vendor';
+const ROOT=path.resolve(__dirname,'..'),VENDOR=path.join(__dirname,'vendor');
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8'};
 function srv(){return new Promise(r=>{const s=http.createServer((q,res)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p.endsWith('/'))p+='index.html';const fp=path.join(ROOT,p);if(!fp.startsWith(ROOT)||!fs.existsSync(fp)||fs.statSync(fp).isDirectory()){res.writeHead(404);res.end('nf');return;}res.writeHead(200,{'Content-Type':MIME[path.extname(fp)]||'application/octet-stream'});fs.createReadStream(fp).pipe(res);});s.listen(0,'127.0.0.1',()=>r(s));});}
 function tests(){
@@ -1590,6 +1590,9 @@ function tests(){
   ok('아군 봇 조준: 시나리오 목표 함수 파생 — 거점 전멸 시 현위치 유지(추격 대상 없음)',
     (()=>{const cl={...cA2,meta:{...cA2.meta,coop:{...cA2.meta.coop,bases:{}}}};return CBG(cl,'F5',0)==='F5';})());
   // ---- ⑤b 통합 스모크: 봇 전용 협동 2판 — PvP 흔적 0 + 정상 종료 ----
+  const isCoopPvpEvent=m=>/레이드 성공|Ghost 결투|인수 선언(?! 금지)|견제 \(₵|청부 살인|현상금 발행/.test(m);
+  ok('협동 PvP 감사: 인수 금지 뉴스는 공격 이벤트가 아님',!isCoopPvpEvent('블록 감독 위원회 설립 — 이번R 인수 선언 금지'));
+  ok('협동 PvP 감사: 실제 인수 선언은 계속 탐지',isCoopPvpEvent('P2 VANTA 인수 선언'));
   for(let gi=0;gi<2;gi++){
     let sG=B({mode:'coop',mapSize:'11x11',difficulty:'normal',role:'ghost',specific:'BLADE',humans:[{role:'ghost',specific:'BLADE'},{role:'ghost',specific:'CIPHER'},{role:'bloc',specific:'IRONWALL'},{role:'bloc',specific:'VANTA'}],scenario:'C01'});
     sG={...sG,players:sG.players.map(p=>({...p,kind:'bot'}))};
@@ -1606,7 +1609,7 @@ function tests(){
       const af=window.checkInstantVictory(sG);
       if(af.meta.gameOver){sG=R(sG,{type:'VICTORY',winner:af.meta.winner,reason:af.meta.winReason});break;}
       sG=R(sG,{type:'NEXT_ROUND'});
-      for(const l of sG.log){const m=l.message||'';if(/레이드 성공|Ghost 결투|인수 선언|견제 \(₵|청부 살인|현상금 발행/.test(m))pvp.push(m);}
+      for(const l of sG.log){const m=l.message||'';if(isCoopPvpEvent(m))pvp.push(m);}
     }
     ok(`통합 ${gi+1}/2: 봇 전용 C01 완주 — PvP·적대 M&A·견제 흔적 0 · 정상 종료 (${sG.meta.winner===0?'승':'패'} R${sG.meta.round})`,
       sG.meta.gameOver===true&&pvp.length===0,pvp[0]||'');
@@ -1630,11 +1633,11 @@ function tests(){
   LRS(); // 테스트 격리 — 프로덕션 키 오염 방지(다음 실행 clean start)
   return out;
 }
-(async()=>{const server=await srv();const port=server.address().port;const br=await chromium.launch({headless:true,executablePath:'/opt/pw-browsers/chromium'});const pg=await br.newPage();
+(async()=>{const server=process.env.DN_BASE_URL?null:await srv();const base=(process.env.DN_BASE_URL||`http://127.0.0.1:${server.address().port}`).replace(/\/$/,'');const br=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined});const pg=await br.newPage();
 await pg.route('**/*',route=>{const u=route.request().url();const send=f=>route.fulfill({status:200,contentType:'text/javascript; charset=utf-8',body:fs.readFileSync(path.join(VENDOR,f))});if(u.includes('unpkg.com')&&u.includes('react-dom'))return send('react-dom.production.min.js');if(u.includes('unpkg.com')&&u.includes('/react@'))return send('react.production.min.js');if(u.includes('unpkg.com')&&u.includes('babel'))return send('babel.min.js');if(u.includes('fonts.g'))return route.fulfill({status:200,contentType:'text/css',body:''});return route.continue();});
-await pg.goto(`http://127.0.0.1:${port}/simulator/v0.5/`,{waitUntil:'load',timeout:30000});
+await pg.goto(`${base}/simulator/v0.5/`,{waitUntil:'load',timeout:30000});
 await pg.waitForFunction(()=>typeof window.reducer==='function'&&typeof window.buildInitial==='function'&&typeof window.getVictoryGoals==='function'&&typeof window.scenarioRule==='function'&&typeof window.euro_totalShares==='function',{timeout:45000});
 const res=await pg.evaluate(tests);
 let fail=0;for(const t of res){console.log((t.pass?'  PASS ':'  FAIL ')+t.n+(t.extra?'  ['+t.extra+']':''));if(!t.pass)fail++;}
 console.log('\n'+(fail===0?'ALL '+res.length+' UNIT TESTS PASSED':fail+' / '+res.length+' FAILED'));
-await br.close();server.close();process.exit(fail===0?0:1);})();
+await br.close();if(server)server.close();process.exit(fail===0?0:1);})();
